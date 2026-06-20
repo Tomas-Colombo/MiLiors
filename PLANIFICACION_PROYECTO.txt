@@ -1,0 +1,740 @@
+# PLANIFICACION_PROYECTO.txt
+## TalentID — Plataforma de Reclutamiento con Perfilado de Personalidad por IA
+
+**Versión del documento:** 1.0
+**Fecha:** 2026-06-20
+**Estado:** Documento maestro de planificación (pre-desarrollo)
+**Fuentes:** `EJECUCION.txt` (requisitos + reglas de negocio) y `DiagramDeClases.txt` (modelo de clases draw.io)
+
+---
+
+## 1. RESUMEN EJECUTIVO
+
+TalentID es una plataforma web responsive de reclutamiento que diferencia a los candidatos no solo por su
+perfil técnico (experiencia, formación, competencias, idiomas) sino por un **perfil de personalidad**
+construido a partir de dos marcos: el **Eneagrama** (test obligatorio de 135 preguntas) y el **Human Design**
+(opcional, carga manual). A partir de esos datos, un **modelo LLM (Claude)** genera un **Informe de
+Personalidad** y la plataforma emite un **Certificado PDF firmado y verificable mediante QR** contra un
+endpoint propio de TalentID.
+
+El sistema conecta tres actores: **Postulantes** (candidatos), **Reclutadores** (empresas que publican puestos
+y buscan talento) y **Administrador** (gestiona catálogos y modera). Incluye además un **Asistente IA** para
+que los reclutadores consulten la compatibilidad candidato-puesto.
+
+El alcance geográfico es **Argentina (nacional)**: aunque la operación física es en Mendoza, el sistema debe
+permitir registrar localidades y provincias de todo el país. Es una **web app responsive** (no nativa,
+explícitamente excluida del contrato). El presupuesto de IA objetivo es de **USD 20–30/mes**, lo que obliga a
+optimizar tokens (salidas JSON estructuradas, modelos económicos, caching de prompts).
+
+**Propuesta de valor diferencial:** matching humano + técnico, certificación verificable de personalidad, y
+asistencia de IA al reclutador.
+
+---
+
+## 2. OBJETIVOS DEL NEGOCIO
+
+1. **Diferenciar candidatos por personalidad**, no solo por CV, mediante Eneagrama + Human Design + LLM.
+2. **Reducir el tiempo de screening** del reclutador con búsqueda filtrada y un Asistente IA de compatibilidad.
+3. **Emitir certificación verificable** (PDF + QR) que valide la autenticidad del perfil de personalidad.
+4. **Generar inteligencia analítica** sobre el mercado (p. ej. alerta cuando una empresa republica el mismo
+   puesto repetidas veces → posible problema de clima/perfilado).
+5. **Mantener costos de IA acotados** (USD 20–30/mes) sin degradar la calidad del informe.
+6. **Cumplir con privacidad y consentimiento** (control de visibilidad del postulante, liberación condicional
+   de datos de contacto, aceptación versionada de Términos y Condiciones).
+7. **Construir un MVP comercializable** sobre una arquitectura mantenible y de bajo costo operativo.
+
+### KPIs sugeridos
+- Nº de postulantes activos / con Eneagrama completo / con informe LISTO.
+- Nº de reclutadores y empresas activas; puestos publicados / cerrados.
+- Tasa de postulaciones por puesto y tiempo medio a "Proceso finalizado".
+- Costo de IA mensual (USD) y nº de consultas al Asistente IA.
+- Tasa de informes en estado ERROR (calidad de generación).
+
+---
+
+## 3. TIPOS DE USUARIOS Y ROLES
+
+Existen **exactamente tres roles** (sin niveles intermedios en el MVP), definidos en el enum `rolUsuario` de la
+clase `Usuario`:
+
+| Rol | Descripción | Cómo se crea |
+|-----|-------------|--------------|
+| **POSTULANTE** | Candidato que carga perfil técnico, hace el Eneagrama, opcionalmente Human Design, genera informe/certificado y postula a puestos. | Autoregistro |
+| **RECLUTADOR** | Representa a una empresa; publica puestos, busca postulantes, usa el Asistente IA, toma notas privadas y gestiona postulaciones. | Autoregistro (con onboarding de empresa) |
+| **ADMIN** | Gestiona catálogos (sectores, competencias), modera postulantes, monitorea informes y ve métricas. | **No se autoregistra**: se crea manualmente o por seed inicial. |
+
+> **Decisión de modelado (nota del diagrama):** se **elimina la clase `PerfilAdministrador`**. El rol vive
+> directamente en `Usuario.rolUsuario`; las operaciones administrativas se exponen como acciones/endpoints
+> protegidos por el rol ADMIN, no como una entidad de perfil separada.
+
+---
+
+## 4. CASOS DE USO PRINCIPALES
+
+### Transversales
+- **CU-00 Aceptar Términos y Condiciones:** todo usuario debe aceptar la versión vigente de TyC antes de operar;
+  si se publica una versión nueva, se vuelve a solicitar al login.
+- **CU-01 Registro diferenciado por rol** (Postulante / Reclutador).
+- **CU-02 Login único** (un solo formulario; el sistema detecta el rol y redirige al dashboard correspondiente).
+- **CU-03 Recuperar contraseña** vía email (Supabase Auth).
+- **CU-04 Verificar certificado** (público, sin login, vía QR).
+
+### Postulante
+- **CU-10 Onboarding guiado:** datos básicos → Eneagrama (obligatorio) → desbloqueo de la app.
+- **CU-11 Realizar Test de Eneagrama** (135 preguntas paginadas, con guardado parcial) y calcular Eneatipo.
+- **CU-12 Cargar/editar Human Design** (opcional, selectores).
+- **CU-13 Generar/regenerar Informe de Personalidad** (LLM).
+- **CU-14 Cargar/editar Perfil Técnico** (experiencia, formación, competencias, idiomas).
+- **CU-15 Generar y descargar Certificado PDF** (con QR verificable).
+- **CU-16 Activar/desactivar visibilidad de perfil** (perfilEnBusqueda).
+- **CU-17 Buscar y postular a puestos.**
+- **CU-18 Ver historial de postulaciones** y su estado.
+
+### Reclutador
+- **CU-20 Onboarding de empresa** (alta de datos de la empresa).
+- **CU-21 Publicar / editar / cerrar puestos.**
+- **CU-22 Buscar postulantes** (filtros por sector, puesto, competencias; resultados en tarjetas sin contacto
+  salvo autorización).
+- **CU-23 Ver detalle de postulante** (perfil + informe si público).
+- **CU-24 Consultar al Asistente IA** sobre compatibilidad candidato-puesto.
+- **CU-25 Gestionar postulaciones recibidas** (avanzar estado / descartar).
+- **CU-26 Tomar notas privadas** por postulante/puesto.
+
+### Administrador
+- **CU-30 Ver dashboard de métricas.**
+- **CU-31 Gestionar Sectores** (crear / desactivar).
+- **CU-32 Gestionar Competencias** (crear / desactivar).
+- **CU-33 Listar y moderar Postulantes** (desactivar perfil).
+- **CU-34 Listar Empresas/Reclutadores.**
+- **CU-35 Monitorear Informes** (estados, detectar fallos).
+
+---
+
+## 5. FUNCIONALIDADES ORGANIZADAS POR MÓDULOS
+
+### M1 — Autenticación, Cuenta y Consentimiento
+- Registro diferenciado (Postulante / Reclutador), login único con detección de rol y redirección.
+- Recuperación de contraseña por email.
+- Rutas protegidas por rol (middleware Next.js).
+- Aceptación versionada de TyC; bloqueo hasta aceptar la versión vigente; re-prompt ante nueva versión.
+
+### M2 — Onboarding y Eneagrama (barrera de entrada del Postulante)
+- Flujo forzado: datos básicos → Eneagrama → desbloqueo.
+- Wizard de 135 preguntas paginadas con indicador de progreso y guardado parcial.
+- Cálculo automático del Eneatipo (1–9) por puntaje acumulado.
+- Rehacer el test **sobrescribe** el resultado anterior (no se conserva histórico de tests).
+
+### M3 — Perfil Técnico
+- CRUD de Experiencia Laboral (opcional), Formación Académica (**obligatoria**), Idiomas (opcional) y
+  Competencias (catálogo administrado).
+- Validación de fechas (fin ≥ inicio, etc.).
+- `PerfilTecnico` agrupa todo y puede generar un `resumenProfesionalLLM`.
+
+### M4 — Human Design (opcional)
+- Carga manual mediante selectores (Tipo energético, Autoridad, Perfil, Estrategia) — sin cálculo automático.
+- Editar HD después del Eneagrama **regenera** el informe sin rehacer el test.
+
+### M5 — Informe de Personalidad (LLM)
+- Generación vía LLM combinando Eneagrama + Human Design (si existe).
+- Estados: PENDIENTE / LISTO / ERROR; contenido válido solo en LISTO.
+- Un único informe vigente por postulante (se conservan los datos crudos que lo alimentan).
+- Longitud objetivo 500–1.500 palabras (regla de calidad).
+- Reintento ante ERROR.
+
+### M6 — Certificación (PDF + QR)
+- Generar PDF a partir de Perfil Técnico + Informe de Personalidad.
+- Subir a storage y guardar URL; incluir timestamp de firma y QR.
+- QR apunta a **endpoint propio de TalentID** de verificación (no servicio externo).
+- Página pública de verificación (sin login).
+- Descarga vía URL firmada de Supabase Storage.
+
+### M7 — Visibilidad y Privacidad
+- Toggle perfilEnBusqueda (visible/no visible en búsquedas).
+- Datos de contacto ocultos por defecto; se liberan si perfilEnBusqueda está activo.
+- Al postular a un puesto de una empresa, el reclutador de esa empresa ve el contacto **independientemente** de
+  perfilEnBusqueda.
+
+### M8 — Puestos y Postulaciones
+- CRUD de Puestos (título, descripción, sector, idioma, carga horaria, ubicación, nivel de experiencia,
+  perfilPsicologicoDeseado —oculto al postulante—).
+- Baja lógica del puesto (`Activo`/`bajaPuesto`) — no se borra para no afectar métricas.
+- Al cerrar un puesto, todas sus postulaciones en curso pasan a **Cerrada**.
+- Descartar una postulación puntual → estado **Proceso finalizado** (sin cerrar el puesto).
+- Buscador de puestos con filtros; postulación que dispara liberación de contacto.
+- Historial de postulaciones del postulante.
+
+### M9 — Asistente IA y Notas (Reclutador)
+- Consultar al Asistente IA (compatibilidad candidato-puesto); registrar la consulta para métricas de uso.
+- Notas privadas por postulante/puesto, visibles solo para el reclutador autor.
+
+### M10 — Administración
+- CRUD de Sectores y Competencias (crear / desactivar; nunca borrar físicamente).
+- Listado/moderación de Postulantes (desactivar perfil).
+- Listado de Empresas/Reclutadores.
+- Monitor de Informes (estados).
+- Dashboard de métricas.
+
+### M11 — Analítica
+- `HistorialPuesto`: registra cada activación de un puesto (fecha inicio/fin). Si una empresa busca el mismo
+  puesto ≥ 3 veces en el año, disparar **alerta analítica** ("algo pasa en ese puesto").
+- `ConsultaAsistenteIA`: métricas de uso de IA (quién/cuánto; no se guarda cada conversación completa por costo).
+
+### M12 — Notificaciones
+- Notificación por email ante cambio de estado de una postulación.
+- Emails transaccionales de Supabase Auth (recuperación de contraseña).
+
+---
+
+## 6. ARQUITECTURA PROPUESTA
+
+### Stack
+- **Framework full-stack:** Next.js (App Router) — *frontend + API routes/route handlers + Server Actions*.
+  - ⚠️ **Advertencia crítica del repo (`AGENTS.md`):** esta versión de Next.js tiene *breaking changes*
+    respecto del conocimiento previo. **Antes de escribir código se debe leer la guía correspondiente en
+    `node_modules/next/dist/docs/`** y respetar los avisos de deprecación. No asumir APIs/convenciones.
+- **Base de datos:** Supabase (PostgreSQL) con **Row Level Security (RLS)** por rol.
+- **Autenticación:** Supabase Auth (email/password, recuperación de contraseña nativa).
+- **Almacenamiento:** Supabase Storage (PDFs certificados, con URLs firmadas).
+- **IA / LLM:** **Anthropic Claude API**.
+  - Generación de informe: modelo de gama media/económica con salida **JSON estructurada** (recomendado
+    Claude Haiku 4.5 / Sonnet 4.6 según calidad requerida).
+  - Asistente IA del reclutador: modelo económico (Claude Haiku 4.5) por volumen.
+  - Optimización de costos: prompts compactos, **prompt caching**, *structured outputs*, límite de tokens.
+- **Generación de PDF + QR:** servicio server-side (route handler / función) que arma el PDF, genera el QR
+  apuntando a `/verificar/{certificadoId}` y sube el archivo a Storage.
+- **Email transaccional:** Supabase Auth para auth; proveedor transaccional (p. ej. Resend) para
+  notificaciones de cambio de estado de postulación.
+- **Hosting:** Vercel (Next.js) + Supabase gestionado.
+
+### Patrón de capas
+1. **Presentación:** React Server/Client Components, layouts por rol, componentes de UI reutilizables.
+2. **Autorización:** middleware Next.js (protección de rutas por rol) + RLS en Postgres (defensa en profundidad).
+3. **Dominio/Servicios:** módulos de negocio (Eneagrama, Informe, Certificado, Puestos, Postulaciones, IA).
+4. **Acceso a datos:** cliente Supabase (server-side con service role solo en endpoints administrativos/IA).
+5. **Integraciones externas:** Claude API, Storage, email.
+
+### Procesos asíncronos
+- Generación de Informe y Certificado y Consultas IA pueden tardar/fallar → **patrón job + estado**:
+  crear registro en PENDIENTE, procesar, marcar LISTO/ERROR; UI con polling o realtime de Supabase.
+- `ConsultaAsistenteIA` con estado PENDIENTE si la IA no está disponible (caída de servicio) → reintento.
+
+### Seguridad
+- RLS estricta: un postulante solo ve/edita lo propio; un reclutador ve postulantes según reglas de visibilidad;
+  ADMIN con service role en endpoints dedicados.
+- Datos de contacto servidos solo cuando corresponde (perfilEnBusqueda o postulación a puesto propio).
+- Endpoint de verificación de certificado público pero de solo lectura y mínima exposición de datos.
+
+---
+
+## 7. MODELO DE DATOS INICIAL
+
+> Derivado del diagrama de clases. Convención: PK `id UUID`, timestamps `created_at/updated_at`, **bajas lógicas**
+> con campos `fecha_baja*` (nunca borrado físico, para preservar métricas y referencias).
+
+### 7.1 Entidades
+
+**usuario**
+- id (UUID, PK), email (unique), password_hash *(gestionado por Supabase Auth)*, rol_usuario (enum: ADMIN|POSTULANTE|RECLUTADOR), fecha_creacion, fecha_baja (nullable)
+- Métodos de negocio: registrar, iniciarSesion, recuperarPassword, cerrarSesion
+
+**perfil_postulante** (1–1 con usuario rol POSTULANTE)
+- id, usuario_id (FK), nombre_completo, telefono, especificidad_puesto, fecha_hora_nacimiento, ultima_conexion, perfil_en_busqueda (bool), enlace_linkedin, portfolio
+- Operaciones: actualizarPerfil, postularTrabajo(puestoId), generarInformePersonalidad, editarExperiencia
+
+**perfil_reclutador** (1–1 con usuario rol RECLUTADOR)
+- id, usuario_id (FK), nombre_reclutador, empresa_id (FK), ultima_conexion, fecha_baja
+- Operaciones: buscarPostulantes(filtros), consultarAsistenteIA, listarMisNotas, verPerfilPostulante, editarDatosEmpresa
+
+**empresa**
+- id, nombre_empresa, descripcion, link_url, fecha_baja
+
+**perfil_tecnico** (1–1 con perfil_postulante)
+- id, postulante_id (FK), resumen_profesional_llm, fecha_actualizacion
+- Agrupa experiencia, formación, competencias e idiomas. Operación: generarResumenConLLM
+
+**experiencia_laboral** (N por perfil_tecnico) — *opcional*
+- id, perfil_tecnico_id (FK), empresa, puesto, fecha_inicio, fecha_fin, descripcion
+
+**formacion_academica** (N por perfil_tecnico) — **obligatoria (≥1)**
+- id, perfil_tecnico_id (FK), institucion, titulo, fecha_graduacion
+
+**idioma** (N por perfil_tecnico) — *opcional*
+- id, perfil_tecnico_id (FK), nombre, nivel_idioma (enum)
+
+**competencia** (catálogo administrado por ADMIN)
+- id, nombre (unique), fecha_baja
+**postulante_competencia** (join N–N postulante ↔ competencia)
+- id, perfil_tecnico_id (FK), competencia_id (FK)
+
+> Nota: el diagrama trae una clase única `CompetenciaIdioma` (nombre + nivelIdioma). Se **normaliza** en dos
+> conceptos: `competencia` (catálogo de habilidades, sin nivel, gestionado por ADMIN) e `idioma` (con nivel).
+
+**test_eneagrama** (1–1 vigente con perfil_postulante)
+- id, postulante_id (FK), fecha_realizacion, eneatipo_id (FK, resultado)
+- Operación: calcularEneatipo()
+
+**pregunta_eneagrama** (catálogo fijo de 135, definido por la propietaria)
+- id, numero_pregunta, enunciado, eneatipo_asociado (int 1–9), fecha_creacion
+
+**opcion_respuesta** (escala de respuesta)
+- id, texto_opcion, valor_numerico
+
+**respuesta_item_eneagrama** (135 por test)
+- id, test_eneagrama_id (FK), pregunta_id (FK), valor_respondido (int)
+
+**eneatipo** (catálogo 1–9)
+- id, nombre, numero_eneatipo (int), fecha_baja
+
+**human_design** (0–1 por perfil_postulante)
+- id, postulante_id (FK), perfil_hd (enum), tipo_energetico (enum), estrategia_hd (enum), autoridad_hd (enum)
+- Operación: completarHumanDesign(...)
+
+**informe_personalidad** (1 vigente por perfil_postulante)
+- id, postulante_id (FK), contenido_informe (text), estado_informe (enum: PENDIENTE|LISTO|ERROR), fecha_generacion
+- Operación: generarConLLM()
+
+**certificado_pdf** (por perfil_postulante)
+- id, postulante_id (FK), url_archivo, timestamp_firma, codigo_qr_url
+- Operaciones: generarPDF, verificarServidor (endpoint público), descargarPDF (URL firmada)
+
+**sector_industrial** (catálogo administrado)
+- id, nombre_sector, fecha_baja_s
+
+**puesto**
+- id, reclutador_id (FK), empresa_id (FK), sector_id (FK), titulo_puesto, descripcion_texto, idioma (string),
+  carga_horaria (enum), ubicacion (enum), nivel_experiencia, perfil_psicologico_deseado (oculto al postulante),
+  activo (bool), fecha_publicacion, fecha_baja_puesto
+- Operaciones: bajaPuesto, editarPuesto, activoPuesto(bool)
+
+**historial_puesto** (N por puesto)
+- id, puesto_id (FK), fecha_inicio, fecha_fin
+- Regla analítica: ≥3 activaciones del mismo puesto en el año → alerta.
+
+**postulacion**
+- id, postulante_id (FK), puesto_id (FK), estado (enum EstadoPostulacion), fecha_postulacion
+- Operaciones: descartarPostulacion, actualizarEstado
+
+**nota_privada**
+- id, reclutador_id (FK), postulante_id (FK), puesto_id (FK), contenido, fecha_creacion
+- Operaciones: guardarNota, editarNota, eliminarNota
+
+**consulta_asistente_ia**
+- id, reclutador_id (FK), postulante_id (FK), puesto_id (FK), pregunta_reclutador, respuesta_ia, fecha_consulta,
+  estado (LISTO|PENDIENTE)
+- Operación: registrarConsulta (solo métricas de uso; no se guarda cada conversación completa)
+
+**terminos_y_condiciones**
+- id, version, descripcion, fecha_publicacion, fecha_baja_tyc
+**aceptacion_tyc**
+- id, usuario_id (FK), tyc_id (FK), fecha_aceptacion
+- Operación: registrarAceptacion(usuarioId, tycId)
+
+### 7.2 Enumeraciones
+
+- **rolUsuario:** ADMIN, POSTULANTE, RECLUTADOR
+- **EstadoInforme:** PENDIENTE, LISTO, ERROR
+- **EstadoPostulacion:** ENVIADA ("Tu aplicación ha sido recibida"), VISTO ("Tu perfil ha sido visualizado"),
+  PROCESO_FINALIZADO ("Tu aplicación ha sido descartada"), CERRADA ("La vacante ha sido concluida")
+- **CargaHoraria:** TIEMPO_COMPLETO, MEDIO_TIEMPO, POR_HORAS_FREELANCE
+- **Ubicacion:** REMOTO, HIBRIDO, LOCALIDADES (presencial por localidad/provincia — alcance nacional Argentina)
+- **nivelIdioma:** (escala a definir; p. ej. BASICO, INTERMEDIO, AVANZADO, NATIVO)
+- **TipoEnergetico (HD):** Generator, Manifesting Generator, Projector, Manifestor, Reflector
+- **PerfilHD:** 1/3, 1/4, 2/4, 2/5, 3/5, 3/6, 4/6, 4/1, 5/1, 5/2, 6/2, 6/3
+- **AutoridadHD:** Emotional, Sacral, Splenic, Ego/Heart, Self-Projected, Mental/Environmental, Lunar
+- **EstrategiaHD:** To Respond, To Inform, Wait for the Invitation, Wait a Lunar Cycle
+
+### 7.3 Relaciones clave
+- usuario 1–1 perfil_postulante **o** perfil_reclutador (según rol).
+- usuario 1–N aceptacion_tyc; aceptacion_tyc N–1 terminos_y_condiciones.
+- perfil_postulante 1–1 perfil_tecnico, 1–1 test_eneagrama (vigente), 0–1 human_design, 1–1 informe_personalidad,
+  0–1 certificado_pdf, 1–N postulacion.
+- perfil_tecnico 1–N experiencia_laboral / formacion_academica / idioma; N–N competencia.
+- test_eneagrama 1–N respuesta_item_eneagrama; respuesta N–1 pregunta_eneagrama; test_eneagrama N–1 eneatipo.
+- perfil_reclutador 1–1 empresa, 1–N puesto, 1–N nota_privada, 1–N consulta_asistente_ia.
+- puesto N–1 sector_industrial, N–1 empresa, 1–N historial_puesto, 1–N postulacion.
+
+---
+
+## 8. PANTALLAS NECESARIAS
+
+### Públicas / Auth
+1. Landing / Home.
+2. Registro (selector Postulante/Reclutador).
+3. Login único.
+4. Recuperar contraseña.
+5. Modal/pantalla de aceptación de TyC (bloqueante).
+6. **Verificación pública de certificado** (`/verificar/{id}`, sin login).
+
+### Postulante
+7. Onboarding — datos básicos.
+8. Wizard Eneagrama (135 preguntas paginadas, progreso, guardar avance).
+9. Dashboard del Postulante (estado perfil, estado informe, postulaciones activas, accesos rápidos).
+10. Formulario Perfil Técnico (experiencia / formación / competencias / idiomas, con validación de fechas).
+11. Formulario Human Design (selectores).
+12. Visor de Informe de Personalidad (estados PENDIENTE/LISTO/ERROR + reintento).
+13. Generador y visor de Certificado PDF (generar / preview / descargar / QR).
+14. Toggle de visibilidad (perfilEnBusqueda).
+15. Buscador de puestos + filtros + "Postularme".
+16. Historial de postulaciones (con estados).
+
+### Reclutador
+17. Onboarding de empresa.
+18. Dashboard del Reclutador (puestos, postulaciones recibidas, accesos).
+19. Publicador/editor de Puestos (publicar / editar / cerrar).
+20. Buscador de Postulantes (filtros, tarjetas sin contacto).
+21. Detalle de Postulante (perfil + informe si disponible/público + competencias).
+22. Chat/consulta con Asistente IA.
+23. Notas privadas (CRUD por postulante/puesto).
+24. Gestión de postulaciones recibidas (avanzar/descartar).
+
+### Administrador
+25. Dashboard de Admin (métricas).
+26. Gestión de Sectores (crear/desactivar).
+27. Gestión de Competencias (crear/desactivar).
+28. Listado de Postulantes (búsqueda/filtro + desactivar).
+29. Listado de Empresas/Reclutadores.
+30. Monitor de Informes (estados).
+
+### Transversales
+31. Manejo global de estados de carga/error (especialmente en lo dependiente del LLM).
+32. Layout responsive por rol; navegación protegida.
+
+---
+
+## 9. FLUJOS DE NAVEGACIÓN
+
+### 9.1 Registro → Onboarding (Postulante)
+Registro (rol Postulante) → aceptar TyC → datos básicos → **Eneagrama obligatorio** (no salteable) → cálculo de
+Eneatipo → (primera vez: opción de cargar Human Design ahora) → generación automática del Informe → desbloqueo del
+dashboard y del resto de la app.
+
+### 9.2 Login (todos)
+Login único → autenticación → si hay TyC nueva, re-prompt → detección de rol → redirección a dashboard del rol.
+Postulante sin Eneagrama → redirigido al wizard del Eneagrama.
+
+### 9.3 Generación de Informe
+Completar/rehacer Eneagrama **o** completar/editar Human Design → dispara (re)generación del informe →
+estado PENDIENTE → LLM → LISTO (válido) o ERROR (con reintento).
+
+### 9.4 Certificación y verificación
+Postulante con Perfil Técnico + Informe LISTO → "Generar certificado" → PDF + QR + subida a Storage → descarga.
+Tercero escanea QR → `/verificar/{id}` (público) → `verificarServidor()` confirma existencia/validez.
+
+### 9.5 Postulación
+Postulante busca puesto → "Postularme" → crea Postulacion (ENVIADA) → **libera contacto** al reclutador del puesto →
+reclutador ve/avanza estado (VISTO → …) o descarta (PROCESO_FINALIZADO) → email al postulante en cada cambio.
+Cerrar puesto → todas las postulaciones en curso → CERRADA.
+
+### 9.6 Reclutador
+Onboarding empresa → dashboard → publicar puesto → recibir postulaciones → buscar postulantes / consultar IA /
+tomar notas → gestionar estados.
+
+### 9.7 Admin
+Login → dashboard métricas → gestionar sectores/competencias → moderar postulantes → monitorear informes.
+
+---
+
+## 10. INTEGRACIONES EXTERNAS
+
+| Integración | Uso | Notas |
+|-------------|-----|-------|
+| **Supabase Auth** | Registro, login, recuperación de contraseña | Email nativo |
+| **Supabase Postgres** | Base de datos + RLS | Defensa en profundidad |
+| **Supabase Storage** | PDFs certificados | URLs firmadas para descarga |
+| **Anthropic Claude API** | Informe de personalidad + Asistente IA + resumen profesional | JSON estructurado, caching, modelos económicos; budget USD 20–30/mes |
+| **Generación PDF + QR** | Certificado firmado | QR → endpoint propio TalentID de verificación |
+| **Email transaccional** (p. ej. Resend) | Notificación de cambio de estado de postulación | |
+| **Vercel** | Hosting Next.js | |
+
+---
+
+## 11. REQUERIMIENTOS FUNCIONALES (RF)
+
+- **RF-01** Registro diferenciado por rol (Postulante/Reclutador); Admin por seed.
+- **RF-02** Login único con detección de rol y redirección.
+- **RF-03** Recuperación de contraseña por email.
+- **RF-04** Rutas protegidas por rol (un rol no accede a rutas de otro).
+- **RF-05** Aceptación versionada de TyC; bloqueo hasta aceptar la vigente; re-prompt ante versión nueva;
+  se conserva la aceptación anterior registrada.
+- **RF-06** Eneagrama obligatorio y previo a cualquier otra acción del postulante.
+- **RF-07** Wizard de 135 preguntas paginadas, con progreso y guardado parcial.
+- **RF-08** Cálculo automático del Eneatipo por puntaje acumulado por tipo.
+- **RF-09** Rehacer el test sobrescribe el resultado (sin histórico de tests).
+- **RF-10** Completar Eneagrama dispara (re)generación del informe; primera vez ofrece cargar HD de entrada.
+- **RF-11** Human Design opcional, carga manual por selectores; editarlo regenera el informe sin rehacer el test.
+- **RF-12** Informe vía LLM (Eneagrama + HD si existe), 500–1.500 palabras, con estados PENDIENTE/LISTO/ERROR y
+  reintento; un único informe vigente.
+- **RF-13** Perfil Técnico: formación **obligatoria**; idioma y experiencia opcionales; validación de fechas.
+- **RF-14** Competencias e Idiomas seleccionables (catálogo de competencias administrado).
+- **RF-15** Generar Certificado PDF (timestamp + QR) verificable en endpoint propio; descarga por URL firmada.
+- **RF-16** Toggle perfilEnBusqueda; contacto oculto por defecto; liberación si perfilEnBusqueda activo.
+- **RF-17** Al postular, el reclutador del puesto ve el contacto independientemente de perfilEnBusqueda.
+- **RF-18** Buscador de puestos con filtros y postulación.
+- **RF-19** Historial de postulaciones con estados.
+- **RF-20** Onboarding de empresa para reclutador.
+- **RF-21** CRUD de Puestos (incluye perfilPsicologicoDeseado oculto al postulante); baja lógica.
+- **RF-22** Cerrar puesto pasa sus postulaciones en curso a CERRADA.
+- **RF-23** Descartar postulación puntual → PROCESO_FINALIZADO sin cerrar el puesto.
+- **RF-24** Buscador de postulantes con filtros (sector, puesto, competencias), tarjetas sin contacto.
+- **RF-25** Detalle de postulante con informe si está disponible/público.
+- **RF-26** Asistente IA de compatibilidad; registrar consulta para métricas.
+- **RF-27** Notas privadas por postulante/puesto, visibles solo al reclutador autor.
+- **RF-28** Gestión de postulaciones recibidas (avanzar/descartar).
+- **RF-29** Admin: CRUD de Sectores y Competencias (desactivar, no borrar).
+- **RF-30** Admin: listar/moderar postulantes (desactivar perfil); listar empresas/reclutadores; monitor de informes.
+- **RF-31** Dashboard de métricas (postulantes, reclutadores, informes, estado general).
+- **RF-32** `HistorialPuesto`: registrar activaciones; alerta si ≥3 reaperturas del mismo puesto en el año.
+- **RF-33** Notificación por email ante cambio de estado de postulación.
+- **RF-34** Página pública de verificación de certificado.
+- **RF-35** Alcance geográfico nacional (Argentina): registrar localidades/provincias.
+
+---
+
+## 12. REQUERIMIENTOS NO FUNCIONALES (RNF)
+
+- **RNF-01 Web responsive** (no nativa; excluida explícitamente del contrato).
+- **RNF-02 Costo de IA** acotado a USD 20–30/mes: JSON estructurado, prompts compactos, caching, modelos económicos.
+- **RNF-03 Manejo robusto de estados de carga/error**, en especial para procesos LLM (pueden tardar/fallar).
+- **RNF-04 Seguridad y privacidad:** RLS por rol; contacto protegido; mínima exposición en verificación pública.
+- **RNF-05 Bajas lógicas** en entidades referenciadas (sectores, competencias, puestos, etc.) para no romper
+  referencias ni métricas.
+- **RNF-06 Auditoría temporal:** timestamps de creación/actualización; `ultima_conexion`.
+- **RNF-07 Integridad referencial** y validaciones de dominio (fechas, unicidad de catálogos).
+- **RNF-08 Disponibilidad/resiliencia de IA:** consultas con estado PENDIENTE y reintento ante caídas.
+- **RNF-09 Verificabilidad:** certificado firmado con timestamp y QR a endpoint propio.
+- **RNF-10 Mantenibilidad:** seguir las convenciones de la versión instalada de Next.js
+  (`node_modules/next/dist/docs/`), respetar deprecaciones.
+- **RNF-11 Internacionalización mínima:** UI en español (Argentina).
+- **RNF-12 Performance:** paginación del wizard del Eneagrama y de listados.
+
+---
+
+## 13. MVP INICIAL
+
+**Objetivo del MVP:** ciclo completo Postulante (registro → Eneagrama → informe → certificado → postulación) y
+ciclo Reclutador (empresa → puesto → recibir/gestionar postulaciones), más administración mínima de catálogos.
+
+**Incluye:**
+- M1 Auth + TyC (registro, login, recuperación, rutas protegidas, aceptación versionada).
+- M2 Onboarding + Eneagrama (wizard 135, cálculo de Eneatipo, guardado parcial).
+- M3 Perfil Técnico (formación obligatoria; experiencia/idiomas/competencias).
+- M4 Human Design (opcional).
+- M5 Informe LLM (estados + reintento).
+- M6 Certificado PDF + verificación pública.
+- M7 Visibilidad/privacidad (contacto condicional).
+- M8 Puestos + Postulaciones (CRUD, búsqueda, estados, cierre en cascada).
+- M9 Asistente IA (versión básica) + Notas privadas.
+- M10 Admin (sectores, competencias, moderación, monitor de informes, dashboard básico).
+- M12 Notificación por email de cambio de estado.
+
+**Excluido del MVP (a futuro):** ver sección 14.
+
+---
+
+## 14. FUNCIONALIDADES PARA VERSIONES FUTURAS
+
+- Cálculo automático de Human Design a partir de fecha/hora/lugar de nacimiento (hoy es carga manual).
+- Matching automático candidato↔puesto con scoring (no solo asistente bajo demanda).
+- App móvil nativa (hoy excluida).
+- Mensajería interna reclutador↔postulante.
+- Analítica avanzada / panel de tendencias de mercado.
+- Versionado histórico del informe de personalidad.
+- Multi-idioma de la interfaz.
+- Roles administrativos intermedios / permisos finos.
+- Integraciones externas (LinkedIn import, ATS de terceros).
+- Pagos / planes para empresas.
+
+---
+
+## 15. RIESGOS TÉCNICOS
+
+| Riesgo | Impacto | Mitigación |
+|--------|---------|------------|
+| Versión de Next.js con breaking changes | Código incorrecto/roto | Leer `node_modules/next/dist/docs/` antes de codificar; respetar deprecaciones |
+| Costo de IA supera USD 20–30/mes | Sobrecosto | JSON estructurado, caching, modelo económico, límite de tokens, métricas de uso |
+| Latencia/fallos del LLM | Mala UX, informes inválidos | Patrón job + estado (PENDIENTE/LISTO/ERROR), reintentos, polling/realtime |
+| Calidad/consistencia del informe (500–1.500 palabras) | Valor percibido | Prompt templates, validación de longitud, regeneración |
+| Cálculo del Eneatipo (empates / 135 ítems) | Resultado incorrecto | Definir regla de desempate; tests de la suma por tipo; tabla de puntajes |
+| Fuga de datos de contacto | Privacidad | RLS estricta + lógica de visibilidad server-side |
+| Borrado físico rompiendo referencias/métricas | Pérdida de integridad | Bajas lógicas en catálogos y puestos |
+| Verificación de certificado falsificable | Confianza | Endpoint propio, timestamp de firma, IDs no adivinables |
+| Definición del catálogo fijo de 135 preguntas | Bloqueante del onboarding | Seed validado con la propietaria antes de salir a producción |
+
+---
+
+## 16. ROADMAP DE IMPLEMENTACIÓN POR FASES
+
+**Fase 0 — Cimientos (infra):** proyecto Next.js (leyendo docs locales), Supabase (DB/Auth/Storage), esquema
+inicial + RLS, seeds (Eneatipos, preguntas Eneagrama, opciones de respuesta, sectores/competencias base,
+TyC v1, usuario ADMIN).
+
+**Fase 1 — Auth + TyC + ruteo por rol** (M1).
+
+**Fase 2 — Onboarding + Eneagrama** (M2): wizard, guardado parcial, cálculo de Eneatipo.
+
+**Fase 3 — Perfil Técnico + Human Design** (M3, M4).
+
+**Fase 4 — Informe de Personalidad (LLM)** (M5): integración Claude, estados, reintento.
+
+**Fase 5 — Certificado PDF + verificación pública** (M6).
+
+**Fase 6 — Visibilidad/privacidad + Puestos + Postulaciones** (M7, M8): incl. cierre en cascada y notificaciones.
+
+**Fase 7 — Reclutador: búsqueda, Asistente IA, notas, gestión** (M9 + parte de M8).
+
+**Fase 8 — Administración + métricas + analítica** (M10, M11).
+
+**Fase 9 — Hardening:** pruebas E2E, control de costos de IA, accesibilidad, responsive QA, deploy.
+
+---
+
+## 17. BACKLOG PRIORIZADO (MoSCoW)
+
+**Must (MVP):**
+- Auth + login único + rutas por rol + recuperación de contraseña.
+- Aceptación versionada de TyC.
+- Onboarding + Eneagrama obligatorio + cálculo de Eneatipo + guardado parcial.
+- Perfil Técnico (formación obligatoria) + Human Design opcional.
+- Informe LLM con estados y reintento.
+- Certificado PDF + QR + verificación pública.
+- Visibilidad/contacto condicional.
+- Puestos (CRUD + baja lógica) + Postulaciones (estados + cierre en cascada).
+- Notificación email de cambio de estado.
+- Admin: sectores, competencias, moderación, monitor de informes, dashboard básico.
+
+**Should:**
+- Asistente IA (compatibilidad) + registro de consultas.
+- Notas privadas.
+- Alerta analítica de `HistorialPuesto`.
+- Filtros avanzados de búsqueda.
+
+**Could:**
+- Resumen profesional LLM en Perfil Técnico.
+- Realtime (Supabase) para estados de informe.
+- Métricas/exportes ampliados.
+
+**Won't (esta versión):**
+- HD automático, app nativa, matching automático con scoring, mensajería, pagos, multi-idioma UI.
+
+---
+
+## 18. TAREAS DE DESARROLLO DETALLADAS (por módulo)
+
+> Granularidad orientada a tickets. Cada tarea asume tests y manejo de estados de carga/error.
+
+### M0 — Infra
+- T0.1 Inicializar proyecto Next.js (App Router) **tras leer `node_modules/next/dist/docs/`**.
+- T0.2 Configurar Supabase (proyecto, claves, cliente server/client).
+- T0.3 Migraciones del esquema (sección 7) + enums.
+- T0.4 Políticas RLS por rol.
+- T0.5 Seeds: eneatipos (1–9), 135 preguntas + opciones de respuesta, sectores y competencias base, TyC v1,
+  usuario ADMIN.
+- T0.6 Layout base responsive + theming.
+
+### M1 — Auth + TyC
+- T1.1 Formulario de registro con selector de rol (Postulante/Reclutador).
+- T1.2 Login único + detección de rol + redirección.
+- T1.3 Recuperación de contraseña (Supabase).
+- T1.4 Middleware de protección de rutas por rol.
+- T1.5 Aceptación de TyC versionada (bloqueo + re-prompt) y registro `aceptacion_tyc`.
+
+### M2 — Onboarding + Eneagrama
+- T2.1 Datos básicos del postulante.
+- T2.2 Wizard de 135 preguntas paginado + indicador de progreso.
+- T2.3 Persistencia de avance parcial (respuesta_item_eneagrama).
+- T2.4 `calcularEneatipo()` (suma por tipo + regla de desempate) y persistencia del resultado.
+- T2.5 Gatillo de generación de informe al completar; primera vez: oferta de cargar HD.
+- T2.6 Guard de "Eneagrama obligatorio" en el ruteo del postulante.
+
+### M3 — Perfil Técnico
+- T3.1 CRUD Formación (obligatoria ≥1) con validación de fechas.
+- T3.2 CRUD Experiencia (opcional) con validación de fechas.
+- T3.3 CRUD Idiomas (opcional, nivel).
+- T3.4 Selección de Competencias (catálogo) — join postulante_competencia.
+- T3.5 (Could) `generarResumenConLLM()` del perfil técnico.
+
+### M4 — Human Design
+- T4.1 Formulario con selectores (Tipo, Autoridad, Perfil, Estrategia).
+- T4.2 Persistencia + gatillo de regeneración de informe al guardar/editar.
+
+### M5 — Informe de Personalidad
+- T5.1 Servicio de integración con Claude (prompt template + salida JSON estructurada).
+- T5.2 Estados PENDIENTE/LISTO/ERROR + validación de longitud (500–1.500).
+- T5.3 Regeneración (Eneagrama/HD) manteniendo un único informe vigente.
+- T5.4 Visor del informe con loading/error + reintento.
+- T5.5 Control de costos (caching, límite de tokens, logging de uso).
+
+### M6 — Certificado
+- T6.1 `generarPDF()` (PDF a partir de perfil técnico + informe) + subida a Storage.
+- T6.2 Generación de QR → `/verificar/{id}` + timestamp de firma.
+- T6.3 `descargarPDF()` con URL firmada.
+- T6.4 Página pública de verificación + `verificarServidor()`.
+
+### M7 — Visibilidad/Privacidad
+- T7.1 Toggle perfilEnBusqueda.
+- T7.2 Lógica server-side de exposición de contacto (perfilEnBusqueda OR postulación a puesto propio).
+
+### M8 — Puestos + Postulaciones
+- T8.1 CRUD Puesto (con perfilPsicologicoDeseado oculto al postulante) + baja lógica.
+- T8.2 Registro en `historial_puesto` al activar; alerta ≥3/año.
+- T8.3 Buscador de puestos + filtros + "Postularme".
+- T8.4 Estados de postulación + `actualizarEstado` / `descartarPostulacion`.
+- T8.5 Cierre de puesto → cascada a CERRADA.
+- T8.6 Historial de postulaciones del postulante.
+- T8.7 Notificación email en cambio de estado.
+
+### M9 — Asistente IA + Notas
+- T9.1 UI de consulta IA (chat/form) + `registrarConsulta` (estado, métricas).
+- T9.2 Servicio Claude para compatibilidad candidato-puesto (económico).
+- T9.3 CRUD de notas privadas (visibles solo al autor).
+
+### M10 — Administración
+- T10.1 CRUD Sectores (crear/desactivar).
+- T10.2 CRUD Competencias (crear/desactivar).
+- T10.3 Listado/moderación de postulantes (desactivar perfil).
+- T10.4 Listado de empresas/reclutadores.
+- T10.5 Monitor de informes (estados).
+- T10.6 Dashboard de métricas.
+
+---
+
+## 19. DEPENDENCIAS ENTRE MÓDULOS
+
+```
+M0 (Infra)
+  └── M1 (Auth + TyC)
+        ├── M2 (Onboarding + Eneagrama)        [bloquea todo el flujo Postulante]
+        │     ├── M3 (Perfil Técnico)
+        │     ├── M4 (Human Design)
+        │     └── M5 (Informe LLM)  ← requiere M2 (y opcional M4)
+        │            └── M6 (Certificado)  ← requiere M3 + M5
+        ├── M7 (Visibilidad)  ← requiere M3
+        ├── M8 (Puestos + Postulaciones)  ← requiere M1; interactúa con M7 (contacto)
+        │     └── M12 (Notificaciones email)
+        ├── M9 (Asistente IA + Notas)  ← requiere M5 (informe) + M8 (puesto/postulante)
+        ├── M10 (Admin)  ← requiere M0/M1; provee catálogos a M3/M8
+        └── M11 (Analítica)  ← consume M8 (HistorialPuesto) y M9 (ConsultaIA)
+```
+
+**Dependencias críticas:**
+- El **Eneagrama (M2)** es barrera de entrada del postulante: M3–M6 dependen de él.
+- El **Informe (M5)** depende de Eneagrama y, opcionalmente, Human Design; el **Certificado (M6)** depende de
+  Perfil Técnico + Informe LISTO.
+- Los **catálogos (M10)** (sectores/competencias) alimentan M3 (competencias) y M8 (sector del puesto).
+- La **liberación de contacto** acopla M7 (visibilidad) con M8 (postulación).
+
+---
+
+## 20. SUPUESTOS Y DECISIONES ABIERTAS
+
+- **Decisión tomada:** se elimina `PerfilAdministrador`; el rol vive en `Usuario`.
+- **Decisión tomada:** `CompetenciaIdioma` se normaliza en `competencia` (catálogo) + `idioma` (con nivel).
+- **Abierto:** escala exacta de `nivelIdioma` y de `opcion_respuesta` del Eneagrama (valores numéricos).
+- **Abierto:** regla de **desempate** cuando dos eneatipos empatan en puntaje.
+- **Abierto:** modelo Claude exacto por etapa (informe vs. asistente) según calidad/costo medidos.
+- **Abierto:** proveedor de email transaccional para notificaciones (Supabase vs. Resend u otro).
+- **Pendiente de la propietaria:** contenido definitivo de las 135 preguntas y su mapeo a eneatipo.
+
+---
+
+*Fin de PLANIFICACION_PROYECTO.txt*
