@@ -92,6 +92,9 @@ export async function iniciarSesion(
   })
 
   if (error || !data.user) {
+    if (error?.message?.toLowerCase().includes('email not confirmed')) {
+      return { success: false, error: 'Confirmá tu email antes de ingresar. Revisá tu bandeja de entrada.' }
+    }
     return { success: false, error: 'Email o contraseña incorrectos.' }
   }
 
