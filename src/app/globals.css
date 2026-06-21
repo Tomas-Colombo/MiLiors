@@ -47,11 +47,13 @@
   /* alias semánticos de superficie y texto */
   --color-page: #f6f7f9;
   --color-surface: #ffffff;
+  --color-surface-page: #f6f7f9; /* alias bg-surface-page */
   --color-line: #ecedf1;
   --color-line-strong: #e2e4e9;
   --color-divider: #f1f2f5;
   --color-ink: #1c2030;
   --color-ink-soft: #4b5160;
+  --color-soft: #4b5160;   /* alias text-soft (usado en registro-form y eneagrama-wizard) */
   --color-muted: #6b7280;
   --color-faint: #9aa0ab;
 

@@ -1,8 +1,34 @@
-// Layout del reclutador — sidebar y navegación se agregarán en Fase 1
-export default function ReclutadorLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return <div className="min-h-screen bg-surface-page">{children}</div>
+import { verifySession } from '@/lib/dal'
+import { AppSidebar } from '@/components/shared/app-sidebar'
+import {
+  HomeIcon,
+  BuildingIcon,
+  FileIcon,
+  SearchIcon,
+  SparklesIcon,
+} from '@/components/icons'
+
+const NAV_RECLUTADOR = [
+  { href: '/reclutador', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true },
+  { href: '/reclutador/puestos', label: 'Mis puestos', icon: <BuildingIcon size={18} /> },
+  { href: '/reclutador/postulaciones', label: 'Postulaciones', icon: <FileIcon size={18} /> },
+  { href: '/reclutador/postulantes', label: 'Buscar candidatos', icon: <SearchIcon size={18} /> },
+  { href: '/reclutador/asistente', label: 'Asistente IA', icon: <SparklesIcon size={18} /> },
+]
+
+export default async function ReclutadorLayout({ children }: { children: React.ReactNode }) {
+  const session = await verifySession()
+
+  return (
+    <div className="flex min-h-screen bg-surface-page">
+      <AppSidebar
+        items={NAV_RECLUTADOR}
+        userEmail={session.email}
+        rolLabel="Reclutador"
+      />
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
+    </div>
+  )
 }
