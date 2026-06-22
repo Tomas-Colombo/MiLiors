@@ -201,8 +201,10 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     .select('valor_respondido, pregunta_eneagrama(eneatipo_asociado)')
     .eq('test_eneagrama_id', testId)
 
-  if (!respuestas || respuestas.length < 135) {
-    return { success: false, error: 'El test no está completo. Respondé todas las preguntas.' }
+  // En testing con preguntas reducidas, aceptamos 5. En producción: 135.
+  const MIN_RESPUESTAS = process.env.NODE_ENV === 'development' ? 5 : 135
+  if (!respuestas || respuestas.length < MIN_RESPUESTAS) {
+    return { success: false, error: `El test no está completo. Respondé ${MIN_RESPUESTAS} preguntas.` }
   }
 
   // Calcular puntajes por tipo (1–9)
