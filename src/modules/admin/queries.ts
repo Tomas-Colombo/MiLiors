@@ -136,6 +136,26 @@ export async function getEmpresasAdmin() {
   })
 }
 
+// ─── Preguntas eneagrama ─────────────────────────────────────────────────────
+
+export async function getPreguntasAdmin() {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('pregunta_eneagrama')
+    .select('id, numero_pregunta, enunciado, eneatipo_asociado, fecha_creacion, codigo_original, fecha_baja, pausada')
+    .order('numero_pregunta')
+  return (data ?? []) as {
+    id: string
+    numero_pregunta: number
+    enunciado: string
+    eneatipo_asociado: number
+    fecha_creacion: string
+    codigo_original: string | null
+    fecha_baja: string | null
+    pausada: boolean
+  }[]
+}
+
 // ─── Monitor de informes ─────────────────────────────────────────────────────
 
 export async function getInformesAdmin() {

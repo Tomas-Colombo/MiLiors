@@ -25,6 +25,7 @@ export default async function AdminDashboard() {
     { href: '/admin/postulantes', label: 'Postulantes', description: 'Moderar perfiles de postulantes' },
     { href: '/admin/empresas', label: 'Empresas', description: 'Ver empresas y reclutadores' },
     { href: '/admin/informes', label: 'Informes', description: 'Monitor de informes de personalidad' },
+    { href: '/admin/preguntas', label: 'Preguntas eneagrama', description: 'Gestionar banco de preguntas del test' },
   ]
 
   return (

@@ -9,6 +9,7 @@ import {
   GridIcon,
   BarChartIcon,
   FileIcon,
+  HelpCircleIcon,
 } from '@/components/icons'
 
 const NAV_LINKS = [
@@ -18,6 +19,7 @@ const NAV_LINKS = [
   { href: '/admin/postulantes', label: 'Postulantes', icon: <UsersIcon size={18} /> },
   { href: '/admin/empresas', label: 'Empresas', icon: <BuildingIcon size={18} /> },
   { href: '/admin/informes', label: 'Informes', icon: <FileIcon size={18} /> },
+  { href: '/admin/preguntas', label: 'Preguntas eneagrama', icon: <HelpCircleIcon size={18} /> },
 ]
 
 export function AdminNav() {
