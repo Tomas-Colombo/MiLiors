@@ -25,6 +25,7 @@ export function LoginForm() {
               type="email"
               placeholder="tucuenta@email.com"
               leftIcon={<MailIcon size={17} />}
+              defaultValue={state && !state.success ? (state.fieldErrors?._email?.[0] ?? '') : ''}
               status={state && !state.success && state.fieldErrors?.email ? 'error' : undefined}
               autoComplete="email"
             />
@@ -45,7 +46,7 @@ export function LoginForm() {
             />
           </Field>
 
-          {state && !state.success && state.error && !state.fieldErrors && (
+          {state && !state.success && state.error && !state.fieldErrors?.email && !state.fieldErrors?.password && (
             <Alert tone="error" title={state.error} />
           )}
         </div>

@@ -34,6 +34,12 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
     <div className="flex flex-col gap-2 items-end">
       <div className="flex gap-2">
         <a
+          href={`/reclutador/puestos/${puestoId}`}
+          className="inline-flex h-8 items-center rounded-[7px] border border-neutral-300 bg-surface px-3.5 text-[12.5px] font-semibold text-ink-soft hover:bg-neutral-50"
+        >
+          Ver
+        </a>
+        <a
           href={`/reclutador/puestos/${puestoId}/editar`}
           className="inline-flex h-8 items-center rounded-[7px] border border-neutral-300 bg-surface px-3.5 text-[12.5px] font-semibold text-ink-soft hover:bg-neutral-50"
         >

@@ -42,20 +42,35 @@ export async function crearEmpresaYAsociar(
     id: empresaId,
     nombre_empresa: parsed.data.nombre_empresa,
     descripcion: parsed.data.descripcion ?? null,
-    url_empresa: parsed.data.url_empresa || null,
+    link_url: parsed.data.url_empresa || null,
   })
 
-  if (empresaError) return { success: false, error: 'No se pudo crear la empresa.' }
+  if (empresaError) {
+    console.error('[crearEmpresaYAsociar] empresa insert error:', empresaError)
+    return { success: false, error: 'No se pudo crear la empresa.' }
+  }
 
-  // Associate to recruiter profile (upsert)
+  // Associate to recruiter profile — insert on first time, update empresa_id if profile already exists
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: reclutadorError } = await (admin.from('perfil_reclutador') as any)
-    .upsert(
-      { usuario_id: session.id, empresa_id: empresaId },
-      { onConflict: 'usuario_id' }
-    )
+  const { data: existing } = await (admin.from('perfil_reclutador') as any)
+    .select('id')
+    .eq('usuario_id', session.id)
+    .maybeSingle()
 
-  if (reclutadorError) return { success: false, error: 'No se pudo asociar la empresa al perfil.' }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reclutadorQuery = existing
+    ? (admin.from('perfil_reclutador') as any)
+        .update({ empresa_id: empresaId })
+        .eq('usuario_id', session.id)
+    : (admin.from('perfil_reclutador') as any)
+        .insert({ usuario_id: session.id, empresa_id: empresaId, nombre_reclutador: session.email })
+
+  const { error: reclutadorError } = await reclutadorQuery
+
+  if (reclutadorError) {
+    console.error('[crearEmpresaYAsociar] perfil_reclutador error:', reclutadorError)
+    return { success: false, error: 'No se pudo asociar la empresa al perfil.' }
+  }
 
   revalidatePath('/reclutador')
   redirect('/reclutador/puestos')

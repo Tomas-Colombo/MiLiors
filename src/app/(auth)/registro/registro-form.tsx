@@ -63,6 +63,7 @@ export function RegistroForm() {
                 type="email"
                 placeholder="tucuenta@email.com"
                 leftIcon={<MailIcon size={17} />}
+                defaultValue={state && !state.success ? (state.fieldErrors?._email?.[0] ?? '') : ''}
                 status={state && !state.success && state.fieldErrors?.email ? 'error' : undefined}
                 autoComplete="email"
               />
@@ -102,7 +103,7 @@ export function RegistroForm() {
             </Field>
 
             {/* Error general */}
-            {state && !state.success && state.error && !state.fieldErrors && (
+            {state && !state.success && state.error && !state.fieldErrors?.email && !state.fieldErrors?.password && !state.fieldErrors?.confirmPassword && !state.fieldErrors?.rol && (
               <Alert tone="error" title={state.error} />
             )}
 

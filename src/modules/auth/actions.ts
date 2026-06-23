@@ -26,7 +26,10 @@ export async function registrarUsuario(
     return {
       success: false,
       error: 'Revisá los campos del formulario.',
-      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fieldErrors: {
+        ...parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        _email: [String(raw.email ?? '')],
+      },
     }
   }
 
@@ -44,9 +47,9 @@ export async function registrarUsuario(
 
   if (authError || !authData.user) {
     if (authError?.message?.toLowerCase().includes('already registered')) {
-      return { success: false, error: 'Ya existe una cuenta con ese email.' }
+      return { success: false, error: 'Ya existe una cuenta con ese email.', fieldErrors: { _email: [email] } }
     }
-    return { success: false, error: 'No se pudo crear la cuenta. Intentá de nuevo.' }
+    return { success: false, error: 'No se pudo crear la cuenta. Intentá de nuevo.', fieldErrors: { _email: [email] } }
   }
 
   // 2. Insertar en tabla usuario (usando admin client para saltear RLS en insert inicial)
@@ -81,7 +84,10 @@ export async function iniciarSesion(
     return {
       success: false,
       error: 'Revisá los campos del formulario.',
-      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fieldErrors: {
+        ...parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        _email: [String(raw.email ?? '')],
+      },
     }
   }
 
@@ -93,9 +99,9 @@ export async function iniciarSesion(
 
   if (error || !data.user) {
     if (error?.message?.toLowerCase().includes('email not confirmed')) {
-      return { success: false, error: 'Confirmá tu email antes de ingresar. Revisá tu bandeja de entrada.' }
+      return { success: false, error: 'Confirmá tu email antes de ingresar. Revisá tu bandeja de entrada.', fieldErrors: { _email: [parsed.data.email] } }
     }
-    return { success: false, error: 'Email o contraseña incorrectos.' }
+    return { success: false, error: 'Email o contraseña incorrectos.', fieldErrors: { _email: [parsed.data.email] } }
   }
 
   const rol = data.user.user_metadata?.rol as RolUsuario | undefined

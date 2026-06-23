@@ -82,6 +82,65 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
   })
 })
 
+/** Detalle de un puesto propio del reclutador actual (incluye perfil_psicologico_deseado) */
+export const getPuestoById = cache(async (
+  puestoId: string
+): Promise<(PuestoItem & { perfil_psicologico_deseado: string | null }) | null> => {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!reclutador) return null
+
+  const { data } = await supabase
+    .from('puesto')
+    .select(`
+      id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
+      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
+      empresa_id, sector_id, perfil_psicologico_deseado,
+      empresa(nombre_empresa), sector_industrial(nombre_sector)
+    `)
+    .eq('id', puestoId)
+    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .maybeSingle()
+
+  if (!data) return null
+
+  const r = data as {
+    id: string; titulo_puesto: string; descripcion_texto: string | null
+    idioma: string; carga_horaria: string; ubicacion: string
+    nivel_experiencia: string | null; activo: boolean
+    fecha_publicacion: string; fecha_baja_puesto: string | null
+    empresa_id: string; sector_id: string | null
+    perfil_psicologico_deseado: string | null
+    empresa: { nombre_empresa: string } | null
+    sector_industrial: { nombre_sector: string } | null
+  }
+
+  return {
+    id: r.id,
+    titulo_puesto: r.titulo_puesto,
+    descripcion_texto: r.descripcion_texto,
+    idioma: r.idioma,
+    carga_horaria: r.carga_horaria,
+    ubicacion: r.ubicacion,
+    nivel_experiencia: r.nivel_experiencia,
+    activo: r.activo,
+    fecha_publicacion: r.fecha_publicacion,
+    fecha_baja_puesto: r.fecha_baja_puesto,
+    empresa_id: r.empresa_id,
+    sector_id: r.sector_id,
+    perfil_psicologico_deseado: r.perfil_psicologico_deseado,
+    nombre_empresa: r.empresa?.nombre_empresa,
+    nombre_sector: r.sector_industrial?.nombre_sector,
+  }
+})
+
 /** Puestos activos disponibles para postulantes (SIN perfil_psicologico_deseado) */
 export const getPuestosActivos = cache(async (filtros?: {
   sectorId?: string
