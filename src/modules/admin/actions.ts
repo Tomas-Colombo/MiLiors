@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { ActionResult } from '@/lib/types/domain'
+import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 
 // Guard ADMIN
 async function requireAdmin() {
@@ -128,6 +129,7 @@ export async function crearPregunta(
     .insert({ enunciado, eneatipo_asociado, numero_pregunta })
   if (error) return { success: false, error: 'No se pudo crear la pregunta.' }
 
+  await resetearTestsEnProgreso()
   revalidatePath('/admin/preguntas')
   return { success: true, data: undefined }
 }
@@ -164,6 +166,7 @@ export async function eliminarPregunta(id: string): Promise<ActionResult> {
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar la pregunta.' }
+  await resetearTestsEnProgreso()
   revalidatePath('/admin/preguntas')
   return { success: true, data: undefined }
 }
@@ -176,6 +179,7 @@ export async function togglePausarPregunta(id: string, pausada: boolean): Promis
     .update({ pausada })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo cambiar el estado.' }
+  await resetearTestsEnProgreso()
   revalidatePath('/admin/preguntas')
   return { success: true, data: undefined }
 }

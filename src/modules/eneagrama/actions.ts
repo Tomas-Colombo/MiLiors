@@ -213,6 +213,7 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     .from('pregunta_eneagrama')
     .select('id, eneatipo_asociado')
     .eq('pausada', false)
+    .is('fecha_baja', null)
 
   if (errPreguntas || !preguntasActivas) {
     return { success: false, error: 'No se pudieron cargar las preguntas del test.' }

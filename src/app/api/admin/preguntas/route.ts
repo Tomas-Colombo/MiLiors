@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
+import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 
 export async function POST(req: NextRequest) {
   // Verificar sesión y rol ADMIN
@@ -54,5 +55,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se pudo crear la pregunta.' }, { status: 500 })
   }
 
+  await resetearTestsEnProgreso()
   return NextResponse.json({ id: (data as { id: string }).id }, { status: 201 })
 }
