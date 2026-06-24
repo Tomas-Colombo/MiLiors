@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { onboardingPostulanteSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
+import { calcularResultadoEneagrama, ErrorRespuestasIncompletas } from './calculator'
 
 // ─── Onboarding: guardar datos básicos ───────────────────────────────────────
 export async function guardarDatosBasicos(
@@ -96,15 +97,27 @@ export async function iniciarTest(perfilId: string): Promise<ActionResult<{ test
     .single()
 
   if (testExistente) {
-    // Reiniciar: borrar respuestas y resetear eneatipo
+    // Reiniciar: borrar respuestas, puntajes y resetear resultado
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('respuesta_item_eneagrama') as any)
       .delete()
       .eq('test_eneagrama_id', (testExistente as { id: string }).id)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('resultado_puntaje_eneagrama') as any)
+      .delete()
+      .eq('test_eneagrama_id', (testExistente as { id: string }).id)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('test_eneagrama') as any)
-      .update({ eneatipo_id: null, fecha_realizacion: new Date().toISOString() })
+      .update({
+        eneatipo_id: null,
+        ala: null,
+        tiene_empate_dominante: false,
+        dominantes_empate: null,
+        tiene_empate_ala: false,
+        fecha_realizacion: new Date().toISOString(),
+      })
       .eq('id', (testExistente as { id: string }).id)
 
     return { success: true, data: { testId: (testExistente as { id: string }).id } }
@@ -195,59 +208,92 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
 
   if (!perfil) return { success: false, error: 'Acceso denegado.' }
 
-  // Cargar respuestas + eneatipo_asociado de cada pregunta
-  const { data: respuestas } = await supabase
+  // Cargar preguntas activas (pausada=false) para saber qué se espera responder
+  const { data: preguntasActivas, error: errPreguntas } = await supabase
+    .from('pregunta_eneagrama')
+    .select('id, eneatipo_asociado')
+    .eq('pausada', false)
+
+  if (errPreguntas || !preguntasActivas) {
+    return { success: false, error: 'No se pudieron cargar las preguntas del test.' }
+  }
+
+  // Cargar respuestas del candidato con el eneatipo de cada pregunta
+  const { data: respuestasDb } = await supabase
     .from('respuesta_item_eneagrama')
-    .select('valor_respondido, pregunta_eneagrama(eneatipo_asociado)')
+    .select('pregunta_id, valor_respondido, pregunta_eneagrama(eneatipo_asociado)')
     .eq('test_eneagrama_id', testId)
 
-  // En testing con preguntas reducidas, aceptamos 5. En producción: 135.
-  const MIN_RESPUESTAS = process.env.NODE_ENV === 'development' ? 5 : 135
-  if (!respuestas || respuestas.length < MIN_RESPUESTAS) {
-    return { success: false, error: `El test no está completo. Respondé ${MIN_RESPUESTAS} preguntas.` }
+  if (!respuestasDb) {
+    return { success: false, error: 'No se pudieron cargar las respuestas.' }
   }
 
-  // Calcular puntajes por tipo (1–9)
-  const puntajes: Record<number, number> = {}
-  for (let i = 1; i <= 9; i++) puntajes[i] = 0
-
-  for (const r of respuestas) {
-    const resp = r as { valor_respondido: number; pregunta_eneagrama: { eneatipo_asociado: number } | null }
-    const tipo = resp.pregunta_eneagrama?.eneatipo_asociado
-    if (tipo && tipo >= 1 && tipo <= 9) {
-      puntajes[tipo] += resp.valor_respondido
+  // Convertir al formato que espera el calculator
+  const respuestasInput = respuestasDb.flatMap(r => {
+    const row = r as {
+      pregunta_id: string
+      valor_respondido: number
+      pregunta_eneagrama: { eneatipo_asociado: number } | null
     }
-  }
+    const tipo = row.pregunta_eneagrama?.eneatipo_asociado
+    if (!tipo || tipo < 1 || tipo > 9) return []
+    return [{
+      preguntaId: row.pregunta_id,
+      eneatipoAsociado: tipo as import('./calculator').NumeroEneatipo,
+      valorRespondido: row.valor_respondido as 1 | 2 | 3 | 4 | 5,
+    }]
+  })
 
-  // Encontrar el mayor puntaje; en empate, elegir el número menor
-  // Decisión: empate → tipo menor (documentado para revisión futura con la propietaria)
-  let maxPuntaje = 0
-  let eneatipoGanador = 1
-  for (let i = 1; i <= 9; i++) {
-    if (puntajes[i] > maxPuntaje) {
-      maxPuntaje = puntajes[i]
-      eneatipoGanador = i
+  // Calcular resultado (lanza ErrorRespuestasIncompletas si faltan respuestas)
+  const preguntasEsperadasIds = new Set(preguntasActivas.map(p => (p as { id: string }).id))
+  let resultado: import('./calculator').ResultadoCalculo
+  try {
+    resultado = calcularResultadoEneagrama(respuestasInput, preguntasEsperadasIds)
+  } catch (e) {
+    if (e instanceof ErrorRespuestasIncompletas) {
+      return {
+        success: false,
+        error: `El test no está completo. Faltan ${e.faltantes.length} respuesta(s).`,
+      }
     }
+    return { success: false, error: 'Error al calcular el resultado.' }
   }
 
-  // Obtener el UUID del eneatipo ganador
-  const { data: eneatipo } = await supabase
+  // Obtener el UUID del eneatipo dominante principal para la FK existente
+  // Con empate, guardamos el primer dominante (número menor); tieneEmpateDominante indica la situación real.
+  const dominantePrincipal = resultado.dominantes[0]
+  const { data: eneatipoRow } = await supabase
     .from('eneatipo')
     .select('id')
-    .eq('numero_eneatipo', eneatipoGanador)
+    .eq('numero_eneatipo', dominantePrincipal)
     .single()
 
-  if (!eneatipo) return { success: false, error: 'Error al obtener el eneatipo.' }
+  if (!eneatipoRow) return { success: false, error: 'Error al obtener el eneatipo.' }
 
-  const eneatipoTyped = eneatipo as { id: string }
-
-  // Guardar resultado en el test
+  // Persistir resultado en test_eneagrama
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin.from('test_eneagrama') as any)
-    .update({ eneatipo_id: eneatipoTyped.id })
+    .update({
+      eneatipo_id: (eneatipoRow as { id: string }).id,
+      ala: resultado.ala,
+      tiene_empate_dominante: resultado.tieneEmpateDominante,
+      dominantes_empate: resultado.tieneEmpateDominante ? resultado.dominantes : null,
+      tiene_empate_ala: resultado.tieneEmpateAla,
+    })
     .eq('id', testId)
 
-  // Crear informe_personalidad en PENDIENTE (la generación LLM es Fase 4)
+  // Persistir los 9 puntajes en resultado_puntaje_eneagrama (upsert)
+  const filasPuntaje = resultado.puntajes.map(p => ({
+    test_eneagrama_id: testId,
+    eneatipo_numero: p.eneatipo,
+    puntaje_crudo: p.puntajeCrudo,
+    porcentaje: p.porcentaje,
+  }))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('resultado_puntaje_eneagrama') as any)
+    .upsert(filasPuntaje, { onConflict: 'test_eneagrama_id,eneatipo_numero' })
+
+  // Crear/reiniciar informe_personalidad en PENDIENTE
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: informeExistente } = await (supabase.from('informe_personalidad') as any)
     .select('id')
@@ -261,7 +307,6 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
       estado_informe: 'PENDIENTE',
     })
   } else {
-    // Reiniciar informe existente a PENDIENTE (porque el test cambió)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
       .update({ estado_informe: 'PENDIENTE', contenido_informe: null })
@@ -271,5 +316,5 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
   revalidatePath('/postulante')
   revalidatePath('/postulante/eneagrama')
 
-  return { success: true, data: { eneatipoNumero: eneatipoGanador } }
+  return { success: true, data: { eneatipoNumero: dominantePrincipal } }
 }

@@ -11,6 +11,7 @@ export const getPreguntasEneagrama = cache(async () => {
   const { data, error } = await supabase
     .from('pregunta_eneagrama')
     .select('id, numero_pregunta, enunciado, eneatipo_asociado')
+    .eq('pausada', false)
     .order('numero_pregunta', { ascending: true })
 
   if (error) throw new Error('Error cargando preguntas del Eneagrama')
