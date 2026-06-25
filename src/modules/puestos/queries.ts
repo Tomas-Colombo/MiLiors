@@ -141,47 +141,49 @@ export const getPuestoById = cache(async (
   }
 })
 
+export const PUESTOS_PER_PAGE = 12
+
 /** Puestos activos disponibles para postulantes (SIN perfil_psicologico_deseado) */
-export const getPuestosActivos = cache(async (filtros?: {
+export const getPuestosActivos = async (filtros?: {
   sectorId?: string
   cargaHoraria?: string
   ubicacion?: string
   busqueda?: string
-}): Promise<PuestoItem[]> => {
+  diasDesde?: number
+  page?: number
+}): Promise<{ items: PuestoItem[]; total: number }> => {
   const supabase = await createClient()
+  const page = filtros?.page ?? 0
+  const from = page * PUESTOS_PER_PAGE
+  const to = from + PUESTOS_PER_PAGE - 1
 
-  let query = supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
     .from('puesto')
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
       empresa_id, sector_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector)
-    `)
+    `, { count: 'exact' })
     .eq('activo', true)
     .is('fecha_baja_puesto', null)
     .order('fecha_publicacion', { ascending: false })
+    .range(from, to)
 
-  if (filtros?.sectorId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    query = (query as any).eq('sector_id', filtros.sectorId)
-  }
-  if (filtros?.cargaHoraria) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    query = (query as any).eq('carga_horaria', filtros.cargaHoraria)
-  }
-  if (filtros?.ubicacion) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    query = (query as any).eq('ubicacion', filtros.ubicacion)
-  }
-  if (filtros?.busqueda) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    query = (query as any).ilike('titulo_puesto', `%${filtros.busqueda}%`)
+  if (filtros?.sectorId) query = query.eq('sector_id', filtros.sectorId)
+  if (filtros?.cargaHoraria) query = query.eq('carga_horaria', filtros.cargaHoraria)
+  if (filtros?.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
+  if (filtros?.busqueda) query = query.ilike('titulo_puesto', `%${filtros.busqueda}%`)
+  if (filtros?.diasDesde) {
+    const since = new Date()
+    since.setDate(since.getDate() - filtros.diasDesde)
+    query = query.gte('fecha_publicacion', since.toISOString())
   }
 
-  const { data } = await query
+  const { data, count } = await query
 
-  return (data ?? []).map((row: unknown) => {
+  const items = (data ?? []).map((row: unknown) => {
     const r = row as {
       id: string; titulo_puesto: string; descripcion_texto: string | null
       idioma: string; carga_horaria: string; ubicacion: string
@@ -208,6 +210,53 @@ export const getPuestosActivos = cache(async (filtros?: {
       nombre_sector: r.sector_industrial?.nombre_sector,
     }
   })
+
+  return { items, total: count ?? 0 }
+}
+
+/** Detalle de un puesto público para postulantes (SIN perfil_psicologico_deseado) */
+export const getPuestoPublicoById = cache(async (puestoId: string): Promise<PuestoItem | null> => {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('puesto')
+    .select(`
+      id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
+      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
+      empresa_id, sector_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector)
+    `)
+    .eq('id', puestoId)
+    .maybeSingle()
+
+  if (!data) return null
+
+  const r = data as {
+    id: string; titulo_puesto: string; descripcion_texto: string | null
+    idioma: string; carga_horaria: string; ubicacion: string
+    nivel_experiencia: string | null; activo: boolean
+    fecha_publicacion: string; fecha_baja_puesto: string | null
+    empresa_id: string; sector_id: string | null
+    empresa: { nombre_empresa: string } | null
+    sector_industrial: { nombre_sector: string } | null
+  }
+
+  return {
+    id: r.id,
+    titulo_puesto: r.titulo_puesto,
+    descripcion_texto: r.descripcion_texto,
+    idioma: r.idioma,
+    carga_horaria: r.carga_horaria,
+    ubicacion: r.ubicacion,
+    nivel_experiencia: r.nivel_experiencia,
+    activo: r.activo,
+    fecha_publicacion: r.fecha_publicacion,
+    fecha_baja_puesto: r.fecha_baja_puesto,
+    empresa_id: r.empresa_id,
+    sector_id: r.sector_id,
+    nombre_empresa: r.empresa?.nombre_empresa,
+    nombre_sector: r.sector_industrial?.nombre_sector,
+  }
 })
 
 /** Sectores activos para filtros */
@@ -221,8 +270,10 @@ export const getSectores = cache(async () => {
   return (data ?? []) as { id: string; nombre_sector: string }[]
 })
 
+export const POSTULACIONES_PER_PAGE = 10
+
 /** Postulaciones del postulante actual */
-export const getMisPostulaciones = cache(async () => {
+export const getMisPostulaciones = async (filtros?: { page?: number }) => {
   const session = await verifySession()
   const supabase = await createClient()
 
@@ -232,18 +283,23 @@ export const getMisPostulaciones = cache(async () => {
     .eq('usuario_id', session.id)
     .single()
 
-  if (!postulante) return []
+  if (!postulante) return { items: [], total: 0 }
 
-  const { data } = await supabase
+  const page = filtros?.page ?? 0
+  const from = page * POSTULACIONES_PER_PAGE
+  const to = from + POSTULACIONES_PER_PAGE - 1
+
+  const { data, count } = await supabase
     .from('postulacion')
     .select(`
       id, estado, fecha_postulacion, updated_at,
       puesto(id, titulo_puesto, empresa(nombre_empresa))
-    `)
+    `, { count: 'exact' })
     .eq('postulante_id', (postulante as { id: string }).id)
     .order('fecha_postulacion', { ascending: false })
+    .range(from, to)
 
-  return (data ?? []).map((row: unknown) => {
+  const items = (data ?? []).map((row: unknown) => {
     const r = row as {
       id: string; estado: string; fecha_postulacion: string; updated_at: string
       puesto: { id: string; titulo_puesto: string; empresa: { nombre_empresa: string } | null } | null
@@ -258,7 +314,9 @@ export const getMisPostulaciones = cache(async () => {
       nombre_empresa: r.puesto?.empresa?.nombre_empresa,
     }
   })
-})
+
+  return { items, total: count ?? 0 }
+}
 
 /** IDs de puestos a los que ya postuló el postulante (para deshabilitar botón) */
 export const getMisPostulacionesPuestoIds = cache(async (): Promise<Set<string>> => {
