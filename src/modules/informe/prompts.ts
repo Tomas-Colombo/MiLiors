@@ -1,23 +1,18 @@
 import type { FormacionItem, ExperienciaItem, IdiomaItem, CompetenciaItem } from '@/modules/perfil-tecnico/queries'
 import type { HumanDesignData } from '@/modules/human-design/queries'
 
-// ─── Nombres de eneatipos para el prompt ─────────────────────────────────────
-const NOMBRE_ENEATIPO: Record<number, string> = {
-  1: 'El Perfeccionista',
-  2: 'El Ayudador',
-  3: 'El Triunfador',
-  4: 'El Individualista',
-  5: 'El Investigador',
-  6: 'El Leal',
-  7: 'El Entusiasta',
-  8: 'El Desafiador',
-  9: 'El Pacificador',
+export type DominanteInfo = {
+  numero: number
+  nombre: string
+  puntajeCrudo: number
+  porcentaje: number
 }
 
 export type InformeContext = {
   nombreCompleto: string
   especificidadPuesto: string | null
-  eneatipoNumero: number
+  dominantes: DominanteInfo[]
+  tieneEmpateDominante: boolean
   humanDesign: HumanDesignData | null
   formaciones: FormacionItem[]
   experiencias: ExperienciaItem[]
@@ -25,12 +20,8 @@ export type InformeContext = {
   competencias: CompetenciaItem[]
 }
 
-/**
- * Builds the system prompt and user prompt for report generation.
- * Keeping prompts separate from service logic allows changing them without touching the service.
- */
 export function buildInformePrompts(ctx: InformeContext): { systemPrompt: string; userPrompt: string } {
-  const systemPrompt = `Sos un psicólogo organizacional experto en Eneagrama y Human Design aplicados al desarrollo profesional. 
+  const systemPrompt = `Sos un psicólogo organizacional experto en Eneagrama y Human Design aplicados al desarrollo profesional.
 Tu tarea es redactar un Informe de Personalidad Profesional para un candidato laboral.
 
 FORMATO DE SALIDA:
@@ -45,9 +36,9 @@ FORMATO DE SALIDA:
 - Tono: profesional, empático, basado en evidencia del marco
 - No inventar rasgos no sustentados por el Eneatipo o el Human Design
 - Si no hay datos de Human Design, omitir esa sección del análisis
-- No mencionar el número de eneatipo en forma de etiqueta técnica — integrarlo naturalmente`
+- No mencionar el número de eneatipo en forma de etiqueta técnica — integrarlo naturalmente
+- Si hay empate de eneatipos dominantes, analizá las confluencias y tensiones entre ambos tipos sin elegir uno arbitrariamente`
 
-  // Build compact technical profile section
   const formacionStr = ctx.formaciones.length > 0
     ? ctx.formaciones.map(f => `  - ${f.titulo} en ${f.institucion}${f.fecha_graduacion ? ` (${f.fecha_graduacion})` : ''}`).join('\n')
     : '  - No especificada'
@@ -67,10 +58,21 @@ FORMATO DE SALIDA:
   const hdStr = ctx.humanDesign
     ? `Human Design:
   - Tipo energético: ${ctx.humanDesign.tipo_energetico}
-  - Autoridad: ${ctx.humanDesign.autoridad_hd}
+  - Categoría de energía: ${ctx.humanDesign.energy_type_classification ?? 'No especificada'}
+  - Autoridad interna: ${ctx.humanDesign.autoridad_hd}
   - Perfil: ${ctx.humanDesign.perfil_hd}
   - Estrategia: ${ctx.humanDesign.estrategia_hd}`
     : 'Human Design: No proporcionado'
+
+  let eneatipoStr: string
+  if (ctx.tieneEmpateDominante) {
+    eneatipoStr = `Eneatipos dominantes (EMPATE):
+${ctx.dominantes.map(d => `  - Tipo ${d.numero} — ${d.nombre} (puntaje: ${d.puntajeCrudo}, ${d.porcentaje}%)`).join('\n')}
+Nota: el candidato presenta puntaje idéntico en estos tipos. Analizá las confluencias y divergencias entre ambos.`
+  } else {
+    const d = ctx.dominantes[0]
+    eneatipoStr = `Eneatipo: ${d.numero} — ${d.nombre}`
+  }
 
   const userPrompt = `Redactá el Informe de Personalidad Profesional para el siguiente candidato:
 
@@ -79,7 +81,7 @@ Nombre: ${ctx.nombreCompleto}
 Búsqueda laboral: ${ctx.especificidadPuesto ?? 'No especificada'}
 
 PERFIL PSICOLÓGICO:
-Eneatipo: ${ctx.eneatipoNumero} — ${NOMBRE_ENEATIPO[ctx.eneatipoNumero] ?? 'Desconocido'}
+${eneatipoStr}
 ${hdStr}
 
 PERFIL TÉCNICO:

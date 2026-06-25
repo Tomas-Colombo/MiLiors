@@ -47,7 +47,7 @@ export const buscarPostulantes = cache(async (filtros?: {
     .from('perfil_postulante')
     .select(`
       id, nombre_completo, especificidad_puesto, perfil_en_busqueda,
-      test_eneagrama(eneatipo(numero_eneatipo, nombre))
+      test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
     .eq('perfil_en_busqueda', true)
 
@@ -84,15 +84,19 @@ export const buscarPostulantes = cache(async (filtros?: {
       nombre_completo: string
       especificidad_puesto: string | null
       perfil_en_busqueda: boolean
-      test_eneagrama: { eneatipo: { numero_eneatipo: number; nombre: string } | null } | null
+      test_eneagrama: {
+        tiene_empate_dominante: boolean
+        test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
+      } | null
     }
+    const primerDominante = r.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo ?? null
     return {
       id: r.id,
       nombre_completo: r.nombre_completo,
       especificidad_puesto: r.especificidad_puesto,
       perfil_en_busqueda: r.perfil_en_busqueda,
-      eneatipo_numero: r.test_eneagrama?.eneatipo?.numero_eneatipo ?? null,
-      eneatipo_nombre: r.test_eneagrama?.eneatipo?.nombre ?? null,
+      eneatipo_numero: primerDominante?.numero_eneatipo ?? null,
+      eneatipo_nombre: primerDominante?.nombre ?? null,
       competencias: competenciasPorPostulante[r.id] ?? [],
     }
   })
@@ -142,7 +146,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
       id, nombre_completo, especificidad_puesto, perfil_en_busqueda,
       telefono, enlace_linkedin, portfolio,
       usuario(email),
-      test_eneagrama(eneatipo(numero_eneatipo, nombre))
+      test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
     .eq('id', postulanteId)
     .single()
@@ -158,7 +162,10 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     enlace_linkedin: string | null
     portfolio: string | null
     usuario: { email: string } | null
-    test_eneagrama: { eneatipo: { numero_eneatipo: number; nombre: string } | null } | null
+    test_eneagrama: {
+      tiene_empate_dominante: boolean
+      test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
+    } | null
   }
 
   // Gate: must be searchable OR have applied to this recruiter's jobs
@@ -238,8 +245,8 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     nombre_completo: p.nombre_completo,
     especificidad_puesto: p.especificidad_puesto,
     perfil_en_busqueda: p.perfil_en_busqueda,
-    eneatipo_numero: p.test_eneagrama?.eneatipo?.numero_eneatipo ?? null,
-    eneatipo_nombre: p.test_eneagrama?.eneatipo?.nombre ?? null,
+    eneatipo_numero: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ?? null,
+    eneatipo_nombre: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,
     competencias,
     email: contactoLiberado ? (p.usuario?.email ?? null) : null,
     telefono: contactoLiberado ? p.telefono : null,

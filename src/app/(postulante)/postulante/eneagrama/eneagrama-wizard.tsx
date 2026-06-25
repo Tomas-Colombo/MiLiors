@@ -28,6 +28,7 @@ type Props = {
   testId: string | null
   respuestasIniciales: Record<string, number>
   yaCompleto: boolean
+  humanDesignCompleto: boolean
 }
 
 export function EneagramaWizard({
@@ -37,6 +38,7 @@ export function EneagramaWizard({
   testId: testIdInicial,
   respuestasIniciales,
   yaCompleto,
+  humanDesignCompleto,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -53,6 +55,7 @@ export function EneagramaWizard({
   const [error, setError] = useState<string | null>(null)
   const [completado, setCompletado] = useState(yaCompleto)
   const [eneatipoResultado, setEneatipoResultado] = useState<number | null>(null)
+  const [eneatipoNombre, setEneatipoNombre] = useState<string | null>(null)
   const [iniciando, setIniciando] = useState(!testIdInicial)
 
   const totalPaginas = Math.ceil(preguntas.length / PREGUNTAS_POR_PAGINA)
@@ -138,6 +141,7 @@ export function EneagramaWizard({
         return
       }
       setEneatipoResultado(result.data.eneatipoNumero)
+      setEneatipoNombre(result.data.eneatipoNombre)
       setCompletado(true)
     })
   }
@@ -146,29 +150,60 @@ export function EneagramaWizard({
   if (completado && eneatipoResultado) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-10">
-        <div className="w-full max-w-md text-center">
-          <div
-            className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl shadow-primary"
-            style={{ background: 'var(--gradient-brand-soft)' }}
-          >
-            <SparklesIcon size={32} className="text-white" />
+        <div className="w-full max-w-md">
+          {/* Card resultado eneagrama */}
+          <div className="rounded-2xl bg-white p-8 text-center shadow-card">
+            <div
+              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-primary"
+              style={{ background: 'var(--gradient-brand-soft)' }}
+            >
+              <CheckIcon size={28} className="text-white" />
+            </div>
+            <Badge tone="success" className="mb-3">Eneagrama completo</Badge>
+            <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+              {eneatipoNombre ?? `Eneatipo ${eneatipoResultado}`}
+            </h1>
+            <p className="mt-1 text-sm text-muted">Tipo {eneatipoResultado}</p>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink">
-            ¡Test completado!
-          </h1>
-          <p className="mt-3 text-muted">Tu eneatipo es</p>
-          <div className="my-6 text-7xl font-black text-primary-600">{eneatipoResultado}</div>
-          <p className="mb-8 text-sm text-muted">
-            Tu informe de personalidad se está generando. Podés acceder a él desde tu perfil.
-          </p>
-          <Button
-            size="lg"
-            className="w-full"
-            rightIcon={<ArrowRightIcon size={16} />}
-            onClick={() => router.push('/postulante')}
-          >
-            Ir a mi perfil
-          </Button>
+
+          {/* Propuesta Human Design — solo si no fue completado aún */}
+          {!humanDesignCompleto ? (
+            <div className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+              <div className="mb-1 text-base font-bold text-ink">¿Agregás tu Human Design?</div>
+              <p className="mb-5 text-sm text-muted">
+                Si conocés tu carta, podés incorporarla ahora y el informe de personalidad
+                combinará ambos sistemas para un resultado más completo.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button
+                  size="lg"
+                  className="w-full"
+                  rightIcon={<ArrowRightIcon size={16} />}
+                  onClick={() => router.push('/postulante/human-design')}
+                >
+                  Agregar Human Design
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => router.push('/postulante')}
+                >
+                  Continuar sin Human Design
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => router.push('/postulante')}
+              >
+                Ir a mi perfil
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     )

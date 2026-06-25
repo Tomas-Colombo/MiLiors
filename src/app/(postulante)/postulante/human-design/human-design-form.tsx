@@ -1,37 +1,51 @@
 'use client'
 
-import { useActionState, useTransition } from 'react'
+import { useActionState, useTransition, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Field, Select, Alert, Button } from '@/components/ui'
 import {
   TIPO_ENERGETICO_HD,
+  ENERGY_TYPE_CLASSIFICATION_HD,
   AUTORIDAD_HD,
   PERFIL_HD,
   ESTRATEGIA_HD,
 } from '@/lib/constants/enums'
-import { guardarHumanDesign, eliminarHumanDesign } from '@/modules/human-design/actions'
+import { guardarHumanDesign } from '@/modules/human-design/actions'
 import type { HumanDesignData } from '@/modules/human-design/queries'
 import type { ActionResult } from '@/lib/types/domain'
 
 const INITIAL_STATE: ActionResult = { success: false, error: '' }
 
 const tipoEnergeticoOptions = TIPO_ENERGETICO_HD.map((v) => ({ value: v, label: v }))
+const energyClassOptions = ENERGY_TYPE_CLASSIFICATION_HD.map((v) => ({ value: v, label: v }))
 const autoridadOptions = AUTORIDAD_HD.map((v) => ({ value: v, label: v }))
 const perfilOptions = PERFIL_HD.map((v) => ({ value: v, label: v }))
 const estrategiaOptions = ESTRATEGIA_HD.map((v) => ({ value: v, label: v }))
 
 export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
+  const router = useRouter()
   const [state, action, pending] = useActionState(guardarHumanDesign, INITIAL_STATE)
-  const [isDeleting, startDeleteTransition] = useTransition()
 
-  function handleEliminar() {
-    if (!confirm('¿Eliminás tu carta de Human Design? Esta acción no se puede deshacer.')) return
-    startDeleteTransition(async () => {
-      await eliminarHumanDesign()
-    })
-  }
+  useEffect(() => {
+    if (state.success) {
+      router.push('/postulante')
+    }
+  }, [state.success, router])
 
   return (
     <div className="space-y-5">
+      {/* Aviso de seriedad */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <p className="text-sm font-semibold text-amber-800">
+          Completá esta sección con seriedad
+        </p>
+        <p className="mt-0.5 text-sm text-amber-700">
+          Los datos de tu carta de Human Design forman parte de tu perfil de personalidad
+          y pueden influir en cómo los reclutadores te evalúan. Una vez guardado,
+          no podrás eliminar esta información.
+        </p>
+      </div>
+
       <form action={action} className="space-y-4">
         <Field
           label="Tipo energético"
@@ -47,7 +61,20 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
         </Field>
 
         <Field
-          label="Autoridad"
+          label="Subtipo / Categoría de energía"
+          required
+          error={state.success === false && state.fieldErrors?.energy_type_classification?.[0]}
+        >
+          <Select
+            name="energy_type_classification"
+            options={energyClassOptions}
+            placeholder="Seleccioná"
+            defaultValue={hd?.energy_type_classification ?? ''}
+          />
+        </Field>
+
+        <Field
+          label="Autoridad interna"
           required
           error={state.success === false && state.fieldErrors?.autoridad_hd?.[0]}
         >
@@ -88,29 +115,11 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
         {state.success === false && state.error && !state.fieldErrors && (
           <Alert tone="error">{state.error}</Alert>
         )}
-        {state.success === true && (
-          <Alert tone="success">Human Design guardado correctamente.</Alert>
-        )}
 
         <Button type="submit" disabled={pending}>
           {pending ? 'Guardando…' : hd ? 'Actualizar' : 'Guardar'}
         </Button>
       </form>
-
-      {hd && (
-        <div className="border-t border-neutral-100 pt-4">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleEliminar}
-            disabled={isDeleting}
-            className="text-error hover:bg-error-bg"
-          >
-            {isDeleting ? 'Eliminando…' : 'Eliminar Human Design'}
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

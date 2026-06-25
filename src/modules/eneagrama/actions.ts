@@ -97,30 +97,38 @@ export async function iniciarTest(perfilId: string): Promise<ActionResult<{ test
     .single()
 
   if (testExistente) {
-    // Reiniciar: borrar respuestas, puntajes y resetear resultado
+    const testId = (testExistente as { id: string }).id
+
+    // Reiniciar: borrar respuestas, puntajes y dominantes anteriores
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('respuesta_item_eneagrama') as any)
       .delete()
-      .eq('test_eneagrama_id', (testExistente as { id: string }).id)
+      .eq('test_eneagrama_id', testId)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('resultado_puntaje_eneagrama') as any)
       .delete()
-      .eq('test_eneagrama_id', (testExistente as { id: string }).id)
+      .eq('test_eneagrama_id', testId)
+
+    // ON DELETE CASCADE se encarga si borráramos el test, pero como lo reutilizamos
+    // borramos los dominantes manualmente.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('test_eneagrama_dominante') as any)
+      .delete()
+      .eq('test_eneagrama_id', testId)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('test_eneagrama') as any)
       .update({
-        eneatipo_id: null,
         ala: null,
         tiene_empate_dominante: false,
         dominantes_empate: null,
         tiene_empate_ala: false,
         fecha_realizacion: new Date().toISOString(),
       })
-      .eq('id', (testExistente as { id: string }).id)
+      .eq('id', testId)
 
-    return { success: true, data: { testId: (testExistente as { id: string }).id } }
+    return { success: true, data: { testId } }
   }
 
   // Crear nuevo test
@@ -183,7 +191,7 @@ export async function guardarRespuesta(
 }
 
 // ─── Calcular eneatipo ────────────────────────────────────────────────────────
-export async function calcularEneatipo(testId: string): Promise<ActionResult<{ eneatipoNumero: number }>> {
+export async function calcularEneatipo(testId: string): Promise<ActionResult<{ eneatipoNumero: number; eneatipoNombre: string }>> {
   const session = await verifySession()
   const supabase = await createClient()
   const admin = createAdminClient()
@@ -208,7 +216,7 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
 
   if (!perfil) return { success: false, error: 'Acceso denegado.' }
 
-  // Cargar preguntas activas (pausada=false) para saber qué se espera responder
+  // Cargar preguntas activas para validar completitud
   const { data: preguntasActivas, error: errPreguntas } = await supabase
     .from('pregunta_eneagrama')
     .select('id, eneatipo_asociado')
@@ -219,7 +227,7 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     return { success: false, error: 'No se pudieron cargar las preguntas del test.' }
   }
 
-  // Cargar respuestas del candidato con el eneatipo de cada pregunta
+  // Cargar respuestas del candidato
   const { data: respuestasDb } = await supabase
     .from('respuesta_item_eneagrama')
     .select('pregunta_id, valor_respondido, pregunta_eneagrama(eneatipo_asociado)')
@@ -229,7 +237,6 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     return { success: false, error: 'No se pudieron cargar las respuestas.' }
   }
 
-  // Convertir al formato que espera el calculator
   const respuestasInput = respuestasDb.flatMap(r => {
     const row = r as {
       pregunta_id: string
@@ -245,7 +252,6 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     }]
   })
 
-  // Calcular resultado (lanza ErrorRespuestasIncompletas si faltan respuestas)
   const preguntasEsperadasIds = new Set(preguntasActivas.map(p => (p as { id: string }).id))
   let resultado: import('./calculator').ResultadoCalculo
   try {
@@ -260,22 +266,33 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     return { success: false, error: 'Error al calcular el resultado.' }
   }
 
-  // Obtener el UUID del eneatipo dominante principal para la FK existente
-  // Con empate, guardamos el primer dominante (número menor); tieneEmpateDominante indica la situación real.
-  const dominantePrincipal = resultado.dominantes[0]
-  const { data: eneatipoRow } = await supabase
-    .from('eneatipo')
-    .select('id')
-    .eq('numero_eneatipo', dominantePrincipal)
-    .single()
+  // Obtener UUID + datos para CADA dominante
+  const dominantesConDatos = await Promise.all(
+    resultado.dominantes.map(async (num) => {
+      const { data } = await supabase
+        .from('eneatipo')
+        .select('id, nombre')
+        .eq('numero_eneatipo', num)
+        .single()
+      if (!data) return null
+      const row = data as { id: string; nombre: string }
+      const puntaje = resultado.puntajes.find(p => p.eneatipo === num)!
+      return { id: row.id, nombre: row.nombre, numero: num, puntajeCrudo: puntaje.puntajeCrudo, porcentaje: puntaje.porcentaje }
+    })
+  )
 
-  if (!eneatipoRow) return { success: false, error: 'Error al obtener el eneatipo.' }
+  if (dominantesConDatos.some(d => d === null)) {
+    return { success: false, error: 'Error al obtener los eneatipos dominantes.' }
+  }
 
-  // Persistir resultado en test_eneagrama
+  const dominantesValidos = dominantesConDatos.filter(
+    (d): d is NonNullable<typeof d> => d !== null
+  )
+
+  // Actualizar test_eneagrama (ya sin eneatipo_id)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin.from('test_eneagrama') as any)
     .update({
-      eneatipo_id: (eneatipoRow as { id: string }).id,
       ala: resultado.ala,
       tiene_empate_dominante: resultado.tieneEmpateDominante,
       dominantes_empate: resultado.tieneEmpateDominante ? resultado.dominantes : null,
@@ -283,7 +300,22 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     })
     .eq('id', testId)
 
-  // Persistir los 9 puntajes en resultado_puntaje_eneagrama (upsert)
+  // Borrar dominantes anteriores e insertar los nuevos
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('test_eneagrama_dominante') as any)
+    .delete()
+    .eq('test_eneagrama_id', testId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('test_eneagrama_dominante') as any)
+    .insert(dominantesValidos.map(d => ({
+      test_eneagrama_id: testId,
+      eneatipo_id: d.id,
+      puntaje_crudo: d.puntajeCrudo,
+      porcentaje: d.porcentaje,
+    })))
+
+  // Persistir los 9 puntajes en resultado_puntaje_eneagrama
   const filasPuntaje = resultado.puntajes.map(p => ({
     test_eneagrama_id: testId,
     eneatipo_numero: p.eneatipo,
@@ -317,5 +349,6 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
   revalidatePath('/postulante')
   revalidatePath('/postulante/eneagrama')
 
-  return { success: true, data: { eneatipoNumero: dominantePrincipal } }
+  const primero = dominantesValidos[0]
+  return { success: true, data: { eneatipoNumero: primero.numero, eneatipoNombre: primero.nombre } }
 }

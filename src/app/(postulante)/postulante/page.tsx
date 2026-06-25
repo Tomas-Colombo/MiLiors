@@ -27,7 +27,7 @@ const QUICK_LINKS = [
   {
     href: '/postulante/human-design',
     icon: <GridIcon size={20} className="text-primary-600" />,
-    title: 'Human Design',
+    title: 'Perfil de personalidad',
     desc: 'Tipo energético, autoridad y estrategia',
   },
   {

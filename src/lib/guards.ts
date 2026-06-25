@@ -26,14 +26,15 @@ export async function requireEneagramaCompleto() {
     redirect('/postulante/onboarding')
   }
 
-  // Verificar Eneagrama completado
+  // Verificar Eneagrama completado: debe existir al menos un dominante
   const { data: test } = await supabase
     .from('test_eneagrama')
-    .select('eneatipo_id')
+    .select('id, test_eneagrama_dominante(id)')
     .eq('postulante_id', (perfil as { id: string }).id)
     .single()
 
-  if (!test || !(test as { eneatipo_id: string | null }).eneatipo_id) {
+  const testTyped = test as { id: string; test_eneagrama_dominante: { id: string }[] } | null
+  if (!testTyped || testTyped.test_eneagrama_dominante.length === 0) {
     redirect('/postulante/eneagrama')
   }
 }

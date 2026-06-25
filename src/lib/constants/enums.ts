@@ -63,11 +63,16 @@ export const NIVEL_IDIOMA_LABEL: Record<string, string> = {
 }
 
 export const TIPO_ENERGETICO_HD = [
-  'Generator',
-  'Manifesting Generator',
-  'Projector',
-  'Manifestor',
+  'Generador',
+  'Generador Manifestante',
+  'Proyector',
+  'Manifestador',
   'Reflector',
+] as const
+
+export const ENERGY_TYPE_CLASSIFICATION_HD = [
+  'Energético',
+  'No Energético',
 ] as const
 
 export const PERFIL_HD = [
@@ -76,20 +81,20 @@ export const PERFIL_HD = [
 ] as const
 
 export const AUTORIDAD_HD = [
-  'Emotional',
+  'Emocional',
   'Sacral',
-  'Splenic',
-  'Ego/Heart',
-  'Self-Projected',
-  'Mental/Environmental',
+  'Esplénico',
+  'Ego/Corazón',
+  'Auto-Proyectada',
+  'Mental/Ambiental',
   'Lunar',
 ] as const
 
 export const ESTRATEGIA_HD = [
-  'To Respond',
-  'To Inform',
-  'Wait for the Invitation',
-  'Wait a Lunar Cycle',
+  'Responder',
+  'Informar',
+  'Esperar la Invitación',
+  'Esperar un Ciclo Lunar',
 ] as const
 
 // Rutas por rol (para uso en proxy y redirecciones)

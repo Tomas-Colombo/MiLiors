@@ -50,7 +50,7 @@ export async function consultarAsistente(
     .from('perfil_postulante')
     .select(`
       nombre_completo,
-      test_eneagrama(eneatipo(numero_eneatipo, nombre)),
+      test_eneagrama(test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre))),
       human_design(tipo_energetico, autoridad_hd, perfil_hd, estrategia_hd)
     `)
     .eq('id', postulanteId)
@@ -60,7 +60,9 @@ export async function consultarAsistente(
 
   const postulanteTyped = postulante as {
     nombre_completo: string
-    test_eneagrama: { eneatipo: { numero_eneatipo: number; nombre: string } | null } | null
+    test_eneagrama: {
+      test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
+    } | null
     human_design: {
       tipo_energetico: string
       autoridad_hd: string
@@ -90,8 +92,8 @@ export async function consultarAsistente(
   // Build prompts and call AI
   const ctx = {
     nombrePostulante: postulanteTyped.nombre_completo,
-    eneatipoNumero: postulanteTyped.test_eneagrama?.eneatipo?.numero_eneatipo ?? null,
-    eneatipoNombre: postulanteTyped.test_eneagrama?.eneatipo?.nombre ?? null,
+    eneatipoNumero: postulanteTyped.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ?? null,
+    eneatipoNombre: postulanteTyped.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,
     humanDesign: postulanteTyped.human_design,
     competencias,
     tituloPuesto: puestoTyped.titulo_puesto,

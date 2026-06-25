@@ -5,6 +5,7 @@ import {
   getTestActual,
   getPerfilPostulante,
 } from '@/modules/eneagrama/queries'
+import { getHumanDesign } from '@/modules/human-design/queries'
 import { EneagramaWizard } from './eneagrama-wizard'
 import { redirect } from 'next/navigation'
 
@@ -16,10 +17,11 @@ export default async function EneagramaPage() {
   const perfil = await getPerfilPostulante()
   if (!perfil) redirect('/postulante/onboarding')
 
-  const [preguntas, opciones, testActual] = await Promise.all([
+  const [preguntas, opciones, testActual, humanDesign] = await Promise.all([
     getPreguntasEneagrama(),
     getOpcionesRespuesta(),
     getTestActual(),
+    getHumanDesign(),
   ])
 
   const respuestasMap: Record<string, number> = {}
@@ -51,6 +53,7 @@ export default async function EneagramaPage() {
         testId={testActual?.test?.id ?? null}
         respuestasIniciales={respuestasMap}
         yaCompleto={!!testActual?.test?.eneatipo_id}
+        humanDesignCompleto={!!humanDesign}
       />
     </div>
   )

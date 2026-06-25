@@ -13,7 +13,7 @@ import {
 const NAV_POSTULANTE = [
   { href: '/postulante', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true },
   { href: '/postulante/perfil', label: 'Mi perfil técnico', icon: <UserIcon size={18} /> },
-  { href: '/postulante/human-design', label: 'Human Design', icon: <GridIcon size={18} /> },
+  { href: '/postulante/human-design', label: 'Perfil de personalidad', icon: <GridIcon size={18} /> },
   { href: '/postulante/informe', label: 'Informe de personalidad', icon: <FileIcon size={18} /> },
   { href: '/postulante/certificado', label: 'Certificado', icon: <ShieldIcon size={18} /> },
   { href: '/postulante/puestos', label: 'Buscar puestos', icon: <SearchIcon size={18} /> },

@@ -9,10 +9,6 @@ import type { ActionResult } from '@/lib/types/domain'
 import type { InformeContext } from './prompts'
 import type { FormacionItem, ExperienciaItem, IdiomaItem, CompetenciaItem } from '@/modules/perfil-tecnico/queries'
 
-/**
- * Gathers all applicant data needed for the report.
- * Runs inside the Server Action to have server context access.
- */
 async function recopilarContexto(postulanteId: string): Promise<InformeContext | null> {
   const session = await verifySession()
   const supabase = await createClient()
@@ -28,17 +24,32 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   if (!perfil) return null
   const perfilTyped = perfil as { nombre_completo: string; especificidad_puesto: string | null }
 
-  // Eneatype from test
+  // Dominantes via tabla intermedia
   const { data: test } = await supabase
     .from('test_eneagrama')
-    .select('eneatipo_id, eneatipo(numero_eneatipo)')
+    .select('tiene_empate_dominante, test_eneagrama_dominante(puntaje_crudo, porcentaje, eneatipo(numero_eneatipo, nombre))')
     .eq('postulante_id', postulanteId)
     .single()
 
   if (!test) return null
-  const testTyped = test as { eneatipo_id: string | null; eneatipo: { numero_eneatipo: number } | null }
-  if (!testTyped.eneatipo_id || !testTyped.eneatipo) return null
-  const eneatipoNumero = testTyped.eneatipo.numero_eneatipo
+
+  const testTyped = test as {
+    tiene_empate_dominante: boolean
+    test_eneagrama_dominante: {
+      puntaje_crudo: number
+      porcentaje: number
+      eneatipo: { numero_eneatipo: number; nombre: string }
+    }[]
+  }
+
+  if (testTyped.test_eneagrama_dominante.length === 0) return null
+
+  const dominantes = testTyped.test_eneagrama_dominante.map(d => ({
+    numero: d.eneatipo.numero_eneatipo,
+    nombre: d.eneatipo.nombre,
+    puntajeCrudo: d.puntaje_crudo,
+    porcentaje: Number(d.porcentaje),
+  }))
 
   // Human Design (optional)
   const { data: hd } = await supabase
@@ -79,8 +90,9 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   return {
     nombreCompleto: perfilTyped.nombre_completo,
     especificidadPuesto: perfilTyped.especificidad_puesto,
-    eneatipoNumero,
-    humanDesign: hd ? (hd as { id: string; tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string }) : null,
+    dominantes,
+    tieneEmpateDominante: testTyped.tiene_empate_dominante,
+    humanDesign: hd ? (hd as { id: string; tipo_energetico: string; energy_type_classification: string | null; autoridad_hd: string; perfil_hd: string; estrategia_hd: string }) : null,
     formaciones,
     experiencias,
     idiomas,
@@ -100,7 +112,6 @@ export async function generarInforme(): Promise<ActionResult> {
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  // Get postulante_id
   const { data: postulante } = await supabase
     .from('perfil_postulante')
     .select('id')
@@ -110,7 +121,6 @@ export async function generarInforme(): Promise<ActionResult> {
   if (!postulante) return { success: false, error: 'Perfil no encontrado.' }
   const postulanteId = (postulante as { id: string }).id
 
-  // Get or create the report record
   const { data: informeExistente } = await supabase
     .from('informe_personalidad')
     .select('id')
@@ -121,7 +131,6 @@ export async function generarInforme(): Promise<ActionResult> {
 
   if (informeExistente) {
     informeId = (informeExistente as { id: string }).id
-    // Mark as PENDIENTE before generating
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
       .update({ estado_informe: 'PENDIENTE', contenido_informe: null })
@@ -136,7 +145,6 @@ export async function generarInforme(): Promise<ActionResult> {
     informeId = (nuevo as { id: string }).id
   }
 
-  // Gather context
   const ctx = await recopilarContexto(postulanteId)
   if (!ctx) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -146,7 +154,6 @@ export async function generarInforme(): Promise<ActionResult> {
     return { success: false, error: 'Datos insuficientes para generar el informe. Completá el Eneagrama.' }
   }
 
-  // Generate with AI
   const resultado = await generarInformePersonalidad(ctx)
 
   if (!resultado.ok) {
@@ -158,7 +165,6 @@ export async function generarInforme(): Promise<ActionResult> {
     return { success: false, error: `No se pudo generar el informe: ${resultado.motivo}` }
   }
 
-  // Save content and mark as LISTO
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin.from('informe_personalidad') as any)
     .update({

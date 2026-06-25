@@ -36,16 +36,19 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     }
   }
 
-  // 2. Get eneatipo
+  // 2. Get eneatipo (primer dominante)
   const { data: test } = await supabase
     .from('test_eneagrama')
-    .select('eneatipo(numero_eneatipo, nombre)')
+    .select('test_eneagrama_dominante(puntaje_crudo, eneatipo(numero_eneatipo, nombre))')
     .eq('postulante_id', postulanteTyped.id)
     .single()
 
   if (!test) return { success: false, error: 'Test de Eneagrama no encontrado.' }
-  const testTyped = test as { eneatipo: { numero_eneatipo: number; nombre: string } | null }
-  if (!testTyped.eneatipo) return { success: false, error: 'Eneatipo no calculado.' }
+  const testTyped = test as {
+    test_eneagrama_dominante: { puntaje_crudo: number; eneatipo: { numero_eneatipo: number; nombre: string } }[]
+  }
+  if (testTyped.test_eneagrama_dominante.length === 0) return { success: false, error: 'Eneatipo no calculado.' }
+  const primerDominante = testTyped.test_eneagrama_dominante[0].eneatipo
 
   // 3. Human Design (optional)
   const { data: hd } = await supabase
@@ -107,8 +110,8 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     pdfBuffer = await generarPDFBuffer({
       nombre: postulanteTyped.nombre_completo,
       email: session.email,
-      eneatipoNumero: testTyped.eneatipo.numero_eneatipo,
-      eneatipoNombre: testTyped.eneatipo.nombre,
+      eneatipoNumero: primerDominante.numero_eneatipo,
+      eneatipoNombre: primerDominante.nombre,
       humanDesign: hd
         ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })
         : null,

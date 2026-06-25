@@ -17,6 +17,7 @@ export async function guardarHumanDesign(
 
   const parsed = humanDesignSchema.safeParse({
     tipo_energetico: formData.get('tipo_energetico'),
+    energy_type_classification: formData.get('energy_type_classification'),
     autoridad_hd: formData.get('autoridad_hd'),
     perfil_hd: formData.get('perfil_hd'),
     estrategia_hd: formData.get('estrategia_hd'),
@@ -48,6 +49,7 @@ export async function guardarHumanDesign(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload: any = {
     tipo_energetico: parsed.data.tipo_energetico,
+    energy_type_classification: parsed.data.energy_type_classification,
     autoridad_hd: parsed.data.autoridad_hd,
     perfil_hd: parsed.data.perfil_hd,
     estrategia_hd: parsed.data.estrategia_hd,
