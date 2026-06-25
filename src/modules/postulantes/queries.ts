@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 
 export type PostulanteCard = {
@@ -101,9 +102,41 @@ export const buscarPostulantes = cache(async (filtros?: {
 export async function getPostulanteDetalle(postulanteId: string): Promise<PostulanteDetalle | null> {
   const session = await verifySession()
   const supabase = await createClient()
+  const admin = createAdminClient()
 
-  // Solo postulantes en búsqueda son visibles para reclutadores
-  const { data: postulante } = await supabase
+  // Load the recruiter's profile first to check if the applicant posted to one of their jobs
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  const reclutadorId = reclutador ? (reclutador as { id: string }).id : null
+
+  // Check if this applicant posted to one of the recruiter's jobs
+  let postuloAlReclutador = false
+  if (reclutadorId) {
+    const { data: puestosRec } = await supabase
+      .from('puesto')
+      .select('id')
+      .eq('reclutador_id', reclutadorId)
+    const puestoIds = (puestosRec ?? []).map((r: unknown) => (r as { id: string }).id)
+
+    if (puestoIds.length > 0) {
+      const { data: postulacion } = await admin
+        .from('postulacion')
+        .select('id')
+        .eq('postulante_id', postulanteId)
+        .in('puesto_id', puestoIds)
+        .limit(1)
+        .maybeSingle()
+      if (postulacion) postuloAlReclutador = true
+    }
+  }
+
+  // Visible if: actively searching OR posted to one of the recruiter's jobs
+  // Use admin to bypass RLS when reading another user's profile
+  const { data: postulante } = await admin
     .from('perfil_postulante')
     .select(`
       id, nombre_completo, especificidad_puesto, perfil_en_busqueda,
@@ -112,7 +145,6 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
       test_eneagrama(eneatipo(numero_eneatipo, nombre))
     `)
     .eq('id', postulanteId)
-    .eq('perfil_en_busqueda', true)
     .single()
 
   if (!postulante) return null
@@ -129,40 +161,14 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     test_eneagrama: { eneatipo: { numero_eneatipo: number; nombre: string } | null } | null
   }
 
-  // perfil_en_busqueda=true ya habilita el contacto
-  // Adicionalmente: si postuló a un puesto propio también se libera
-  let contactoLiberado = p.perfil_en_busqueda
+  // Gate: must be searchable OR have applied to this recruiter's jobs
+  if (!p.perfil_en_busqueda && !postuloAlReclutador) return null
 
-  if (!contactoLiberado) {
-    const { data: reclutador } = await supabase
-      .from('perfil_reclutador')
-      .select('id')
-      .eq('usuario_id', session.id)
-      .single()
+  // Contact is released if searching actively or if they applied to this recruiter's jobs
+  const contactoLiberado = p.perfil_en_busqueda || postuloAlReclutador
 
-    if (reclutador) {
-      const reclutadorId = (reclutador as { id: string }).id
-      const { data: puestosRec } = await supabase
-        .from('puesto')
-        .select('id')
-        .eq('reclutador_id', reclutadorId)
-      const puestoIds = (puestosRec ?? []).map((r: unknown) => (r as { id: string }).id)
-
-      if (puestoIds.length > 0) {
-        const { data: postulacion } = await supabase
-          .from('postulacion')
-          .select('id')
-          .eq('postulante_id', postulanteId)
-          .in('puesto_id', puestoIds)
-          .limit(1)
-          .maybeSingle()
-        if (postulacion) contactoLiberado = true
-      }
-    }
-  }
-
-  // Perfil técnico
-  const { data: pt } = await supabase
+  // Perfil técnico — admin to bypass RLS
+  const { data: pt } = await admin
     .from('perfil_tecnico')
     .select('id')
     .eq('postulante_id', postulanteId)
@@ -175,15 +181,15 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
   if (pt) {
     const ptId = (pt as { id: string }).id
     const [f, e, i] = await Promise.all([
-      supabase
+      admin
         .from('formacion_academica')
         .select('titulo, institucion, fecha_graduacion')
         .eq('perfil_tecnico_id', ptId),
-      supabase
+      admin
         .from('experiencia_laboral')
         .select('puesto, empresa, fecha_inicio, fecha_fin')
         .eq('perfil_tecnico_id', ptId),
-      supabase
+      admin
         .from('idioma')
         .select('nombre, nivel_idioma')
         .eq('perfil_tecnico_id', ptId),
@@ -193,17 +199,17 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     idiomas = (i.data ?? []) as typeof idiomas
   }
 
-  // Human Design
-  const { data: hd } = await supabase
+  // Human Design — admin to bypass RLS
+  const { data: hd } = await admin
     .from('human_design')
     .select('tipo_energetico, autoridad_hd, perfil_hd, estrategia_hd')
     .eq('postulante_id', postulanteId)
     .maybeSingle()
 
-  // Informe (solo si perfil_en_busqueda y LISTO)
+  // Informe: visible if searchable OR applied to this recruiter's jobs — admin to bypass RLS
   let informeContenido: string | null = null
-  if (p.perfil_en_busqueda) {
-    const { data: informe } = await supabase
+  if (p.perfil_en_busqueda || postuloAlReclutador) {
+    const { data: informe } = await admin
       .from('informe_personalidad')
       .select('contenido_informe, estado_informe')
       .eq('postulante_id', postulanteId)
@@ -214,11 +220,11 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
       : null
   }
 
-  // Competencias del postulante
+  // Competencias del postulante — admin to bypass RLS
   let competencias: { nombre: string }[] = []
   if (pt) {
     const ptId = (pt as { id: string }).id
-    const { data: comps } = await supabase
+    const { data: comps } = await admin
       .from('postulante_competencia')
       .select('competencia(nombre)')
       .eq('perfil_tecnico_id', ptId)

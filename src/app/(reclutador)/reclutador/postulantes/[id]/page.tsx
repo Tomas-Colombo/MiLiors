@@ -9,20 +9,43 @@ import {
   UserIcon,
 } from '@/components/icons'
 import { getPostulanteDetalle, getNotasPrivadas } from '@/modules/postulantes/queries'
+import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
+import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { NotasPanel } from './notas-panel'
 
 export const metadata = { title: 'Detalle de postulante — TalentID' }
 
 // params in Next.js App Router dynamic routes is a Promise
 type Params = Promise<{ id: string }>
+type SearchParams = Promise<{ postulacion?: string }>
 
-export default async function PostulanteDetallePage({ params }: { params: Params }) {
+export default async function PostulanteDetallePage({
+  params,
+  searchParams,
+}: {
+  params: Params
+  searchParams: SearchParams
+}) {
   const { id } = await params
+  const { postulacion: postulacionId } = await searchParams
 
   const [postulante, notas] = await Promise.all([
     getPostulanteDetalle(id),
     getNotasPrivadas(id),
   ])
+
+  // Auto-mark as VISTO when the recruiter opens the profile from the applications list
+  if (postulacionId) {
+    const admin = (await import('@/lib/supabase/server-admin')).createAdminClient()
+    const { data: p } = await admin
+      .from('postulacion')
+      .select('estado')
+      .eq('id', postulacionId)
+      .single()
+    if (p && (p as { estado: string }).estado === ESTADO_POSTULACION.ENVIADA) {
+      await avanzarEstadoPostulacion(postulacionId, 'VISTO')
+    }
+  }
 
   if (!postulante) notFound()
 

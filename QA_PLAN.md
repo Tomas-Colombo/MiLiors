@@ -28,7 +28,7 @@
 | TC-AUTH-018 | Acceso directo a /reclutador sin sesión → redirige a /login | 🔴 | ⬜ |
 | TC-AUTH-019 | POSTULANTE intenta acceder a /reclutador → prohibido | 🔴 | ⬜ |
 | TC-AUTH-020 | RECLUTADOR intenta acceder a /admin → prohibido | 🔴 | ⬜ |
-| TC-AUTH-021 | TyC Gate — usuario sin TyC aceptado ve modal bloqueante | 🔴 | ⬜ |
+| TC-AUTH-021 | TyC Gate — usuario sin TyC aceptado ve modal bloqueante | 🔴 | ✅ |
 | TC-AUTH-022 | TyC Gate — aceptar TyC dos veces seguidas → sin error (idempotente) | 🟡 | ⬜ |
 
 ---
@@ -51,7 +51,7 @@
 
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
-| TC-ONB-POS-001 | Completar con solo nombre_completo → redirige a /postulante/eneagrama | 🔴 | ⬜ |
+| TC-ONB-POS-001 | Completar con solo nombre_completo → redirige a /postulante/eneagrama | 🔴 | ✅ |
 | TC-ONB-POS-002 | nombre_completo vacío → error | 🔴 | ⬜ |
 | TC-ONB-POS-003 | enlace_linkedin con URL inválida → error | 🟡 | ⬜ |
 | TC-ONB-POS-004 | portfolio con URL inválida → error | 🟡 | ⬜ |
@@ -102,13 +102,13 @@
 
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
-| TC-POST-001 | Candidato postula a puesto activo → estado ENVIADA | 🔴 | ⬜ |
-| TC-POST-002 | Candidato intenta postular dos veces → botón deshabilitado / error | 🔴 | ⬜ |
-| TC-POST-003 | Candidato ve sus postulaciones en /postulante/postulaciones | 🔴 | ⬜ |
-| TC-POST-004 | Candidato no puede cambiar ni retirar postulación | 🟡 | ⬜ |
-| TC-POST-005 | Reclutador avanza estado ENVIADA → VISTO | 🔴 | ⬜ |
+| TC-POST-001 | Candidato postula a puesto activo → estado ENVIADA | 🔴 | ✅ |
+| TC-POST-002 | Candidato intenta postular dos veces → botón deshabilitado / error | 🔴 | ✅ |
+| TC-POST-003 | Candidato ve sus postulaciones en /postulante/postulaciones | 🔴 | ✅ |
+| TC-POST-004 | Candidato no puede cambiar ni retirar postulación | 🟡 | ✅ |
+| TC-POST-005 | Reclutador avanza estado ENVIADA → VISTO | 🔴 | ✅ |
 | TC-POST-006 | Al pasar a VISTO → candidato recibe email de notificación | 🔴 | ⬜ |
-| TC-POST-007 | Reclutador avanza VISTO → PROCESO_FINALIZADO | 🔴 | ⬜ |
+| TC-POST-007 | Reclutador avanza VISTO → PROCESO_FINALIZADO | 🔴 | ✅ |
 | TC-POST-008 | Al pasar a PROCESO_FINALIZADO → candidato recibe email | 🔴 | ⬜ |
 | TC-POST-009 | Fallo de Resend (email) → postulación sigue avanzando igual | 🟡 | ⬜ |
 | TC-POST-010 | Reclutador no ve postulaciones de puestos ajenos | 🔴 🔒 | ⬜ |

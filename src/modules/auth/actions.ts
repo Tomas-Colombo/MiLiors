@@ -46,7 +46,14 @@ export async function registrarUsuario(
   })
 
   if (authError || !authData.user) {
+    console.error('[registrarUsuario] Supabase signUp error:', authError)
+    if (authError?.status === 429 || authError?.code === 'over_email_send_rate_limit') {
+      return { success: false, error: 'Demasiados intentos. Esperá unos minutos antes de volver a intentarlo.' }
+    }
     if (authError?.message?.toLowerCase().includes('already registered')) {
+      return { success: false, error: 'Ya existe una cuenta con ese email.', fieldErrors: { _email: [email] } }
+    }
+    if (!authData.user && !authError) {
       return { success: false, error: 'Ya existe una cuenta con ese email.', fieldErrors: { _email: [email] } }
     }
     return { success: false, error: 'No se pudo crear la cuenta. Intentá de nuevo.', fieldErrors: { _email: [email] } }

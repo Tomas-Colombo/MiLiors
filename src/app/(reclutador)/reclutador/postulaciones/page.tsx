@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, EmptyState } from '@/components/ui'
 import { UsersIcon, MailIcon } from '@/components/icons'
@@ -93,7 +94,13 @@ export default async function PostulacionesRecibidasPage() {
                     </p>
                   </div>
 
-                  <div className="flex-none">
+                  <div className="flex-none flex flex-col items-end gap-2">
+                    <Link
+                      href={`/reclutador/postulantes/${p.postulante_id}?postulacion=${p.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+                    >
+                      Ver perfil
+                    </Link>
                     <PostulacionAcciones postulacionId={p.id} estadoActual={p.estado} />
                   </div>
                 </div>
