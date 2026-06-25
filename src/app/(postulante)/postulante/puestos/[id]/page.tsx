@@ -26,11 +26,11 @@ export default async function PuestoDetallePage({ params }: Props) {
       <div className="mx-auto max-w-2xl px-6 py-10 space-y-6">
         {/* Volver */}
         <Link
-          href="/postulante/postulaciones"
+          href="/postulante/puestos"
           className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink transition-colors"
         >
           <ChevronLeftIcon size={15} />
-          Mis postulaciones
+          Buscar puestos
         </Link>
 
         {/* Card principal */}

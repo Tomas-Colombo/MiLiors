@@ -1,8 +1,6 @@
-'use client'
-
-import { useState } from 'react'
+import Link from 'next/link'
 import { Card, Badge } from '@/components/ui'
-import { ChevronDownIcon, CalendarIcon } from '@/components/icons'
+import { CalendarIcon, ArrowRightIcon } from '@/components/icons'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
 import type { PuestoItem } from '@/modules/puestos/queries'
 
@@ -12,9 +10,6 @@ type Props = {
 }
 
 export function PuestoCard({ puesto, actions }: Props) {
-  const [expanded, setExpanded] = useState(false)
-  const hasDesc = !!puesto.descripcion_texto
-
   return (
     <Card padding="md" className="flex flex-col gap-3 h-full">
       {/* Cabecera */}
@@ -46,28 +41,11 @@ export function PuestoCard({ puesto, actions }: Props) {
         )}
       </div>
 
-      {/* Descripción */}
-      {hasDesc && (
-        <p
-          className={[
-            'text-[13px] text-ink-soft leading-relaxed',
-            !expanded ? 'line-clamp-2' : '',
-          ].join(' ')}
-        >
+      {/* Descripción (preview) */}
+      {puesto.descripcion_texto && (
+        <p className="text-[13px] text-ink-soft leading-relaxed line-clamp-2">
           {puesto.descripcion_texto}
         </p>
-      )}
-
-      {/* Detalles extra al expandir */}
-      {expanded && (puesto.idioma || puesto.nivel_experiencia) && (
-        <div className="border-t border-neutral-100 pt-3 space-y-1 text-[12px] text-neutral-500">
-          {puesto.idioma && (
-            <p>
-              <span className="font-semibold text-neutral-600">Idioma:</span>{' '}
-              {puesto.idioma}
-            </p>
-          )}
-        </div>
       )}
 
       {/* Pie */}
@@ -80,21 +58,13 @@ export function PuestoCard({ puesto, actions }: Props) {
             year: 'numeric',
           })}
         </span>
-        {hasDesc && (
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            className="flex items-center gap-1 text-[12px] font-semibold text-primary-600 hover:text-primary-700 transition-colors"
-          >
-            {expanded ? 'Ver menos' : 'Ver descripción'}
-            <ChevronDownIcon
-              size={13}
-              className={['transition-transform duration-200', expanded ? 'rotate-180' : ''].join(
-                ' '
-              )}
-            />
-          </button>
-        )}
+        <Link
+          href={`/postulante/puestos/${puesto.id}`}
+          className="flex items-center gap-1 text-[12px] font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+        >
+          Ver detalle
+          <ArrowRightIcon size={13} />
+        </Link>
       </div>
     </Card>
   )
