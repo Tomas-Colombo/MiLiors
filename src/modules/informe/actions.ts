@@ -169,12 +169,26 @@ export async function generarInforme(): Promise<ActionResult> {
   await (admin.from('informe_personalidad') as any)
     .update({
       estado_informe: 'LISTO',
-      contenido_informe: resultado.contenido,
+      contenido_informe: JSON.stringify(resultado.contenido_json),
+      contenido_json: resultado.contenido_json,
       fecha_generacion: new Date().toISOString(),
+      desactualizado: false,
     })
     .eq('id', informeId)
 
   revalidatePath('/postulante/informe')
   revalidatePath('/postulante')
   return { success: true, data: undefined }
+}
+
+/**
+ * Marks the personality report as stale (desactualizado=true).
+ * Called when Human Design is saved/updated.
+ */
+export async function marcarInformeDesactualizado(postulanteId: string): Promise<void> {
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('informe_personalidad') as any)
+    .update({ desactualizado: true })
+    .eq('postulante_id', postulanteId)
 }

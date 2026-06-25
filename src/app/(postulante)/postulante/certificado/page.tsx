@@ -1,5 +1,6 @@
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
+import { createClient } from '@/lib/supabase/server'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getInformeActual } from '@/modules/informe/queries'
@@ -8,15 +9,50 @@ import { CertificadoUI } from './certificado-ui'
 export const metadata = { title: 'Mi Certificado — TalentID' }
 
 export default async function CertificadoPage() {
-  await verifySession()
+  const session = await verifySession()
   await requireEneagramaCompleto()
+
+  const supabase = await createClient()
 
   const [certificado, informe] = await Promise.all([
     getUltimoCertificado(),
     getInformeActual(),
   ])
 
-  const informeListo = informe?.estado_informe === 'LISTO'
+  // Fetch formación + competencia counts to drive requirements display
+  const { data: postulante } = await supabase
+    .from('perfil_postulante')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  let tieneFormacion = false
+  let tieneCompetencia = false
+
+  if (postulante) {
+    const pid = (postulante as { id: string }).id
+    const { data: pt } = await supabase
+      .from('perfil_tecnico')
+      .select('id')
+      .eq('postulante_id', pid)
+      .single()
+
+    if (pt) {
+      const ptId = (pt as { id: string }).id
+      const [{ count: formCount }, { count: compCount }] = await Promise.all([
+        supabase
+          .from('formacion_academica')
+          .select('id', { count: 'exact', head: true })
+          .eq('perfil_tecnico_id', ptId),
+        supabase
+          .from('postulante_competencia')
+          .select('competencia_id', { count: 'exact', head: true })
+          .eq('perfil_tecnico_id', ptId),
+      ])
+      tieneFormacion = (formCount ?? 0) > 0
+      tieneCompetencia = (compCount ?? 0) > 0
+    }
+  }
 
   return (
     <TyCGate>
@@ -27,7 +63,13 @@ export default async function CertificadoPage() {
             Descargá tu certificado verificable con QR para compartir con reclutadores.
           </p>
         </div>
-        <CertificadoUI certificado={certificado} informeListo={informeListo} />
+        <CertificadoUI
+          certificado={certificado}
+          informeListo={informe?.estado_informe === 'LISTO'}
+          informeDesactualizado={informe?.desactualizado ?? false}
+          tieneFormacion={tieneFormacion}
+          tieneCompetencia={tieneCompetencia}
+        />
       </div>
     </TyCGate>
   )

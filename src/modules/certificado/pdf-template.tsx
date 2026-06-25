@@ -169,6 +169,8 @@ export type CertificadoPDFProps = {
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
   competencias: { nombre: string }[]
+  /** Texto de perfil de personalidad del informe (sección perfil_personalidad) */
+  personalidad?: string
   timestampFirma: string
   certificadoId: string
   qrBase64: string // PNG en base64 (data:image/png;base64,...)
@@ -195,6 +197,7 @@ export function CertificadoPDF({
   experiencias,
   idiomas,
   competencias,
+  personalidad,
   timestampFirma,
   certificadoId,
   qrBase64,
@@ -242,6 +245,14 @@ export function CertificadoPDF({
                 <Text style={styles.bodyText}>
                   Tipo: {humanDesign.tipo_energetico} · Autoridad: {humanDesign.autoridad_hd} · Perfil: {humanDesign.perfil_hd}
                 </Text>
+              </View>
+            )}
+            {personalidad && (
+              <View style={{ marginTop: 10 }}>
+                <Text style={[styles.bodyText, { marginBottom: 3, fontFamily: 'Helvetica-Bold', color: colors.soft }]}>
+                  Síntesis:
+                </Text>
+                <Text style={styles.bodyText}>{personalidad}</Text>
               </View>
             )}
           </View>

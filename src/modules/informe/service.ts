@@ -1,22 +1,44 @@
 import 'server-only'
 import { aiProvider } from '@/lib/ai'
 import { buildInformePrompts, type InformeContext } from './prompts'
+import type { InformeJSON } from '@/lib/types/informe'
 
-const MIN_PALABRAS = 500
-const MAX_PALABRAS = 1500
+const INFORME_KEYS = [
+  'perfil_personalidad',
+  'fortalezas_laborales',
+  'areas_desarrollo',
+  'compatibilidad_entorno',
+  'recomendaciones_reclutadores',
+] as const
+
+const MIN_WORDS_PER_SECTION = 50
 
 function contarPalabras(texto: string): number {
   return texto.trim().split(/\s+/).filter(Boolean).length
 }
 
+function parseInformeJSON(raw: string): InformeJSON | null {
+  try {
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+    const parsed = JSON.parse(cleaned)
+    for (const key of INFORME_KEYS) {
+      if (typeof parsed[key] !== 'string' || parsed[key].trim().length === 0) {
+        return null
+      }
+    }
+    return parsed as InformeJSON
+  } catch {
+    return null
+  }
+}
+
 export type GeneracionResult =
-  | { ok: true; contenido: string; palabras: number; tokens: { input: number; output: number }; modelo: string }
+  | { ok: true; contenido_json: InformeJSON; tokens: { input: number; output: number }; modelo: string }
   | { ok: false; motivo: string }
 
 /**
  * Generates the personality report by calling the active AI provider.
- * Does not write to DB — that is the caller's responsibility (Server Action).
- * Validates length: 500–1500 words.
+ * Returns structured JSON — does not write to DB (caller's responsibility).
  */
 export async function generarInformePersonalidad(ctx: InformeContext): Promise<GeneracionResult> {
   const { systemPrompt, userPrompt } = buildInformePrompts(ctx)
@@ -26,7 +48,7 @@ export async function generarInformePersonalidad(ctx: InformeContext): Promise<G
     result = await aiProvider.generate({
       systemPrompt,
       userPrompt,
-      maxTokens: 2500,  // margin above the 1500-word maximum
+      maxTokens: 3000,
       temperature: 0.7,
     })
   } catch (err) {
@@ -35,38 +57,31 @@ export async function generarInformePersonalidad(ctx: InformeContext): Promise<G
     return { ok: false, motivo: msg }
   }
 
-  const palabras = contarPalabras(result.content)
+  const informeJSON = parseInformeJSON(result.content)
+  if (!informeJSON) {
+    console.error('[informe/service] Respuesta no es JSON válido:', result.content.slice(0, 300))
+    return { ok: false, motivo: 'El modelo no respondió con JSON válido. Intentá de nuevo.' }
+  }
 
-  // Usage log for cost monitoring
+  for (const key of INFORME_KEYS) {
+    if (contarPalabras(informeJSON[key]) < MIN_WORDS_PER_SECTION) {
+      return {
+        ok: false,
+        motivo: `La sección "${key}" es demasiado corta (mínimo ${MIN_WORDS_PER_SECTION} palabras).`,
+      }
+    }
+  }
+
+  const totalPalabras = INFORME_KEYS.reduce((acc, k) => acc + contarPalabras(informeJSON[k]), 0)
   console.info(
     `[informe/service] Generado con ${result.model}. ` +
     `Tokens: ${result.usage.inputTokens} in + ${result.usage.outputTokens} out. ` +
-    `Palabras: ${palabras}.`
+    `Palabras totales: ${totalPalabras}.`
   )
-
-  if (palabras < MIN_PALABRAS) {
-    return {
-      ok: false,
-      motivo: `El informe generado es muy corto (${palabras} palabras, mínimo ${MIN_PALABRAS}).`,
-    }
-  }
-
-  if (palabras > MAX_PALABRAS) {
-    // Truncate at the limit — prefer this to marking as ERROR
-    const truncado = result.content.split(/\s+/).slice(0, MAX_PALABRAS).join(' ') + '…'
-    return {
-      ok: true,
-      contenido: truncado,
-      palabras: MAX_PALABRAS,
-      tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-      modelo: result.model,
-    }
-  }
 
   return {
     ok: true,
-    contenido: result.content,
-    palabras,
+    contenido_json: informeJSON,
     tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
     modelo: result.model,
   }

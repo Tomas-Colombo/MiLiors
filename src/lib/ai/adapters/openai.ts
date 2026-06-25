@@ -2,20 +2,16 @@ import 'server-only'
 import OpenAI from 'openai'
 import type { AIProvider, GenerateOptions, GenerateResult } from '../port'
 
-// Modelo a usar. Cambiar aquí para actualizar en toda la app.
-// gpt-4o-mini: económico, rápido, buena calidad para perfiles.
-// gpt-4o: más preciso, más costo — usar si la calidad no alcanza.
-const DEFAULT_MODEL = 'gpt-4o-mini'
-
 let client: OpenAI | null = null
 
 function getClient(): OpenAI {
   if (!client) {
-    const apiKey = process.env.OPENAI_API_KEY
+    const apiKey = process.env.LLM_API_KEY
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno.')
+      throw new Error('LLM_API_KEY no está configurada en las variables de entorno.')
     }
-    client = new OpenAI({ apiKey })
+    const baseURL = process.env.LLM_BASE_URL
+    client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) })
   }
   return client
 }
@@ -23,9 +19,13 @@ function getClient(): OpenAI {
 export const openAIAdapter: AIProvider = {
   async generate({ systemPrompt, userPrompt, maxTokens = 2000, temperature = 0.7 }: GenerateOptions): Promise<GenerateResult> {
     const openai = getClient()
+    const model = process.env.LLM_MODEL
+    if (!model) {
+      throw new Error('LLM_MODEL no está configurada en las variables de entorno.')
+    }
 
     const response = await openai.chat.completions.create({
-      model: DEFAULT_MODEL,
+      model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },

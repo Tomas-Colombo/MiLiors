@@ -71,22 +71,20 @@ export async function guardarHumanDesign(
 
   if (error) return { success: false, error: 'No se pudo guardar el Human Design.' }
 
-  // Set report to PENDING (LLM regeneration is Phase 4)
-  const { data: informe } = await supabase
-    .from('informe_personalidad')
-    .select('id')
+  // Mark report and certificate as stale (requires regeneration)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('informe_personalidad') as any)
+    .update({ estado_informe: 'PENDIENTE', contenido_informe: null, contenido_json: null, desactualizado: true })
     .eq('postulante_id', postulanteId)
-    .single()
 
-  if (informe) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'PENDIENTE', contenido_informe: null })
-      .eq('id', (informe as { id: string }).id)
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('certificado_pdf') as any)
+    .update({ desactualizado: true })
+    .eq('postulante_id', postulanteId)
 
   revalidatePath('/postulante/human-design')
   revalidatePath('/postulante/perfil')
+  revalidatePath('/postulante')
   return { success: true, data: undefined }
 }
 

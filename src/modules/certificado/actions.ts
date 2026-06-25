@@ -25,7 +25,7 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
 
   const { data: informe } = await supabase
     .from('informe_personalidad')
-    .select('estado_informe')
+    .select('estado_informe, desactualizado, contenido_json')
     .eq('postulante_id', postulanteTyped.id)
     .single()
 
@@ -33,6 +33,13 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     return {
       success: false,
       error: 'El informe de personalidad debe estar en estado LISTO para generar el certificado.',
+    }
+  }
+
+  if ((informe as { desactualizado: boolean }).desactualizado) {
+    return {
+      success: false,
+      error: 'El informe de personalidad está desactualizado. Regeneralo antes de emitir el certificado.',
     }
   }
 
@@ -100,11 +107,25 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
       .filter((x): x is CompetenciaItem => x !== null)
   }
 
-  // 5. Generate certificate ID before PDF (QR needs it)
+  // 5. Guard: require at least 1 formación and 1 competencia
+  if (formaciones.length === 0) {
+    return { success: false, error: 'Necesitás al menos una formación académica para emitir el certificado.' }
+  }
+  if (competencias.length === 0) {
+    return { success: false, error: 'Necesitás al menos una competencia para emitir el certificado.' }
+  }
+
+  // 6. Generate certificate ID before PDF (QR needs it)
   const certificadoId = crypto.randomUUID()
   const timestampFirma = new Date().toISOString()
 
-  // 6. Generate PDF with embedded QR
+  // Snapshot personality text from informe (no second LLM call)
+  const informeTyped = informe as { estado_informe: string; desactualizado: boolean; contenido_json: unknown }
+  const personalidadText = informeTyped.contenido_json
+    ? (informeTyped.contenido_json as { perfil_personalidad?: string }).perfil_personalidad
+    : undefined
+
+  // Generate PDF with embedded QR
   let pdfBuffer: Buffer
   try {
     pdfBuffer = await generarPDFBuffer({
@@ -119,6 +140,7 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
       experiencias,
       idiomas,
       competencias,
+      personalidad: personalidadText,
       timestampFirma,
       certificadoId,
     })
@@ -141,14 +163,16 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     return { success: false, error: 'No se pudo almacenar el certificado.' }
   }
 
-  // 8. Persist record in DB
+  // Persist record in DB (upsert by postulante_id — unique constraint in schema)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: dbError } = await (admin.from('certificado_pdf') as any).insert({
+  const { error: dbError } = await (admin.from('certificado_pdf') as any).upsert({
     id: certificadoId,
     postulante_id: postulanteTyped.id,
     url_archivo: storagePath,
     timestamp_firma: timestampFirma,
-  })
+    contenido_json: informeTyped.contenido_json ?? null,
+    desactualizado: false,
+  }, { onConflict: 'postulante_id' })
 
   if (dbError) {
     console.error('[certificado] Error guardando en DB:', dbError.message)

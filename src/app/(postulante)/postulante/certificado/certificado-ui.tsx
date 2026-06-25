@@ -9,9 +9,12 @@ import { ArrowRightIcon, FileIcon, ShieldIcon, SparklesIcon } from '@/components
 type Props = {
   certificado: CertificadoData | null
   informeListo: boolean
+  informeDesactualizado: boolean
+  tieneFormacion: boolean
+  tieneCompetencia: boolean
 }
 
-export function CertificadoUI({ certificado, informeListo }: Props) {
+export function CertificadoUI({ certificado, informeListo, informeDesactualizado, tieneFormacion, tieneCompetencia }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
@@ -29,11 +32,22 @@ export function CertificadoUI({ certificado, informeListo }: Props) {
     })
   }
 
+  const puedeGenerar = informeListo && !informeDesactualizado && tieneFormacion && tieneCompetencia
+
   if (!informeListo) {
     return (
       <Alert tone="warning" title="Informe pendiente">
         Necesitás tener el Informe de Personalidad en estado LISTO antes de generar el certificado.
         Completá el Eneagrama y generá tu informe.
+      </Alert>
+    )
+  }
+
+  if (informeDesactualizado) {
+    return (
+      <Alert tone="warning" title="Informe desactualizado">
+        Tu informe de personalidad fue marcado como desactualizado. Regeneralo desde la sección
+        &ldquo;Informe de personalidad&rdquo; antes de emitir el certificado.
       </Alert>
     )
   }
@@ -50,8 +64,11 @@ export function CertificadoUI({ certificado, informeListo }: Props) {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[13.5px] font-semibold text-ink">Certificado activo</span>
-                  <Badge tone="success" dot>Verificado</Badge>
+                  <span className="text-[13.5px] font-semibold text-ink">Certificado</span>
+                  {certificado.desactualizado
+                    ? <Badge tone="warning">Desactualizado</Badge>
+                    : <Badge tone="success" dot>Verificado</Badge>
+                  }
                 </div>
                 <p className="mt-0.5 text-xs text-muted">
                   Emitido el{' '}
@@ -67,14 +84,16 @@ export function CertificadoUI({ certificado, informeListo }: Props) {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button
-              size="sm"
-              variant="secondary"
-              leftIcon={<FileIcon size={15} />}
-              onClick={() => window.open(`/api/certificado/descargar/${certificado.id}`, '_blank')}
-            >
-              Descargar PDF
-            </Button>
+            {certificado.url_archivo && (
+              <Button
+                size="sm"
+                variant="secondary"
+                leftIcon={<FileIcon size={15} />}
+                onClick={() => window.open(`/api/certificado/descargar/${certificado.id}`, '_blank')}
+              >
+                Descargar PDF
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -102,11 +121,25 @@ export function CertificadoUI({ certificado, informeListo }: Props) {
             {certificado ? 'Emitir nuevo certificado' : 'Generar mi certificado'}
           </span>
         </div>
-        <p className="mb-4 text-xs text-muted">
+        <p className="mb-3 text-xs text-muted">
           El certificado incluye tu perfil de personalidad (Eneatipo y Human Design si está cargado),
           formación académica, experiencia y competencias. Incluye un código QR verificable por
           cualquier reclutador.
         </p>
+
+        {/* Requirements checklist */}
+        <ul className="mb-4 space-y-1">
+          {[
+            { label: 'Informe de personalidad generado', ok: informeListo && !informeDesactualizado },
+            { label: 'Al menos una formación académica', ok: tieneFormacion },
+            { label: 'Al menos una competencia', ok: tieneCompetencia },
+          ].map(({ label, ok }) => (
+            <li key={label} className={`flex items-center gap-2 text-xs ${ok ? 'text-success' : 'text-muted'}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-success' : 'bg-neutral-300'}`} />
+              {label}
+            </li>
+          ))}
+        </ul>
 
         {exito && (
           <div className="mb-4">
@@ -124,7 +157,7 @@ export function CertificadoUI({ certificado, informeListo }: Props) {
         <Button
           onClick={handleGenerar}
           loading={isPending}
-          disabled={isPending}
+          disabled={isPending || !puedeGenerar}
           className="w-full"
         >
           {isPending

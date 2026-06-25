@@ -12,6 +12,8 @@ export type NavLinkItem = {
   icon: React.ReactNode
   /** If true, only active on exact match; otherwise uses startsWith. */
   exactMatch?: boolean
+  /** If true, shows a red dot indicating something requires attention. */
+  badge?: boolean
 }
 
 type Props = {
@@ -60,6 +62,9 @@ export function AppSidebar({ items, userEmail, rolLabel }: Props) {
             icon={item.icon}
             label={item.label}
             active={isActive(item)}
+            trailing={item.badge ? (
+              <span className="flex h-2 w-2 rounded-full bg-red-500" aria-label="Requiere atención" />
+            ) : undefined}
           />
         ))}
       </nav>

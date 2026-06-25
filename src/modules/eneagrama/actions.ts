@@ -8,6 +8,7 @@ import { verifySession } from '@/lib/dal'
 import { onboardingPostulanteSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 import { calcularResultadoEneagrama, ErrorRespuestasIncompletas } from './calculator'
+import { generarInforme } from '@/modules/informe/actions'
 
 // ─── Onboarding: guardar datos básicos ───────────────────────────────────────
 export async function guardarDatosBasicos(
@@ -342,8 +343,15 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
   } else {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'PENDIENTE', contenido_informe: null })
+      .update({ estado_informe: 'PENDIENTE', contenido_informe: null, contenido_json: null })
       .eq('id', (informeExistente as { id: string }).id)
+  }
+
+  // Auto-generate personality report. Errors are non-fatal — user can retry from /postulante/informe.
+  try {
+    await generarInforme()
+  } catch (e) {
+    console.error('[eneagrama] Error auto-generando informe:', e)
   }
 
   revalidatePath('/postulante')

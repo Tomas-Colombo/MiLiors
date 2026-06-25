@@ -95,6 +95,22 @@ export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
   const postulanteId = (postulante as { id: string }).id
   const admin = createAdminClient()
 
+  // Guard: must have a valid (non-stale) certificate to apply
+  const { data: cert } = await supabase
+    .from('certificado_pdf')
+    .select('id, desactualizado')
+    .eq('postulante_id', postulanteId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!cert) {
+    return { success: false, error: 'Necesitás generar tu certificado de perfil antes de postularte.' }
+  }
+  if ((cert as { desactualizado: boolean }).desactualizado) {
+    return { success: false, error: 'Tu certificado está desactualizado. Generá uno nuevo antes de postularte.' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (admin.from('postulacion') as any).insert({
     postulante_id: postulanteId,
