@@ -7,9 +7,10 @@ import { postularAPuesto } from '@/modules/postulaciones/actions'
 type Props = {
   puestoId: string
   yaPostulo: boolean
+  disabled?: boolean
 }
 
-export function PostularButton({ puestoId, yaPostulo }: Props) {
+export function PostularButton({ puestoId, yaPostulo, disabled }: Props) {
   const [isPending, startTransition] = useTransition()
 
   if (yaPostulo) {
@@ -32,6 +33,7 @@ export function PostularButton({ puestoId, yaPostulo }: Props) {
       size="sm"
       loading={isPending}
       onClick={handleClick}
+      disabled={disabled}
     >
       Postularme
     </Button>

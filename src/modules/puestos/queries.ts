@@ -17,6 +17,7 @@ export type PuestoItem = {
   fecha_baja_puesto: string | null
   empresa_id: string
   sector_id: string | null
+  reclutador_id?: string | null
   // perfil_psicologico_deseado is intentionally excluded from the public type
   nombre_empresa?: string
   nombre_sector?: string
@@ -151,6 +152,9 @@ export const getPuestosActivos = async (filtros?: {
   busqueda?: string
   diasDesde?: number
   page?: number
+  /** 'postulados' = solo los que ya apliqué | 'no_postulados' = solo los que no apliqué */
+  postulacion?: 'postulados' | 'no_postulados'
+  postulacionIds?: string[]
 }): Promise<{ items: PuestoItem[]; total: number }> => {
   const supabase = await createClient()
   const page = filtros?.page ?? 0
@@ -179,6 +183,14 @@ export const getPuestosActivos = async (filtros?: {
     const since = new Date()
     since.setDate(since.getDate() - filtros.diasDesde)
     query = query.gte('fecha_publicacion', since.toISOString())
+  }
+  if (filtros?.postulacion && filtros.postulacionIds) {
+    const ids = filtros.postulacionIds
+    if (filtros.postulacion === 'postulados' && ids.length > 0) {
+      query = query.in('id', ids)
+    } else if (filtros.postulacion === 'no_postulados') {
+      if (ids.length > 0) query = query.not('id', 'in', `(${ids.join(',')})`)
+    }
   }
 
   const { data, count } = await query
@@ -223,7 +235,7 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id,
+      empresa_id, sector_id, reclutador_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector)
     `)
     .eq('id', puestoId)
@@ -236,7 +248,7 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     idioma: string; carga_horaria: string; ubicacion: string
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
-    empresa_id: string; sector_id: string | null
+    empresa_id: string; sector_id: string | null; reclutador_id: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
   }
@@ -254,6 +266,7 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     fecha_baja_puesto: r.fecha_baja_puesto,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
+    reclutador_id: r.reclutador_id,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
   }
@@ -404,4 +417,81 @@ export const getPostulacionesRecibidas = cache(async () => {
       contacto,
     }
   })
+})
+
+// ─── Perfil público del reclutador ───────────────────────────────────────────
+
+export type ReclutadorPublicoPuesto = {
+  id: string
+  titulo_puesto: string
+  ubicacion: string
+  carga_horaria: string
+  fecha_publicacion: string
+  descripcion_texto: string | null
+  nivel_experiencia: string | null
+  nombre_sector: string | null
+}
+
+export type ReclutadorPublico = {
+  id: string
+  nombre_reclutador: string
+  empresa: {
+    nombre_empresa: string
+    descripcion: string | null
+    link_url: string | null
+  } | null
+  puestos_activos: ReclutadorPublicoPuesto[]
+}
+
+export const getReclutadorPublico = cache(async (reclutadorId: string): Promise<ReclutadorPublico | null> => {
+  const admin = createAdminClient()
+
+  const { data } = await admin
+    .from('perfil_reclutador')
+    .select(`
+      id, nombre_reclutador,
+      empresa(nombre_empresa, descripcion, link_url)
+    `)
+    .eq('id', reclutadorId)
+    .maybeSingle()
+
+  if (!data) return null
+
+  const r = data as {
+    id: string
+    nombre_reclutador: string
+    empresa: { nombre_empresa: string; descripcion: string | null; link_url: string | null } | null
+  }
+
+  const { data: puestosData } = await admin
+    .from('puesto')
+    .select('id, titulo_puesto, ubicacion, carga_horaria, fecha_publicacion, descripcion_texto, nivel_experiencia, sector_industrial(nombre_sector)')
+    .eq('reclutador_id', reclutadorId)
+    .eq('activo', true)
+    .order('fecha_publicacion', { ascending: false })
+
+  const puestos: ReclutadorPublicoPuesto[] = (puestosData ?? []).map((row: unknown) => {
+    const p = row as {
+      id: string; titulo_puesto: string; ubicacion: string; carga_horaria: string
+      fecha_publicacion: string; descripcion_texto: string | null; nivel_experiencia: string | null
+      sector_industrial: { nombre_sector: string } | null
+    }
+    return {
+      id: p.id,
+      titulo_puesto: p.titulo_puesto,
+      ubicacion: p.ubicacion,
+      carga_horaria: p.carga_horaria,
+      fecha_publicacion: p.fecha_publicacion,
+      descripcion_texto: p.descripcion_texto,
+      nivel_experiencia: p.nivel_experiencia,
+      nombre_sector: p.sector_industrial?.nombre_sector ?? null,
+    }
+  })
+
+  return {
+    id: r.id,
+    nombre_reclutador: r.nombre_reclutador,
+    empresa: r.empresa ?? null,
+    puestos_activos: puestos,
+  }
 })

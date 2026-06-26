@@ -25,6 +25,7 @@ export default async function ReclutadorLayout({ children }: { children: React.R
         items={NAV_RECLUTADOR}
         userEmail={session.email}
         rolLabel="Reclutador"
+        settingsHref="/reclutador/mi-perfil"
       />
       <main className="flex-1 overflow-auto">
         {children}

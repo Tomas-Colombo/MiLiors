@@ -9,10 +9,12 @@ import {
   getMisPostulacionesPuestoIds,
   PUESTOS_PER_PAGE,
 } from '@/modules/puestos/queries'
+import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { PostularButton } from './postular-button'
 import { PuestosFilters } from './filters'
 import { PuestoCard } from './puesto-card'
 import Link from 'next/link'
+import { AlertTriangleIcon } from '@/components/icons'
 
 export const metadata = { title: 'Buscar puestos — TalentID' }
 
@@ -32,19 +34,32 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
 
   const page = Math.max(0, parseInt(sp.page ?? '0', 10))
   const diasDesde = sp.dias ? parseInt(sp.dias, 10) : undefined
+  const postulacion = (sp.postulacion === 'postulados' || sp.postulacion === 'no_postulados')
+    ? sp.postulacion
+    : undefined
 
-  const [{ items: puestos, total }, sectores, yaPostulados] = await Promise.all([
-    getPuestosActivos({
-      sectorId: sp.sector || undefined,
-      cargaHoraria: sp.carga_horaria || undefined,
-      ubicacion: sp.ubicacion || undefined,
-      busqueda: sp.q || undefined,
-      diasDesde,
-      page,
-    }),
+  const [sectores, yaPostuladosSet, certificado] = await Promise.all([
     getSectores(),
     getMisPostulacionesPuestoIds(),
+    getUltimoCertificado(),
   ])
+
+  const postulacionIds = [...yaPostuladosSet]
+
+  const { items: puestos, total } = await getPuestosActivos({
+    sectorId: sp.sector || undefined,
+    cargaHoraria: sp.carga_horaria || undefined,
+    ubicacion: sp.ubicacion || undefined,
+    busqueda: sp.q || undefined,
+    diasDesde,
+    page,
+    postulacion,
+    postulacionIds,
+  })
+
+  const sinCertificado = !certificado
+  const certDesactualizado = certificado?.desactualizado === true
+  const bloqueado = sinCertificado || certDesactualizado
 
   const totalPages = Math.ceil(total / PUESTOS_PER_PAGE)
 
@@ -66,6 +81,25 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
           </Suspense>
         </Card>
 
+        {/* Banner certificado */}
+        {bloqueado && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-amber-500" />
+            <div className="text-sm">
+              <span className="font-semibold text-amber-800">
+                {sinCertificado ? 'Necesitás un certificado para postularte.' : 'Tu certificado está desactualizado.'}
+              </span>
+              {' '}
+              <Link
+                href="/postulante/certificado"
+                className="text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors"
+              >
+                {sinCertificado ? 'Generá tu certificado aquí.' : 'Generá uno nuevo aquí.'}
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Resultados */}
         {puestos.length === 0 ? (
           <EmptyState
@@ -83,7 +117,8 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
                   actions={
                     <PostularButton
                       puestoId={puesto.id}
-                      yaPostulo={yaPostulados.has(puesto.id)}
+                      yaPostulo={yaPostuladosSet.has(puesto.id)}
+                      disabled={bloqueado}
                     />
                   }
                 />

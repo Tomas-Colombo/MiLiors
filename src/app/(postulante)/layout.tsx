@@ -64,6 +64,7 @@ export default async function PostulanteLayout({ children }: { children: React.R
         items={NAV_POSTULANTE}
         userEmail={session.email}
         rolLabel="Postulante"
+        settingsHref="/postulante/mi-perfil"
       />
       <main className="flex-1 overflow-auto">
         {children}

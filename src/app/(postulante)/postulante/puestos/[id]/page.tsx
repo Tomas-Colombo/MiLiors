@@ -3,8 +3,9 @@ import Link from 'next/link'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge } from '@/components/ui'
-import { ChevronLeftIcon, CalendarIcon, BuildingIcon } from '@/components/icons'
+import { ChevronLeftIcon, CalendarIcon, BuildingIcon, ArrowRightIcon, AlertTriangleIcon } from '@/components/icons'
 import { getPuestoPublicoById, getMisPostulacionesPuestoIds } from '@/modules/puestos/queries'
+import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
 import { PostularButton } from '../postular-button'
 
@@ -14,12 +15,15 @@ export default async function PuestoDetallePage({ params }: Props) {
   await requireEneagramaCompleto()
   const { id } = await params
 
-  const [puesto, yaPostulados] = await Promise.all([
+  const [puesto, yaPostulados, certificado] = await Promise.all([
     getPuestoPublicoById(id),
     getMisPostulacionesPuestoIds(),
+    getUltimoCertificado(),
   ])
 
   if (!puesto) notFound()
+
+  const bloqueado = !certificado || certificado.desactualizado
 
   return (
     <TyCGate>
@@ -33,25 +37,55 @@ export default async function PuestoDetallePage({ params }: Props) {
           Buscar puestos
         </Link>
 
+        {/* Banner certificado */}
+        {bloqueado && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-amber-500" />
+            <div className="text-sm">
+              <span className="font-semibold text-amber-800">
+                {!certificado ? 'Necesitás un certificado para postularte.' : 'Tu certificado está desactualizado.'}
+              </span>
+              {' '}
+              <Link
+                href="/postulante/certificado"
+                className="text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors"
+              >
+                {!certificado ? 'Generá tu certificado aquí.' : 'Generá uno nuevo aquí.'}
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Card principal */}
         <Card padding="lg" className="space-y-5">
           {/* Encabezado */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-extrabold text-ink leading-snug">
-                {puesto.titulo_puesto}
-              </h1>
-              {puesto.nombre_empresa && (
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+          <div className="space-y-3">
+            <h1 className="text-xl font-extrabold text-ink leading-snug">
+              {puesto.titulo_puesto}
+            </h1>
+            {puesto.nombre_empresa && (
+              <p className="flex items-center gap-1.5 text-sm text-muted">
+                <BuildingIcon size={14} />
+                {puesto.nombre_empresa}
+              </p>
+            )}
+            <div className="flex items-center justify-between gap-3">
+              {puesto.reclutador_id ? (
+                <Link
+                  href={`/postulante/reclutadores/${puesto.reclutador_id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 h-9 text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                >
                   <BuildingIcon size={14} />
-                  {puesto.nombre_empresa}
-                </p>
+                  Ver perfil de la empresa
+                  <ArrowRightIcon size={13} />
+                </Link>
+              ) : (
+                <span />
               )}
-            </div>
-            <div className="flex-none">
               <PostularButton
                 puestoId={puesto.id}
                 yaPostulo={yaPostulados.has(puesto.id)}
+                disabled={bloqueado}
               />
             </div>
           </div>

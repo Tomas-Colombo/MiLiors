@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTransition } from 'react'
 import { NavItem } from '@/components/ui'
-import { SparklesIcon, LogOutIcon } from '@/components/icons'
+import { SparklesIcon, LogOutIcon, SettingsIcon } from '@/components/icons'
 import { cerrarSesion } from '@/modules/auth/actions'
 
 export type NavLinkItem = {
@@ -20,9 +21,10 @@ type Props = {
   items: NavLinkItem[]
   userEmail: string
   rolLabel: string
+  settingsHref?: string
 }
 
-export function AppSidebar({ items, userEmail, rolLabel }: Props) {
+export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) {
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
 
@@ -72,7 +74,22 @@ export function AppSidebar({ items, userEmail, rolLabel }: Props) {
       {/* Footer */}
       <div className="border-t border-neutral-100 pt-4 px-3 space-y-3">
         <div>
-          <p className="text-[11.5px] font-semibold text-ink-soft truncate">{userEmail}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11.5px] font-semibold text-ink-soft truncate">{userEmail}</p>
+            {settingsHref && (
+              <Link
+                href={settingsHref}
+                aria-label="Configuración de perfil"
+                className={
+                  pathname.startsWith(settingsHref)
+                    ? 'flex-none text-primary-600 transition-colors'
+                    : 'flex-none text-neutral-400 hover:text-neutral-700 transition-colors'
+                }
+              >
+                <SettingsIcon size={13} />
+              </Link>
+            )}
+          </div>
           <p className="text-[11px] text-neutral-400">{rolLabel}</p>
         </div>
         <button
