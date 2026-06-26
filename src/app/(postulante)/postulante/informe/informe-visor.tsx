@@ -26,7 +26,7 @@ export function InformeVisor({ informe }: Props) {
   const [isPending, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
 
-  function handleGenerar() {
+  function handleReintentar() {
     setActionError(null)
     startTransition(async () => {
       const result = await generarInforme()
@@ -38,16 +38,23 @@ export function InformeVisor({ informe }: Props) {
 
   // ── LISTO ──────────────────────────────────────────────────────────────────
   if (informe?.estado_informe === 'LISTO') {
+    let contenidoJSON: Record<string, string> | null = null
+    try {
+      if (informe.contenido_informe) {
+        const parsed = JSON.parse(informe.contenido_informe)
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          contenidoJSON = parsed as Record<string, string>
+        }
+      }
+    } catch {
+      // not JSON — will fall back to plain text
+    }
+
     return (
       <div className="space-y-4">
         {/* Status row */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge tone="success" dot>Generado</Badge>
-            {informe.desactualizado && (
-              <Badge tone="warning">Desactualizado</Badge>
-            )}
-          </div>
+          <Badge tone="success" dot>Generado</Badge>
           {informe.fecha_generacion && (
             <span className="text-xs text-muted">
               {formatFecha(informe.fecha_generacion)}
@@ -55,18 +62,11 @@ export function InformeVisor({ informe }: Props) {
           )}
         </div>
 
-        {/* Desactualizado banner */}
-        {informe.desactualizado && (
-          <Alert tone="warning" title="Informe desactualizado">
-            Guardaste nuevos datos de personalidad. Regenerá el informe para que refleje los cambios.
-          </Alert>
-        )}
-
-        {/* Structured content — use contenido_json if available, fallback to text */}
-        {informe.contenido_json ? (
+        {/* Structured sections if parseable, otherwise plain text */}
+        {contenidoJSON ? (
           <div className="space-y-4">
             {INFORME_SECTION_ORDER.map((key) => {
-              const text = informe.contenido_json![key]
+              const text = contenidoJSON![key]
               if (!text) return null
               return (
                 <Card key={key} padding="lg">
@@ -92,16 +92,9 @@ export function InformeVisor({ informe }: Props) {
           </Card>
         ) : null}
 
-        {/* Regenerate */}
-        <div className="flex justify-end">
-          <Button variant="ghost" size="sm" loading={isPending} onClick={handleGenerar} disabled={isPending}>
-            {informe.desactualizado ? 'Actualizar informe' : 'Regenerar informe'}
-          </Button>
-        </div>
-
-        {actionError && (
-          <Alert tone="error" title="Error al regenerar">{actionError}</Alert>
-        )}
+        <p className="text-xs text-muted text-right">
+          Se actualiza automáticamente al rehacer el Eneagrama o al modificar el Human Design.
+        </p>
       </div>
     )
   }
@@ -116,7 +109,7 @@ export function InformeVisor({ informe }: Props) {
         {actionError && (
           <Alert tone="error" title="Error en el reintento">{actionError}</Alert>
         )}
-        <Button variant="primary" loading={isPending} onClick={handleGenerar} disabled={isPending}>
+        <Button variant="primary" loading={isPending} onClick={handleReintentar} disabled={isPending}>
           Reintentar
         </Button>
       </div>
@@ -124,30 +117,59 @@ export function InformeVisor({ informe }: Props) {
   }
 
   // ── PENDIENTE / null ───────────────────────────────────────────────────────
+  const estaGenerando = isPending
+  const quedoAtascado = !isPending && informe?.estado_informe === 'PENDIENTE'
+
   return (
     <div className="space-y-4">
       <Card padding="lg">
         <div className="space-y-3">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-4/5" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {estaGenerando ? (
+                <Badge tone="info" dot>Generando...</Badge>
+              ) : quedoAtascado ? (
+                <Badge tone="warning">Pendiente</Badge>
+              ) : (
+                <Badge tone="neutral">Sin generar</Badge>
+              )}
+            </div>
+            {informe?.updated_at && (
+              <span className="text-xs text-muted">
+                Última actividad: {formatFecha(informe.updated_at)}
+              </span>
+            )}
+          </div>
+
+          <p className="text-sm text-muted">
+            {estaGenerando
+              ? 'Generando tu informe de personalidad con el modelo de IA. Puede tardar unos minutos.'
+              : quedoAtascado
+              ? 'La generación quedó interrumpida. Podés volver a intentarlo.'
+              : 'El informe se genera automáticamente al completar el Eneagrama o al guardar el Human Design.'}
+          </p>
+
+          {estaGenerando && (
+            <div className="space-y-2 pt-1">
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          )}
         </div>
       </Card>
-      <p className="text-sm text-muted">
-        {informe?.estado_informe === 'PENDIENTE' ? 'Generando tu informe...' : 'Tu informe aún no fue generado.'}
-      </p>
+
       {actionError && (
         <Alert tone="error" title="Error al generar">{actionError}</Alert>
       )}
-      <Button variant="primary" loading={isPending} onClick={handleGenerar} disabled={isPending}>
-        Generar ahora
-      </Button>
+
+      {quedoAtascado && (
+        <Button variant="primary" loading={isPending} onClick={handleReintentar} disabled={isPending}>
+          Reintentar generación
+        </Button>
+      )}
     </div>
   )
 }

@@ -343,7 +343,7 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
   } else {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'PENDIENTE', contenido_informe: null, contenido_json: null })
+      .update({ estado_informe: 'PENDIENTE', contenido_informe: null })
       .eq('id', (informeExistente as { id: string }).id)
   }
 

@@ -92,7 +92,7 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
     especificidadPuesto: perfilTyped.especificidad_puesto,
     dominantes,
     tieneEmpateDominante: testTyped.tiene_empate_dominante,
-    humanDesign: hd ? (hd as { id: string; tipo_energetico: string; energy_type_classification: string | null; autoridad_hd: string; perfil_hd: string; estrategia_hd: string }) : null,
+    humanDesign: hd ? (hd as { id: string; tipo_energetico: string; energy_type_classification: string | null; autoridad_hd: string; perfil_hd: string; estrategia_hd: string; veces_guardado: number }) : null,
     formaciones,
     experiencias,
     idiomas,
@@ -166,29 +166,27 @@ export async function generarInforme(): Promise<ActionResult> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('informe_personalidad') as any)
+  const { error: saveError } = await (admin.from('informe_personalidad') as any)
     .update({
       estado_informe: 'LISTO',
       contenido_informe: JSON.stringify(resultado.contenido_json),
-      contenido_json: resultado.contenido_json,
       fecha_generacion: new Date().toISOString(),
       desactualizado: false,
     })
     .eq('id', informeId)
+
+  if (saveError) {
+    console.error('[informe/actions] Error al guardar informe LISTO:', saveError)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('informe_personalidad') as any)
+      .update({ estado_informe: 'ERROR' })
+      .eq('id', informeId)
+    revalidatePath('/postulante/informe')
+    return { success: false, error: 'El informe se generó pero no se pudo guardar. Intentá de nuevo.' }
+  }
 
   revalidatePath('/postulante/informe')
   revalidatePath('/postulante')
   return { success: true, data: undefined }
 }
 
-/**
- * Marks the personality report as stale (desactualizado=true).
- * Called when Human Design is saved/updated.
- */
-export async function marcarInformeDesactualizado(postulanteId: string): Promise<void> {
-  const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('informe_personalidad') as any)
-    .update({ desactualizado: true })
-    .eq('postulante_id', postulanteId)
-}

@@ -4,6 +4,8 @@ import { TyCGate } from '@/components/shared/tyc-gate'
 import { getInformeActual } from '@/modules/informe/queries'
 import { InformeVisor } from './informe-visor'
 
+export const maxDuration = 300
+
 export const metadata = { title: 'Informe de Personalidad — TalentID' }
 
 export default async function InformePage() {

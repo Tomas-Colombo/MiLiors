@@ -45,9 +45,8 @@ export function CertificadoUI({ certificado, informeListo, informeDesactualizado
 
   if (informeDesactualizado) {
     return (
-      <Alert tone="warning" title="Informe desactualizado">
-        Tu informe de personalidad fue marcado como desactualizado. Regeneralo desde la sección
-        &ldquo;Informe de personalidad&rdquo; antes de emitir el certificado.
+      <Alert tone="warning" title="Informe en proceso de actualización">
+        Tu informe de personalidad está siendo actualizado. Volvé en unos instantes para emitir el certificado.
       </Alert>
     )
   }

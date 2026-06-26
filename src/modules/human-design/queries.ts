@@ -10,6 +10,7 @@ export type HumanDesignData = {
   autoridad_hd: string
   perfil_hd: string
   estrategia_hd: string
+  veces_guardado: number
 }
 
 export const getHumanDesign = cache(async (): Promise<HumanDesignData | null> => {
@@ -26,7 +27,7 @@ export const getHumanDesign = cache(async (): Promise<HumanDesignData | null> =>
 
   const { data } = await supabase
     .from('human_design')
-    .select('id, tipo_energetico, energy_type_classification, autoridad_hd, perfil_hd, estrategia_hd')
+    .select('id, tipo_energetico, energy_type_classification, autoridad_hd, perfil_hd, estrategia_hd, veces_guardado')
     .eq('postulante_id', (postulante as { id: string }).id)
     .single()
 
