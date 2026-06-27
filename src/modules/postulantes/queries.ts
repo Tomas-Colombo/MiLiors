@@ -20,6 +20,7 @@ export type PostulanteDetalle = PostulanteCard & {
   telefono: string | null
   enlace_linkedin: string | null
   portfolio: string | null
+  ultima_conexion: string | null
   // Perfil técnico
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
@@ -144,7 +145,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     .from('perfil_postulante')
     .select(`
       id, nombre_completo, especificidad_puesto, perfil_en_busqueda,
-      telefono, enlace_linkedin, portfolio,
+      telefono, enlace_linkedin, portfolio, ultima_conexion,
       usuario(email),
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
@@ -161,6 +162,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     telefono: string | null
     enlace_linkedin: string | null
     portfolio: string | null
+    ultima_conexion: string | null
     usuario: { email: string } | null
     test_eneagrama: {
       tiene_empate_dominante: boolean
@@ -252,6 +254,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     telefono: contactoLiberado ? p.telefono : null,
     enlace_linkedin: contactoLiberado ? p.enlace_linkedin : null,
     portfolio: contactoLiberado ? p.portfolio : null,
+    ultima_conexion: p.ultima_conexion ?? null,
     formaciones,
     experiencias,
     idiomas,
@@ -266,6 +269,75 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     informe: informeContenido,
   }
 }
+
+export type NotaReclutador = {
+  id: string
+  contenido: string
+  fecha_creacion: string
+  updated_at: string
+  puesto_id: string | null
+  titulo_puesto: string | null
+  postulante_id: string
+  nombre_completo: string | null  // null if candidate was deleted
+}
+
+/** All private notes for the authenticated recruiter, across all candidates */
+export const getTodasLasNotasReclutador = cache(async (filters?: {
+  candidatoId?: string
+}): Promise<NotaReclutador[]> => {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!reclutador) return []
+
+  const reclutadorId = (reclutador as { id: string }).id
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
+    .from('nota_privada')
+    .select(`
+      id, contenido, fecha_creacion, updated_at, puesto_id,
+      puesto(titulo_puesto),
+      perfil_postulante!postulante_id(id, nombre_completo)
+    `)
+    .eq('reclutador_id', reclutadorId)
+
+  if (filters?.candidatoId) {
+    query = query.eq('postulante_id', filters.candidatoId)
+  }
+
+  const { data } = await query
+    .order('fecha_creacion', { ascending: false })
+    .limit(100)
+
+  return (data ?? []).map((row: unknown) => {
+    const r = row as {
+      id: string
+      contenido: string
+      fecha_creacion: string
+      updated_at: string
+      puesto_id: string | null
+      puesto: { titulo_puesto: string } | null
+      perfil_postulante: { id: string; nombre_completo: string | null } | null
+    }
+    return {
+      id: r.id,
+      contenido: r.contenido,
+      fecha_creacion: r.fecha_creacion,
+      updated_at: r.updated_at,
+      puesto_id: r.puesto_id,
+      titulo_puesto: r.puesto?.titulo_puesto ?? null,
+      postulante_id: r.perfil_postulante?.id ?? '',
+      nombre_completo: r.perfil_postulante?.nombre_completo ?? null,
+    }
+  })
+})
 
 /** Notas privadas del reclutador para un postulante */
 export const getNotasPrivadas = cache(async (postulanteId: string) => {

@@ -374,27 +374,49 @@ export const getPostulacionesRecibidas = cache(async () => {
   const puestoIds = (puestos ?? []).map((p: unknown) => (p as { id: string }).id)
   if (puestoIds.length === 0) return []
 
+  const reclutadorId = (reclutador as { id: string }).id
+
   // Step 2: load applications for those posts
   const admin = createAdminClient()
   const { data: postulaciones } = await admin
     .from('postulacion')
     .select(`
-      id, estado, fecha_postulacion, updated_at, postulante_id, puesto_id,
+      id, estado, is_favorito, fecha_postulacion, updated_at, postulante_id, puesto_id,
       puesto(id, titulo_puesto),
-      perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono,
+      perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
         usuario(email))
     `)
     .in('puesto_id', puestoIds)
     .order('fecha_postulacion', { ascending: false })
 
+  // Step 3: load note counts per applicant for this recruiter
+  const postulanteIds = (postulaciones ?? []).map(
+    (r: unknown) => (r as { postulante_id: string }).postulante_id,
+  )
+  const notaCountMap = new Map<string, number>()
+  if (postulanteIds.length > 0) {
+    const { data: notas } = await supabase
+      .from('nota_privada')
+      .select('postulante_id')
+      .eq('reclutador_id', reclutadorId)
+      .in('postulante_id', postulanteIds)
+
+    for (const n of notas ?? []) {
+      const row = n as { postulante_id: string }
+      notaCountMap.set(row.postulante_id, (notaCountMap.get(row.postulante_id) ?? 0) + 1)
+    }
+  }
+
   return (postulaciones ?? []).map((row: unknown) => {
     const r = row as {
-      id: string; estado: string; fecha_postulacion: string; updated_at: string
+      id: string; estado: string; is_favorito: boolean
+      fecha_postulacion: string; updated_at: string
       postulante_id: string; puesto_id: string
       puesto: { id: string; titulo_puesto: string } | null
       perfil_postulante: {
         id: string; nombre_completo: string
         perfil_en_busqueda: boolean; telefono: string | null
+        ultima_conexion: string | null
         usuario: { email: string } | null
       } | null
     }
@@ -408,13 +430,16 @@ export const getPostulacionesRecibidas = cache(async () => {
     return {
       id: r.id,
       estado: r.estado,
+      is_favorito: r.is_favorito ?? false,
       fecha_postulacion: r.fecha_postulacion,
       updated_at: r.updated_at,
       puesto_id: r.puesto_id,
       titulo_puesto: r.puesto?.titulo_puesto,
       postulante_id: r.postulante_id,
       nombre_completo: r.perfil_postulante?.nombre_completo,
+      ultima_conexion: r.perfil_postulante?.ultima_conexion ?? null,
       contacto,
+      tiene_nota: (notaCountMap.get(r.postulante_id) ?? 0) > 0,
     }
   })
 })

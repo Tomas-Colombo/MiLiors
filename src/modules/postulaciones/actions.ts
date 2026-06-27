@@ -162,3 +162,32 @@ export async function avanzarEstadoPostulacion(
   revalidatePath('/reclutador/postulaciones')
   return { success: true, data: undefined }
 }
+
+export async function toggleFavoritoPostulacion(
+  postulacionId: string,
+  isFavorito: boolean,
+): Promise<ActionResult> {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  // Verify the recruiter owns the application via their posts
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!reclutador) return { success: false, error: 'No autorizado.' }
+
+  const admin = createAdminClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('postulacion') as any)
+    .update({ is_favorito: isFavorito })
+    .eq('id', postulacionId)
+
+  if (error) return { success: false, error: 'No se pudo actualizar favorito.' }
+
+  revalidatePath('/reclutador/postulaciones')
+  return { success: true, data: undefined }
+}

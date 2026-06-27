@@ -8,6 +8,23 @@ import {
   SparklesIcon,
   UserIcon,
 } from '@/components/icons'
+
+function tiempoRelativo(fecha: string | null): string | null {
+  if (!fecha) return null
+  const diffMs = Date.now() - new Date(fecha).getTime()
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 60) return mins <= 1 ? 'hace un momento' : `hace ${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return hours === 1 ? 'hace 1 hora' : `hace ${hours} horas`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return days === 1 ? 'hace 1 día' : `hace ${days} días`
+  const weeks = Math.floor(days / 7)
+  if (weeks < 5) return weeks === 1 ? 'hace 1 semana' : `hace ${weeks} semanas`
+  const months = Math.floor(days / 30)
+  if (months < 12) return months === 1 ? 'hace 1 mes' : `hace ${months} meses`
+  const years = Math.floor(days / 365)
+  return years === 1 ? 'hace 1 año' : `hace ${years} años`
+}
 import { getPostulanteDetalle, getNotasPrivadas } from '@/modules/postulantes/queries'
 import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
@@ -279,6 +296,14 @@ export default async function PostulanteDetallePage({
                 <Alert tone="info">
                   Contacto no disponible — este candidato no está en búsqueda activa.
                 </Alert>
+              )}
+              {tiempoRelativo(postulante.ultima_conexion) && (
+                <p className="mt-3 pt-3 border-t border-neutral-100 text-[12px] text-neutral-400">
+                  Último acceso:{' '}
+                  <span className="text-neutral-500">
+                    {tiempoRelativo(postulante.ultima_conexion)}
+                  </span>
+                </p>
               )}
             </Card>
 

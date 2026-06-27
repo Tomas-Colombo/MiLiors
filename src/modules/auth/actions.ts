@@ -116,6 +116,13 @@ export async function iniciarSesion(
     return { success: false, error: 'Cuenta con configuración incorrecta. Contactá soporte.' }
   }
 
+  // Update last login timestamp on the role profile (fire-and-forget: failure doesn't block login)
+  const admin = createAdminClient()
+  const profileTable = rol === 'POSTULANTE' ? 'perfil_postulante' : 'perfil_reclutador'
+  await (admin.from(profileTable) as any)
+    .update({ ultima_conexion: new Date().toISOString() })
+    .eq('usuario_id', data.user.id)
+
   revalidatePath('/', 'layout')
   redirect(RUTAS_POR_ROL[rol])
 }

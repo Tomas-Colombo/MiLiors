@@ -1,10 +1,12 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, EmptyState } from '@/components/ui'
-import { UsersIcon, MailIcon } from '@/components/icons'
+import { UsersIcon, MailIcon, FileTextIcon } from '@/components/icons'
 import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
+import { FiltrosPostulaciones } from './filtros-postulaciones'
 import type { BadgeProps } from '@/components/ui/badge'
 
 export const metadata = { title: 'Postulaciones recibidas — TalentID' }
@@ -25,8 +27,51 @@ const estadoLabel: Record<string, string> = {
   [ESTADO_POSTULACION.CERRADA]: 'Cerrada',
 }
 
-export default async function PostulacionesRecibidasPage() {
+function tiempoRelativo(fecha: string | null): string | null {
+  if (!fecha) return null
+  const diffMs = Date.now() - new Date(fecha).getTime()
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 60) return mins <= 1 ? 'hace un momento' : `hace ${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return hours === 1 ? 'hace 1 hora' : `hace ${hours} horas`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return days === 1 ? 'hace 1 día' : `hace ${days} días`
+  const weeks = Math.floor(days / 7)
+  if (weeks < 5) return weeks === 1 ? 'hace 1 semana' : `hace ${weeks} semanas`
+  const months = Math.floor(days / 30)
+  if (months < 12) return months === 1 ? 'hace 1 mes' : `hace ${months} meses`
+  const years = Math.floor(days / 365)
+  return years === 1 ? 'hace 1 año' : `hace ${years} años`
+}
+
+type SearchParams = Promise<{ puesto?: string; estado?: string }>
+
+export default async function PostulacionesRecibidasPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const { puesto: filtroPuesto, estado: filtroEstado } = await searchParams
   const postulaciones = await getPostulacionesRecibidas()
+
+  // Build the list of unique job posts for the filter dropdown
+  const puestosMap = new Map<string, string>()
+  for (const p of postulaciones) {
+    if (p.puesto_id && p.titulo_puesto) {
+      puestosMap.set(p.puesto_id, p.titulo_puesto)
+    }
+  }
+  const puestosOpts = Array.from(puestosMap.entries()).map(([id, titulo_puesto]) => ({
+    id,
+    titulo_puesto,
+  }))
+
+  // Apply filters server-side (data already loaded; filter in memory)
+  const filtered = postulaciones.filter((p) => {
+    if (filtroPuesto && p.puesto_id !== filtroPuesto) return false
+    if (filtroEstado && p.estado !== filtroEstado) return false
+    return true
+  })
 
   return (
     <TyCGate>
@@ -34,19 +79,37 @@ export default async function PostulacionesRecibidasPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-ink">Postulaciones recibidas</h1>
           <p className="mt-1 text-muted">
-            {postulaciones.length} postulación{postulaciones.length !== 1 ? 'es' : ''}
+            {postulaciones.length} postulación{postulaciones.length !== 1 ? 'es' : ''} en total
           </p>
         </div>
 
-        {postulaciones.length === 0 ? (
+        {postulaciones.length > 0 && (
+          <Suspense>
+            <FiltrosPostulaciones
+              puestos={puestosOpts}
+              totalVisible={filtered.length}
+              totalTotal={postulaciones.length}
+            />
+          </Suspense>
+        )}
+
+        {filtered.length === 0 ? (
           <EmptyState
             icon={<UsersIcon size={24} />}
-            title="Todavía no recibiste postulaciones"
-            description="Publicá puestos para que los candidatos puedan postularse."
+            title={
+              postulaciones.length === 0
+                ? 'Todavía no recibiste postulaciones'
+                : 'Ninguna postulación coincide con los filtros'
+            }
+            description={
+              postulaciones.length === 0
+                ? 'Publicá puestos para que los candidatos puedan postularse.'
+                : 'Probá cambiando o limpiando los filtros.'
+            }
           />
         ) : (
           <div className="space-y-4">
-            {postulaciones.map((p) => (
+            {filtered.map((p) => (
               <Card key={p.id} padding="md">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0 space-y-1">
@@ -57,11 +120,28 @@ export default async function PostulacionesRecibidasPage() {
                       <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
                         {estadoLabel[p.estado] ?? p.estado}
                       </Badge>
+                      {/* Note indicator */}
+                      {p.tiene_nota && (
+                        <span
+                          title="Tiene notas privadas"
+                          className="inline-flex items-center text-amber-500"
+                        >
+                          <FileTextIcon size={14} />
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-[13px] text-muted truncate">
-                      Puesto: <span className="font-medium text-ink-soft">{p.titulo_puesto ?? '—'}</span>
+                      Puesto:{' '}
+                      <span className="font-medium text-ink-soft">{p.titulo_puesto ?? '—'}</span>
                     </p>
+
+                    {tiempoRelativo(p.ultima_conexion) && (
+                      <p className="text-[12px] text-neutral-400">
+                        Último acceso:{' '}
+                        <span className="text-neutral-500">{tiempoRelativo(p.ultima_conexion)}</span>
+                      </p>
+                    )}
 
                     {/* Contact info — always visible because applicant applied to this recruiter's post */}
                     <div className="flex flex-wrap gap-4 mt-2">
@@ -101,7 +181,11 @@ export default async function PostulacionesRecibidasPage() {
                     >
                       Ver perfil
                     </Link>
-                    <PostulacionAcciones postulacionId={p.id} estadoActual={p.estado} />
+                    <PostulacionAcciones
+                      postulacionId={p.id}
+                      estadoActual={p.estado}
+                      isFavorito={p.is_favorito}
+                    />
                   </div>
                 </div>
               </Card>
