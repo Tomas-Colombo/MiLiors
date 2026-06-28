@@ -52,8 +52,9 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
   const sector = sp.get('sector') ?? ''
   const carga = sp.get('carga_horaria') ?? ''
   const ubicacion = sp.get('ubicacion') ?? ''
-  const postulacion = sp.get('postulacion') ?? ''
-  const hasFilters = !!(q || dias || sector || carga || ubicacion || postulacion)
+  // "postulacion" defaults to "no_postulados" server-side, so we treat missing param as that value.
+  const postulacion = sp.get('postulacion') ?? 'no_postulados'
+  const hasFilters = !!(q || dias || sector || carga || ubicacion || sp.get('postulacion'))
 
   return (
     <div className="space-y-5">
@@ -196,17 +197,10 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
               <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
-                  onClick={() => update('postulacion', '')}
-                  className={pill(postulacion === '')}
+                  onClick={() => update('postulacion', 'todos')}
+                  className={pill(postulacion === 'todos')}
                 >
                   Todos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => update('postulacion', 'postulados')}
-                  className={pill(postulacion === 'postulados')}
-                >
-                  Ya postulé
                 </button>
                 <button
                   type="button"
@@ -214,6 +208,13 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
                   className={pill(postulacion === 'no_postulados')}
                 >
                   No postulé
+                </button>
+                <button
+                  type="button"
+                  onClick={() => update('postulacion', 'postulados')}
+                  className={pill(postulacion === 'postulados')}
+                >
+                  Ya postulé
                 </button>
               </div>
             </div>

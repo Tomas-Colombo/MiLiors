@@ -280,3 +280,81 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
   revalidatePath('/postulante/perfil')
   return { success: true, data: undefined }
 }
+
+/**
+ * Saves competencies for the current applicant.
+ * `existingIds` — UUIDs already in the catalog.
+ * `customNames` — free-text names to upsert into the catalog first.
+ * Returns the final list of saved CompetenciaItem so the UI can update optimistically.
+ */
+export async function guardarCompetenciasConCustom(
+  existingIds: string[],
+  customNames: string[]
+): Promise<ActionResult & { items?: { id: string; nombre: string }[] }> {
+  if (existingIds.length + customNames.length > 15) {
+    return { success: false, error: 'Podés seleccionar hasta 15 competencias.' }
+  }
+
+  const postulanteId = await getPostulanteId()
+  if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
+
+  const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
+  const admin = createAdminClient()
+
+  // Resolve custom names → IDs (upsert by nombre, which is UNIQUE)
+  const customIds: string[] = []
+  for (const nombre of customNames) {
+    const trimmed = nombre.trim()
+    if (!trimmed) continue
+
+    // Try insert; if the nombre already exists the conflict returns nothing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: inserted } = await (admin.from('competencia') as any)
+      .insert({ nombre: trimmed })
+      .select('id')
+      .single()
+
+    if (inserted) {
+      customIds.push((inserted as { id: string }).id)
+    } else {
+      // nombre already exists — fetch the existing id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existing } = await (admin.from('competencia') as any)
+        .select('id')
+        .eq('nombre', trimmed)
+        .single()
+      if (existing) customIds.push((existing as { id: string }).id)
+    }
+  }
+
+  const allIds = [...new Set([...existingIds, ...customIds])]
+
+  // Replace all competencies for this profile
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('postulante_competencia') as any)
+    .delete()
+    .eq('perfil_tecnico_id', perfilTecnicoId)
+
+  if (allIds.length === 0) {
+    revalidatePath('/postulante/perfil')
+    return { success: true, data: undefined, items: [] }
+  }
+
+  const rows = allIds.map((cid) => ({
+    perfil_tecnico_id: perfilTecnicoId,
+    competencia_id: cid,
+  }))
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('postulante_competencia') as any).insert(rows)
+  if (error) return { success: false, error: 'No se pudieron guardar las competencias.' }
+
+  // Fetch the saved items to return updated state to the UI
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: saved } = await (admin.from('competencia') as any)
+    .select('id, nombre')
+    .in('id', allIds)
+
+  revalidatePath('/postulante/perfil')
+  return { success: true, data: undefined, items: (saved ?? []) as { id: string; nombre: string }[] }
+}
