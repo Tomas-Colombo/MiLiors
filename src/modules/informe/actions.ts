@@ -125,6 +125,8 @@ export async function generarInforme(): Promise<ActionResult> {
     .from('informe_personalidad')
     .select('id')
     .eq('postulante_id', postulanteId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .single()
 
   let informeId: string

@@ -25,18 +25,20 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
 
   const { data: informe } = await supabase
     .from('informe_personalidad')
-    .select('estado_informe, desactualizado, contenido_json')
+    .select('estado_informe, desactualizado, contenido_informe')
     .eq('postulante_id', postulanteTyped.id)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .single()
 
-  if (!informe || (informe as { estado_informe: string }).estado_informe !== 'LISTO') {
+  if (!informe || (informe as { estado_informe: string; desactualizado: boolean; contenido_informe: string | null }).estado_informe !== 'LISTO') {
     return {
       success: false,
       error: 'El informe de personalidad debe estar en estado LISTO para generar el certificado.',
     }
   }
 
-  if ((informe as { desactualizado: boolean }).desactualizado) {
+  if ((informe as { estado_informe: string; desactualizado: boolean; contenido_informe: string | null }).desactualizado) {
     return {
       success: false,
       error: 'El informe de personalidad está desactualizado. Regeneralo antes de emitir el certificado.',
@@ -120,10 +122,16 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
   const timestampFirma = new Date().toISOString()
 
   // Snapshot personality text from informe (no second LLM call)
-  const informeTyped = informe as { estado_informe: string; desactualizado: boolean; contenido_json: unknown }
-  const personalidadText = informeTyped.contenido_json
-    ? (informeTyped.contenido_json as { perfil_personalidad?: string }).perfil_personalidad
-    : undefined
+  const informeTyped = informe as { estado_informe: string; desactualizado: boolean; contenido_informe: string | null }
+  let personalidadText: string | undefined
+  if (informeTyped.contenido_informe) {
+    try {
+      const parsed = JSON.parse(informeTyped.contenido_informe) as { perfil_personalidad?: string }
+      personalidadText = parsed.perfil_personalidad
+    } catch {
+      personalidadText = undefined
+    }
+  }
 
   // Generate PDF with embedded QR
   let pdfBuffer: Buffer
@@ -170,7 +178,7 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     postulante_id: postulanteTyped.id,
     url_archivo: storagePath,
     timestamp_firma: timestampFirma,
-    contenido_json: informeTyped.contenido_json ?? null,
+    contenido_json: informeTyped.contenido_informe ?? null,
     desactualizado: false,
   }, { onConflict: 'postulante_id' })
 

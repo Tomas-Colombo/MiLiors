@@ -7,6 +7,12 @@ import { verifySession } from '@/lib/dal'
 import { formacionSchema, experienciaSchema, idiomaSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 
+// Converts YYYY-MM → YYYY-MM-01 for Postgres DATE columns
+function toDate(mesAnio: string | undefined): string | null {
+  if (!mesAnio) return null
+  return `${mesAnio}-01`
+}
+
 // Helper: get or create perfil_tecnico
 async function getOrCreatePerfilTecnico(postulanteId: string): Promise<string> {
   const supabase = await createClient()
@@ -67,7 +73,7 @@ export async function agregarFormacion(
     perfil_tecnico_id: perfilTecnicoId,
     institucion: parsed.data.institucion,
     titulo: parsed.data.titulo,
-    fecha_graduacion: parsed.data.fecha_graduacion || null,
+    fecha_graduacion: toDate(parsed.data.fecha_graduacion),
   })
 
   if (error) return { success: false, error: 'No se pudo guardar la formación.' }
@@ -98,7 +104,7 @@ export async function editarFormacion(
     .update({
       institucion: parsed.data.institucion,
       titulo: parsed.data.titulo,
-      fecha_graduacion: parsed.data.fecha_graduacion || null,
+      fecha_graduacion: toDate(parsed.data.fecha_graduacion),
     })
     .eq('id', id)
 
@@ -145,8 +151,8 @@ export async function agregarExperiencia(
     perfil_tecnico_id: perfilTecnicoId,
     empresa: parsed.data.empresa,
     puesto: parsed.data.puesto,
-    fecha_inicio: parsed.data.fecha_inicio,
-    fecha_fin: parsed.data.fecha_fin || null,
+    fecha_inicio: toDate(parsed.data.fecha_inicio)!,
+    fecha_fin: toDate(parsed.data.fecha_fin),
     descripcion: parsed.data.descripcion || null,
   })
 
@@ -178,8 +184,8 @@ export async function editarExperiencia(
     .update({
       empresa: parsed.data.empresa,
       puesto: parsed.data.puesto,
-      fecha_inicio: parsed.data.fecha_inicio,
-      fecha_fin: parsed.data.fecha_fin || null,
+      fecha_inicio: toDate(parsed.data.fecha_inicio)!,
+      fecha_fin: toDate(parsed.data.fecha_fin),
       descripcion: parsed.data.descripcion || null,
     })
     .eq('id', id)

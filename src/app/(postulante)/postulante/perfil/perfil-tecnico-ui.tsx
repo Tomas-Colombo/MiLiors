@@ -1,7 +1,9 @@
 'use client'
 
-import { useActionState, useTransition, useState } from 'react'
+import { useActionState, useTransition, useState, useRef } from 'react'
 import { Tabs, Field, Input, Textarea, Select, Alert, Chip, Button } from '@/components/ui'
+import type { InputProps } from '@/components/ui/input'
+import { CalendarIcon } from '@/components/icons'
 import { NIVEL_IDIOMA_LABEL } from '@/lib/constants/enums'
 import {
   agregarFormacion,
@@ -16,6 +18,94 @@ import {
 } from '@/modules/perfil-tecnico/actions'
 import type { PerfilTecnicoCompleto, CompetenciaItem, FormacionItem, ExperienciaItem, IdiomaItem } from '@/modules/perfil-tecnico/queries'
 import type { ActionResult } from '@/lib/types/domain'
+
+// ─── MONTH/YEAR INPUT ────────────────────────────────────────────────────────
+// Accepts/shows MM/AAAA, submits YYYY-MM via hidden input.
+
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+
+function formatMesAnio(fecha: string | null | undefined): string | null {
+  if (!fecha) return null
+  const [year, month] = fecha.split('-')
+  if (!year || !month) return fecha
+  const mes = MESES[parseInt(month, 10) - 1]
+  const mesLabel = mes ? mes.charAt(0).toUpperCase() + mes.slice(1) : ''
+  return mesLabel ? `${mesLabel} ${year}` : fecha
+}
+
+function toDisplay(yyyymm?: string | null): string {
+  if (!yyyymm) return ''
+  const [y, m] = yyyymm.split('-')
+  return m && y ? `${m}/${y}` : ''
+}
+
+function toYYYYMM(display: string): string {
+  const match = display.match(/^(\d{2})\/(\d{4})$/)
+  return match ? `${match[2]}-${match[1]}` : ''
+}
+
+function MonthYearInput({ name, defaultValue, status, ...rest }: Omit<InputProps, 'type' | 'value' | 'onChange'> & { name: string; defaultValue?: string }) {
+  const [display, setDisplay] = useState(() => toDisplay(defaultValue))
+  const pickerRef = useRef<HTMLInputElement>(null)
+  const hidden = toYYYYMM(display)
+
+  function handleTextChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const prev = display
+    let v = e.target.value.replace(/[^\d/]/g, '')
+    if (v.length === 2 && !v.includes('/') && prev.length < 2) v = v + '/'
+    if (v.length <= 7) setDisplay(v)
+  }
+
+  function handlePickerChange(e: React.ChangeEvent<HTMLInputElement>) {
+    // picker returns YYYY-MM
+    setDisplay(toDisplay(e.target.value))
+  }
+
+  function openPicker() {
+    try {
+      pickerRef.current?.showPicker()
+    } catch {
+      pickerRef.current?.click()
+    }
+  }
+
+  return (
+    <>
+      <input type="hidden" name={name} value={hidden} />
+      {/* Hidden native month picker — triggered by the calendar button */}
+      <input
+        ref={pickerRef}
+        type="month"
+        value={hidden}
+        onChange={handlePickerChange}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+      <div className="relative">
+        <Input
+          value={display}
+          onChange={handleTextChange}
+          placeholder="MM/AAAA"
+          maxLength={7}
+          status={status}
+          inputMode="numeric"
+          className="pr-9"
+          {...rest}
+        />
+        <button
+          type="button"
+          onClick={openPicker}
+          tabIndex={-1}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+          aria-label="Seleccionar mes y año"
+        >
+          <CalendarIcon size={16} />
+        </button>
+      </div>
+    </>
+  )
+}
 
 const INITIAL_STATE: ActionResult = { success: false, error: '' }
 
@@ -47,8 +137,8 @@ function FormacionForm({
       <Field label="Título" required error={state.success === false && state.fieldErrors?.titulo?.[0]}>
         <Input name="titulo" placeholder="Ej: Lic. en Sistemas" status={state.success === false && state.fieldErrors?.titulo ? 'error' : 'default'} />
       </Field>
-      <Field label="Fecha de graduación" hint="Opcional — formato mes/año">
-        <Input name="fecha_graduacion" type="month" />
+      <Field label="Fecha de graduación" hint="Opcional">
+        <MonthYearInput name="fecha_graduacion" />
       </Field>
       {state.success === false && state.error && !state.fieldErrors && (
         <Alert tone="error">{state.error}</Alert>
@@ -87,8 +177,8 @@ function FormacionEditForm({
       <Field label="Título" required error={state.success === false && state.fieldErrors?.titulo?.[0]}>
         <Input name="titulo" defaultValue={item.titulo} status={state.success === false && state.fieldErrors?.titulo ? 'error' : 'default'} />
       </Field>
-      <Field label="Fecha de graduación">
-        <Input name="fecha_graduacion" type="month" defaultValue={item.fecha_graduacion ?? ''} />
+      <Field label="Fecha de graduación" hint="Opcional">
+        <MonthYearInput name="fecha_graduacion" defaultValue={item.fecha_graduacion ?? ''} />
       </Field>
       {state.success === false && state.error && !state.fieldErrors && (
         <Alert tone="error">{state.error}</Alert>
@@ -132,7 +222,7 @@ function SeccionFormacion({ formaciones }: { formaciones: FormacionItem[] }) {
               <p className="text-[14px] font-semibold text-ink">{f.titulo}</p>
               <p className="text-[13px] text-muted">{f.institucion}</p>
               {f.fecha_graduacion && (
-                <p className="text-[12px] text-neutral-400">{f.fecha_graduacion}</p>
+                <p className="text-[12px] text-neutral-400">{formatMesAnio(f.fecha_graduacion)}</p>
               )}
             </div>
             <div className="flex gap-2">
@@ -156,6 +246,7 @@ function SeccionFormacion({ formaciones }: { formaciones: FormacionItem[] }) {
 // ─── EXPERIENCIA ──────────────────────────────────────────────────────────────
 
 function ExperienciaForm({ onSuccess }: { onSuccess: () => void }) {
+  const [trabajoActual, setTrabajoActual] = useState(false)
   const [state, action, pending] = useActionState(
     async (prev: ActionResult, formData: FormData) => {
       const result = await agregarExperiencia(prev, formData)
@@ -178,12 +269,23 @@ function ExperienciaForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Inicio" required error={state.success === false && state.fieldErrors?.fecha_inicio?.[0]}>
-          <Input name="fecha_inicio" type="month" status={state.success === false && state.fieldErrors?.fecha_inicio ? 'error' : 'default'} />
+          <MonthYearInput name="fecha_inicio" status={state.success === false && state.fieldErrors?.fecha_inicio ? 'error' : 'default'} />
         </Field>
-        <Field label="Fin" hint="Dejá vacío si es tu trabajo actual" error={state.success === false && state.fieldErrors?.fecha_fin?.[0]}>
-          <Input name="fecha_fin" type="month" />
-        </Field>
+        {!trabajoActual && (
+          <Field label="Fin" error={state.success === false && state.fieldErrors?.fecha_fin?.[0]}>
+            <MonthYearInput name="fecha_fin" />
+          </Field>
+        )}
       </div>
+      <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink-soft">
+        <input
+          type="checkbox"
+          checked={trabajoActual}
+          onChange={(e) => setTrabajoActual(e.target.checked)}
+          className="h-4 w-4 rounded border-neutral-300 accent-primary-600"
+        />
+        Trabajo actual
+      </label>
       <Field label="Descripción" hint="Opcional">
         <Textarea name="descripcion" placeholder="Describí tus responsabilidades…" rows={3} />
       </Field>
@@ -204,6 +306,7 @@ function ExperienciaEditForm({
   onSuccess: () => void
   onCancel: () => void
 }) {
+  const [trabajoActual, setTrabajoActual] = useState(() => item.fecha_fin === null)
   const boundAction = editarExperiencia.bind(null, item.id)
   const [state, action, pending] = useActionState(
     async (prev: ActionResult, formData: FormData) => {
@@ -226,12 +329,23 @@ function ExperienciaEditForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Inicio" required error={state.success === false && state.fieldErrors?.fecha_inicio?.[0]}>
-          <Input name="fecha_inicio" type="month" defaultValue={item.fecha_inicio} status={state.success === false && state.fieldErrors?.fecha_inicio ? 'error' : 'default'} />
+          <MonthYearInput name="fecha_inicio" defaultValue={item.fecha_inicio} status={state.success === false && state.fieldErrors?.fecha_inicio ? 'error' : 'default'} />
         </Field>
-        <Field label="Fin" hint="Vacío = trabajo actual" error={state.success === false && state.fieldErrors?.fecha_fin?.[0]}>
-          <Input name="fecha_fin" type="month" defaultValue={item.fecha_fin ?? ''} />
-        </Field>
+        {!trabajoActual && (
+          <Field label="Fin" error={state.success === false && state.fieldErrors?.fecha_fin?.[0]}>
+            <MonthYearInput name="fecha_fin" defaultValue={item.fecha_fin ?? ''} />
+          </Field>
+        )}
       </div>
+      <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink-soft">
+        <input
+          type="checkbox"
+          checked={trabajoActual}
+          onChange={(e) => setTrabajoActual(e.target.checked)}
+          className="h-4 w-4 rounded border-neutral-300 accent-primary-600"
+        />
+        Trabajo actual
+      </label>
       <Field label="Descripción">
         <Textarea name="descripcion" defaultValue={item.descripcion ?? ''} rows={3} />
       </Field>
@@ -277,7 +391,7 @@ function SeccionExperiencia({ experiencias }: { experiencias: ExperienciaItem[] 
               <p className="text-[14px] font-semibold text-ink">{e.puesto}</p>
               <p className="text-[13px] text-muted">{e.empresa}</p>
               <p className="text-[12px] text-neutral-400">
-                {e.fecha_inicio} – {e.fecha_fin ?? 'Actualidad'}
+                {formatMesAnio(e.fecha_inicio)} – {formatMesAnio(e.fecha_fin) ?? 'Actualidad'}
               </p>
               {e.descripcion && (
                 <p className="mt-1 text-[12px] text-neutral-500 line-clamp-2">{e.descripcion}</p>
