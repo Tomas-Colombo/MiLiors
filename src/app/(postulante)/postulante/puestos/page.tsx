@@ -34,9 +34,13 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
 
   const page = Math.max(0, parseInt(sp.page ?? '0', 10))
   const diasDesde = sp.dias ? parseInt(sp.dias, 10) : undefined
+  // Default to "no_postulados" so the first view only shows jobs the user hasn't applied to yet.
+  // Passing 'todos' explicitly resets the filter to show everything.
   const postulacion = (sp.postulacion === 'postulados' || sp.postulacion === 'no_postulados')
     ? sp.postulacion
-    : undefined
+    : sp.postulacion === 'todos'
+      ? undefined
+      : 'no_postulados'
 
   const [sectores, yaPostuladosSet, certificado] = await Promise.all([
     getSectores(),
