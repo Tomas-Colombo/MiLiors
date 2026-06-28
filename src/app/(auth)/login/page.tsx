@@ -1,4 +1,5 @@
 import { LoginForm } from './login-form'
+import { VerificarWidget } from './verificar-widget'
 import Link from 'next/link'
 import { SparklesIcon } from '@/components/icons'
 
@@ -37,6 +38,8 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      <VerificarWidget />
     </div>
   )
 }

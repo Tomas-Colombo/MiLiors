@@ -43,8 +43,6 @@ export type CertificadoVerificacion = {
   id: string
   timestamp_firma: string
   nombre_completo: string
-  eneatipo_numero: number
-  eneatipo_nombre: string
 }
 
 export async function getCertificadoParaVerificar(id: string): Promise<CertificadoVerificacion | null> {
@@ -69,21 +67,9 @@ export async function getCertificadoParaVerificar(id: string): Promise<Certifica
   if (!postulante) return null
   const postulanteTyped = postulante as { nombre_completo: string }
 
-  const { data: test } = await admin
-    .from('test_eneagrama')
-    .select('eneatipo(numero_eneatipo, nombre)')
-    .eq('postulante_id', certTyped.postulante_id)
-    .single()
-
-  if (!test) return null
-  const testTyped = test as { eneatipo: { numero_eneatipo: number; nombre: string } | null }
-  if (!testTyped.eneatipo) return null
-
   return {
     id: certTyped.id,
     timestamp_firma: certTyped.timestamp_firma,
     nombre_completo: postulanteTyped.nombre_completo,
-    eneatipo_numero: testTyped.eneatipo.numero_eneatipo,
-    eneatipo_nombre: testTyped.eneatipo.nombre,
   }
 }
