@@ -12,8 +12,9 @@
 
 @theme {
   /* ----- Tipografía ----------------------------------------------------- */
-  --font-sans: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --font-heading: var(--font-fraunces), Georgia, serif;
 
   /* ----- Color · Primario (violeta de marca) ---------------------------- */
   --color-primary-50: #eeedfd;
@@ -45,9 +46,9 @@
   --color-neutral-disabled: #c9c7d4; /* texto/relleno deshabilitado */
 
   /* alias semánticos de superficie y texto */
-  --color-page: #f6f7f9;
+  --color-page: #F7F6FB;
   --color-surface: #ffffff;
-  --color-surface-page: #f6f7f9; /* alias bg-surface-page */
+  --color-surface-page: #F7F6FB; /* alias bg-surface-page */
   --color-line: #ecedf1;
   --color-line-strong: #e2e4e9;
   --color-divider: #f1f2f5;
@@ -120,6 +121,20 @@
   --gradient-promo: linear-gradient(155deg, #6e5deb, #5039d8);
   --gradient-avatar: linear-gradient(135deg, #a99ef2, #6d5de8);
   --gradient-progress: linear-gradient(90deg, #7c6bec, #5b4be6);
+
+  /* Sidebar oscuro */
+  --sidebar-bg: #1E1B3A;
+  --sidebar-item-active-bg: #322D5C;
+  --sidebar-item-hover-bg: #2A2550;
+  --sidebar-item-text: #B8B3DC;
+  --sidebar-item-text-active: #ffffff;
+  --sidebar-border: #2D2A4A;
+  --sidebar-logo-gradient: linear-gradient(135deg, #8B7FFF, #5B4FE8);
+
+  /* Acento extendido para el dashboard */
+  --color-accent-light: #8B7FFF;
+  --color-surface-badge: #EEEDFE;
+  --color-border-soft: #E8E4FF;
 
   /* Layout */
   --app-sidebar-width: 248px;
