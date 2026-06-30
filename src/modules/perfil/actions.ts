@@ -7,6 +7,13 @@ import { verifySession } from '@/lib/dal'
 import { onboardingPostulanteSchema } from '@/modules/eneagrama/schema'
 import type { ActionResult } from '@/lib/types/domain'
 
+function normalizeUrl(val: FormDataEntryValue | null): string | undefined {
+  if (!val || typeof val !== 'string' || val.trim() === '') return undefined
+  const trimmed = val.trim()
+  if (!/^https?:\/\//i.test(trimmed)) return `https://${trimmed}`
+  return trimmed
+}
+
 // ─── Postulante ───────────────────────────────────────────────────────────────
 
 export async function actualizarPerfilPostulante(
@@ -19,8 +26,8 @@ export async function actualizarPerfilPostulante(
     nombre_completo: formData.get('nombre_completo'),
     telefono: formData.get('telefono') || undefined,
     especificidad_puesto: formData.get('especificidad_puesto') || undefined,
-    enlace_linkedin: formData.get('enlace_linkedin') || undefined,
-    portfolio: formData.get('portfolio') || undefined,
+    enlace_linkedin: normalizeUrl(formData.get('enlace_linkedin')),
+    portfolio: normalizeUrl(formData.get('portfolio')),
   }
 
   const parsed = onboardingPostulanteSchema.safeParse(raw)
@@ -146,5 +153,51 @@ export async function actualizarPerfilReclutador(
   }
 
   revalidatePath('/reclutador/mi-perfil')
+  return { success: true, data: undefined }
+}
+
+// ─── Cambiar contraseña ───────────────────────────────────────────────────────
+
+const cambiarPasswordSchema = z
+  .object({
+    nueva_password: z
+      .string()
+      .min(8, { message: 'La contraseña debe tener al menos 8 caracteres.' }),
+    confirmar_password: z.string(),
+  })
+  .refine((d) => d.nueva_password === d.confirmar_password, {
+    message: 'Las contraseñas no coinciden.',
+    path: ['confirmar_password'],
+  })
+
+export async function cambiarPassword(
+  _prevState: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await verifySession()
+
+  const raw = {
+    nueva_password: formData.get('nueva_password'),
+    confirmar_password: formData.get('confirmar_password'),
+  }
+
+  const parsed = cambiarPasswordSchema.safeParse(raw)
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Revisá los campos.',
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.nueva_password,
+  })
+
+  if (error) {
+    return { success: false, error: 'No se pudo cambiar la contraseña. Intentá de nuevo.' }
+  }
+
   return { success: true, data: undefined }
 }

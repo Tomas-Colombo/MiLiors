@@ -3,7 +3,7 @@
 import { useActionState } from 'react'
 import { actualizarPerfilPostulante } from '@/modules/perfil/actions'
 import { Button, Field, Input, Alert } from '@/components/ui'
-import { UserIcon } from '@/components/icons'
+import { UserIcon, MailIcon } from '@/components/icons'
 import type { ActionResult } from '@/lib/types/domain'
 
 type Perfil = {
@@ -17,7 +17,7 @@ type Perfil = {
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function PerfilPostulanteForm({ perfil }: { perfil: Perfil }) {
+export function PerfilPostulanteForm({ perfil, email }: { perfil: Perfil; email: string }) {
   const [state, action, pending] = useActionState(actualizarPerfilPostulante, initialState)
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
 
@@ -30,6 +30,20 @@ export function PerfilPostulanteForm({ perfil }: { perfil: Perfil }) {
       {!state.success && state.error && !state.fieldErrors && (
         <Alert tone="error" title={state.error} />
       )}
+
+      <Field label="Email" htmlFor="email">
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          value={email}
+          readOnly
+          disabled
+          leftIcon={<MailIcon size={17} />}
+          className="opacity-60 cursor-not-allowed"
+        />
+        <p className="mt-1 text-xs text-muted">El email no se puede cambiar.</p>
+      </Field>
 
       <Field
         label="Nombre completo"
