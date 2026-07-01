@@ -4,13 +4,14 @@ import { Alert } from '@/components/ui'
 import { SparklesIcon } from '@/components/icons'
 import { getMisPuestos } from '@/modules/puestos/queries'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { AsistenteChat } from './asistente-chat'
 
 export const metadata = { title: 'Asistente IA — TalentID' }
 
 // searchParams is a Promise in Next.js App Router
-type SearchParams = Promise<{ postulante?: string; puesto?: string }>
+type SearchParams = Promise<{ postulante?: string; puesto?: string; postulacion?: string }>
 
 export default async function AsistentePage({
   searchParams,
@@ -20,13 +21,14 @@ export default async function AsistentePage({
   const sp = await searchParams
 
   // postulanteId is required to use the assistant.
-  // The expected flow: candidate detail → "Consultar Asistente IA" link → this page.
+  // The expected flow: postulaciones list → "Asistente IA" link → this page.
   // We intentionally do NOT implement a full candidate search picker in MVP.
   if (!sp.postulante) {
     redirect('/reclutador/postulantes')
   }
 
   const postulanteId = sp.postulante
+  const postulacionId = sp.postulacion ?? null
 
   // Load recruiter's positions for the selector
   const puestos = await getMisPuestos()
@@ -35,26 +37,53 @@ export default async function AsistentePage({
     titulo_puesto: p.titulo_puesto,
   }))
 
-  // Load candidate name for display (read-only, informational only)
+  // Verify session (redirects to login if unauthenticated)
   const session = await verifySession()
-  const supabase = await createClient()
+  void session
 
-  const { data: postulante } = await supabase
+  const supabase = await createClient()
+  const admin = createAdminClient()
+
+  // Verify the recruiter owns at least one job this candidate applied to.
+  // Using admin client to bypass RLS — we do our own authorization check below.
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!reclutador) redirect('/reclutador/postulantes')
+
+  const reclutadorId = (reclutador as { id: string }).id
+
+  const { data: puestosRec } = await supabase
+    .from('puesto')
+    .select('id')
+    .eq('reclutador_id', reclutadorId)
+
+  const puestoIds = (puestosRec ?? []).map((r: unknown) => (r as { id: string }).id)
+
+  // Check candidate actually applied to one of this recruiter's jobs
+  const { data: postulacionCheck } = await admin
+    .from('postulacion')
+    .select('id')
+    .eq('postulante_id', postulanteId)
+    .in('puesto_id', puestoIds.length > 0 ? puestoIds : ['00000000-0000-0000-0000-000000000000'])
+    .limit(1)
+    .maybeSingle()
+
+  if (!postulacionCheck) redirect('/reclutador/postulantes')
+
+  // Load candidate name — admin bypasses RLS; candidate may have perfil_en_busqueda=false
+  const { data: postulante } = await admin
     .from('perfil_postulante')
     .select('nombre_completo')
     .eq('id', postulanteId)
-    .eq('perfil_en_busqueda', true)
     .maybeSingle()
 
-  if (!postulante) {
-    // Candidate not found or not in active search — redirect gracefully
-    redirect('/reclutador/postulantes')
-  }
+  if (!postulante) redirect('/reclutador/postulantes')
 
   const nombrePostulante = (postulante as { nombre_completo: string }).nombre_completo
-
-  // Suppress unused variable warning — session is needed for verifySession side-effects (redirect on unauth)
-  void session
 
   return (
     <TyCGate>
@@ -83,6 +112,7 @@ export default async function AsistentePage({
           nombrePostulante={nombrePostulante}
           puestos={puestosOptions}
           puestoIdInicial={sp.puesto}
+          postulacionId={postulacionId}
         />
       </div>
     </TyCGate>

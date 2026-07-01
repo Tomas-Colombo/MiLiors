@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, EmptyState } from '@/components/ui'
-import { UsersIcon, MailIcon, FileTextIcon } from '@/components/icons'
+import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon } from '@/components/icons'
 import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
@@ -44,14 +44,14 @@ function tiempoRelativo(fecha: string | null): string | null {
   return years === 1 ? 'hace 1 año' : `hace ${years} años`
 }
 
-type SearchParams = Promise<{ puesto?: string; estado?: string }>
+type SearchParams = Promise<{ puesto?: string; estado?: string; favoritos?: string }>
 
 export default async function PostulacionesRecibidasPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { puesto: filtroPuesto, estado: filtroEstado } = await searchParams
+  const { puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos } = await searchParams
   const postulaciones = await getPostulacionesRecibidas()
 
   // Build the list of unique job posts for the filter dropdown
@@ -70,6 +70,7 @@ export default async function PostulacionesRecibidasPage({
   const filtered = postulaciones.filter((p) => {
     if (filtroPuesto && p.puesto_id !== filtroPuesto) return false
     if (filtroEstado && p.estado !== filtroEstado) return false
+    if (filtroFavoritos === '1' && !p.is_favorito) return false
     return true
   })
 
@@ -175,12 +176,21 @@ export default async function PostulacionesRecibidasPage({
                   </div>
 
                   <div className="flex-none flex flex-col items-end gap-2">
-                    <Link
-                      href={`/reclutador/postulantes/${p.postulante_id}?postulacion=${p.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
-                    >
-                      Ver perfil
-                    </Link>
+                    <div className="flex flex-col gap-2 w-full">
+                      <Link
+                        href={`/reclutador/postulantes/${p.postulante_id}?postulacion=${p.id}`}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+                      >
+                        Ver perfil
+                      </Link>
+                      <Link
+                        href={`/reclutador/asistente?postulante=${p.postulante_id}&puesto=${p.puesto_id ?? ''}&postulacion=${p.id}`}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+                      >
+                        <SparklesIcon size={14} />
+                        Asistente IA
+                      </Link>
+                    </div>
                     <PostulacionAcciones
                       postulacionId={p.id}
                       estadoActual={p.estado}

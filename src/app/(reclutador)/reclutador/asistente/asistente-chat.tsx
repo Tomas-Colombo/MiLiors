@@ -18,17 +18,13 @@ type HistorialItem = {
 }
 
 type Props = {
-  // The recruiter arrives from the candidate detail page with postulanteId pre-filled.
-  // In MVP we don't implement a full candidate search dropdown here — the expected flow is:
-  //   1. Recruiter browses /reclutador/postulantes
-  //   2. Opens a candidate detail
-  //   3. Clicks "Consultar Asistente IA" which passes ?postulante=<id>
-  // The postulanteId is therefore a URL parameter, not a user-typed value.
   postulanteId: string
   nombrePostulante: string
   puestos: PuestoOption[]
-  // Optional pre-selected position from searchParams
+  // Optional pre-selected position from searchParams (passed when coming from postulaciones)
   puestoIdInicial?: string
+  // Optional postulacion ID for future context loading (notes, personality report, etc.)
+  postulacionId?: string | null
 }
 
 export function AsistenteChat({
@@ -36,6 +32,7 @@ export function AsistenteChat({
   nombrePostulante,
   puestos,
   puestoIdInicial,
+  postulacionId: _postulacionId,
 }: Props) {
   const [puestoId, setPuestoId] = useState(puestoIdInicial ?? '')
   const [pregunta, setPregunta] = useState('')

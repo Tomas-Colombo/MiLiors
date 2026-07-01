@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Select } from '@/components/ui'
+import { StarIcon } from '@/components/icons'
 
 type Puesto = { id: string; titulo_puesto: string }
 
@@ -61,7 +62,27 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
           aria-label="Filtrar por estado"
         />
       </div>
-      {(searchParams.get('puesto') || searchParams.get('estado')) && (
+      <button
+        type="button"
+        onClick={() => setParam('favoritos', searchParams.get('favoritos') === '1' ? '' : '1')}
+        aria-pressed={searchParams.get('favoritos') === '1'}
+        className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+          searchParams.get('favoritos') === '1'
+            ? 'bg-warning-bg text-warning-solid'
+            : 'bg-neutral-100 text-muted hover:text-ink'
+        }`}
+      >
+        <StarIcon
+          size={14}
+          className={
+            searchParams.get('favoritos') === '1'
+              ? 'fill-yellow-400 stroke-yellow-400'
+              : 'stroke-current'
+          }
+        />
+        Favoritos
+      </button>
+      {(searchParams.get('puesto') || searchParams.get('estado') || searchParams.get('favoritos')) && (
         <button
           type="button"
           onClick={() => {

@@ -16,7 +16,7 @@ function getClient(): GoogleGenAI {
 }
 
 export const geminiAdapter: AIProvider = {
-  async generate({ systemPrompt, userPrompt, maxTokens = 2000, temperature = 0.7 }: GenerateOptions): Promise<GenerateResult> {
+  async generate({ systemPrompt, userPrompt, maxTokens = 2000, temperature = 0.7, responseFormat = 'json' }: GenerateOptions): Promise<GenerateResult> {
     const ai = getClient()
     const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
 
@@ -27,7 +27,13 @@ export const geminiAdapter: AIProvider = {
         systemInstruction: systemPrompt,
         maxOutputTokens: maxTokens,
         temperature,
-        responseMimeType: 'application/json',
+        // Only use JSON mode for structured outputs (e.g. personality report).
+        // The conversational assistant returns plain text — JSON mode wastes tokens and may break formatting.
+        ...(responseFormat === 'json' ? { responseMimeType: 'application/json' } : {}),
+        // Disable thinking for non-reasoning tasks (assistant, report generation).
+        // gemini-2.5-flash has thinking enabled by default — thinking tokens count against
+        // maxOutputTokens and leave almost no budget for the actual response.
+        thinkingConfig: { thinkingBudget: 0 },
       },
     })
 

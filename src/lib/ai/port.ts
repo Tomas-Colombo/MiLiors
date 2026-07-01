@@ -16,6 +16,12 @@ export interface GenerateOptions {
   maxTokens?: number
   /** Temperatura (0 = determinista, 1 = creativo) */
   temperature?: number
+  /**
+   * Formato de respuesta esperado.
+   * 'json' → el proveedor puede activar JSON mode (mejor para informes estructurados).
+   * 'text' → texto plano (por defecto para el asistente conversacional).
+   */
+  responseFormat?: 'json' | 'text'
 }
 
 export interface GenerateResult {

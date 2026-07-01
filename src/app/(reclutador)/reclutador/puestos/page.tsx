@@ -74,8 +74,8 @@ export default async function MisPuestosPage() {
                 </span>
                 <p className="text-[13px] text-neutral-400">
                   {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
-                    day: 'numeric',
-                    month: 'short',
+                    day: '2-digit',
+                    month: '2-digit',
                     year: 'numeric',
                   })}
                 </p>

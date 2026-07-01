@@ -5,7 +5,6 @@ import {
   BuildingIcon,
   FileIcon,
   SearchIcon,
-  SparklesIcon,
   NotebookIcon,
 } from '@/components/icons'
 
@@ -15,7 +14,6 @@ const NAV_RECLUTADOR = [
   { href: '/reclutador/postulaciones', label: 'Postulaciones', icon: <FileIcon size={18} /> },
   { href: '/reclutador/postulantes', label: 'Buscar candidatos', icon: <SearchIcon size={18} /> },
   { href: '/reclutador/notas', label: 'Mis notas', icon: <NotebookIcon size={18} /> },
-  { href: '/reclutador/asistente', label: 'Asistente IA', icon: <SparklesIcon size={18} /> },
 ]
 
 export default async function ReclutadorLayout({ children }: { children: React.ReactNode }) {
