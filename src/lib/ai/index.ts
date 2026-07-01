@@ -1,18 +1,18 @@
 /**
- * Punto de inyección del proveedor de IA activo.
+ * Active AI provider injection point.
  *
- * Para cambiar de proveedor:
- *   - Importar el nuevo adaptador y asignarlo a `aiProvider`.
- *   - El resto de la app no necesita cambios.
+ * To switch providers:
+ *   - Import the new adapter and assign it to `aiProvider`.
+ *   - Nothing else in the app needs to change.
  *
- * Ejemplo para cambiar a Claude:
- *   import { claudeAdapter } from './adapters/claude'
- *   export const aiProvider = claudeAdapter
+ * Example to switch to a different provider:
+ *   import { myAdapter } from './adapters/my-provider'
+ *   export const aiProvider = myAdapter
  */
-import { openAIAdapter } from './adapters/openai'
+import { geminiAdapter } from './adapters/gemini'
 import type { AIProvider } from './port'
 
-export const aiProvider: AIProvider = openAIAdapter
+export const aiProvider: AIProvider = geminiAdapter
 
 // Re-exportar tipos para que los consumidores no necesiten importar desde port.ts
 export type { AIProvider, GenerateOptions, GenerateResult } from './port'
