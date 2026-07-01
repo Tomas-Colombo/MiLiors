@@ -123,19 +123,26 @@ export async function generarInforme(): Promise<ActionResult> {
 
   const { data: informeExistente } = await supabase
     .from('informe_personalidad')
-    .select('id')
+    .select('id, estado_informe, contenido_informe')
     .eq('postulante_id', postulanteId)
     .order('updated_at', { ascending: false })
     .limit(1)
     .single()
 
   let informeId: string
+  // ¿Hay un informe válido previo que NO debemos destruir si la regeneración falla?
+  // (p. ej. una caída transitoria del proveedor de IA no debe borrar un informe bueno)
+  let teniaInformeValido = false
 
   if (informeExistente) {
-    informeId = (informeExistente as { id: string }).id
+    const prev = informeExistente as { id: string; estado_informe: string; contenido_informe: string | null }
+    informeId = prev.id
+    teniaInformeValido = prev.estado_informe === 'LISTO' && !!prev.contenido_informe
+    // Marcamos PENDIENTE pero NO borramos el contenido: si la generación falla,
+    // el informe anterior sigue intacto y se restaura a LISTO (ver fallarGeneracion).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'PENDIENTE', contenido_informe: null })
+      .update({ estado_informe: 'PENDIENTE' })
       .eq('id', informeId)
   } else {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -147,24 +154,32 @@ export async function generarInforme(): Promise<ActionResult> {
     informeId = (nuevo as { id: string }).id
   }
 
-  const ctx = await recopilarContexto(postulanteId)
-  if (!ctx) {
+  // Fallo de generación: si había un informe válido previo lo conservamos
+  // (restauramos a LISTO sin tocar el contenido); si no, marcamos ERROR.
+  async function fallarGeneracion(mensaje: string): Promise<ActionResult> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'ERROR' })
+      .update({ estado_informe: teniaInformeValido ? 'LISTO' : 'ERROR' })
       .eq('id', informeId)
-    return { success: false, error: 'Datos insuficientes para generar el informe. Completá el Eneagrama.' }
+    revalidatePath('/postulante/informe')
+    revalidatePath('/postulante')
+    return {
+      success: false,
+      error: teniaInformeValido
+        ? `No se pudo regenerar el informe: ${mensaje} Se conservó tu informe anterior.`
+        : mensaje,
+    }
+  }
+
+  const ctx = await recopilarContexto(postulanteId)
+  if (!ctx) {
+    return fallarGeneracion('Datos insuficientes para generar el informe. Completá el Eneagrama.')
   }
 
   const resultado = await generarInformePersonalidad(ctx)
 
   if (!resultado.ok) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'ERROR' })
-      .eq('id', informeId)
-    revalidatePath('/postulante/informe')
-    return { success: false, error: `No se pudo generar el informe: ${resultado.motivo}` }
+    return fallarGeneracion(`No se pudo generar el informe: ${resultado.motivo}`)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -179,12 +194,7 @@ export async function generarInforme(): Promise<ActionResult> {
 
   if (saveError) {
     console.error('[informe/actions] Error al guardar informe LISTO:', saveError)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'ERROR' })
-      .eq('id', informeId)
-    revalidatePath('/postulante/informe')
-    return { success: false, error: 'El informe se generó pero no se pudo guardar. Intentá de nuevo.' }
+    return fallarGeneracion('El informe se generó pero no se pudo guardar. Intentá de nuevo.')
   }
 
   revalidatePath('/postulante/informe')
