@@ -55,7 +55,7 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
   // Bloqueado: ya usó la única actualización permitida
   if (isLocked && hd) {
     return (
-      <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-4 space-y-3">
+      <div className="rounded-xl border border-neutral-200 bg-surface shadow-card px-5 py-4 space-y-3">
         <div className="grid grid-cols-2 gap-x-6 gap-y-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Tipo energético</p>
@@ -112,9 +112,9 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
         </div>
       )}
 
-      <div className="space-y-5">
+      <div className="rounded-xl border border-neutral-200 bg-surface shadow-card divide-y divide-neutral-100">
         {/* Aviso adaptado al estado: primera vez vs. actualización */}
-        <div className="rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
+        <div className="px-5 py-4 bg-warning-bg">
           <p className="text-sm font-semibold text-warning">
             {isUpdate ? '⚠ Última actualización disponible' : 'Completá esta sección con seriedad'}
           </p>
@@ -125,7 +125,7 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
           </p>
         </div>
 
-        <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
           <Field
             label="Tipo energético"
             required

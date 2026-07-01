@@ -17,10 +17,22 @@ function contarPalabras(texto: string): number {
   return texto.trim().split(/\s+/).filter(Boolean).length
 }
 
+function extractJSON(raw: string): string {
+  // 1. Strip markdown fences (```json ... ``` or ``` ... ```)
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenceMatch) return fenceMatch[1].trim()
+
+  // 2. Extract the outermost JSON object
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+  if (start !== -1 && end !== -1 && end > start) return raw.slice(start, end + 1)
+
+  return raw.trim()
+}
+
 function parseInformeJSON(raw: string): InformeJSON | null {
   try {
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
-    const parsed = JSON.parse(cleaned)
+    const parsed = JSON.parse(extractJSON(raw))
     for (const key of INFORME_KEYS) {
       if (typeof parsed[key] !== 'string' || parsed[key].trim().length === 0) {
         return null
@@ -48,7 +60,7 @@ export async function generarInformePersonalidad(ctx: InformeContext): Promise<G
     result = await aiProvider.generate({
       systemPrompt,
       userPrompt,
-      maxTokens: 3000,
+      maxTokens: 6000,
       temperature: 0.7,
     })
   } catch (err) {
