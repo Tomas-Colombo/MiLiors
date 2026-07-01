@@ -91,7 +91,7 @@ export default async function PostulanteDashboard() {
   const perfilId = perfilTyped?.id
 
   let puntajes: { eneatipo_numero: number; puntaje_crudo: number }[] = []
-  let eneatipoGanador: { numero: number; nombre: string } | null = null
+  let dominantes: { numero: number; nombre: string }[] = []
 
   if (perfilId) {
     const { data: testData } = await supabase
@@ -103,7 +103,9 @@ export default async function PostulanteDashboard() {
     if (testData) {
       const testId = (testData as { id: string }).id
 
-      const [{ data: puntajesData }, { data: dominanteData }] = await Promise.all([
+      // Misma fuente de verdad que el perfil de personalidad: todos los dominantes
+      // (puede haber 1, 2 o 3 en caso de empate legítimo), sin recortar a uno solo.
+      const [{ data: puntajesData }, { data: dominantesData }] = await Promise.all([
         supabase
           .from('resultado_puntaje_eneagrama')
           .select('eneatipo_numero, puntaje_crudo')
@@ -111,33 +113,26 @@ export default async function PostulanteDashboard() {
           .order('eneatipo_numero'),
         supabase
           .from('test_eneagrama_dominante')
-          .select('puntaje_crudo, eneatipo:eneatipo_id(numero_eneatipo, nombre)')
-          .eq('test_eneagrama_id', testId)
-          .order('puntaje_crudo', { ascending: false })
-          .limit(1)
-          .single(),
+          .select('eneatipo:eneatipo_id(numero_eneatipo, nombre)')
+          .eq('test_eneagrama_id', testId),
       ])
 
       if (puntajesData) {
         puntajes = puntajesData as { eneatipo_numero: number; puntaje_crudo: number }[]
       }
 
-      if (dominanteData) {
-        const d = dominanteData as {
-          eneatipo: { numero_eneatipo: number; nombre: string } | null
-        }
-        if (d.eneatipo) {
-          eneatipoGanador = {
-            numero: d.eneatipo.numero_eneatipo,
-            nombre: d.eneatipo.nombre,
-          }
-        }
+      if (dominantesData) {
+        dominantes = (dominantesData as { eneatipo: { numero_eneatipo: number; nombre: string } | null }[])
+          .filter((d): d is { eneatipo: { numero_eneatipo: number; nombre: string } } => d.eneatipo !== null)
+          .map((d) => ({ numero: d.eneatipo.numero_eneatipo, nombre: d.eneatipo.nombre }))
       }
     }
   }
 
   const nombrePrimero = nombre.split(' ')[0]
-  const tieneRadar = puntajes.length === 9
+  // El radar sólo muestra datos cuando hay un resultado válido persistido (9 puntajes
+  // + al menos un dominante). Si el test fue inválido y nunca se persistió, no hay nada que mostrar.
+  const tieneRadar = puntajes.length === 9 && dominantes.length > 0
 
   return (
     <TyCGate>
@@ -147,7 +142,7 @@ export default async function PostulanteDashboard() {
         <div className="mb-8">
           <h1
             className="text-3xl font-semibold"
-            style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: '#2D2A4A' }}
+            style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: 'var(--color-ink)' }}
           >
             ¡Hola, {nombrePrimero}!
           </h1>
@@ -159,17 +154,17 @@ export default async function PostulanteDashboard() {
           {/* ─── Columna principal: Radar ─── */}
           <div className="flex-1 min-w-0">
             <div
-              className="rounded-[14px] bg-white p-8"
-              style={{ border: '1px solid #E8E4FF' }}
+              className="rounded-[14px] bg-surface p-8"
+              style={{ border: '1px solid var(--color-border-soft)' }}
             >
               <div className="mb-6 flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5B4FE8' }}>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-accent-violet)' }}>
                     Perfil de eneagrama
                   </p>
                   <h2
                     className="text-xl font-semibold leading-snug"
-                    style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: '#2D2A4A' }}
+                    style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: 'var(--color-ink)' }}
                   >
                     Distribución de los 9 eneatipos
                   </h2>
@@ -178,20 +173,22 @@ export default async function PostulanteDashboard() {
                   </p>
                 </div>
 
-                {eneatipoGanador && (
+                {dominantes.length > 0 && (
                   <div
                     className="flex-none rounded-xl px-5 py-3 text-center"
-                    style={{ background: '#EEEDFE', minWidth: 132 }}
+                    style={{ background: 'var(--color-accent-violet-bg)', minWidth: 132 }}
                   >
-                    <p className="text-[11px] text-muted mb-0.5">Tu eneatipo</p>
+                    <p className="text-[11px] text-muted mb-0.5">
+                      {dominantes.length > 1 ? 'Tus eneatipos' : 'Tu eneatipo'}
+                    </p>
                     <p
                       className="text-3xl font-semibold leading-none"
-                      style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: '#5B4FE8' }}
+                      style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: 'var(--color-accent-violet)' }}
                     >
-                      {eneatipoGanador.numero}
+                      {dominantes.map((d) => d.numero).join(' / ')}
                     </p>
-                    <p className="text-[11px] font-medium mt-1.5" style={{ color: '#2D2A4A' }}>
-                      {ENEATIPO_NOMBRES[eneatipoGanador.numero] ?? eneatipoGanador.nombre}
+                    <p className="text-[11px] font-medium mt-1.5" style={{ color: 'var(--color-ink)' }}>
+                      {dominantes.map((d) => ENEATIPO_NOMBRES[d.numero] ?? d.nombre).join(' · ')}
                     </p>
                   </div>
                 )}
@@ -200,7 +197,7 @@ export default async function PostulanteDashboard() {
               {tieneRadar ? (
                 <div className="flex justify-center">
                   <div style={{ width: '100%', maxWidth: 440, padding: '0 40px' }}>
-                    <EneatipoRadar puntajes={puntajes} size={440} />
+                    <EneatipoRadar puntajes={puntajes} dominantes={dominantes.map((d) => d.numero)} size={440} />
                   </div>
                 </div>
               ) : (
@@ -216,12 +213,12 @@ export default async function PostulanteDashboard() {
 
             {/* Visibilidad */}
             <div
-              className="rounded-[14px] bg-white px-5 py-4"
-              style={{ border: '1px solid #E8E4FF' }}
+              className="rounded-[14px] bg-surface px-5 py-4"
+              style={{ border: '1px solid var(--color-border-soft)' }}
             >
               <h2
                 className="text-[11px] font-semibold uppercase tracking-widest mb-3"
-                style={{ color: '#5B4FE8' }}
+                style={{ color: 'var(--color-accent-violet)' }}
               >
                 Visibilidad en búsquedas
               </h2>
@@ -230,12 +227,12 @@ export default async function PostulanteDashboard() {
 
             {/* Accesos rápidos */}
             <div
-              className="rounded-[14px] bg-white px-5 py-4"
-              style={{ border: '1px solid #E8E4FF' }}
+              className="rounded-[14px] bg-surface px-5 py-4"
+              style={{ border: '1px solid var(--color-border-soft)' }}
             >
               <h2
                 className="text-[11px] font-semibold uppercase tracking-widest mb-3"
-                style={{ color: '#5B4FE8' }}
+                style={{ color: 'var(--color-accent-violet)' }}
               >
                 Accesos rápidos
               </h2>
@@ -244,10 +241,10 @@ export default async function PostulanteDashboard() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 rounded-[9px] px-3 py-2.5 transition-colors group hover:bg-[#EEEDFE]"
-                    style={{ color: '#2D2A4A' }}
+                    className="flex items-center gap-3 rounded-[9px] px-3 py-2.5 transition-colors group hover:bg-primary-tint"
+                    style={{ color: 'var(--color-ink)' }}
                   >
-                    <span className="flex-none" style={{ color: '#5B4FE8' }}>{item.icon}</span>
+                    <span className="flex-none" style={{ color: 'var(--color-accent-violet)' }}>{item.icon}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-[13px] font-semibold leading-tight">{item.title}</span>
                       <span className="block text-[11px] text-muted leading-tight mt-0.5">{item.desc}</span>

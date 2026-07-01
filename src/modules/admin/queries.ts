@@ -79,7 +79,7 @@ export async function getPostulantesAdmin() {
     .select(`
       id, nombre_completo, perfil_en_busqueda, created_at,
       usuario(email),
-      test_eneagrama(eneatipo_id),
+      test_eneagrama(test_eneagrama_dominante(id)),
       informe_personalidad(estado_informe)
     `)
     .order('created_at', { ascending: false })
@@ -88,7 +88,7 @@ export async function getPostulantesAdmin() {
     const r = row as {
       id: string; nombre_completo: string; perfil_en_busqueda: boolean; created_at: string
       usuario: { email: string } | null
-      test_eneagrama: { eneatipo_id: string | null } | null
+      test_eneagrama: { test_eneagrama_dominante: { id: string }[] } | null
       informe_personalidad: { estado_informe: string } | null
     }
     return {
@@ -97,7 +97,7 @@ export async function getPostulantesAdmin() {
       perfil_en_busqueda: r.perfil_en_busqueda,
       created_at: r.created_at,
       email: r.usuario?.email ?? null,
-      eneagrama_completo: !!r.test_eneagrama?.eneatipo_id,
+      eneagrama_completo: (r.test_eneagrama?.test_eneagrama_dominante.length ?? 0) > 0,
       estado_informe: r.informe_personalidad?.estado_informe ?? null,
     }
   })

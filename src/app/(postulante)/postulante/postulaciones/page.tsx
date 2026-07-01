@@ -103,7 +103,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                 {page > 0 ? (
                   <Link
                     href={pageUrl(page - 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
                   >
                     <ChevronLeftIcon size={16} />
                   </Link>
@@ -122,7 +122,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                         'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
                         i === page
                           ? 'bg-primary-600 text-white'
-                          : 'border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50',
+                          : 'border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
                       ].join(' ')}
                     >
                       {i + 1}
@@ -133,7 +133,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                 {page < totalPages - 1 ? (
                   <Link
                     href={pageUrl(page + 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
                   >
                     <ChevronRightIcon size={16} />
                   </Link>

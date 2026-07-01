@@ -124,7 +124,7 @@ export default async function PostulacionesRecibidasPage({
                       {p.tiene_nota && (
                         <span
                           title="Tiene notas privadas"
-                          className="inline-flex items-center text-amber-500"
+                          className="inline-flex items-center text-warning-solid"
                         >
                           <FileTextIcon size={14} />
                         </span>

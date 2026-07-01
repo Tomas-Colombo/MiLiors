@@ -8,6 +8,7 @@ import { verifySession } from '@/lib/dal'
 import { onboardingPostulanteSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 import { calcularResultadoEneagrama, ErrorRespuestasIncompletas } from './calculator'
+import { validarCalidadTest } from './quality-validator'
 import { generarInforme } from '@/modules/informe/actions'
 
 // ─── Onboarding: guardar datos básicos ───────────────────────────────────────
@@ -100,34 +101,16 @@ export async function iniciarTest(perfilId: string): Promise<ActionResult<{ test
   if (testExistente) {
     const testId = (testExistente as { id: string }).id
 
-    // Reiniciar: borrar respuestas, puntajes y dominantes anteriores
+    // Reiniciar respuestas para permitir un nuevo intento. El resultado anterior
+    // (dominantes, puntajes, ala, fecha_realizacion) se conserva intacto hasta que
+    // calcularEneatipo() valide y persista un resultado nuevo y válido. Así, si el
+    // nuevo intento falla (incompleto o inválido por calidad), el postulante sigue
+    // teniendo su resultado previo vigente y el resto de la app (navegación entre
+    // módulos, certificado, informe) no se rompe.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('respuesta_item_eneagrama') as any)
       .delete()
       .eq('test_eneagrama_id', testId)
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('resultado_puntaje_eneagrama') as any)
-      .delete()
-      .eq('test_eneagrama_id', testId)
-
-    // ON DELETE CASCADE se encarga si borráramos el test, pero como lo reutilizamos
-    // borramos los dominantes manualmente.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('test_eneagrama_dominante') as any)
-      .delete()
-      .eq('test_eneagrama_id', testId)
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('test_eneagrama') as any)
-      .update({
-        ala: null,
-        tiene_empate_dominante: false,
-        dominantes_empate: null,
-        tiene_empate_ala: false,
-        fecha_realizacion: new Date().toISOString(),
-      })
-      .eq('id', testId)
 
     return { success: true, data: { testId } }
   }
@@ -267,6 +250,16 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     return { success: false, error: 'Error al calcular el resultado.' }
   }
 
+  // Validar calidad estadística de las respuestas ANTES de persistir.
+  // Un test con patrón de respuesta inválido (plano/uniforme o empate excesivo)
+  // no se guarda como resultado válido: no genera certificado ni alimenta el informe.
+  const valoresRespuesta = respuestasInput.map(r => r.valorRespondido)
+  const validacion = validarCalidadTest(valoresRespuesta, resultado.dominantes)
+  if (!validacion.valido) {
+    console.warn(`[eneagrama] Test ${testId} inválido por: ${validacion.motivo}`)
+    return { success: false, error: 'TEST_INVALIDO' }
+  }
+
   // Obtener UUID + datos para CADA dominante
   const dominantesConDatos = await Promise.all(
     resultado.dominantes.map(async (num) => {
@@ -290,7 +283,8 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     (d): d is NonNullable<typeof d> => d !== null
   )
 
-  // Actualizar test_eneagrama (ya sin eneatipo_id)
+  // Actualizar test_eneagrama (ya sin eneatipo_id). Recién acá, con el resultado
+  // ya validado, se sobrescribe el intento anterior — nunca antes de validar.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin.from('test_eneagrama') as any)
     .update({
@@ -298,6 +292,7 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
       tiene_empate_dominante: resultado.tieneEmpateDominante,
       dominantes_empate: resultado.tieneEmpateDominante ? resultado.dominantes : null,
       tiene_empate_ala: resultado.tieneEmpateAla,
+      fecha_realizacion: new Date().toISOString(),
     })
     .eq('id', testId)
 

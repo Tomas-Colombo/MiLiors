@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 
 /**
  * Resetea todos los tests de eneagrama que están en progreso
- * (sin resultado aún, eneatipo_id IS NULL).
+ * (sin dominantes calculados aún, es decir sin filas en test_eneagrama_dominante).
  *
  * Se llama cada vez que el conjunto de preguntas activas cambia:
  * al crear, eliminar, pausar o despausar preguntas. Así se garantiza
@@ -13,19 +13,26 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
  * respuestas y puntajes se borran y los campos de resultado se limpian.
  * Cuando el postulante vuelva a iniciar el test, iniciarTest() lo
  * sobreescribe en el mismo registro.
+ *
+ * Los tests que YA tienen un resultado válido (con dominantes calculados)
+ * no se tocan: cambiar el set de preguntas no debe borrar resultados que
+ * ya fueron entregados al postulante.
  */
 export async function resetearTestsEnProgreso(): Promise<void> {
   const admin = createAdminClient()
 
-  // Obtener todos los tests sin resultado
+  // Obtener todos los tests que todavía no tienen dominantes calculados
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: testsEnProgreso } = await (admin.from('test_eneagrama') as any)
-    .select('id')
-    .is('eneatipo_id', null)
+    .select('id, test_eneagrama_dominante(id)')
 
   if (!testsEnProgreso || testsEnProgreso.length === 0) return
 
-  const ids = (testsEnProgreso as { id: string }[]).map(t => t.id)
+  const ids = (testsEnProgreso as { id: string; test_eneagrama_dominante: { id: string }[] }[])
+    .filter(t => t.test_eneagrama_dominante.length === 0)
+    .map(t => t.id)
+
+  if (ids.length === 0) return
 
   // Borrar respuestas y puntajes de todos los tests en progreso
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

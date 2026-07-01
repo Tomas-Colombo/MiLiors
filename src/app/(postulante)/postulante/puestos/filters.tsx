@@ -71,7 +71,7 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
             defaultValue={q}
             onChange={handleSearch}
             placeholder="Buscar por título…"
-            className="h-10 w-full rounded-xl border border-neutral-200 bg-white pl-9 pr-4 text-sm text-ink placeholder:text-neutral-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 transition-shadow"
+            className="h-10 w-full rounded-xl border border-neutral-200 bg-surface pl-9 pr-4 text-sm text-ink placeholder:text-neutral-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 transition-shadow"
           />
         </div>
         <button
@@ -81,7 +81,7 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
             'flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors',
             filtersOpen
               ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
-              : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50',
+              : 'border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
           ].join(' ')}
         >
           <FilterIcon size={15} />
@@ -122,7 +122,7 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
                 <select
                   value={sector}
                   onChange={(e) => update('sector', e.target.value)}
-                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-white pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
+                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
                 >
                   <option value="">Todos los sectores</option>
                   {sectores.map((s) => (

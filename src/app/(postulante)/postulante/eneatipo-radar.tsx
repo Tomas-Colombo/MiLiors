@@ -16,6 +16,8 @@ type PuntajePorEneatipo = { eneatipo_numero: number; puntaje_crudo: number }
 
 interface Props {
   puntajes: PuntajePorEneatipo[]
+  /** Eneatipo(s) dominante(s) a destacar — debe coincidir 1:1 con lo mostrado en el perfil de personalidad. */
+  dominantes?: number[]
   size?: number
 }
 
@@ -31,7 +33,8 @@ function polarToXY(cx: number, cy: number, r: number, angleIndex: number) {
   }
 }
 
-export function EneatipoRadar({ puntajes, size = 480 }: Props) {
+export function EneatipoRadar({ puntajes, dominantes = [], size = 480 }: Props) {
+  const dominantesSet = new Set(dominantes)
   // Padding around the radar to leave room for labels
   const pad = size * 0.24
   const cx = size / 2
@@ -105,57 +108,78 @@ export function EneatipoRadar({ puntajes, size = 480 }: Props) {
             stroke="#E8E4FF"
             strokeWidth={idx === 2 ? 1.5 : 1}
             strokeDasharray={idx === 2 ? undefined : '3 3'}
+            style={{ stroke: 'var(--color-border-soft)' }}
           />
         )
       })}
 
       {/* Axes */}
       {axes.map((ax, i) => (
-        <line key={i} x1={cx} y1={cy} x2={ax.x2.toFixed(2)} y2={ax.y2.toFixed(2)} stroke="#E8E4FF" strokeWidth={1} />
+        <line key={i} x1={cx} y1={cy} x2={ax.x2.toFixed(2)} y2={ax.y2.toFixed(2)} strokeWidth={1} style={{ stroke: 'var(--color-border-soft)' }} />
       ))}
 
       {/* User polygon */}
       <path d={radarPath} fill="rgba(91,79,232,0.13)" stroke="#5B4FE8" strokeWidth={2} strokeLinejoin="round" />
 
-      {/* Vertex dots */}
-      {radarPoints.map((p, i) => (
-        <circle key={i} cx={p.x.toFixed(2)} cy={p.y.toFixed(2)} r={3.5} fill="#5B4FE8" stroke="white" strokeWidth={1.5} />
-      ))}
+      {/* Vertex dots — los dominantes se destacan con un anillo y radio mayor */}
+      {radarPoints.map((p, i) => {
+        const esDominante = dominantesSet.has(i + 1)
+        return (
+          <g key={i}>
+            {esDominante && (
+              <circle cx={p.x.toFixed(2)} cy={p.y.toFixed(2)} r={7} fill="none" stroke="#5B4FE8" strokeWidth={1.5} opacity={0.35} />
+            )}
+            <circle
+              cx={p.x.toFixed(2)}
+              cy={p.y.toFixed(2)}
+              r={esDominante ? 5 : 3.5}
+              fill="#5B4FE8"
+              stroke="white"
+              strokeWidth={1.5}
+            />
+          </g>
+        )
+      })}
 
-      {/* Labels — number + two-line name */}
-      {labels.map((l) => (
-        <text key={l.num} textAnchor={l.anchor} fontFamily="var(--font-sans), system-ui, sans-serif">
-          {/* Eneatipo number */}
-          <tspan
-            x={l.x.toFixed(2)}
-            y={(l.y - wordSize * 1.1).toFixed(2)}
-            fontSize={numSize}
-            fontWeight={700}
-            fill="#5B4FE8"
-            fontFamily="var(--font-heading), Georgia, serif"
-          >
-            {l.num}
-          </tspan>
-          {/* "El" */}
-          <tspan
-            x={l.x.toFixed(2)}
-            y={(l.y + wordSize * 0.4).toFixed(2)}
-            fontSize={wordSize}
-            fill="#6b7280"
-          >
-            {l.parts[0]}
-          </tspan>
-          {/* noun */}
-          <tspan
-            x={l.x.toFixed(2)}
-            y={(l.y + wordSize * 0.4 + wordSize * 1.35).toFixed(2)}
-            fontSize={wordSize}
-            fill="#6b7280"
-          >
-            {l.parts[1]}
-          </tspan>
-        </text>
-      ))}
+      {/* Labels — number + two-line name; dominantes en negrita y color más oscuro */}
+      {labels.map((l) => {
+        const esDominante = dominantesSet.has(Number(l.num))
+        return (
+          <text key={l.num} textAnchor={l.anchor} fontFamily="var(--font-sans), system-ui, sans-serif">
+            {/* Eneatipo number */}
+            <tspan
+              x={l.x.toFixed(2)}
+              y={(l.y - wordSize * 1.1).toFixed(2)}
+              fontSize={esDominante ? numSize * 1.15 : numSize}
+              fontWeight={700}
+              fontFamily="var(--font-heading), Georgia, serif"
+              style={{ fill: 'var(--color-accent-violet)' }}
+            >
+              {l.num}
+            </tspan>
+            {/* "El" */}
+            <tspan
+              x={l.x.toFixed(2)}
+              y={(l.y + wordSize * 0.4).toFixed(2)}
+              fontSize={wordSize}
+              fontWeight={esDominante ? 700 : 400}
+              style={{ fill: esDominante ? 'var(--color-ink)' : 'var(--color-muted)' }}
+            >
+              {l.parts[0]}
+            </tspan>
+            {/* noun */}
+            <tspan
+              x={l.x.toFixed(2)}
+              y={(l.y + wordSize * 0.4 + wordSize * 1.35).toFixed(2)}
+              fontSize={wordSize}
+              fontWeight={esDominante ? 700 : 400}
+              style={{ fill: esDominante ? 'var(--color-ink)' : 'var(--color-muted)' }}
+            >
+              {l.parts[1]}
+            </tspan>
+          </text>
+        )
+      })}
     </svg>
   )
 }

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition, useCallback, useEffect, useRef } from 'react'
 import { Button, Card, Badge, ProgressBar, Alert } from '@/components/ui'
 import { iniciarTest, guardarRespuesta, calcularEneatipo } from '@/modules/eneagrama/actions'
 import { useRouter } from 'next/navigation'
-import { SparklesIcon, CheckIcon, ArrowRightIcon } from '@/components/icons'
+import { SparklesIcon, CheckIcon, ArrowRightIcon, ChevronLeftIcon } from '@/components/icons'
 
 const PREGUNTAS_POR_PAGINA = 15
 
@@ -57,6 +57,9 @@ export function EneagramaWizard({
   const [eneatipoResultado, setEneatipoResultado] = useState<number | null>(null)
   const [eneatipoNombre, setEneatipoNombre] = useState<string | null>(null)
   const [iniciando, setIniciando] = useState(!testIdInicial)
+  const [resultadoInvalido, setResultadoInvalido] = useState(false)
+  const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const totalPaginas = Math.ceil(preguntas.length / PREGUNTAS_POR_PAGINA)
   const preguntasPagina = preguntas.slice(
@@ -107,6 +110,12 @@ export function EneagramaWizard({
     [testId]
   )
 
+  // Scroll al inicio de la página de preguntas cada vez que cambia,
+  // después de que el nuevo contenido ya se haya montado.
+  useEffect(() => {
+    containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [paginaActual])
+
   // Avanzar página
   function handleSiguiente() {
     if (!paginaCompleta) {
@@ -116,7 +125,6 @@ export function EneagramaWizard({
     setError(null)
     if (paginaActual < totalPaginas - 1) {
       setPaginaActual((p) => p + 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
@@ -125,7 +133,6 @@ export function EneagramaWizard({
     setError(null)
     if (paginaActual > 0) {
       setPaginaActual((p) => p - 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
@@ -133,10 +140,15 @@ export function EneagramaWizard({
   function handleFinalizar() {
     if (!testId) return
     setError(null)
+    setResultadoInvalido(false)
 
     startTransition(async () => {
       const result = await calcularEneatipo(testId)
       if (!result.success) {
+        if (result.error === 'TEST_INVALIDO') {
+          setResultadoInvalido(true)
+          return
+        }
         setError(result.error)
         return
       }
@@ -146,13 +158,86 @@ export function EneagramaWizard({
     })
   }
 
+  // Volver a intentar tras un test inválido: limpia el estado local del intento
+  // fallido y muestra primero la plantilla "Comenzar el test" — no se vuelve a
+  // llamar iniciarTest() (ni se toca el resultado anterior en la base) hasta que
+  // el usuario confirma explícitamente que quiere empezar de nuevo.
+  function handleReintentar() {
+    setResultadoInvalido(false)
+    setRespuestas({})
+    setPaginaActual(0)
+    setCompletado(false)
+    setEneatipoResultado(null)
+    setEneatipoNombre(null)
+    setIniciando(true)
+  }
+
+  // Cancelar el test en curso: como las respuestas se sobrescriben (no hay
+  // histórico), salir implica perder lo respondido hasta ahora.
+  function handleConfirmarCancelar() {
+    setMostrarConfirmCancelar(false)
+    router.push('/postulante')
+  }
+
+  // ── Pantalla de test inválido (respuestas sin variación suficiente) ────────
+  if (resultadoInvalido) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl bg-surface p-8 text-center shadow-card">
+            <div
+              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ background: 'var(--color-error-bg)' }}
+            >
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <Badge tone="warning" className="mb-3">No pudimos calcular tu resultado</Badge>
+            <h1 className="text-xl font-extrabold tracking-tight text-ink">
+              Tus respuestas no permiten calcular un perfil confiable
+            </h1>
+            <div className="mt-4 space-y-3 text-left text-sm leading-relaxed text-muted">
+              <p>
+                El Eneagrama puede ser uno de los activos más valiosos de tu perfil: las
+                empresas que usan TalentID lo tienen muy en cuenta a la hora de evaluar
+                candidatos, porque revela fortalezas, estilos de trabajo y patrones de
+                comportamiento reales.
+              </p>
+              <p>
+                Para que el resultado sea genuino, cada respuesta tiene que reflejar
+                honestamente cuánto te identificás con cada afirmación, sin buscar &ldquo;la
+                opción correcta&rdquo;. El test no tiene respuestas buenas ni malas — sí tiene
+                resultados que aportan información real, y otros que no.
+              </p>
+              <p>
+                Esta vez tus respuestas fueron demasiado uniformes y no generaron variación
+                suficiente para identificar tu perfil. Te invitamos a rehacerlo con calma,
+                pensando cada afirmación.
+              </p>
+            </div>
+            <div className="mt-6">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleReintentar}
+                loading={isPending}
+                rightIcon={<ArrowRightIcon size={16} />}
+              >
+                Rehacer el test
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── Pantalla de resultado recién obtenido ──────────────────────────────────
   if (completado && eneatipoResultado) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           {/* Card resultado eneagrama */}
-          <div className="rounded-2xl bg-white p-8 text-center shadow-card">
+          <div className="rounded-2xl bg-surface p-8 text-center shadow-card">
             <div
               className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-primary"
               style={{ background: 'var(--gradient-brand-soft)' }}
@@ -168,7 +253,7 @@ export function EneagramaWizard({
 
           {/* Propuesta Human Design — solo si no fue completado aún */}
           {!humanDesignCompleto ? (
-            <div className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+            <div className="mt-6 rounded-2xl bg-surface p-6 shadow-card">
               <div className="mb-1 text-base font-bold text-ink">¿Agregás tu Human Design?</div>
               <p className="mb-5 text-sm text-muted">
                 Si conocés tu carta, podés incorporarla ahora y el informe de personalidad
@@ -270,15 +355,15 @@ export function EneagramaWizard({
             retomarlo cuando quieras. Respondé con honestidad.
           </p>
           <div className="my-6 grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg bg-white p-3 shadow-card">
+            <div className="rounded-lg bg-surface p-3 shadow-card">
               <div className="text-xl font-black text-primary-600">135</div>
               <div className="text-xs text-muted">preguntas</div>
             </div>
-            <div className="rounded-lg bg-white p-3 shadow-card">
+            <div className="rounded-lg bg-surface p-3 shadow-card">
               <div className="text-xl font-black text-primary-600">9</div>
               <div className="text-xs text-muted">secciones</div>
             </div>
-            <div className="rounded-lg bg-white p-3 shadow-card">
+            <div className="rounded-lg bg-surface p-3 shadow-card">
               <div className="text-xl font-black text-primary-600">~20&apos;</div>
               <div className="text-xs text-muted">estimado</div>
             </div>
@@ -303,7 +388,51 @@ export function EneagramaWizard({
   const todasRespondidas = preguntas.length === totalRespondidas
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div ref={containerRef} className="mx-auto max-w-2xl px-4 py-8">
+      {/* Modal de confirmación al cancelar */}
+      {mostrarConfirmCancelar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
+            <h3 className="text-base font-bold text-ink">¿Cancelar el test?</h3>
+            <div className="mt-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-3">
+              <p className="text-sm text-warning">
+                Tus respuestas no se guardan como historial: si salís ahora perdés lo
+                respondido en esta sección y vas a tener que empezar de nuevo.
+              </p>
+            </div>
+            <div className="mt-4 flex gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1"
+                onClick={() => setMostrarConfirmCancelar(false)}
+              >
+                Seguir respondiendo
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex-1"
+                onClick={handleConfirmarCancelar}
+              >
+                Sí, cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancelar */}
+      <button
+        type="button"
+        onClick={() => setMostrarConfirmCancelar(true)}
+        disabled={isPending}
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink disabled:opacity-50"
+      >
+        <ChevronLeftIcon size={15} />
+        Cancelar
+      </button>
+
       {/* Header con progreso */}
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between">
@@ -345,7 +474,7 @@ export function EneagramaWizard({
                       'rounded-lg border-2 px-2 py-3 text-center text-xs font-semibold transition-all',
                       seleccionada
                         ? 'border-primary-600 bg-primary-50 text-primary-600'
-                        : 'border-neutral-200 bg-white text-soft hover:border-primary-600 hover:text-primary-600',
+                        : 'border-neutral-200 bg-surface text-soft hover:border-primary-600 hover:text-primary-600',
                     ].join(' ')}
                   >
                     <div className="text-lg font-black">{opcion.valor_numerico}</div>

@@ -53,13 +53,34 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
   }
 
   // Bloqueado: ya usó la única actualización permitida
-  if (isLocked) {
+  if (isLocked && hd) {
     return (
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-4">
-        <p className="text-sm font-semibold text-neutral-700">Human Design guardado permanentemente</p>
-        <p className="mt-1 text-sm text-neutral-500">
-          Ya utilizaste la actualización permitida. Los datos de Human Design son permanentes y no pueden modificarse nuevamente.
-        </p>
+      <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-4 space-y-3">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Tipo energético</p>
+            <p className="text-sm text-ink">{hd.tipo_energetico}</p>
+          </div>
+          {hd.energy_type_classification && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Subtipo</p>
+              <p className="text-sm text-ink">{hd.energy_type_classification}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Autoridad interna</p>
+            <p className="text-sm text-ink">{hd.autoridad_hd}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Perfil</p>
+            <p className="text-sm text-ink">{hd.perfil_hd}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Estrategia</p>
+            <p className="text-sm text-ink">{hd.estrategia_hd}</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-neutral-400">Datos permanentes — no pueden modificarse.</p>
       </div>
     )
   }
@@ -69,11 +90,11 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
       {/* Modal de confirmación para actualización */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
             <h3 className="text-base font-bold text-ink">¿Confirmar actualización?</h3>
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
-              <p className="text-sm font-semibold text-amber-800">Esta es tu única actualización disponible</p>
-              <p className="mt-1 text-sm text-amber-700">
+            <div className="mt-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-3">
+              <p className="text-sm font-semibold text-warning">Esta es tu única actualización disponible</p>
+              <p className="mt-1 text-sm text-warning">
                 El Human Design es un dato permanente que no cambia a lo largo de tu vida.
                 Solo podés modificarlo esta vez para corregir un error.
                 Una vez confirmado, los datos quedarán fijos definitivamente.
@@ -93,11 +114,11 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
 
       <div className="space-y-5">
         {/* Aviso adaptado al estado: primera vez vs. actualización */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-semibold text-amber-800">
+        <div className="rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
+          <p className="text-sm font-semibold text-warning">
             {isUpdate ? '⚠ Última actualización disponible' : 'Completá esta sección con seriedad'}
           </p>
-          <p className="mt-0.5 text-sm text-amber-700">
+          <p className="mt-0.5 text-sm text-warning">
             {isUpdate
               ? 'Solo podés modificar el Human Design una vez para corregir errores. Después de esta actualización, los datos quedarán fijos de forma permanente.'
               : 'Los datos de tu carta de Human Design forman parte de tu perfil de personalidad. Son datos permanentes — solo podrás modificarlos una vez después de guardarlos.'}

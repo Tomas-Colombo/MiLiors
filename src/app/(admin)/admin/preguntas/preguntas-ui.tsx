@@ -62,7 +62,7 @@ export function EliminarPreguntaBtn({ id, enunciado }: { id: string; enunciado: 
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        className="text-error hover:bg-[#fceeed] hover:text-error"
+        className="text-error hover:bg-error-bg hover:text-error"
         aria-label="Eliminar pregunta"
       >
         <TrashIcon size={15} />

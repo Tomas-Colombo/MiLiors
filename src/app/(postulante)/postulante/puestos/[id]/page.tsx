@@ -39,16 +39,16 @@ export default async function PuestoDetallePage({ params }: Props) {
 
         {/* Banner certificado */}
         {bloqueado && (
-          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-amber-500" />
+          <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
+            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning-solid" />
             <div className="text-sm">
-              <span className="font-semibold text-amber-800">
+              <span className="font-semibold text-warning">
                 {!certificado ? 'Necesitás un certificado para postularte.' : 'Tu certificado está desactualizado.'}
               </span>
               {' '}
               <Link
                 href="/postulante/certificado"
-                className="text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors"
+                className="text-warning underline underline-offset-2 hover:text-warning-strong transition-colors"
               >
                 {!certificado ? 'Generá tu certificado aquí.' : 'Generá uno nuevo aquí.'}
               </Link>
@@ -73,7 +73,7 @@ export default async function PuestoDetallePage({ params }: Props) {
               {puesto.reclutador_id ? (
                 <Link
                   href={`/postulante/reclutadores/${puesto.reclutador_id}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 h-9 text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-surface px-3 h-9 text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
                 >
                   <BuildingIcon size={14} />
                   Ver perfil de la empresa

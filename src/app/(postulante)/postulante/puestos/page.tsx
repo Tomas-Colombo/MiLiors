@@ -87,16 +87,16 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
 
         {/* Banner certificado */}
         {bloqueado && (
-          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-amber-500" />
+          <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
+            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning-solid" />
             <div className="text-sm">
-              <span className="font-semibold text-amber-800">
+              <span className="font-semibold text-warning">
                 {sinCertificado ? 'Necesitás un certificado para postularte.' : 'Tu certificado está desactualizado.'}
               </span>
               {' '}
               <Link
                 href="/postulante/certificado"
-                className="text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors"
+                className="text-warning underline underline-offset-2 hover:text-warning-strong transition-colors"
               >
                 {sinCertificado ? 'Generá tu certificado aquí.' : 'Generá uno nuevo aquí.'}
               </Link>
@@ -135,7 +135,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
                 {page > 0 ? (
                   <Link
                     href={buildUrl(sp, { page: String(page - 1) })}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
                   >
                     <ChevronLeftIcon size={16} />
                   </Link>
@@ -154,7 +154,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
                         'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
                         i === page
                           ? 'bg-primary-600 text-white'
-                          : 'border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50',
+                          : 'border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
                       ].join(' ')}
                     >
                       {i + 1}
@@ -165,7 +165,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
                 {page < totalPages - 1 ? (
                   <Link
                     href={buildUrl(sp, { page: String(page + 1) })}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
                   >
                     <ChevronRightIcon size={16} />
                   </Link>

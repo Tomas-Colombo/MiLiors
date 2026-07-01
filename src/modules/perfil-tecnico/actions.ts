@@ -49,12 +49,21 @@ async function getPostulanteId(): Promise<string | null> {
 
 // ─── FORMACIÓN ────────────────────────────────────────────────────────────────
 
+function resolveInstitucion(formData: FormData): string | null {
+  const institucion = formData.get('institucion') as string | null
+  if (institucion === 'Otra') {
+    const personalizada = (formData.get('institucion_personalizada') as string | null)?.trim()
+    return personalizada || null
+  }
+  return institucion
+}
+
 export async function agregarFormacion(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
   const parsed = formacionSchema.safeParse({
-    institucion: formData.get('institucion'),
+    institucion: resolveInstitucion(formData),
     titulo: formData.get('titulo'),
     fecha_graduacion: formData.get('fecha_graduacion') || undefined,
   })
@@ -87,7 +96,7 @@ export async function editarFormacion(
   formData: FormData
 ): Promise<ActionResult> {
   const parsed = formacionSchema.safeParse({
-    institucion: formData.get('institucion'),
+    institucion: resolveInstitucion(formData),
     titulo: formData.get('titulo'),
     fecha_graduacion: formData.get('fecha_graduacion') || undefined,
   })
@@ -211,8 +220,12 @@ export async function agregarIdioma(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
+  const nombreRaw = formData.get('nombre') as string | null
+  const nombre = nombreRaw === 'Otro'
+    ? ((formData.get('nombre_personalizado') as string | null)?.trim() || null)
+    : nombreRaw
   const parsed = idiomaSchema.safeParse({
-    nombre: formData.get('nombre'),
+    nombre,
     nivel_idioma: formData.get('nivel_idioma'),
   })
   if (!parsed.success) {

@@ -64,7 +64,7 @@ export default async function PerfilPersonalidadPage() {
           </div>
 
           {dominantes.length > 0 ? (
-            <div className="rounded-xl border border-neutral-200 bg-white shadow-card divide-y divide-neutral-100">
+            <div className="rounded-xl border border-neutral-200 bg-surface shadow-card divide-y divide-neutral-100">
 
               {/* Encabezado con resultado y botón */}
               <div className="flex items-center justify-between gap-4 px-5 py-4">
@@ -89,9 +89,9 @@ export default async function PerfilPersonalidadPage() {
 
               {/* Aviso de empate */}
               {tieneEmpate && (
-                <div className="px-5 py-3 bg-amber-50">
-                  <p className="text-sm font-semibold text-amber-800">Tu test arrojó un empate</p>
-                  <p className="mt-0.5 text-sm text-amber-700">
+                <div className="px-5 py-3 bg-warning-bg">
+                  <p className="text-sm font-semibold text-warning">Tu test arrojó un empate</p>
+                  <p className="mt-0.5 text-sm text-warning">
                     Obtuviste el mismo puntaje en los tipos{' '}
                     {dominantes.map(d => `${d.eneatipo.numero_eneatipo} (${d.eneatipo.nombre})`).join(' y ')}.
                     Leé ambas descripciones y evaluá con cuál te identificás más, o rehacé el test.
@@ -115,7 +115,7 @@ export default async function PerfilPersonalidadPage() {
 
             </div>
           ) : (
-            <div className="rounded-xl border border-neutral-200 bg-white px-5 py-4 shadow-card flex items-center justify-between gap-4">
+            <div className="rounded-xl border border-neutral-200 bg-surface px-5 py-4 shadow-card flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-ink">Completá el test de Eneagrama</p>
                 <p className="mt-0.5 text-xs text-muted">Aún no tenés un resultado registrado.</p>
@@ -140,17 +140,19 @@ export default async function PerfilPersonalidadPage() {
             <p className="mt-1 text-sm text-muted">Tu carta de Human Design enriquece el informe combinado de personalidad.</p>
           </div>
 
-          <div className="flex items-start gap-3 rounded-xl bg-gradient-to-r from-violet-50 to-indigo-50 px-4 py-3 ring-1 ring-violet-100">
-            <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-200 text-violet-700 text-[11px] font-black">
-              ✦
+          {!hd && (
+            <div className="flex items-start gap-3 rounded-xl bg-primary-tint px-4 py-3 ring-1 ring-primary-ring">
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600 text-[11px] font-black">
+                ✦
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary-700">Sección opcional</p>
+                <p className="mt-0.5 text-sm text-primary-600">
+                  Completá tu carta solo si ya la conocés. Una vez guardada, no podrás eliminar esta información.
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-violet-800">Sección opcional</p>
-              <p className="mt-0.5 text-sm text-violet-700">
-                Completá tu carta solo si ya la conocés. Una vez guardada, no podrás eliminar esta información.
-              </p>
-            </div>
-          </div>
+          )}
 
           <HumanDesignForm hd={hd} />
         </section>

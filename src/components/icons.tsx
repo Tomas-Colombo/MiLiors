@@ -371,6 +371,42 @@ export const FileTextIcon = (p: IconProps) => (
   </Icon>
 )
 
+export const MoonIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </Icon>
+)
+
+export const SunIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <line x1="12" y1="2" x2="12" y2="4" />
+    <line x1="12" y1="20" x2="12" y2="22" />
+    <line x1="4.93" y1="4.93" x2="6.34" y2="6.34" />
+    <line x1="17.66" y1="17.66" x2="19.07" y2="19.07" />
+    <line x1="2" y1="12" x2="4" y2="12" />
+    <line x1="20" y1="12" x2="22" y2="12" />
+    <line x1="4.93" y1="19.07" x2="6.34" y2="17.66" />
+    <line x1="17.66" y1="6.34" x2="19.07" y2="4.93" />
+  </Icon>
+)
+
+export const PanelLeftCloseIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+    <path d="M14 9l-2 3 2 3" />
+  </Icon>
+)
+
+export const PanelLeftOpenIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+    <path d="M13 9l2 3-2 3" />
+  </Icon>
+)
+
 export const Spinner = ({ size = 16, className }: { size?: number; className?: string }) => (
   <span
     role="status"

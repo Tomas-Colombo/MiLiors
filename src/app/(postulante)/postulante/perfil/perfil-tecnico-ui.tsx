@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useTransition, useState, useRef } from 'react'
-import { Tabs, Field, Input, Textarea, Select, Alert, Chip, Button } from '@/components/ui'
+import { Tabs, Field, Input, Textarea, Select, SearchableSelect, Alert, Chip, Button } from '@/components/ui'
 import type { InputProps } from '@/components/ui/input'
 import { CalendarIcon } from '@/components/icons'
 import { NIVEL_IDIOMA_LABEL, UNIVERSIDADES_ARGENTINA, IDIOMAS_COMUNES } from '@/lib/constants/enums'
@@ -114,6 +114,45 @@ const nivelIdiomaOptions = Object.entries(NIVEL_IDIOMA_LABEL).map(([value, label
 const universidadOptions = UNIVERSIDADES_ARGENTINA.map((u) => ({ value: u, label: u }))
 const idiomaOptions = IDIOMAS_COMUNES.map((i) => ({ value: i, label: i }))
 
+// ─── CONFIRM DELETE MODAL ─────────────────────────────────────────────────────
+
+function ConfirmDeleteModal({
+  open,
+  message,
+  onConfirm,
+  onClose,
+  isPending,
+}: {
+  open: boolean
+  message: string
+  onConfirm: () => void
+  onClose: () => void
+  isPending?: boolean
+}) {
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'rgba(28,32,48,.35)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[400px] rounded-xl bg-surface p-6 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="mb-1 text-[16px] font-bold text-ink">¿Eliminar este elemento?</p>
+        <p className="mb-5 text-[13.5px] leading-relaxed text-muted">{message}</p>
+        <div className="flex justify-end gap-2.5">
+          <Button variant="secondary" size="sm" onClick={onClose} disabled={isPending}>Cancelar</Button>
+          <Button variant="destructive" size="sm" onClick={onConfirm} disabled={isPending}>
+            {isPending ? 'Eliminando…' : 'Eliminar'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── FORMACIÓN ────────────────────────────────────────────────────────────────
 
 function FormacionForm({
@@ -121,6 +160,7 @@ function FormacionForm({
 }: {
   onSuccess: () => void
 }) {
+  const [institucion, setInstitucion] = useState('')
   const [state, action, pending] = useActionState(
     async (prev: ActionResult, formData: FormData) => {
       const result = await agregarFormacion(prev, formData)
@@ -134,8 +174,13 @@ function FormacionForm({
     <form action={action} className="mt-4 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
       <p className="text-[13px] font-semibold text-ink">Agregar formación</p>
       <Field label="Institución" required error={state.success === false && state.fieldErrors?.institucion?.[0]}>
-        <Select name="institucion" options={universidadOptions} placeholder="Seleccioná la institución" />
+        <SearchableSelect name="institucion" options={universidadOptions} placeholder="Buscá o seleccioná la institución" onValueChange={setInstitucion} />
       </Field>
+      {institucion === 'Otra' && (
+        <Field label="Nombre de la institución" required error={state.success === false && state.fieldErrors?.institucion_personalizada?.[0]}>
+          <Input name="institucion_personalizada" placeholder="Ej: Instituto Superior de Diseño" />
+        </Field>
+      )}
       <Field label="Título" required error={state.success === false && state.fieldErrors?.titulo?.[0]}>
         <Input name="titulo" placeholder="Ej: Lic. en Sistemas" status={state.success === false && state.fieldErrors?.titulo ? 'error' : 'default'} />
       </Field>
@@ -161,6 +206,8 @@ function FormacionEditForm({
   onSuccess: () => void
   onCancel: () => void
 }) {
+  const isOtra = !universidadOptions.some((o) => o.value === item.institucion)
+  const [institucion, setInstitucion] = useState(isOtra ? 'Otra' : item.institucion)
   const boundAction = editarFormacion.bind(null, item.id)
   const [state, action, pending] = useActionState(
     async (prev: ActionResult, formData: FormData) => {
@@ -174,8 +221,19 @@ function FormacionEditForm({
   return (
     <form action={action} className="space-y-3 rounded-xl border border-primary-200 bg-primary-tint/30 p-4">
       <Field label="Institución" required error={state.success === false && state.fieldErrors?.institucion?.[0]}>
-        <Select name="institucion" options={universidadOptions} placeholder="Seleccioná la institución" defaultValue={item.institucion} />
+        <SearchableSelect
+          name="institucion"
+          options={universidadOptions}
+          placeholder="Buscá o seleccioná la institución"
+          defaultValue={isOtra ? 'Otra' : item.institucion}
+          onValueChange={setInstitucion}
+        />
       </Field>
+      {institucion === 'Otra' && (
+        <Field label="Nombre de la institución" required error={state.success === false && state.fieldErrors?.institucion_personalizada?.[0]}>
+          <Input name="institucion_personalizada" defaultValue={isOtra ? item.institucion : ''} placeholder="Ej: Instituto Superior de Diseño" />
+        </Field>
+      )}
       <Field label="Título" required error={state.success === false && state.fieldErrors?.titulo?.[0]}>
         <Input name="titulo" defaultValue={item.titulo} status={state.success === false && state.fieldErrors?.titulo ? 'error' : 'default'} />
       </Field>
@@ -196,52 +254,63 @@ function FormacionEditForm({
 function SeccionFormacion({ formaciones }: { formaciones: FormacionItem[] }) {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [editando, setEditando] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  function handleEliminar(id: string) {
-    if (!confirm('¿Eliminás esta formación?')) return
+  function handleEliminar() {
+    if (!confirmId) return
     startTransition(async () => {
-      await eliminarFormacion(id)
+      await eliminarFormacion(confirmId)
+      setConfirmId(null)
     })
   }
 
   return (
-    <div className="space-y-3">
-      {formaciones.length === 0 && (
-        <p className="text-sm text-muted">Todavía no cargaste formación académica.</p>
-      )}
-      {formaciones.map((f) =>
-        editando === f.id ? (
-          <FormacionEditForm
-            key={f.id}
-            item={f}
-            onSuccess={() => setEditando(null)}
-            onCancel={() => setEditando(null)}
-          />
+    <>
+      <ConfirmDeleteModal
+        open={confirmId !== null}
+        message="¿Querés eliminar esta formación? Esta acción no se puede deshacer."
+        onConfirm={handleEliminar}
+        onClose={() => setConfirmId(null)}
+        isPending={isPending}
+      />
+      <div className="space-y-3">
+        {formaciones.length === 0 && (
+          <p className="text-sm text-muted">Todavía no cargaste formación académica.</p>
+        )}
+        {formaciones.map((f) =>
+          editando === f.id ? (
+            <FormacionEditForm
+              key={f.id}
+              item={f}
+              onSuccess={() => setEditando(null)}
+              onCancel={() => setEditando(null)}
+            />
+          ) : (
+            <div key={f.id} className="flex items-start justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
+              <div>
+                <p className="text-[14px] font-semibold text-ink">{f.titulo}</p>
+                <p className="text-[13px] text-muted">{f.institucion}</p>
+                {f.fecha_graduacion && (
+                  <p className="text-[12px] text-neutral-400">{formatMesAnio(f.fecha_graduacion)}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditando(f.id)}>Editar</Button>
+                <Button type="button" size="sm" variant="ghost" className="text-error hover:bg-[#fceeed]" onClick={() => setConfirmId(f.id)}>Eliminar</Button>
+              </div>
+            </div>
+          )
+        )}
+        {mostrarForm ? (
+          <FormacionForm onSuccess={() => setMostrarForm(false)} />
         ) : (
-          <div key={f.id} className="flex items-start justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
-            <div>
-              <p className="text-[14px] font-semibold text-ink">{f.titulo}</p>
-              <p className="text-[13px] text-muted">{f.institucion}</p>
-              {f.fecha_graduacion && (
-                <p className="text-[12px] text-neutral-400">{formatMesAnio(f.fecha_graduacion)}</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" size="sm" variant="ghost" onClick={() => setEditando(f.id)}>Editar</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => handleEliminar(f.id)} disabled={isPending}>Eliminar</Button>
-            </div>
-          </div>
-        )
-      )}
-      {mostrarForm ? (
-        <FormacionForm onSuccess={() => setMostrarForm(false)} />
-      ) : (
-        <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
-          + Agregar formación
-        </Button>
-      )}
-    </div>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
+            + Agregar formación
+          </Button>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -365,61 +434,73 @@ function ExperienciaEditForm({
 function SeccionExperiencia({ experiencias }: { experiencias: ExperienciaItem[] }) {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [editando, setEditando] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  function handleEliminar(id: string) {
-    if (!confirm('¿Eliminás esta experiencia?')) return
+  function handleEliminar() {
+    if (!confirmId) return
     startTransition(async () => {
-      await eliminarExperiencia(id)
+      await eliminarExperiencia(confirmId)
+      setConfirmId(null)
     })
   }
 
   return (
-    <div className="space-y-3">
-      {experiencias.length === 0 && (
-        <p className="text-sm text-muted">Todavía no cargaste experiencia laboral.</p>
-      )}
-      {experiencias.map((e) =>
-        editando === e.id ? (
-          <ExperienciaEditForm
-            key={e.id}
-            item={e}
-            onSuccess={() => setEditando(null)}
-            onCancel={() => setEditando(null)}
-          />
+    <>
+      <ConfirmDeleteModal
+        open={confirmId !== null}
+        message="¿Querés eliminar esta experiencia? Esta acción no se puede deshacer."
+        onConfirm={handleEliminar}
+        onClose={() => setConfirmId(null)}
+        isPending={isPending}
+      />
+      <div className="space-y-3">
+        {experiencias.length === 0 && (
+          <p className="text-sm text-muted">Todavía no cargaste experiencia laboral.</p>
+        )}
+        {experiencias.map((e) =>
+          editando === e.id ? (
+            <ExperienciaEditForm
+              key={e.id}
+              item={e}
+              onSuccess={() => setEditando(null)}
+              onCancel={() => setEditando(null)}
+            />
+          ) : (
+            <div key={e.id} className="flex items-start justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
+              <div>
+                <p className="text-[14px] font-semibold text-ink">{e.puesto}</p>
+                <p className="text-[13px] text-muted">{e.empresa}</p>
+                <p className="text-[12px] text-neutral-400">
+                  {formatMesAnio(e.fecha_inicio)} – {formatMesAnio(e.fecha_fin) ?? 'Actualidad'}
+                </p>
+                {e.descripcion && (
+                  <p className="mt-1 text-[12px] text-neutral-500 line-clamp-2">{e.descripcion}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditando(e.id)}>Editar</Button>
+                <Button type="button" size="sm" variant="ghost" className="text-error hover:bg-[#fceeed]" onClick={() => setConfirmId(e.id)}>Eliminar</Button>
+              </div>
+            </div>
+          )
+        )}
+        {mostrarForm ? (
+          <ExperienciaForm onSuccess={() => setMostrarForm(false)} />
         ) : (
-          <div key={e.id} className="flex items-start justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
-            <div>
-              <p className="text-[14px] font-semibold text-ink">{e.puesto}</p>
-              <p className="text-[13px] text-muted">{e.empresa}</p>
-              <p className="text-[12px] text-neutral-400">
-                {formatMesAnio(e.fecha_inicio)} – {formatMesAnio(e.fecha_fin) ?? 'Actualidad'}
-              </p>
-              {e.descripcion && (
-                <p className="mt-1 text-[12px] text-neutral-500 line-clamp-2">{e.descripcion}</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" size="sm" variant="ghost" onClick={() => setEditando(e.id)}>Editar</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => handleEliminar(e.id)} disabled={isPending}>Eliminar</Button>
-            </div>
-          </div>
-        )
-      )}
-      {mostrarForm ? (
-        <ExperienciaForm onSuccess={() => setMostrarForm(false)} />
-      ) : (
-        <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
-          + Agregar experiencia
-        </Button>
-      )}
-    </div>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
+            + Agregar experiencia
+          </Button>
+        )}
+      </div>
+    </>
   )
 }
 
 // ─── IDIOMAS ──────────────────────────────────────────────────────────────────
 
 function IdiomaForm({ onSuccess }: { onSuccess: () => void }) {
+  const [idioma, setIdioma] = useState('')
   const [state, action, pending] = useActionState(
     async (prev: ActionResult, formData: FormData) => {
       const result = await agregarIdioma(prev, formData)
@@ -434,12 +515,17 @@ function IdiomaForm({ onSuccess }: { onSuccess: () => void }) {
       <p className="text-[13px] font-semibold text-ink">Agregar idioma</p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Idioma" required error={state.success === false && state.fieldErrors?.nombre?.[0]}>
-          <Select name="nombre" options={idiomaOptions} placeholder="Seleccioná un idioma" />
+          <SearchableSelect name="nombre" options={idiomaOptions} placeholder="Buscá o seleccioná" onValueChange={setIdioma} />
         </Field>
         <Field label="Nivel" required error={state.success === false && state.fieldErrors?.nivel_idioma?.[0]}>
           <Select name="nivel_idioma" options={nivelIdiomaOptions} placeholder="Seleccioná" />
         </Field>
       </div>
+      {idioma === 'Otro' && (
+        <Field label="Nombre del idioma" required error={state.success === false && state.fieldErrors?.nombre_personalizado?.[0]}>
+          <Input name="nombre_personalizado" placeholder="Ej: Catalán" />
+        </Field>
+      )}
       {state.success === false && state.error && !state.fieldErrors && (
         <Alert tone="error">{state.error}</Alert>
       )}
@@ -450,37 +536,48 @@ function IdiomaForm({ onSuccess }: { onSuccess: () => void }) {
 
 function SeccionIdiomas({ idiomas }: { idiomas: IdiomaItem[] }) {
   const [mostrarForm, setMostrarForm] = useState(false)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  function handleEliminar(id: string) {
-    if (!confirm('¿Eliminás este idioma?')) return
+  function handleEliminar() {
+    if (!confirmId) return
     startTransition(async () => {
-      await eliminarIdioma(id)
+      await eliminarIdioma(confirmId)
+      setConfirmId(null)
     })
   }
 
   return (
-    <div className="space-y-3">
-      {idiomas.length === 0 && (
-        <p className="text-sm text-muted">Todavía no cargaste idiomas.</p>
-      )}
-      {idiomas.map((i) => (
-        <div key={i.id} className="flex items-center justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
-          <div>
-            <p className="text-[14px] font-semibold text-ink">{i.nombre}</p>
-            <p className="text-[12px] text-muted">{NIVEL_IDIOMA_LABEL[i.nivel_idioma] ?? i.nivel_idioma}</p>
+    <>
+      <ConfirmDeleteModal
+        open={confirmId !== null}
+        message="¿Querés eliminar este idioma? Esta acción no se puede deshacer."
+        onConfirm={handleEliminar}
+        onClose={() => setConfirmId(null)}
+        isPending={isPending}
+      />
+      <div className="space-y-3">
+        {idiomas.length === 0 && (
+          <p className="text-sm text-muted">Todavía no cargaste idiomas.</p>
+        )}
+        {idiomas.map((i) => (
+          <div key={i.id} className="flex items-center justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
+            <div>
+              <p className="text-[14px] font-semibold text-ink">{i.nombre}</p>
+              <p className="text-[12px] text-muted">{NIVEL_IDIOMA_LABEL[i.nivel_idioma] ?? i.nivel_idioma}</p>
+            </div>
+            <Button type="button" size="sm" variant="ghost" className="text-error hover:bg-[#fceeed]" onClick={() => setConfirmId(i.id)}>Eliminar</Button>
           </div>
-          <Button type="button" size="sm" variant="ghost" onClick={() => handleEliminar(i.id)} disabled={isPending}>Eliminar</Button>
-        </div>
-      ))}
-      {mostrarForm ? (
-        <IdiomaForm onSuccess={() => setMostrarForm(false)} />
-      ) : (
-        <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
-          + Agregar idioma
-        </Button>
-      )}
-    </div>
+        ))}
+        {mostrarForm ? (
+          <IdiomaForm onSuccess={() => setMostrarForm(false)} />
+        ) : (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
+            + Agregar idioma
+          </Button>
+        )}
+      </div>
+    </>
   )
 }
 

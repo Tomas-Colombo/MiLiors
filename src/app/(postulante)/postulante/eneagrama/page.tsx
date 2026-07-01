@@ -52,7 +52,7 @@ export default async function EneagramaPage() {
         perfilId={perfil.id}
         testId={testActual?.test?.id ?? null}
         respuestasIniciales={respuestasMap}
-        yaCompleto={!!testActual?.test?.eneatipo_id}
+        yaCompleto={!!testActual?.test?.completo}
         humanDesignCompleto={!!humanDesign}
       />
     </div>
