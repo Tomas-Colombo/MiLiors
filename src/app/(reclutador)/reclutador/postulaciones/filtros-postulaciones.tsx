@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Select } from '@/components/ui'
-import { StarIcon } from '@/components/icons'
+import { StarIcon, TrashIcon } from '@/components/icons'
 
 type Puesto = { id: string; titulo_puesto: string }
 
@@ -89,8 +89,9 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
             const params = new URLSearchParams()
             router.replace(`${pathname}?${params.toString()}`)
           }}
-          className="text-xs text-muted hover:text-ink transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 h-9 text-[12.5px] font-medium text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300 transition-colors whitespace-nowrap"
         >
+          <TrashIcon size={14} />
           Limpiar filtros
         </button>
       )}

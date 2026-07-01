@@ -6,6 +6,7 @@ import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon } from '@/components/ic
 import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
+import { FavoritoToggle } from './favorito-toggle'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
 import type { BadgeProps } from '@/components/ui/badge'
 
@@ -130,6 +131,7 @@ export default async function PostulacionesRecibidasPage({
                           <FileTextIcon size={14} />
                         </span>
                       )}
+                      <FavoritoToggle postulacionId={p.id} isFavorito={p.is_favorito} />
                     </div>
 
                     <p className="text-[13px] text-muted truncate">
@@ -175,7 +177,7 @@ export default async function PostulacionesRecibidasPage({
                     </p>
                   </div>
 
-                  <div className="flex-none flex flex-col items-end gap-2">
+                  <div className="w-full sm:w-44 flex-none flex flex-col items-stretch gap-2">
                     <div className="flex flex-col gap-2 w-full">
                       <Link
                         href={`/reclutador/postulantes/${p.postulante_id}?postulacion=${p.id}`}
@@ -191,11 +193,7 @@ export default async function PostulacionesRecibidasPage({
                         Asistente IA
                       </Link>
                     </div>
-                    <PostulacionAcciones
-                      postulacionId={p.id}
-                      estadoActual={p.estado}
-                      isFavorito={p.is_favorito}
-                    />
+                    <PostulacionAcciones postulacionId={p.id} estadoActual={p.estado} />
                   </div>
                 </div>
               </Card>
