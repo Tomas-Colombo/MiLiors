@@ -7,7 +7,6 @@ import {
   BuildingIcon,
   FileIcon,
   SearchIcon,
-  SparklesIcon,
   PlusIcon,
   ArrowRightIcon,
 } from '@/components/icons'
@@ -87,12 +86,6 @@ export default async function ReclutadorDashboard() {
       icon: <SearchIcon size={20} className="text-primary-600" />,
       title: 'Buscar candidatos',
       desc: 'Explorá el banco de talentos disponibles',
-    },
-    {
-      href: '/reclutador/asistente',
-      icon: <SparklesIcon size={20} className="text-primary-600" />,
-      title: 'Asistente IA',
-      desc: 'Consultá compatibilidad candidato-puesto',
     },
   ]
 

@@ -53,9 +53,6 @@ export function PostulacionAcciones({ postulacionId, estadoActual }: Props) {
         </>
       )}
 
-      {isClosed && (
-        <span className="text-right text-xs text-neutral-400">Sin acciones disponibles</span>
-      )}
       {error && <Alert tone="error" title={error} className="text-xs" />}
     </div>
   )
