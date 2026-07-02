@@ -45,7 +45,14 @@ test.describe('M01 — Auth: Validaciones formulario login', () => {
     await page.locator('[name="email"]').fill('no-es-un-email')
     await page.locator('[name="password"]').fill('Admin1234!')
     await page.getByRole('button', { name: 'Ingresar' }).click()
-    await expect(page.getByText('Ingresá un email válido.')).toBeVisible()
+    // The email field is <input type="email">: the browser's native HTML5
+    // validation blocks submission before the server action runs, so we assert
+    // the field is invalid and that we never left the login page.
+    const emailValid = await page
+      .locator('[name="email"]')
+      .evaluate((el: HTMLInputElement) => el.validity.valid)
+    expect(emailValid).toBe(false)
+    await expect(page).toHaveURL(/\/login/)
   })
 })
 
@@ -97,7 +104,13 @@ test.describe('M01 — Auth: Registro', () => {
     await page.locator('[name="password"]').fill('Admin1234!')
     await page.locator('[name="confirmPassword"]').fill('Admin1234!')
     await page.getByRole('button', { name: 'Crear cuenta' }).click()
-    await expect(page.getByText('Ingresá un email válido.')).toBeVisible()
+    // <input type="email"> — native validation blocks the submit before the
+    // server-side Zod check, so assert the field is invalid and we stay put.
+    const emailValid = await page
+      .locator('[name="email"]')
+      .evaluate((el: HTMLInputElement) => el.validity.valid)
+    expect(emailValid).toBe(false)
+    await expect(page).toHaveURL(/\/registro/)
   })
 
   test('TC-AUTH-003 — Email ya existente → error', async ({ page }) => {

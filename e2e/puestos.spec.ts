@@ -1,9 +1,24 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { loginAs } from './fixtures/auth'
 
 // TC-PUE-* — M05 Puestos de Trabajo
 
 let createdJobTitle: string
+
+/**
+ * Opens the puestos list and returns the row locator for `title`, re-navigating
+ * until the freshly-created puesto shows up. `fecha_publicacion` is a DATE, so
+ * same-day puestos tie on ordering and a just-created one may not be readable on
+ * the very first render (write-visibility / route-cache race after the publish
+ * redirect). Re-fetching until it appears makes the test deterministic.
+ */
+async function findPuestoRow(page: Page, title: string) {
+  await expect(async () => {
+    await page.goto('/reclutador/puestos')
+    await expect(page.getByText(title)).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 20000 })
+  return page.locator('div.grid').filter({ hasText: title })
+}
 
 test.describe('M05 — Puestos: CRUD del reclutador', () => {
   test.beforeEach(async ({ page }) => {
@@ -56,7 +71,9 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
     await page.getByLabel('Título del puesto').fill(updated)
     await page.getByRole('button', { name: 'Guardar cambios' }).click()
     await expect(page.getByText('Puesto actualizado correctamente.')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText(updated)).toBeVisible()
+    // On the editar page the new title lives in the input's value, not as page
+    // text, so assert the field value rather than getByText.
+    await expect(page.getByLabel('Título del puesto')).toHaveValue(updated)
   })
 
   test('TC-PUE-012 — Cerrar puesto → desaparece de vista del postulante', async ({ page }) => {
@@ -70,14 +87,12 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
     await page.getByRole('button', { name: 'Publicar puesto' }).click()
     await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
 
-    // Open the puesto detail and close it
-    await page.getByText(title).click()
-    await page.getByRole('button', { name: /cerrar puesto/i }).click()
+    // Close/reactivate actions live in the puestos list, not the detail page.
+    const row = await findPuestoRow(page, title)
+    await row.getByRole('button', { name: 'Cerrar', exact: true }).click()
 
-    // Verify it's marked as closed in the recruiter view
-    await page.waitForURL('**/reclutador/puestos/**')
-    // The detail page should reflect the closed state (no reactivate without close first)
-    await expect(page.getByRole('button', { name: /reactivar/i })).toBeVisible({ timeout: 8000 })
+    // After closing, the row flips to a "Reactivar" button.
+    await expect(row.getByRole('button', { name: 'Reactivar', exact: true })).toBeVisible({ timeout: 8000 })
   })
 
   test('TC-PUE-014 — Reactivar puesto → vuelve a aparecer', async ({ page }) => {
@@ -91,13 +106,13 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
     await page.getByRole('button', { name: 'Publicar puesto' }).click()
     await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
 
-    await page.getByText(title).click()
-    await page.getByRole('button', { name: /cerrar puesto/i }).click()
-    await page.getByRole('button', { name: /reactivar/i }).waitFor()
-    await page.getByRole('button', { name: /reactivar/i }).click()
+    // Close then reactivate from the puestos list.
+    const row = await findPuestoRow(page, title)
+    await row.getByRole('button', { name: 'Cerrar', exact: true }).click()
+    await row.getByRole('button', { name: 'Reactivar', exact: true }).click()
 
-    // After reactivation, the close button should be back
-    await expect(page.getByRole('button', { name: /cerrar puesto/i })).toBeVisible({ timeout: 8000 })
+    // After reactivation, the close button should be back.
+    await expect(row.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible({ timeout: 8000 })
   })
 })
 

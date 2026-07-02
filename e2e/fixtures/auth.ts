@@ -12,7 +12,7 @@ export const USERS = {
     dashboard: '/reclutador',
   },
   admin: {
-    email: 'admin@admin.con',
+    email: 'admin@admin.com',
     password: 'Admin1234!',
     dashboard: '/admin',
   },

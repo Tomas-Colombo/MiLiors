@@ -99,11 +99,28 @@ test.describe('M02 — Onboarding Reclutador: registro nuevo usuario', () => {
     await page.getByRole('button', { name: 'Crear cuenta' }).click()
     await page.waitForURL('**/reclutador/onboarding**', { timeout: 15000 })
 
-    // Step 2: complete onboarding with minimum required field
+    // A fresh user must accept the blocking Terms & Conditions modal first —
+    // it overlays the onboarding form and intercepts clicks until accepted.
+    const tycAccept = page.getByRole('button', { name: 'Acepto los Términos y Condiciones' })
+    await tycAccept.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    if (await tycAccept.count()) {
+      await tycAccept.click()
+      await tycAccept.waitFor({ state: 'hidden', timeout: 10000 })
+    }
+
+    // Accepting the ToS triggers a layout revalidation whose router refresh can
+    // wipe the uncontrolled input if we fill it during that window. Reload into a
+    // clean, ToS-accepted onboarding form (still no empresa, so no redirect) so
+    // the fill is stable.
+    await page.goto('/reclutador/onboarding')
+
+    // Step 2: complete onboarding with minimum required field. On success
+    // crearEmpresaYAsociar redirects to /reclutador/puestos, so wait for that
+    // specific target rather than the loose **/reclutador** glob (which also
+    // matches the onboarding URL we're leaving).
     await page.locator('[name="nombre_empresa"]').fill(`E2E Corp ${Date.now()}`)
     await page.getByRole('button', { name: 'Guardar empresa y continuar' }).click()
-    await page.waitForURL('**/reclutador**', { timeout: 15000 })
-    await expect(page).toHaveURL(/\/reclutador/)
+    await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
     await expect(page).not.toHaveURL(/\/reclutador\/onboarding/)
   })
 })
