@@ -5,7 +5,7 @@ import { useCallback } from 'react'
 import { Select } from '@/components/ui'
 import { StarIcon, TrashIcon } from '@/components/icons'
 
-type Puesto = { id: string; titulo_puesto: string }
+type Puesto = { id: string; titulo_puesto: string; sinPostulaciones?: boolean }
 
 type Props = {
   puestos: Puesto[]
@@ -33,7 +33,10 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
 
   const puestoOpts = [
     { value: '', label: 'Todos los puestos' },
-    ...puestos.map((p) => ({ value: p.id, label: p.titulo_puesto })),
+    // Un puesto sin postulaciones (llegamos desde "Mis puestos") se muestra
+    // seleccionado pero deshabilitado: el usuario sólo puede elegir puestos que
+    // tengan postulaciones.
+    ...puestos.map((p) => ({ value: p.id, label: p.titulo_puesto, disabled: p.sinPostulaciones })),
   ]
 
   const estadoOpts = [

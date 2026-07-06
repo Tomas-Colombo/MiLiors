@@ -46,19 +46,18 @@ export default async function MisPuestosPage() {
           <div className="overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-card">
             {/* Header */}
             <div className="grid border-b border-neutral-200 px-[22px] py-3.5 text-[11.5px] font-bold uppercase tracking-[0.04em] text-neutral-400"
-              style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 160px' }}>
+              style={{ gridTemplateColumns: '2fr 1fr 1fr 360px' }}>
               <span>Título</span>
-              <span>Empresa</span>
               <span>Estado</span>
               <span>Publicado</span>
-              <span className="text-right">Acciones</span>
+              <span className="text-center">Acciones</span>
             </div>
 
             {puestos.map((puesto) => (
               <div
                 key={puesto.id}
                 className="grid items-center border-b border-neutral-100 px-[22px] py-[13px] last:border-0 hover:bg-neutral-50"
-                style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 160px' }}
+                style={{ gridTemplateColumns: '2fr 1fr 1fr 360px' }}
               >
                 <div>
                   <p className="text-[13px] font-semibold text-ink truncate">{puesto.titulo_puesto}</p>
@@ -66,7 +65,6 @@ export default async function MisPuestosPage() {
                     <p className="text-xs text-neutral-400">{puesto.nombre_sector}</p>
                   )}
                 </div>
-                <p className="text-[13px] text-ink-soft truncate">{puesto.nombre_empresa ?? '—'}</p>
                 <span>
                   <Badge tone={puesto.activo ? 'success' : 'neutral'} dot>
                     {puesto.activo ? 'Activo' : 'Cerrado'}
@@ -79,7 +77,7 @@ export default async function MisPuestosPage() {
                     year: 'numeric',
                   })}
                 </p>
-                <div className="flex justify-end">
+                <div className="flex justify-center">
                   <PuestoAcciones puestoId={puesto.id} activo={puesto.activo} />
                 </div>
               </div>

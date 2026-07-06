@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
 import { TyCGate } from '@/components/shared/tyc-gate'
@@ -11,6 +12,8 @@ import {
   ArrowRightIcon,
 } from '@/components/icons'
 import Link from 'next/link'
+import { MetricasSection } from './metricas-section'
+import { MetricasSkeleton } from './metricas-skeleton'
 
 export const metadata = { title: 'Inicio — TalentID Reclutador' }
 
@@ -37,30 +40,6 @@ export default async function ReclutadorDashboard() {
   }
 
   const rec = reclutador as ReclutadorRow
-
-  // Fast count queries
-  const puestosRes = await supabase
-    .from('puesto')
-    .select('*', { count: 'exact', head: true })
-    .eq('reclutador_id', rec.id)
-    .eq('activo', true)
-
-  const puestosIds = await supabase
-    .from('puesto')
-    .select('id')
-    .eq('reclutador_id', rec.id)
-
-  const idList = (puestosIds.data ?? []).map((p: unknown) => (p as { id: string }).id)
-
-  const postulacionesRes = idList.length > 0
-    ? await supabase
-        .from('postulacion')
-        .select('*', { count: 'exact', head: true })
-        .in('puesto_id', idList)
-    : { count: 0 }
-
-  const puestosActivos = puestosRes.count ?? 0
-  const postulacionesRecibidas = postulacionesRes.count ?? 0
 
   const QUICK_LINKS = [
     {
@@ -91,29 +70,13 @@ export default async function ReclutadorDashboard() {
 
   return (
     <TyCGate>
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-8">
+      <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-extrabold text-ink">
             ¡Hola, {rec.nombre_reclutador.split(' ')[0]}!
           </h1>
           <p className="mt-1 text-sm text-muted">{rec.empresa?.nombre_empresa ?? 'Tu empresa'}</p>
-        </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card padding="lg">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Puestos activos
-            </p>
-            <p className="mt-2 text-3xl font-black text-ink">{puestosActivos}</p>
-          </Card>
-          <Card padding="lg">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Postulaciones recibidas
-            </p>
-            <p className="mt-2 text-3xl font-black text-ink">{postulacionesRecibidas}</p>
-          </Card>
         </div>
 
         {/* Accesos rápidos */}
@@ -140,6 +103,14 @@ export default async function ReclutadorDashboard() {
               </Link>
             ))}
           </div>
+        </div>
+
+        {/* Métricas */}
+        <div>
+          <h2 className="text-[13.5px] font-bold text-ink mb-3">Métricas</h2>
+          <Suspense fallback={<MetricasSkeleton />}>
+            <MetricasSection />
+          </Suspense>
         </div>
       </div>
     </TyCGate>

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, EmptyState } from '@/components/ui'
 import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon } from '@/components/icons'
-import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
+import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
 import { FavoritoToggle } from './favorito-toggle'
@@ -62,10 +62,21 @@ export default async function PostulacionesRecibidasPage({
       puestosMap.set(p.puesto_id, p.titulo_puesto)
     }
   }
-  const puestosOpts = Array.from(puestosMap.entries()).map(([id, titulo_puesto]) => ({
-    id,
-    titulo_puesto,
-  }))
+  const puestosOpts: { id: string; titulo_puesto: string; sinPostulaciones?: boolean }[] =
+    Array.from(puestosMap.entries()).map(([id, titulo_puesto]) => ({ id, titulo_puesto }))
+
+  // If the recruiter arrives from "Mis puestos" filtering by a job post that has
+  // no applications yet, that post is not in the dropdown (built from applications).
+  // Fetch its title so the filter can display it (as a disabled option) and we can
+  // show a clear "no applications yet" message. getPuestoById enforces ownership.
+  let puestoSinPostulaciones = false
+  if (filtroPuesto && !puestosMap.has(filtroPuesto)) {
+    const orphan = await getPuestoById(filtroPuesto)
+    if (orphan) {
+      puestosOpts.push({ id: orphan.id, titulo_puesto: orphan.titulo_puesto, sinPostulaciones: true })
+      puestoSinPostulaciones = true
+    }
+  }
 
   // Apply filters server-side (data already loaded; filter in memory)
   const filtered = postulaciones.filter((p) => {
@@ -85,7 +96,7 @@ export default async function PostulacionesRecibidasPage({
           </p>
         </div>
 
-        {postulaciones.length > 0 && (
+        {(postulaciones.length > 0 || puestoSinPostulaciones) && (
           <Suspense>
             <FiltrosPostulaciones
               puestos={puestosOpts}
@@ -99,14 +110,18 @@ export default async function PostulacionesRecibidasPage({
           <EmptyState
             icon={<UsersIcon size={24} />}
             title={
-              postulaciones.length === 0
-                ? 'Todavía no recibiste postulaciones'
-                : 'Ninguna postulación coincide con los filtros'
+              puestoSinPostulaciones
+                ? 'Este puesto todavía no tiene postulaciones'
+                : postulaciones.length === 0
+                  ? 'Todavía no recibiste postulaciones'
+                  : 'Ninguna postulación coincide con los filtros'
             }
             description={
-              postulaciones.length === 0
-                ? 'Publicá puestos para que los candidatos puedan postularse.'
-                : 'Probá cambiando o limpiando los filtros.'
+              puestoSinPostulaciones
+                ? 'Cuando un candidato se postule a este puesto, vas a verlo acá.'
+                : postulaciones.length === 0
+                  ? 'Publicá puestos para que los candidatos puedan postularse.'
+                  : 'Probá cambiando o limpiando los filtros.'
             }
           />
         ) : (

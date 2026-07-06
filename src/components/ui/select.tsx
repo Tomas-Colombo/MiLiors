@@ -7,6 +7,7 @@ import { ChevronDownIcon } from "@/components/icons";
 export interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "children"> {
@@ -40,7 +41,7 @@ export function Select({ options, placeholder, className, value, defaultValue, .
           </option>
         )}
         {options.map((o) => (
-          <option key={o.value} value={o.value} className="text-ink">
+          <option key={o.value} value={o.value} disabled={o.disabled} className="text-ink">
             {o.label}
           </option>
         ))}

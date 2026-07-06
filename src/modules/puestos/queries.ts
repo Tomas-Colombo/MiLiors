@@ -50,6 +50,7 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       empresa(nombre_empresa), sector_industrial(nombre_sector)
     `)
     .eq('reclutador_id', (reclutador as { id: string }).id)
+    .is('fecha_baja_puesto', null)
     .order('fecha_publicacion', { ascending: false })
 
   return (data ?? []).map((row: unknown) => {
@@ -108,6 +109,7 @@ export const getPuestoById = cache(async (
     `)
     .eq('id', puestoId)
     .eq('reclutador_id', (reclutador as { id: string }).id)
+    .is('fecha_baja_puesto', null)
     .maybeSingle()
 
   if (!data) return null
@@ -365,11 +367,12 @@ export const getPostulacionesRecibidas = cache(async () => {
 
   if (!reclutador) return []
 
-  // Step 1: load the recruiter's job posts
+  // Step 1: load the recruiter's job posts (excluding logically deleted ones)
   const { data: puestos } = await supabase
     .from('puesto')
     .select('id')
     .eq('reclutador_id', (reclutador as { id: string }).id)
+    .is('fecha_baja_puesto', null)
 
   const puestoIds = (puestos ?? []).map((p: unknown) => (p as { id: string }).id)
   if (puestoIds.length === 0) return []

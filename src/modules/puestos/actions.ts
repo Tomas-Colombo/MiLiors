@@ -154,10 +154,11 @@ export async function cerrarPuesto(puestoId: string): Promise<ActionResult> {
 
   const admin = createAdminClient()
 
-  // Logical deletion of the job post
+  // Cierre reversible: el puesto se desactiva pero sigue visible para el
+  // reclutador y puede reactivarse. No se da de baja (fecha_baja_puesto).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: puestoError } = await (admin.from('puesto') as any)
-    .update({ activo: false, fecha_baja_puesto: new Date().toISOString() })
+    .update({ activo: false })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
 
@@ -178,6 +179,43 @@ export async function cerrarPuesto(puestoId: string): Promise<ActionResult> {
     .in('estado', ['ENVIADA', 'VISTO'])
 
   revalidatePath('/reclutador/puestos')
+  revalidatePath(`/reclutador/puestos/${puestoId}`)
+  return { success: true, data: undefined }
+}
+
+export async function eliminarPuesto(puestoId: string): Promise<ActionResult> {
+  const ctx = await getReclutadorContext()
+  if (!ctx) return { success: false, error: 'No autorizado.' }
+
+  const admin = createAdminClient()
+
+  // Baja lógica: se registra fecha_baja_puesto. El puesto y sus postulaciones
+  // desaparecen de las vistas del reclutador, pero se conservan en la base
+  // para las métricas del admin. No es reversible desde el perfil.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: puestoError } = await (admin.from('puesto') as any)
+    .update({ activo: false, fecha_baja_puesto: new Date().toISOString() })
+    .eq('id', puestoId)
+    .eq('reclutador_id', ctx.reclutadorId)
+
+  if (puestoError) return { success: false, error: 'No se pudo eliminar el puesto.' }
+
+  // Close active historial_puesto entry
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('historial_puesto') as any)
+    .update({ fecha_fin: new Date().toISOString() })
+    .eq('puesto_id', puestoId)
+    .is('fecha_fin', null)
+
+  // Cascade: ENVIADA/VISTO applications → CERRADA
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('postulacion') as any)
+    .update({ estado: 'CERRADA' })
+    .eq('puesto_id', puestoId)
+    .in('estado', ['ENVIADA', 'VISTO'])
+
+  revalidatePath('/reclutador/puestos')
+  revalidatePath('/reclutador/postulaciones')
   revalidatePath(`/reclutador/puestos/${puestoId}`)
   return { success: true, data: undefined }
 }
