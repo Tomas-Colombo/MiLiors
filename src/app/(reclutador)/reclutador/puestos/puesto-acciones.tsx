@@ -1,8 +1,8 @@
 'use client'
 
 import { useTransition, useState } from 'react'
-import { Button, IconButton, Modal, Alert, Tooltip } from '@/components/ui'
-import { AlertTriangleIcon, TrashIcon } from '@/components/icons'
+import { Button, Modal, Alert, Tooltip } from '@/components/ui'
+import { AlertTriangleIcon, TrashIcon, Spinner } from '@/components/icons'
 import { cerrarPuesto, reactivarPuesto, eliminarPuesto } from '@/modules/puestos/actions'
 
 type Props = {
@@ -45,39 +45,54 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
 
   return (
     <div className="flex flex-col gap-2 items-center">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
+        <a
+          href={`/reclutador/puestos/${puestoId}`}
+          className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
+        >
+          Ver
+        </a>
         <a
           href={`/reclutador/postulaciones?puesto=${puestoId}`}
-          className="inline-flex h-8 items-center rounded-[7px] border border-neutral-300 bg-surface px-3.5 text-[12.5px] font-semibold text-ink-soft hover:bg-neutral-50 whitespace-nowrap"
+          className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50 whitespace-nowrap"
         >
-          Ver postulaciones
+          Postulaciones
         </a>
         <a
           href={`/reclutador/puestos/${puestoId}/editar`}
-          className="inline-flex h-8 items-center rounded-[7px] border border-neutral-300 bg-surface px-3.5 text-[12.5px] font-semibold text-ink-soft hover:bg-neutral-50"
+          className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
         >
           Editar
         </a>
         {activo ? (
-          <Button variant="destructive" size="sm" className="min-w-[92px]" loading={isPending} onClick={handleCerrar}>
-            Cerrar
-          </Button>
+          <button
+            type="button"
+            onClick={handleCerrar}
+            disabled={isPending}
+            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-[6px] bg-error-solid px-2.5 text-[11.5px] font-semibold text-white hover:bg-error disabled:bg-neutral-disabled disabled:cursor-not-allowed"
+          >
+            {isPending ? <Spinner size={13} /> : 'Cerrar'}
+          </button>
         ) : (
-          <Button variant="tonal" size="sm" className="min-w-[92px]" loading={isPending} onClick={handleReactivar}>
-            Reactivar
-          </Button>
+          <button
+            type="button"
+            onClick={handleReactivar}
+            disabled={isPending}
+            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-[6px] bg-primary-tint px-2.5 text-[11.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover disabled:text-neutral-400 disabled:bg-neutral-100 disabled:cursor-not-allowed"
+          >
+            {isPending ? <Spinner size={13} /> : 'Reactivar'}
+          </button>
         )}
         <Tooltip content="Eliminar puesto">
-          <IconButton
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             aria-label="Eliminar puesto"
-            className="text-neutral-400 hover:bg-[#fceeed] hover:text-error"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-400 hover:bg-[#fceeed] hover:text-error disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => setConfirmarEliminar(true)}
             disabled={isPending}
           >
-            <TrashIcon size={16} />
-          </IconButton>
+            <TrashIcon size={15} />
+          </button>
         </Tooltip>
       </div>
       {error && <Alert tone="error" title={error} className="text-xs" />}

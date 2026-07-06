@@ -49,7 +49,13 @@ export const metadata = { title: 'Detalle de postulante — TalentID' }
 
 // params in Next.js App Router dynamic routes is a Promise
 type Params = Promise<{ id: string }>
-type SearchParams = Promise<{ postulacion?: string }>
+type SearchParams = Promise<{ postulacion?: string; from?: string }>
+
+// Destino del enlace "Volver" según de dónde se abrió el perfil
+const ORIGENES: Record<string, { href: string; label: string }> = {
+  notas: { href: '/reclutador/notas', label: 'Volver a mis notas' },
+  postulaciones: { href: '/reclutador/postulaciones', label: 'Volver a las postulaciones' },
+}
 
 export default async function PostulanteDetallePage({
   params,
@@ -59,7 +65,11 @@ export default async function PostulanteDetallePage({
   searchParams: SearchParams
 }) {
   const { id } = await params
-  const { postulacion: postulacionId } = await searchParams
+  const { postulacion: postulacionId, from } = await searchParams
+  const volver = (from ? ORIGENES[from] : undefined) ?? {
+    href: '/reclutador/postulantes',
+    label: 'Volver a la búsqueda',
+  }
 
   const [postulante, notas] = await Promise.all([
     getPostulanteDetalle(id),
@@ -88,11 +98,11 @@ export default async function PostulanteDetallePage({
       <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
         {/* Back */}
         <Link
-          href="/reclutador/postulantes"
+          href={volver.href}
           className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
         >
           <ChevronLeftIcon size={16} />
-          Volver a la búsqueda
+          {volver.label}
         </Link>
 
         {/* Header card */}

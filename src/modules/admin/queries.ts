@@ -156,6 +156,32 @@ export async function getPreguntasAdmin() {
   }[]
 }
 
+// ─── Términos y Condiciones ──────────────────────────────────────────────────
+
+export async function getTyCVersiones() {
+  const admin = createAdminClient()
+  const [{ data: versiones }, { data: aceptaciones }] = await Promise.all([
+    admin
+      .from('terminos_y_condiciones')
+      .select('id, version, descripcion, fecha_publicacion, fecha_baja_tyc')
+      .order('fecha_publicacion', { ascending: false }),
+    admin.from('aceptacion_tyc').select('tyc_id'),
+  ])
+
+  const conteo = new Map<string, number>()
+  for (const a of (aceptaciones ?? []) as { tyc_id: string }[]) {
+    conteo.set(a.tyc_id, (conteo.get(a.tyc_id) ?? 0) + 1)
+  }
+
+  return ((versiones ?? []) as {
+    id: string
+    version: string
+    descripcion: string
+    fecha_publicacion: string
+    fecha_baja_tyc: string | null
+  }[]).map(v => ({ ...v, aceptaciones: conteo.get(v.id) ?? 0 }))
+}
+
 // ─── Monitor de informes ─────────────────────────────────────────────────────
 
 export async function getInformesAdmin() {
@@ -167,7 +193,6 @@ export async function getInformesAdmin() {
       perfil_postulante(nombre_completo, usuario(email))
     `)
     .order('updated_at', { ascending: false })
-    .limit(100)
 
   return (data ?? []).map((row: unknown) => {
     const r = row as {

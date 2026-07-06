@@ -1,13 +1,43 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { Card, Badge, CountBadge, EmptyState } from '@/components/ui'
+import { Card, Badge, EmptyState } from '@/components/ui'
 import { NotebookIcon } from '@/components/icons'
 import { getTodasLasNotasReclutador } from '@/modules/postulantes/queries'
-import { groupNotesByCandidate } from '@/modules/postulantes/notas-view'
+import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
+import { FiltrosNotas } from './filtros-notas'
+import { NotaContenido } from './nota-contenido'
 
 export const metadata = { title: 'Mis notas — TalentID' }
 
-type SearchParams = Promise<{ candidato?: string; agrupar?: string }>
+type SearchParams = Promise<{ candidato?: string; dias?: string }>
+
+/** Postulación (aplicación a un puesto) vinculada a una nota */
+type PostulacionRef = { id: string; puesto_id: string; titulo_puesto: string | null }
+
+/** Timestamp de corte para el filtro "hace cuánto" (o null si no hay filtro) */
+function fechaCorte(dias: number | undefined): number | null {
+  if (!dias) return null
+  return Date.now() - dias * 24 * 60 * 60 * 1000
+}
+
+/**
+ * Determina a qué postulación(es) corresponde una nota. Las notas no guardan
+ * el puesto, así que rastreamos las postulaciones del candidato a mis puestos:
+ * si la nota tiene puesto_id y coincide, mostramos esa; si no, mostramos todas
+ * las postulaciones del candidato.
+ */
+function postulacionesDeNota(
+  nota: { postulante_id: string; puesto_id: string | null },
+  porPostulante: Map<string, PostulacionRef[]>,
+): PostulacionRef[] {
+  const delCandidato = porPostulante.get(nota.postulante_id) ?? []
+  if (nota.puesto_id) {
+    const exacta = delCandidato.find((p) => p.puesto_id === nota.puesto_id)
+    if (exacta) return [exacta]
+  }
+  return delCandidato
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -28,10 +58,29 @@ export default async function MisNotasPage({
 }) {
   const sp = await searchParams
   const candidatoFiltro = sp.candidato
-  const agrupar = sp.agrupar === 'candidato'
+  const dias = sp.dias ? parseInt(sp.dias, 10) : undefined
 
-  // Fetch all notes (unfiltered) to populate the candidate dropdown
-  const todasLasNotas = await getTodasLasNotasReclutador()
+  // Fetch all notes (unfiltered) to populate the candidate dropdown.
+  // También traemos las postulaciones recibidas para vincular cada nota con la
+  // postulación (puesto + postulante) a la que corresponde.
+  const [todasLasNotas, postulaciones] = await Promise.all([
+    getTodasLasNotasReclutador(),
+    getPostulacionesRecibidas(),
+  ])
+
+  // Mapa postulante → sus postulaciones a mis puestos, para rastrear a qué
+  // puesto se postuló el candidato al que le puse la nota.
+  const postulacionesPorPostulante = new Map<string, PostulacionRef[]>()
+  for (const p of postulaciones) {
+    const ref: PostulacionRef = {
+      id: p.id,
+      puesto_id: p.puesto_id,
+      titulo_puesto: p.titulo_puesto ?? null,
+    }
+    const lista = postulacionesPorPostulante.get(p.postulante_id)
+    if (lista) lista.push(ref)
+    else postulacionesPorPostulante.set(p.postulante_id, [ref])
+  }
 
   // Derive distinct candidates from all notes for the filter dropdown
   const candidatosConNotas = Array.from(
@@ -43,10 +92,15 @@ export default async function MisNotasPage({
     ).values()
   ).sort((a, b) => a.nombre.localeCompare(b.nombre))
 
-  // Apply candidate filter if set
-  const notas = candidatoFiltro
-    ? todasLasNotas.filter((n) => n.postulante_id === candidatoFiltro)
-    : todasLasNotas
+  // Umbral temporal ("hace cuánto"): notas creadas desde hace N días
+  const desde = fechaCorte(dias)
+
+  // Apply filters (candidate + date) over already-loaded data
+  const notas = todasLasNotas.filter((n) => {
+    if (candidatoFiltro && n.postulante_id !== candidatoFiltro) return false
+    if (desde && new Date(n.fecha_creacion).getTime() < desde) return false
+    return true
+  })
 
   return (
     <TyCGate>
@@ -59,76 +113,45 @@ export default async function MisNotasPage({
           </p>
         </div>
 
-        {/* Filter form — pure GET, no JS required */}
-        <form method="GET" action="" className="flex flex-wrap gap-3">
-          {/* Candidate filter */}
-          <div className="flex-1 min-w-[200px]">
-            <select
-              name="candidato"
-              defaultValue={candidatoFiltro ?? ''}
-              className="h-10 w-full cursor-pointer appearance-none rounded-md border border-neutral-300 bg-surface pl-3.5 pr-10 font-sans text-sm outline-none transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50 text-ink"
-            >
-              <option value="">Todos los candidatos</option>
-              {candidatosConNotas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Group-by filter */}
-          <div className="min-w-[160px]">
-            <select
-              name="agrupar"
-              defaultValue={sp.agrupar ?? ''}
-              className="h-10 w-full cursor-pointer appearance-none rounded-md border border-neutral-300 bg-surface pl-3.5 pr-10 font-sans text-sm outline-none transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50 text-ink"
-            >
-              <option value="">Por fecha</option>
-              <option value="candidato">Por candidato</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
-          >
-            Filtrar
-          </button>
-
-          {candidatoFiltro && (
-            <Link
-              href={agrupar ? '/reclutador/notas?agrupar=candidato' : '/reclutador/notas'}
-              className="inline-flex h-10 items-center rounded-md border border-neutral-300 bg-surface px-4 text-sm font-medium text-ink-soft hover:bg-neutral-50"
-            >
-              Limpiar filtro
-            </Link>
-          )}
-        </form>
+        {todasLasNotas.length > 0 && (
+          <Suspense>
+            <FiltrosNotas
+              candidatos={candidatosConNotas}
+              totalVisible={notas.length}
+              totalTotal={todasLasNotas.length}
+            />
+          </Suspense>
+        )}
 
         {/* Results */}
         {notas.length === 0 ? (
           <EmptyState
             icon={<NotebookIcon size={24} />}
-            title="Sin notas aún"
-            description="No hay notas privadas para mostrar. Visitá el perfil de un candidato para agregar una."
+            title={todasLasNotas.length === 0 ? 'Sin notas aún' : 'Ninguna nota coincide con los filtros'}
+            description={
+              todasLasNotas.length === 0
+                ? 'No hay notas privadas para mostrar. Visitá el perfil de un candidato para agregar una.'
+                : 'Probá cambiando o limpiando los filtros.'
+            }
             action={
-              <Link
-                href="/reclutador/postulantes"
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:brightness-105"
-              >
-                Buscar candidatos
-              </Link>
+              todasLasNotas.length === 0 ? (
+                <Link
+                  href="/reclutador/postulantes"
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:brightness-105"
+                >
+                  Buscar candidatos
+                </Link>
+              ) : undefined
             }
           />
-        ) : agrupar ? (
-          /* Grouped view */
-          <GroupedNotasView notas={notas} />
         ) : (
-          /* Flat list */
           <div className="space-y-4">
             {notas.map((nota) => (
-              <NotaCard key={nota.id} nota={nota} />
+              <NotaCard
+                key={nota.id}
+                nota={nota}
+                postulaciones={postulacionesDeNota(nota, postulacionesPorPostulante)}
+              />
             ))}
           </div>
         )}
@@ -141,97 +164,62 @@ export default async function MisNotasPage({
 
 function NotaCard({
   nota,
+  postulaciones,
 }: {
   nota: {
     id: string
     contenido: string
     fecha_creacion: string
     titulo_puesto: string | null
+    puesto_id: string | null
     postulante_id: string
     nombre_completo: string | null
   }
+  postulaciones: PostulacionRef[]
 }) {
   const candidatoNombre = nota.nombre_completo ?? 'Candidato eliminado'
   const isDeleted = nota.nombre_completo === null
+  // Sólo enlazamos a la postulación si el candidato sigue existiendo.
+  const postulacionesVisibles = isDeleted ? [] : postulaciones
 
   return (
     <Card>
       <div className="space-y-3">
-        {/* Candidate link + job badge */}
-        <div className="flex items-start justify-between gap-3">
-          <Link
-            href={`/reclutador/postulantes/${nota.postulante_id}`}
-            className={`text-[15px] font-semibold hover:underline ${
-              isDeleted ? 'text-muted' : 'text-primary-600'
-            }`}
-          >
-            {candidatoNombre}
-          </Link>
-          {nota.titulo_puesto && (
-            <Badge tone="neutral" className="flex-none">
-              {nota.titulo_puesto}
-            </Badge>
-          )}
-        </div>
+        {/* Candidate link */}
+        <Link
+          href={`/reclutador/postulantes/${nota.postulante_id}`}
+          className={`text-[15px] font-semibold hover:underline ${
+            isDeleted ? 'text-muted' : 'text-primary-600'
+          }`}
+        >
+          {candidatoNombre}
+        </Link>
 
         {/* Note content */}
-        <p className="text-sm text-ink leading-relaxed whitespace-pre-line">
-          {nota.contenido}
-        </p>
+        <NotaContenido contenido={nota.contenido} />
+
+        {/* Postulación vinculada (a qué puesto se postuló el candidato) */}
+        {postulacionesVisibles.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3">
+            <span className="text-[11.5px] font-semibold uppercase tracking-wide text-neutral-400">
+              {postulacionesVisibles.length > 1 ? 'Postulaciones' : 'Postulación'}
+            </span>
+            {postulacionesVisibles.map((p) => (
+              <Link
+                key={p.id}
+                href={`/reclutador/postulantes/${nota.postulante_id}?postulacion=${p.id}&from=notas`}
+              >
+                <Badge tone="primary" className="hover:brightness-95 transition-[filter]">
+                  {p.titulo_puesto ?? 'Ver postulación'}
+                </Badge>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Date */}
         <p className="text-xs text-muted">{formatFecha(nota.fecha_creacion)}</p>
       </div>
     </Card>
-  )
-}
-
-// ─── Grouped view ─────────────────────────────────────────────────────────────
-
-function GroupedNotasView({
-  notas,
-}: {
-  notas: Awaited<ReturnType<typeof getTodasLasNotasReclutador>>
-}) {
-  const grupos = groupNotesByCandidate(notas)
-
-  // Sort candidates by most recent note date descending
-  const candidatosSorted = Object.entries(grupos).sort(([, aNotas], [, bNotas]) => {
-    const aDate = aNotas[0]?.fecha_creacion ?? ''
-    const bDate = bNotas[0]?.fecha_creacion ?? ''
-    return bDate.localeCompare(aDate)
-  })
-
-  return (
-    <div className="space-y-8">
-      {candidatosSorted.map(([postulanteId, candidatoNotas]) => {
-        const nombre = candidatoNotas[0]?.nombre_completo ?? 'Candidato eliminado'
-        const isDeleted = candidatoNotas[0]?.nombre_completo === null
-
-        return (
-          <section key={postulanteId}>
-            {/* Candidate heading */}
-            <div className="flex items-center gap-3 mb-3">
-              <Link
-                href={`/reclutador/postulantes/${postulanteId}`}
-                className={`text-[17px] font-bold hover:underline ${
-                  isDeleted ? 'text-muted' : 'text-ink'
-                }`}
-              >
-                {nombre}
-              </Link>
-              <CountBadge tone="primary">{candidatoNotas.length}</CountBadge>
-            </div>
-
-            {/* Notes for this candidate */}
-            <div className="space-y-3 pl-2 border-l-2 border-neutral-200">
-              {candidatoNotas.map((nota) => (
-                <NotaCard key={nota.id} nota={nota} />
-              ))}
-            </div>
-          </section>
-        )
-      })}
-    </div>
   )
 }

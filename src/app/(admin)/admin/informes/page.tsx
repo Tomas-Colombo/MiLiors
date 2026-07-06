@@ -1,8 +1,12 @@
 import { getInformesAdmin } from '@/modules/admin/queries'
-import { Table, Badge } from '@/components/ui'
+import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
+import { FileIcon } from '@/components/icons'
+import { FiltrosInformes } from './filtros-informes'
 
 export const metadata = { title: 'Informes — Admin TalentID' }
+
+type SearchParams = Promise<{ q?: string; orden?: string; estado?: string }>
 
 type InformeRow = {
   id: string
@@ -22,8 +26,42 @@ function EstadoBadge({ estado }: { estado: string }) {
   return <Badge tone={map[estado] ?? 'neutral'} dot>{estado}</Badge>
 }
 
-export default async function InformesPage() {
-  const informes = await getInformesAdmin()
+function ordenar(rows: InformeRow[], orden: string | undefined): InformeRow[] {
+  const arr = [...rows]
+  switch (orden) {
+    case 'actualizacion_asc':
+      return arr.sort((a, b) => a.updated_at.localeCompare(b.updated_at))
+    case 'generado_desc':
+      return arr.sort((a, b) => (b.fecha_generacion ?? '').localeCompare(a.fecha_generacion ?? ''))
+    case 'generado_asc':
+      return arr.sort((a, b) => (a.fecha_generacion ?? '').localeCompare(b.fecha_generacion ?? ''))
+    case 'participante_az':
+      return arr.sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo, 'es'))
+    case 'participante_za':
+      return arr.sort((a, b) => b.nombre_completo.localeCompare(a.nombre_completo, 'es'))
+    default: // 'actualizacion_desc' (más reciente)
+      return arr.sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+  }
+}
+
+export default async function InformesPage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams
+  const todos = await getInformesAdmin()
+
+  const q = sp.q?.trim().toLowerCase() ?? ''
+  const estado = sp.estado ?? ''
+
+  const filtrados = todos.filter(row => {
+    if (estado && row.estado_informe !== estado) return false
+    if (q) {
+      const enNombre = row.nombre_completo.toLowerCase().includes(q)
+      const enEmail = row.email?.toLowerCase().includes(q) ?? false
+      if (!enNombre && !enEmail) return false
+    }
+    return true
+  })
+
+  const informes = ordenar(filtrados, sp.orden)
 
   const columns: Column<InformeRow>[] = [
     {
@@ -78,15 +116,27 @@ export default async function InformesPage() {
     <div className="mx-auto max-w-5xl px-8 py-10">
       <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Monitor de informes</h1>
       <p className="mt-1 text-[13px] text-muted">
-        Últimos {informes.length} informes ordenados por actividad reciente.
+        {todos.length} informes en total. Filtrá y ordená para encontrar los que buscás.
       </p>
 
-      <div className="mt-8">
-        <Table
-          columns={columns}
-          rows={informes}
-          rowKey={row => row.id}
-        />
+      <div className="mt-6">
+        <FiltrosInformes totalVisible={informes.length} totalTotal={todos.length} />
+      </div>
+
+      <div className="mt-6">
+        {informes.length === 0 ? (
+          <EmptyState
+            icon={<FileIcon size={22} />}
+            title="Sin resultados"
+            description="No hay informes que coincidan con los filtros aplicados."
+          />
+        ) : (
+          <Table
+            columns={columns}
+            rows={informes}
+            rowKey={row => row.id}
+          />
+        )}
       </div>
     </div>
   )

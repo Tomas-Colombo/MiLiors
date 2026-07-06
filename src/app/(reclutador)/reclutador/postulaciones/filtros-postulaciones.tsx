@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
-import { Select } from '@/components/ui'
+import { Select, SearchableSelect } from '@/components/ui'
 import { StarIcon, TrashIcon } from '@/components/icons'
 
 type Puesto = { id: string; titulo_puesto: string; sinPostulaciones?: boolean }
@@ -31,13 +31,11 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
     [router, pathname, searchParams],
   )
 
-  const puestoOpts = [
-    { value: '', label: 'Todos los puestos' },
-    // Un puesto sin postulaciones (llegamos desde "Mis puestos") se muestra
-    // seleccionado pero deshabilitado: el usuario sólo puede elegir puestos que
-    // tengan postulaciones.
-    ...puestos.map((p) => ({ value: p.id, label: p.titulo_puesto, disabled: p.sinPostulaciones })),
-  ]
+  // Un puesto sin postulaciones (llegamos desde "Mis puestos") se incluye para
+  // que su título se muestre como valor actual del filtro.
+  const puestoOpts = puestos.map((p) => ({ value: p.id, label: p.titulo_puesto }))
+
+  const puestoActual = searchParams.get('puesto') ?? ''
 
   const estadoOpts = [
     { value: '', label: 'Todos los estados' },
@@ -50,11 +48,18 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
       <div className="w-full sm:w-56">
-        <Select
+        <SearchableSelect
+          key={puestoActual}
+          name="puesto"
           options={puestoOpts}
-          value={searchParams.get('puesto') ?? ''}
-          onChange={(e) => setParam('puesto', e.target.value)}
-          aria-label="Filtrar por puesto"
+          defaultValue={puestoActual}
+          placeholder="Todos los puestos"
+          onValueChange={(value) => {
+            // Sólo filtramos al elegir un puesto concreto de la lista; para
+            // quitar el filtro se usa "Limpiar filtros" (evita re-montar el campo
+            // mientras el usuario reescribe para cambiar de puesto).
+            if (value) setParam('puesto', value)
+          }}
         />
       </div>
       <div className="w-full sm:w-44">

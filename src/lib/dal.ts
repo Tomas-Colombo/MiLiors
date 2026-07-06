@@ -85,3 +85,25 @@ export const getTyCStatus = cache(async () => {
 
   return { tyc, aceptada: !!aceptacion }
 })
+
+/**
+ * Obtiene solo la TyC vigente (sin baja), sin evaluar aceptación.
+ * Útil para el acceso directo de lectura desde configuración. Retorna null si no hay.
+ */
+export const getTyCVigente = cache(async () => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('terminos_y_condiciones')
+    .select('id, version, descripcion, fecha_publicacion')
+    .is('fecha_baja_tyc', null)
+    .order('fecha_publicacion', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  return data as unknown as {
+    id: string
+    version: string
+    descripcion: string
+    fecha_publicacion: string
+  } | null
+})

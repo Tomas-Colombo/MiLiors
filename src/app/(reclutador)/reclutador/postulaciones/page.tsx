@@ -195,7 +195,7 @@ export default async function PostulacionesRecibidasPage({
                   <div className="w-full sm:w-44 flex-none flex flex-col items-stretch gap-2">
                     <div className="flex flex-col gap-2 w-full">
                       <Link
-                        href={`/reclutador/postulantes/${p.postulante_id}?postulacion=${p.id}`}
+                        href={`/reclutador/postulantes/${p.postulante_id}?postulacion=${p.id}&from=postulaciones`}
                         className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
                       >
                         Ver perfil

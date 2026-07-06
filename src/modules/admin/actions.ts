@@ -184,6 +184,44 @@ export async function togglePausarPregunta(id: string, pausada: boolean): Promis
   return { success: true, data: undefined }
 }
 
+// ─── Términos y Condiciones ──────────────────────────────────────────────────
+
+export async function publicarTyC(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const version = formData.get('version')?.toString().trim()
+  const descripcion = formData.get('descripcion')?.toString().trim()
+
+  if (!version) return { success: false, error: 'Ingresá el número de versión.' }
+  if (!descripcion || descripcion.length < 20)
+    return { success: false, error: 'El contenido de los términos es demasiado corto.' }
+
+  const admin = createAdminClient()
+
+  // 1. Insertar la nueva versión (queda vigente: fecha_baja_tyc = null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: nueva, error } = await (admin.from('terminos_y_condiciones') as any)
+    .insert({ version, descripcion })
+    .select('id')
+    .single()
+  if (error?.code === '23505') return { success: false, error: 'Ya existe una versión con ese número.' }
+  if (error || !nueva) return { success: false, error: 'No se pudo publicar la nueva versión.' }
+
+  // 2. Dar de baja las versiones vigentes anteriores (debe quedar una sola vigente)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('terminos_y_condiciones') as any)
+    .update({ fecha_baja_tyc: new Date().toISOString() })
+    .is('fecha_baja_tyc', null)
+    .neq('id', (nueva as { id: string }).id)
+
+  // Recargar el layout raíz para que el gate de TyC vuelva a evaluarse en todos los usuarios
+  revalidatePath('/admin/tyc')
+  revalidatePath('/', 'layout')
+  return { success: true, data: undefined }
+}
+
 // ─── Moderación postulantes ──────────────────────────────────────────────────
 
 export async function desactivarPostulante(postulanteId: string): Promise<ActionResult> {

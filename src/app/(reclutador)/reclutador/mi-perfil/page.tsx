@@ -1,6 +1,7 @@
-import { verifySession } from '@/lib/dal'
+import { verifySession, getTyCVigente } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui'
+import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilReclutadorForm } from './form'
 
 export const metadata = { title: 'Mi perfil — TalentID' }
@@ -27,7 +28,7 @@ async function getPerfilReclutador(userId: string): Promise<PerfilReclutadorData
 
 export default async function MiPerfilReclutadorPage() {
   const session = await verifySession()
-  const perfil = await getPerfilReclutador(session.id)
+  const [perfil, tyc] = await Promise.all([getPerfilReclutador(session.id), getTyCVigente()])
 
   return (
     <div className="mx-auto max-w-xl px-6 py-10 space-y-6">
@@ -39,6 +40,13 @@ export default async function MiPerfilReclutadorPage() {
       <Card padding="lg">
         <PerfilReclutadorForm perfil={perfil} />
       </Card>
+
+      {tyc && (
+        <div>
+          <h2 className="mb-2 text-lg font-bold tracking-tight text-ink">Legal</h2>
+          <TyCLector tyc={tyc} />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,14 +1,37 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Badge, EmptyState } from '@/components/ui'
 import { BuildingIcon, PlusIcon } from '@/components/icons'
 import { getMisPuestos } from '@/modules/puestos/queries'
 import { PuestoAcciones } from './puesto-acciones'
+import { FiltrosPuestos } from './filtros-puestos'
 
 export const metadata = { title: 'Mis puestos — TalentID' }
 
-export default async function MisPuestosPage() {
+type SearchParams = Promise<{ orden?: string; estado?: string }>
+
+export default async function MisPuestosPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const { orden, estado } = await searchParams
   const puestos = await getMisPuestos()
+
+  // Filtro por estado (activo / cerrado) sobre los datos ya cargados
+  const filtered = puestos.filter((p) => {
+    if (estado === 'activo' && !p.activo) return false
+    if (estado === 'cerrado' && p.activo) return false
+    return true
+  })
+
+  // Orden por fecha de publicación (por defecto: más recientes primero)
+  const visibles = [...filtered].sort((a, b) => {
+    const diff =
+      new Date(a.fecha_publicacion).getTime() - new Date(b.fecha_publicacion).getTime()
+    return orden === 'antiguos' ? diff : -diff
+  })
 
   return (
     <TyCGate>
@@ -27,6 +50,12 @@ export default async function MisPuestosPage() {
           </Link>
         </div>
 
+        {puestos.length > 0 && (
+          <Suspense>
+            <FiltrosPuestos totalVisible={visibles.length} totalTotal={puestos.length} />
+          </Suspense>
+        )}
+
         {puestos.length === 0 ? (
           <EmptyState
             icon={<BuildingIcon size={24} />}
@@ -42,6 +71,12 @@ export default async function MisPuestosPage() {
               </Link>
             }
           />
+        ) : visibles.length === 0 ? (
+          <EmptyState
+            icon={<BuildingIcon size={24} />}
+            title="Ningún puesto coincide con los filtros"
+            description="Probá cambiando o limpiando los filtros."
+          />
         ) : (
           <div className="overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-card">
             {/* Header */}
@@ -53,7 +88,7 @@ export default async function MisPuestosPage() {
               <span className="text-center">Acciones</span>
             </div>
 
-            {puestos.map((puesto) => (
+            {visibles.map((puesto) => (
               <div
                 key={puesto.id}
                 className="grid items-center border-b border-neutral-100 px-[22px] py-[13px] last:border-0 hover:bg-neutral-50"

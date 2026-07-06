@@ -1,6 +1,7 @@
-import { verifySession } from '@/lib/dal'
+import { verifySession, getTyCVigente } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui'
+import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilPostulanteForm } from './form'
 import { CambiarPasswordForm } from './cambiar-password-form'
 
@@ -26,7 +27,7 @@ async function getPerfilPostulante(userId: string) {
 
 export default async function MiPerfilPostulantePage() {
   const session = await verifySession()
-  const perfil = await getPerfilPostulante(session.id)
+  const [perfil, tyc] = await Promise.all([getPerfilPostulante(session.id), getTyCVigente()])
 
   return (
     <div className="mx-auto max-w-xl px-6 py-10 space-y-8">
@@ -46,6 +47,13 @@ export default async function MiPerfilPostulantePage() {
           <CambiarPasswordForm />
         </Card>
       </div>
+
+      {tyc && (
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-ink mb-4">Legal</h2>
+          <TyCLector tyc={tyc} />
+        </div>
+      )}
     </div>
   )
 }
