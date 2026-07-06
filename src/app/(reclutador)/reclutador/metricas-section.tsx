@@ -69,7 +69,7 @@ export async function MetricasSection() {
   return (
     <div className="space-y-5">
       {/* Bloque 1 — Métricas rápidas */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <QuickMetric
           value={m.puestosActivos}
           label="Puestos activos"
@@ -85,11 +85,6 @@ export async function MetricasSection() {
           label="Candidatos sin acción"
           hint="Postulaciones que todavía no revisaste."
           alert={m.candidatosSinAccion > 0}
-        />
-        <QuickMetric
-          value={m.conInforme}
-          label="Con informe disponible"
-          hint="Candidatos con perfil IA listo para consultar."
         />
       </div>
 

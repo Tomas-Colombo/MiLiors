@@ -5,8 +5,8 @@ export function MetricasSkeleton() {
   return (
     <div className="space-y-5">
       {/* Bloque 1 */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
           <Card key={i} padding="md" className="h-full">
             <Skeleton className="h-8 w-14" />
             <Skeleton className="mt-3 h-3.5 w-24" />

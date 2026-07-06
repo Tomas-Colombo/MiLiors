@@ -23,7 +23,6 @@ export type DashboardMetrics = {
   puestosActivos: number
   postulacionesRecibidas: number
   candidatosSinAccion: number
-  conInforme: number
   // Bloque 3 — promedio + ranking (globales, no dependen de filtros)
   promedioPorPuesto: number
   ranking: { id: string; titulo: string; total: number }[]
@@ -37,7 +36,6 @@ const EMPTY: DashboardMetrics = {
   puestosActivos: 0,
   postulacionesRecibidas: 0,
   candidatosSinAccion: 0,
-  conInforme: 0,
   promedioPorPuesto: 0,
   ranking: [],
   puestosActivosList: [],
@@ -84,7 +82,7 @@ export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => 
   const admin = createAdminClient()
   const { data: postsData } = await admin
     .from('postulacion')
-    .select('estado, fecha_postulacion, updated_at, puesto_id, postulante_id')
+    .select('estado, fecha_postulacion, updated_at, puesto_id')
     .in('puesto_id', puestoIds)
 
   const posts = (postsData ?? []) as {
@@ -92,7 +90,6 @@ export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => 
     fecha_postulacion: string
     updated_at: string
     puesto_id: string
-    postulante_id: string
   }[]
 
   // Bloque 1 ─────────────────────────────────────────────────────────────
@@ -103,19 +100,6 @@ export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => 
   const candidatosSinAccion = posts.filter(
     (p) => p.estado === 'ENVIADA' && new Date(p.updated_at).getTime() < umbralSinAccion,
   ).length
-
-  // Postulantes (distintos) que aplicaron y tienen su informe IA LISTO.
-  const postulanteIds = Array.from(new Set(posts.map((p) => p.postulante_id)))
-  let conInforme = 0
-  if (postulanteIds.length > 0) {
-    const { data: informes } = await admin
-      .from('informe_personalidad')
-      .select('postulante_id')
-      .in('postulante_id', postulanteIds)
-      .eq('estado_informe', 'LISTO')
-    // postulante_id es único en informe_personalidad → cada fila es un postulante.
-    conInforme = (informes ?? []).length
-  }
 
   // Bloque 2 y 3 (interactivos / calculados) ──────────────────────────────
   // El gráfico y la tasa de revisión operan sobre el universo de puestos
@@ -138,7 +122,6 @@ export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => 
     puestosActivos,
     postulacionesRecibidas,
     candidatosSinAccion,
-    conInforme,
     promedioPorPuesto,
     ranking,
     puestosActivosList: activos.map((p) => ({ id: p.id, titulo: tituloPorId.get(p.id)! })),
