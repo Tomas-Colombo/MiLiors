@@ -288,7 +288,11 @@ export const getSectores = cache(async () => {
 export const POSTULACIONES_PER_PAGE = 10
 
 /** Postulaciones del postulante actual */
-export const getMisPostulaciones = async (filtros?: { page?: number }) => {
+export const getMisPostulaciones = async (filtros?: {
+  page?: number
+  estado?: string
+  busqueda?: string
+}) => {
   const session = await verifySession()
   const supabase = await createClient()
 
@@ -304,17 +308,29 @@ export const getMisPostulaciones = async (filtros?: { page?: number }) => {
   const from = page * POSTULACIONES_PER_PAGE
   const to = from + POSTULACIONES_PER_PAGE - 1
 
-  const { data, count } = await supabase
+  // Al buscar por título hacemos INNER join para que el filtro descarte las
+  // postulaciones cuyo puesto no coincide (sin INNER, PostgREST las mantiene con puesto null).
+  const puestoJoin = filtros?.busqueda ? 'puesto!inner' : 'puesto'
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
     .from('postulacion')
     .select(`
       id, estado, fecha_postulacion, updated_at,
-      puesto(id, titulo_puesto, empresa(nombre_empresa))
+      ${puestoJoin}(id, titulo_puesto, empresa(nombre_empresa))
     `, { count: 'exact' })
     .eq('postulante_id', (postulante as { id: string }).id)
     .order('fecha_postulacion', { ascending: false })
     .range(from, to)
 
-  const items = (data ?? []).map((row: unknown) => {
+  if (filtros?.estado) query = query.eq('estado', filtros.estado)
+  if (filtros?.busqueda) {
+    query = query.ilike('puesto.titulo_puesto', `%${filtros.busqueda}%`)
+  }
+
+  const { data, count } = await query
+
+  const items = ((data ?? []) as unknown[]).map((row: unknown) => {
     const r = row as {
       id: string; estado: string; fecha_postulacion: string; updated_at: string
       puesto: { id: string; titulo_puesto: string; empresa: { nombre_empresa: string } | null } | null

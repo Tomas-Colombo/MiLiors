@@ -6,6 +6,7 @@ import { FileIcon, ChevronLeftIcon, ChevronRightIcon, ArrowRightIcon } from '@/c
 import { getMisPostulaciones, POSTULACIONES_PER_PAGE } from '@/modules/puestos/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import type { BadgeProps } from '@/components/ui/badge'
+import { PostulacionesFilters } from './filters'
 
 export const metadata = { title: 'Mis postulaciones — TalentID' }
 
@@ -31,12 +32,20 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
   await requireEneagramaCompleto()
   const sp = await searchParams
   const page = Math.max(0, parseInt(sp.page ?? '0', 10))
+  const q = sp.q ?? ''
+  const estado = sp.estado ?? ''
+  const hasFilters = !!(q || estado)
 
-  const { items: postulaciones, total } = await getMisPostulaciones({ page })
+  const { items: postulaciones, total } = await getMisPostulaciones({ page, busqueda: q, estado })
   const totalPages = Math.ceil(total / POSTULACIONES_PER_PAGE)
 
   function pageUrl(p: number) {
-    return p === 0 ? '/postulante/postulaciones' : `/postulante/postulaciones?page=${p}`
+    const params = new URLSearchParams()
+    if (q) params.set('q', q)
+    if (estado) params.set('estado', estado)
+    if (p > 0) params.set('page', String(p))
+    const qs = params.toString()
+    return qs ? `/postulante/postulaciones?${qs}` : '/postulante/postulaciones'
   }
 
   return (
@@ -49,7 +58,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
           </p>
         </div>
 
-        {total === 0 ? (
+        {total === 0 && !hasFilters ? (
           <EmptyState
             icon={<FileIcon size={24} />}
             title="Todavía no postulaste a ningún puesto"
@@ -57,6 +66,15 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
           />
         ) : (
           <>
+            <PostulacionesFilters />
+
+            {total === 0 ? (
+              <EmptyState
+                icon={<FileIcon size={24} />}
+                title="No hay postulaciones que coincidan"
+                description="Probá ajustando la búsqueda o los filtros."
+              />
+            ) : (
             <div className="space-y-3">
               {postulaciones.map((p) => (
                 <Card key={p.id} padding="md">
@@ -78,24 +96,29 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                       </p>
                     </div>
 
-                    <div className="flex flex-none items-center gap-3">
-                      <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
-                        {estadoLabel[p.estado] ?? p.estado}
-                      </Badge>
-                      {p.puesto_id && (
-                        <Link
-                          href={`/postulante/puestos/${p.puesto_id}`}
-                          className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors whitespace-nowrap"
-                        >
-                          Ver puesto
-                          <ArrowRightIcon size={13} />
-                        </Link>
-                      )}
+                    <div className="flex flex-none items-center gap-4">
+                      <div className="flex w-28 justify-end">
+                        <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
+                          {estadoLabel[p.estado] ?? p.estado}
+                        </Badge>
+                      </div>
+                      <div className="flex w-24 justify-end">
+                        {p.puesto_id && (
+                          <Link
+                            href={`/postulante/puestos/${p.puesto_id}`}
+                            className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors whitespace-nowrap"
+                          >
+                            Ver puesto
+                            <ArrowRightIcon size={13} />
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Card>
               ))}
             </div>
+            )}
 
             {/* Paginación */}
             {totalPages > 1 && (
