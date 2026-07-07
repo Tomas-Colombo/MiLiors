@@ -6,45 +6,43 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 export async function getMetricas() {
   const admin = createAdminClient()
 
+  const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+
   const [
     { count: totalPostulantes },
     { count: postulantesBusqueda },
-    { data: informes },
+    { count: informesListo },
+    { count: informesPendiente },
+    { count: informesError },
     { count: totalReclutadores },
     { count: totalEmpresas },
     { count: puestosActivos },
     { count: puestosCerrados },
-    { data: consultasIA },
+    { count: consultasIAEsteMes },
   ] = await Promise.all([
     admin.from('perfil_postulante').select('*', { count: 'exact', head: true }),
     admin.from('perfil_postulante').select('*', { count: 'exact', head: true }).eq('perfil_en_busqueda', true),
-    admin.from('informe_personalidad').select('estado_informe'),
+    admin.from('informe_personalidad').select('*', { count: 'exact', head: true }).eq('estado_informe', 'LISTO'),
+    admin.from('informe_personalidad').select('*', { count: 'exact', head: true }).eq('estado_informe', 'PENDIENTE'),
+    admin.from('informe_personalidad').select('*', { count: 'exact', head: true }).eq('estado_informe', 'ERROR'),
     admin.from('perfil_reclutador').select('*', { count: 'exact', head: true }).is('fecha_baja', null),
     admin.from('empresa').select('*', { count: 'exact', head: true }).is('fecha_baja', null),
     admin.from('puesto').select('*', { count: 'exact', head: true }).eq('activo', true),
     admin.from('puesto').select('*', { count: 'exact', head: true }).eq('activo', false),
-    admin.from('consulta_asistente_ia').select('fecha_consulta').gte(
-      'fecha_consulta',
-      new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    ),
+    admin.from('consulta_asistente_ia').select('*', { count: 'exact', head: true }).gte('fecha_consulta', inicioMes),
   ])
-
-  const informesArr = (informes ?? []) as { estado_informe: string }[]
-  const informesListo = informesArr.filter(i => i.estado_informe === 'LISTO').length
-  const informesError = informesArr.filter(i => i.estado_informe === 'ERROR').length
-  const informesPendiente = informesArr.filter(i => i.estado_informe === 'PENDIENTE').length
 
   return {
     totalPostulantes: totalPostulantes ?? 0,
     postulantesBusqueda: postulantesBusqueda ?? 0,
-    informesListo,
-    informesError,
-    informesPendiente,
+    informesListo: informesListo ?? 0,
+    informesError: informesError ?? 0,
+    informesPendiente: informesPendiente ?? 0,
     totalReclutadores: totalReclutadores ?? 0,
     totalEmpresas: totalEmpresas ?? 0,
     puestosActivos: puestosActivos ?? 0,
     puestosCerrados: puestosCerrados ?? 0,
-    consultasIAEsteMes: (consultasIA ?? []).length,
+    consultasIAEsteMes: consultasIAEsteMes ?? 0,
   }
 }
 

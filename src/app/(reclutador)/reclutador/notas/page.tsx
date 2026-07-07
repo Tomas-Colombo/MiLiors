@@ -5,12 +5,14 @@ import { Card, Badge, EmptyState } from '@/components/ui'
 import { NotebookIcon } from '@/components/icons'
 import { getTodasLasNotasReclutador } from '@/modules/postulantes/queries'
 import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
+import { paginar } from '@/lib/pagination'
+import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosNotas } from './filtros-notas'
 import { NotaContenido } from './nota-contenido'
 
 export const metadata = { title: 'Mis notas — TalentID' }
 
-type SearchParams = Promise<{ candidato?: string; dias?: string }>
+type SearchParams = Promise<{ candidato?: string; dias?: string; q?: string; page?: string }>
 
 /** Postulación (aplicación a un puesto) vinculada a una nota */
 type PostulacionRef = { id: string; puesto_id: string; titulo_puesto: string | null }
@@ -59,6 +61,7 @@ export default async function MisNotasPage({
   const sp = await searchParams
   const candidatoFiltro = sp.candidato
   const dias = sp.dias ? parseInt(sp.dias, 10) : undefined
+  const q = sp.q?.trim().toLowerCase() ?? ''
 
   // Fetch all notes (unfiltered) to populate the candidate dropdown.
   // También traemos las postulaciones recibidas para vincular cada nota con la
@@ -95,12 +98,15 @@ export default async function MisNotasPage({
   // Umbral temporal ("hace cuánto"): notas creadas desde hace N días
   const desde = fechaCorte(dias)
 
-  // Apply filters (candidate + date) over already-loaded data
+  // Apply filters (candidate + date + text) over already-loaded data
   const notas = todasLasNotas.filter((n) => {
     if (candidatoFiltro && n.postulante_id !== candidatoFiltro) return false
     if (desde && new Date(n.fecha_creacion).getTime() < desde) return false
+    if (q && !n.contenido.toLowerCase().includes(q)) return false
     return true
   })
+
+  const { page, pageCount, slice } = paginar(notas, sp.page)
 
   return (
     <TyCGate>
@@ -146,7 +152,7 @@ export default async function MisNotasPage({
           />
         ) : (
           <div className="space-y-4">
-            {notas.map((nota) => (
+            {slice.map((nota) => (
               <NotaCard
                 key={nota.id}
                 nota={nota}
@@ -155,6 +161,8 @@ export default async function MisNotasPage({
             ))}
           </div>
         )}
+
+        {notas.length > 0 && <Paginador page={page} pageCount={pageCount} />}
       </div>
     </TyCGate>
   )

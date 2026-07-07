@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { Field, Input, Textarea, Select, Button, Alert } from '@/components/ui'
 import { editarPuesto } from '@/modules/puestos/actions'
@@ -151,12 +152,12 @@ export function EditarPuestoForm({ puestoId, puesto, sectores }: Props) {
       </Field>
 
       <div className="flex justify-end gap-3 pt-2">
-        <a
+        <Link
           href={`/reclutador/puestos/${puestoId}`}
           className="inline-flex h-10 items-center rounded-md border border-neutral-300 bg-surface px-[18px] text-sm font-semibold text-ink-soft hover:bg-neutral-50"
         >
           Cancelar
-        </a>
+        </Link>
         <Button type="submit" loading={isPending}>
           Guardar cambios
         </Button>

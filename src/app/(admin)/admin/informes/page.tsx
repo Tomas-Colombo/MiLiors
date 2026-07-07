@@ -3,10 +3,12 @@ import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { FileIcon } from '@/components/icons'
 import { FiltrosInformes } from './filtros-informes'
+import { Paginador } from '@/components/shared/list-controls'
+import { paginar } from '@/lib/pagination'
 
 export const metadata = { title: 'Informes — Admin TalentID' }
 
-type SearchParams = Promise<{ q?: string; orden?: string; estado?: string }>
+type SearchParams = Promise<{ q?: string; orden?: string; estado?: string; page?: string }>
 
 type InformeRow = {
   id: string
@@ -62,6 +64,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
   })
 
   const informes = ordenar(filtrados, sp.orden)
+  const { page, pageCount, slice } = paginar(informes, sp.page)
 
   const columns: Column<InformeRow>[] = [
     {
@@ -71,7 +74,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
       cell: row => (
         <div>
           <p className="font-medium text-ink leading-tight">{row.nombre_completo}</p>
-          {row.email && <p className="text-[11px] text-muted">{row.email}</p>}
+          {row.email && <p className="break-words text-[11px] text-muted">{row.email}</p>}
         </div>
       ),
     },
@@ -131,11 +134,14 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
             description="No hay informes que coincidan con los filtros aplicados."
           />
         ) : (
-          <Table
-            columns={columns}
-            rows={informes}
-            rowKey={row => row.id}
-          />
+          <>
+            <Table
+              columns={columns}
+              rows={slice}
+              rowKey={row => row.id}
+            />
+            <Paginador page={page} pageCount={pageCount} />
+          </>
         )}
       </div>
     </div>

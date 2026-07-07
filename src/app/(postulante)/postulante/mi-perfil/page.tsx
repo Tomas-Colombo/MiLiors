@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilPostulanteForm } from './form'
-import { CambiarPasswordForm } from './cambiar-password-form'
+import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
 
 export const metadata = { title: 'Mi perfil — TalentID' }
 

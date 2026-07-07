@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Select, SearchableSelect } from '@/components/ui'
 import { StarIcon, TrashIcon } from '@/components/icons'
+import { SearchInput } from '@/components/shared/list-controls'
 
 type Puesto = { id: string; titulo_puesto: string; sinPostulaciones?: boolean }
 
@@ -26,7 +27,9 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
       } else {
         params.delete(key)
       }
-      router.replace(`${pathname}?${params.toString()}`)
+      params.delete('page')
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname)
     },
     [router, pathname, searchParams],
   )
@@ -47,6 +50,7 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      <SearchInput placeholder="Buscar candidato…" className="w-full sm:w-52" />
       <div className="w-full sm:w-56">
         <SearchableSelect
           key={puestoActual}
@@ -90,7 +94,7 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
         />
         Favoritos
       </button>
-      {(searchParams.get('puesto') || searchParams.get('estado') || searchParams.get('favoritos')) && (
+      {(searchParams.get('q') || searchParams.get('puesto') || searchParams.get('estado') || searchParams.get('favoritos')) && (
         <button
           type="button"
           onClick={() => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Select, Input } from '@/components/ui'
 import { SearchIcon, TrashIcon } from '@/components/icons'
 
@@ -15,6 +15,7 @@ export function FiltrosInformes({ totalVisible, totalTotal }: Props) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [busqueda, setBusqueda] = useState(searchParams.get('q') ?? '')
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -24,19 +25,36 @@ export function FiltrosInformes({ totalVisible, totalTotal }: Props) {
       } else {
         params.delete(key)
       }
-      router.replace(`${pathname}?${params.toString()}`)
+      // Cualquier cambio de filtro vuelve a la primera página
+      params.delete('page')
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname)
     },
     [router, pathname, searchParams],
   )
 
   // Búsqueda de texto con debounce para no navegar en cada tecla
-  const setBusqueda = useCallback(
+  const navegarBusqueda = useCallback(
     (value: string) => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => setParam('q', value.trim()), 300)
     },
     [setParam],
   )
+
+  const handleBusqueda = useCallback(
+    (value: string) => {
+      setBusqueda(value)
+      navegarBusqueda(value)
+    },
+    [navegarBusqueda],
+  )
+
+  const limpiarFiltros = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    setBusqueda('')
+    router.replace(pathname)
+  }, [router, pathname])
 
   const ordenOpts = [
     { value: '', label: 'Actualización: más reciente' },
@@ -62,8 +80,8 @@ export function FiltrosInformes({ totalVisible, totalTotal }: Props) {
         <Input
           leftIcon={<SearchIcon size={15} />}
           placeholder="Buscar por participante…"
-          defaultValue={searchParams.get('q') ?? ''}
-          onChange={(e) => setBusqueda(e.target.value)}
+          value={busqueda}
+          onChange={(e) => handleBusqueda(e.target.value)}
           aria-label="Buscar por participante"
         />
       </div>
@@ -86,7 +104,7 @@ export function FiltrosInformes({ totalVisible, totalTotal }: Props) {
       {hayFiltros && (
         <button
           type="button"
-          onClick={() => router.replace(pathname)}
+          onClick={limpiarFiltros}
           className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 h-9 text-[12.5px] font-medium text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300 transition-colors whitespace-nowrap"
         >
           <TrashIcon size={14} />

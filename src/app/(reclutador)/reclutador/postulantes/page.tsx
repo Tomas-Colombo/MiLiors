@@ -2,13 +2,16 @@ import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, Chip, EmptyState } from '@/components/ui'
 import { SearchIcon, UsersIcon, SparklesIcon } from '@/components/icons'
-import { Input } from '@/components/ui'
+import { Input, Select } from '@/components/ui'
 import { buscarPostulantes } from '@/modules/postulantes/queries'
+import { getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
+import { paginar } from '@/lib/pagination'
+import { Paginador } from '@/components/shared/list-controls'
 
 export const metadata = { title: 'Buscar postulantes — TalentID' }
 
 // searchParams in Next.js App Router is a Promise — must be awaited
-type SearchParams = Promise<{ busqueda?: string; competencia?: string }>
+type SearchParams = Promise<{ busqueda?: string; competencia?: string; page?: string }>
 
 export default async function BuscarPostulantesPage({
   searchParams,
@@ -16,10 +19,20 @@ export default async function BuscarPostulantesPage({
   searchParams: SearchParams
 }) {
   const sp = await searchParams
-  const postulantes = await buscarPostulantes({
-    busqueda: sp.busqueda,
-    competenciaId: sp.competencia,
-  })
+  const [postulantes, competencias] = await Promise.all([
+    buscarPostulantes({
+      busqueda: sp.busqueda,
+      competenciaId: sp.competencia,
+    }),
+    getCompetenciasCatalogo(),
+  ])
+
+  const competenciaOpts = [
+    { value: '', label: 'Todas las competencias' },
+    ...competencias.map((c) => ({ value: c.id, label: c.nombre })),
+  ]
+
+  const { page, pageCount, slice } = paginar(postulantes, sp.page, 12)
 
   return (
     <TyCGate>
@@ -33,7 +46,7 @@ export default async function BuscarPostulantesPage({
         </div>
 
         {/* Search form — pure GET, no JS required */}
-        <form method="GET" action="" className="flex gap-3">
+        <form method="GET" action="" className="flex flex-col gap-3 sm:flex-row">
           <div className="flex-1">
             <Input
               name="busqueda"
@@ -42,16 +55,24 @@ export default async function BuscarPostulantesPage({
               leftIcon={<SearchIcon size={16} />}
             />
           </div>
+          <div className="w-full sm:w-56">
+            <Select
+              name="competencia"
+              options={competenciaOpts}
+              defaultValue={sp.competencia ?? ''}
+              aria-label="Filtrar por competencia"
+            />
+          </div>
           <button
             type="submit"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
           >
             Buscar
           </button>
-          {sp.busqueda && (
+          {(sp.busqueda || sp.competencia) && (
             <Link
               href="/reclutador/postulantes"
-              className="inline-flex h-10 items-center rounded-md border border-neutral-300 bg-surface px-4 text-sm font-medium text-ink-soft hover:bg-neutral-50"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-surface px-4 text-sm font-medium text-ink-soft hover:bg-neutral-50"
             >
               Limpiar
             </Link>
@@ -71,7 +92,7 @@ export default async function BuscarPostulantesPage({
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {postulantes.map((p) => (
+            {slice.map((p) => (
               <Link
                 key={p.id}
                 href={`/reclutador/postulantes/${p.id}`}
@@ -120,6 +141,8 @@ export default async function BuscarPostulantesPage({
             ))}
           </div>
         )}
+
+        {postulantes.length > 0 && <Paginador page={page} pageCount={pageCount} />}
       </div>
     </TyCGate>
   )

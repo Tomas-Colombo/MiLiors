@@ -65,21 +65,30 @@ export const buscarPostulantes = cache(async (filtros?: {
 
   const { data: perfilesTecnicos } = await supabase
     .from('perfil_tecnico')
-    .select('postulante_id, postulante_competencia(competencia(nombre))')
+    .select('postulante_id, postulante_competencia(competencia(id, nombre))')
     .in('postulante_id', postulanteIds)
 
-  const competenciasPorPostulante: Record<string, { nombre: string }[]> = {}
+  const competenciasPorPostulante: Record<string, { id: string; nombre: string }[]> = {}
   for (const pt of (perfilesTecnicos ?? []) as unknown[]) {
     const p = pt as {
       postulante_id: string
-      postulante_competencia: { competencia: { nombre: string } | null }[]
+      postulante_competencia: { competencia: { id: string; nombre: string } | null }[]
     }
     competenciasPorPostulante[p.postulante_id] = p.postulante_competencia
       .map((pc) => pc.competencia)
-      .filter((c): c is { nombre: string } => c !== null)
+      .filter((c): c is { id: string; nombre: string } => c !== null)
   }
 
-  return (postulantes as unknown[]).map((row) => {
+  // Filtro por competencia: sólo candidatos que tienen esa competencia cargada
+  const filtrados = filtros?.competenciaId
+    ? (postulantes as unknown[]).filter((row) =>
+        (competenciasPorPostulante[(row as { id: string }).id] ?? []).some(
+          (c) => c.id === filtros.competenciaId,
+        ),
+      )
+    : (postulantes as unknown[])
+
+  return filtrados.map((row) => {
     const r = row as {
       id: string
       nombre_completo: string
@@ -98,7 +107,7 @@ export const buscarPostulantes = cache(async (filtros?: {
       perfil_en_busqueda: r.perfil_en_busqueda,
       eneatipo_numero: primerDominante?.numero_eneatipo ?? null,
       eneatipo_nombre: primerDominante?.nombre ?? null,
-      competencias: competenciasPorPostulante[r.id] ?? [],
+      competencias: (competenciasPorPostulante[r.id] ?? []).map((c) => ({ nombre: c.nombre })),
     }
   })
 })

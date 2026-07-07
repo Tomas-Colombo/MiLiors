@@ -46,7 +46,7 @@ export function Input({ status = "default", leftIcon, rightIcon, className, ...p
       )}
       {input}
       {rightIcon && (
-        <span className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-neutral-400">
+        <span className="absolute right-[13px] top-1/2 -translate-y-1/2 text-neutral-400">
           {rightIcon}
         </span>
       )}

@@ -294,7 +294,10 @@ export function FiltroPreguntas({ filtroActual }: { filtroActual: Filtro }) {
     } else {
       params.set('filtro', value)
     }
-    router.push(`${pathname}?${params.toString()}`)
+    // Cambiar de filtro vuelve a la primera página
+    params.delete('page')
+    const qs = params.toString()
+    router.push(qs ? `${pathname}?${qs}` : pathname)
   }
 
   return (

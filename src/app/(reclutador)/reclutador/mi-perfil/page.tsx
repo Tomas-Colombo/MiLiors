@@ -2,6 +2,7 @@ import { verifySession, getTyCVigente } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
+import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
 import { PerfilReclutadorForm } from './form'
 
 export const metadata = { title: 'Mi perfil — TalentID' }
@@ -40,6 +41,14 @@ export default async function MiPerfilReclutadorPage() {
       <Card padding="lg">
         <PerfilReclutadorForm perfil={perfil} />
       </Card>
+
+      <div>
+        <h2 className="mb-1 text-lg font-bold tracking-tight text-ink">Seguridad</h2>
+        <p className="mb-4 text-sm text-muted">Cambiá tu contraseña de acceso.</p>
+        <Card padding="lg">
+          <CambiarPasswordForm />
+        </Card>
+      </div>
 
       {tyc && (
         <div>

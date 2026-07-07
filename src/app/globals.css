@@ -161,25 +161,25 @@
 .dark {
   color-scheme: dark;
 
-  --color-page: #0f1117;
-  --color-surface: #181a23;
-  --color-surface-page: #0f1117;
+  --color-page: #191a1e;
+  --color-surface: #30343d;
+  --color-surface-page: #191a1e;
 
-  --color-neutral-0: #181a23;
-  --color-neutral-50: #1c1f2a;
-  --color-neutral-100: #242838;
-  --color-neutral-150: #262a3a;
-  --color-neutral-200: #2d3142;
-  --color-neutral-300: #3a3f54;
-  --color-neutral-400: #767c94;
-  --color-neutral-500: #9298b0;
-  --color-neutral-700: #c4c8da;
-  --color-neutral-900: #f1f2f7;
-  --color-neutral-disabled: #4b4f63;
+  --color-neutral-0: #30343d;
+  --color-neutral-50: #363a44;
+  --color-neutral-100: #3c404b;
+  --color-neutral-150: #3e4350;
+  --color-neutral-200: #464b5a;
+  --color-neutral-300: #545a70;
+  --color-neutral-400: #8188a0;
+  --color-neutral-500: #9aa0b8;
+  --color-neutral-700: #c8ccdc;
+  --color-neutral-900: #f2f3f8;
+  --color-neutral-disabled: #565b70;
 
-  --color-line: #2d3142;
-  --color-line-strong: #3a3f54;
-  --color-divider: #242838;
+  --color-line: #464b5a;
+  --color-line-strong: #545a70;
+  --color-divider: #3c404b;
   --color-ink: #f1f2f7;
   --color-ink-soft: #c4c8da;
   --color-soft: #c4c8da;

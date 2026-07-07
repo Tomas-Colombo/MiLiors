@@ -103,36 +103,8 @@ export async function reactivarCompetencia(id: string): Promise<ActionResult> {
 
 // ─── Preguntas eneagrama ─────────────────────────────────────────────────────
 
-export async function crearPregunta(
-  _prev: ActionResult,
-  formData: FormData
-): Promise<ActionResult> {
-  await requireAdmin()
-  const enunciado = formData.get('enunciado')?.toString().trim()
-  const eneatipo_asociado = Number(formData.get('eneatipo_asociado'))
-
-  if (!enunciado) return { success: false, error: 'El enunciado no puede estar vacío.' }
-  if (isNaN(eneatipo_asociado) || eneatipo_asociado < 1 || eneatipo_asociado > 9)
-    return { success: false, error: 'Eneatipo debe ser entre 1 y 9.' }
-
-  const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: maxRow } = await (admin.from('pregunta_eneagrama') as any)
-    .select('numero_pregunta')
-    .order('numero_pregunta', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  const numero_pregunta = ((maxRow as { numero_pregunta: number } | null)?.numero_pregunta ?? 0) + 1
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('pregunta_eneagrama') as any)
-    .insert({ enunciado, eneatipo_asociado, numero_pregunta })
-  if (error) return { success: false, error: 'No se pudo crear la pregunta.' }
-
-  await resetearTestsEnProgreso()
-  revalidatePath('/admin/preguntas')
-  return { success: true, data: undefined }
-}
+// Nota: la creación de preguntas se maneja vía la API route POST /api/admin/preguntas
+// (usada por el modal de creación). No dupliques esa lógica acá.
 
 export async function editarPregunta(
   _prev: ActionResult,
@@ -232,6 +204,18 @@ export async function desactivarPostulante(postulanteId: string): Promise<Action
     .update({ perfil_en_busqueda: false })
     .eq('id', postulanteId)
   if (error) return { success: false, error: 'No se pudo desactivar el perfil.' }
+  revalidatePath('/admin/postulantes')
+  return { success: true, data: undefined }
+}
+
+export async function reactivarPostulante(postulanteId: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('perfil_postulante') as any)
+    .update({ perfil_en_busqueda: true })
+    .eq('id', postulanteId)
+  if (error) return { success: false, error: 'No se pudo reactivar el perfil.' }
   revalidatePath('/admin/postulantes')
   return { success: true, data: undefined }
 }

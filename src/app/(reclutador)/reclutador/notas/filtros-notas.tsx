@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Select, SearchableSelect } from '@/components/ui'
 import { TrashIcon } from '@/components/icons'
+import { SearchInput } from '@/components/shared/list-controls'
 
 type Candidato = { id: string; nombre: string }
 
@@ -26,7 +27,9 @@ export function FiltrosNotas({ candidatos, totalVisible, totalTotal }: Props) {
       } else {
         params.delete(key)
       }
-      router.replace(`${pathname}?${params.toString()}`)
+      params.delete('page')
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname)
     },
     [router, pathname, searchParams],
   )
@@ -45,6 +48,7 @@ export function FiltrosNotas({ candidatos, totalVisible, totalTotal }: Props) {
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      <SearchInput placeholder="Buscar en notas…" className="w-full sm:w-52" />
       <div className="w-full sm:w-64">
         <SearchableSelect
           key={candidatoActual}
@@ -68,7 +72,7 @@ export function FiltrosNotas({ candidatos, totalVisible, totalTotal }: Props) {
           aria-label="Filtrar por antigüedad"
         />
       </div>
-      {(searchParams.get('candidato') || searchParams.get('dias')) && (
+      {(searchParams.get('q') || searchParams.get('candidato') || searchParams.get('dias')) && (
         <button
           type="button"
           onClick={() => {

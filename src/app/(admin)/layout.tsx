@@ -36,6 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         items={NAV_ITEMS}
         userEmail={session.email}
         rolLabel="Administrador"
+        settingsHref="/admin/mi-perfil"
       />
 
       <main className="flex-1 overflow-auto">

@@ -8,6 +8,8 @@ import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
 import { FavoritoToggle } from './favorito-toggle'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
+import { paginar } from '@/lib/pagination'
+import { Paginador } from '@/components/shared/list-controls'
 import type { BadgeProps } from '@/components/ui/badge'
 
 export const metadata = { title: 'Postulaciones recibidas — TalentID' }
@@ -45,14 +47,15 @@ function tiempoRelativo(fecha: string | null): string | null {
   return years === 1 ? 'hace 1 año' : `hace ${years} años`
 }
 
-type SearchParams = Promise<{ puesto?: string; estado?: string; favoritos?: string }>
+type SearchParams = Promise<{ puesto?: string; estado?: string; favoritos?: string; q?: string; page?: string }>
 
 export default async function PostulacionesRecibidasPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos } = await searchParams
+  const { puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos, q: qRaw, page: pageParam } = await searchParams
+  const q = qRaw?.trim().toLowerCase() ?? ''
   const postulaciones = await getPostulacionesRecibidas()
 
   // Build the list of unique job posts for the filter dropdown
@@ -83,8 +86,11 @@ export default async function PostulacionesRecibidasPage({
     if (filtroPuesto && p.puesto_id !== filtroPuesto) return false
     if (filtroEstado && p.estado !== filtroEstado) return false
     if (filtroFavoritos === '1' && !p.is_favorito) return false
+    if (q && !(p.nombre_completo?.toLowerCase().includes(q) ?? false)) return false
     return true
   })
+
+  const { page, pageCount, slice } = paginar(filtered, pageParam)
 
   return (
     <TyCGate>
@@ -126,7 +132,7 @@ export default async function PostulacionesRecibidasPage({
           />
         ) : (
           <div className="space-y-4">
-            {filtered.map((p) => (
+            {slice.map((p) => (
               <Card key={p.id} padding="md">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0 space-y-1">
@@ -215,6 +221,8 @@ export default async function PostulacionesRecibidasPage({
             ))}
           </div>
         )}
+
+        {filtered.length > 0 && <Paginador page={page} pageCount={pageCount} />}
       </div>
     </TyCGate>
   )

@@ -1,28 +1,33 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { Badge, EmptyState } from '@/components/ui'
+import { Badge, EmptyState, Table } from '@/components/ui'
+import type { Column } from '@/components/ui'
 import { BuildingIcon, PlusIcon } from '@/components/icons'
 import { getMisPuestos } from '@/modules/puestos/queries'
+import { paginar } from '@/lib/pagination'
+import { Paginador } from '@/components/shared/list-controls'
 import { PuestoAcciones } from './puesto-acciones'
 import { FiltrosPuestos } from './filtros-puestos'
 
 export const metadata = { title: 'Mis puestos — TalentID' }
 
-type SearchParams = Promise<{ orden?: string; estado?: string }>
+type SearchParams = Promise<{ orden?: string; estado?: string; q?: string; page?: string }>
 
 export default async function MisPuestosPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { orden, estado } = await searchParams
+  const { orden, estado, q: qRaw, page: pageParam } = await searchParams
+  const q = qRaw?.trim().toLowerCase() ?? ''
   const puestos = await getMisPuestos()
 
-  // Filtro por estado (activo / cerrado) sobre los datos ya cargados
+  // Filtro por estado (activo / cerrado) y búsqueda por título sobre los datos ya cargados
   const filtered = puestos.filter((p) => {
     if (estado === 'activo' && !p.activo) return false
     if (estado === 'cerrado' && p.activo) return false
+    if (q && !p.titulo_puesto.toLowerCase().includes(q)) return false
     return true
   })
 
@@ -32,6 +37,53 @@ export default async function MisPuestosPage({
       new Date(a.fecha_publicacion).getTime() - new Date(b.fecha_publicacion).getTime()
     return orden === 'antiguos' ? diff : -diff
   })
+
+  const { page, pageCount, slice } = paginar(visibles, pageParam)
+
+  type Puesto = (typeof visibles)[number]
+
+  const columns: Column<Puesto>[] = [
+    {
+      key: 'titulo',
+      header: 'Título',
+      width: '2fr',
+      cell: (p) => (
+        <div>
+          <p className="truncate text-[13px] font-semibold text-ink">{p.titulo_puesto}</p>
+          {p.nombre_sector && <p className="text-xs text-neutral-400">{p.nombre_sector}</p>}
+        </div>
+      ),
+    },
+    {
+      key: 'estado',
+      header: 'Estado',
+      cell: (p) => (
+        <Badge tone={p.activo ? 'success' : 'neutral'} dot>
+          {p.activo ? 'Activo' : 'Cerrado'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'publicado',
+      header: 'Publicado',
+      cell: (p) => (
+        <span className="text-[13px] text-neutral-400">
+          {new Date(p.fecha_publicacion).toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          })}
+        </span>
+      ),
+    },
+    {
+      key: 'acciones',
+      header: 'Acciones',
+      align: 'center',
+      width: '360px',
+      cell: (p) => <PuestoAcciones puestoId={p.id} activo={p.activo} />,
+    },
+  ]
 
   return (
     <TyCGate>
@@ -78,47 +130,10 @@ export default async function MisPuestosPage({
             description="Probá cambiando o limpiando los filtros."
           />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-card">
-            {/* Header */}
-            <div className="grid border-b border-neutral-200 px-[22px] py-3.5 text-[11.5px] font-bold uppercase tracking-[0.04em] text-neutral-400"
-              style={{ gridTemplateColumns: '2fr 1fr 1fr 360px' }}>
-              <span>Título</span>
-              <span>Estado</span>
-              <span>Publicado</span>
-              <span className="text-center">Acciones</span>
-            </div>
-
-            {visibles.map((puesto) => (
-              <div
-                key={puesto.id}
-                className="grid items-center border-b border-neutral-100 px-[22px] py-[13px] last:border-0 hover:bg-neutral-50"
-                style={{ gridTemplateColumns: '2fr 1fr 1fr 360px' }}
-              >
-                <div>
-                  <p className="text-[13px] font-semibold text-ink truncate">{puesto.titulo_puesto}</p>
-                  {puesto.nombre_sector && (
-                    <p className="text-xs text-neutral-400">{puesto.nombre_sector}</p>
-                  )}
-                </div>
-                <span>
-                  <Badge tone={puesto.activo ? 'success' : 'neutral'} dot>
-                    {puesto.activo ? 'Activo' : 'Cerrado'}
-                  </Badge>
-                </span>
-                <p className="text-[13px] text-neutral-400">
-                  {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                  })}
-                </p>
-                <div className="flex justify-center">
-                  <PuestoAcciones puestoId={puesto.id} activo={puesto.activo} />
-                </div>
-              </div>
-            ))}
-          </div>
+          <Table columns={columns} rows={slice} rowKey={(p) => p.id} />
         )}
+
+        {visibles.length > 0 && <Paginador page={page} pageCount={pageCount} />}
       </div>
     </TyCGate>
   )

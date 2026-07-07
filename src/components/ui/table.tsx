@@ -58,7 +58,7 @@ export function Table<T>({ columns, rows, rowKey, highlightKey, footer, classNam
             style={{ gridTemplateColumns: template }}
           >
             {columns.map((c) => (
-              <div key={c.key} className={cn("text-[13px] text-ink-soft", alignClass[c.align ?? "left"])}>
+              <div key={c.key} className={cn("min-w-0 text-[13px] text-ink-soft", alignClass[c.align ?? "left"])}>
                 {c.cell(row)}
               </div>
             ))}

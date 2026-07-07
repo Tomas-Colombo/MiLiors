@@ -10,6 +10,8 @@ import {
   CrearPreguntaBtn,
   FiltroPreguntas,
 } from './preguntas-ui'
+import { SearchInput, Paginador } from '@/components/shared/list-controls'
+import { paginar } from '@/lib/pagination'
 
 export const metadata = { title: 'Preguntas eneagrama — Admin TalentID' }
 
@@ -34,21 +36,24 @@ function SortHeader({
   current,
   dir,
   filtro,
+  q,
 }: {
   label: string
   sortKey: SortKey
   current: SortKey
   dir: SortDir
   filtro: Filtro
+  q: string
 }) {
   const isActive = current === sortKey
   const nextDir = isActive && dir === 'asc' ? 'desc' : 'asc'
   const Icon = isActive && dir === 'desc' ? ChevronDownIcon : ChevronUpIcon
   const filtroParam = filtro !== 'todas' ? `&filtro=${filtro}` : ''
+  const qParam = q ? `&q=${encodeURIComponent(q)}` : ''
 
   return (
     <Link
-      href={`?sort=${sortKey}&dir=${nextDir}${filtroParam}`}
+      href={`?sort=${sortKey}&dir=${nextDir}${filtroParam}${qParam}`}
       className={`inline-flex items-center gap-1 transition-colors hover:text-ink ${isActive ? 'text-primary-600' : ''}`}
     >
       {label}
@@ -60,9 +65,9 @@ function SortHeader({
 export default async function PreguntasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; dir?: string; filtro?: string }>
+  searchParams: Promise<{ sort?: string; dir?: string; filtro?: string; q?: string; page?: string }>
 }) {
-  const { sort, dir, filtro: filtroParam } = await searchParams
+  const { sort, dir, filtro: filtroParam, q: qParam, page: pageParam } = await searchParams
   const sortKey: SortKey = sort === 'eneatipo' ? 'eneatipo' : 'numero'
   const sortDir: SortDir = dir === 'desc' ? 'desc' : 'asc'
   const filtro: Filtro =
@@ -70,6 +75,7 @@ export default async function PreguntasPage({
     : filtroParam === 'pausadas'   ? 'pausadas'
     : filtroParam === 'eliminadas' ? 'eliminadas'
     : 'todas'
+  const q = qParam?.trim().toLowerCase() ?? ''
 
   const preguntas = await getPreguntasAdmin()
 
@@ -77,7 +83,7 @@ export default async function PreguntasPage({
     .filter(p => !!p.fecha_baja)
     .sort((a, b) => new Date(b.fecha_baja!).getTime() - new Date(a.fecha_baja!).getTime())
 
-  const filas = filtro === 'eliminadas'
+  const filasSinPaginar = (filtro === 'eliminadas'
     ? eliminadas
     : preguntas
         .filter(p => !p.fecha_baja)
@@ -90,6 +96,9 @@ export default async function PreguntasPage({
           const field = sortKey === 'eneatipo' ? 'eneatipo_asociado' : 'numero_pregunta'
           return sortDir === 'asc' ? a[field] - b[field] : b[field] - a[field]
         })
+  ).filter(p => !q || p.enunciado.toLowerCase().includes(q))
+
+  const { page, pageCount, slice: filas } = paginar(filasSinPaginar, pageParam)
 
   const totalActivas   = preguntas.filter(p => !p.fecha_baja && !p.pausada).length
   const totalPausadas  = preguntas.filter(p => !p.fecha_baja && p.pausada).length
@@ -138,7 +147,7 @@ export default async function PreguntasPage({
         {
           key: 'numero',
           header: (
-            <SortHeader label="#" sortKey="numero" current={sortKey} dir={sortDir} filtro={filtro} />
+            <SortHeader label="#" sortKey="numero" current={sortKey} dir={sortDir} filtro={filtro} q={q} />
           ),
           width: '52px',
           cell: row => (
@@ -156,7 +165,7 @@ export default async function PreguntasPage({
         {
           key: 'eneatipo',
           header: (
-            <SortHeader label="Eneatipo" sortKey="eneatipo" current={sortKey} dir={sortDir} filtro={filtro} />
+            <SortHeader label="Eneatipo" sortKey="eneatipo" current={sortKey} dir={sortDir} filtro={filtro} q={q} />
           ),
           width: '90px',
           cell: row => <Badge tone="neutral">E{row.eneatipo_asociado}</Badge>,
@@ -197,15 +206,19 @@ export default async function PreguntasPage({
         <CrearPreguntaBtn />
       </div>
 
-      {/* Filtro */}
-      <div className="mt-6">
+      {/* Filtro + búsqueda */}
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <FiltroPreguntas filtroActual={filtro} />
+        <SearchInput placeholder="Buscar por enunciado…" className="w-full sm:w-72" />
       </div>
 
       {/* Tabla */}
       <div className="mt-4">
         {filas.length > 0 ? (
-          <Table columns={columns} rows={filas} rowKey={row => row.id} />
+          <>
+            <Table columns={columns} rows={filas} rowKey={row => row.id} />
+            <Paginador page={page} pageCount={pageCount} />
+          </>
         ) : (
           <div className="rounded-xl border border-neutral-200 bg-surface px-6 py-12 text-center shadow-card">
             <p className="text-[14px] text-muted">No hay preguntas que coincidan con el filtro.</p>

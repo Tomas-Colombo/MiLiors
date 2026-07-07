@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useTransition, useState } from 'react'
 import { Button, Modal, Alert, Tooltip } from '@/components/ui'
 import { AlertTriangleIcon, TrashIcon, Spinner } from '@/components/icons'
@@ -46,24 +47,24 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
   return (
     <div className="flex flex-col gap-2 items-center">
       <div className="flex items-center gap-1.5">
-        <a
+        <Link
           href={`/reclutador/puestos/${puestoId}`}
           className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
         >
           Ver
-        </a>
-        <a
+        </Link>
+        <Link
           href={`/reclutador/postulaciones?puesto=${puestoId}`}
           className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50 whitespace-nowrap"
         >
           Postulaciones
-        </a>
-        <a
+        </Link>
+        <Link
           href={`/reclutador/puestos/${puestoId}/editar`}
           className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
         >
           Editar
-        </a>
+        </Link>
         {activo ? (
           <button
             type="button"

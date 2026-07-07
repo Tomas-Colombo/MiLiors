@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Select } from '@/components/ui'
 import { TrashIcon } from '@/components/icons'
+import { SearchInput } from '@/components/shared/list-controls'
 
 type Props = {
   totalVisible: number
@@ -23,7 +24,9 @@ export function FiltrosPuestos({ totalVisible, totalTotal }: Props) {
       } else {
         params.delete(key)
       }
-      router.replace(`${pathname}?${params.toString()}`)
+      params.delete('page')
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname)
     },
     [router, pathname, searchParams],
   )
@@ -41,6 +44,7 @@ export function FiltrosPuestos({ totalVisible, totalTotal }: Props) {
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      <SearchInput placeholder="Buscar por título…" className="w-full sm:w-56" />
       <div className="w-full sm:w-44">
         <Select
           options={ordenOpts}
@@ -57,7 +61,7 @@ export function FiltrosPuestos({ totalVisible, totalTotal }: Props) {
           aria-label="Filtrar por estado"
         />
       </div>
-      {(searchParams.get('orden') || searchParams.get('estado')) && (
+      {(searchParams.get('q') || searchParams.get('orden') || searchParams.get('estado')) && (
         <button
           type="button"
           onClick={() => {
