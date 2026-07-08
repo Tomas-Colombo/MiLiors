@@ -8,6 +8,15 @@ import { verifySession } from '@/lib/dal'
 import { puestoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 
+/**
+ * Contratación opcional al cerrar/eliminar un puesto.
+ * - `plataforma`: la persona contratada es un postulante del sistema (relación real).
+ * - `externo`: se contrató por fuera; solo guardamos el nombre libre.
+ */
+export type ContratacionInput =
+  | { tipo: 'plataforma'; postulanteId: string }
+  | { tipo: 'externo'; nombre: string }
+
 // Helper: get reclutador_id and empresa_id for the current user
 async function getReclutadorContext(): Promise<{ reclutadorId: string; empresaId: string } | null> {
   const session = await verifySession()
@@ -59,6 +68,105 @@ async function registrarApertura(puestoId: string, empresaId: string, tituloPues
       )
     }
   }
+}
+
+/**
+ * Registra la contratación en el CICLO abierto del puesto (historial_puesto con
+ * fecha_fin IS NULL). Debe llamarse ANTES de cerrar el ciclo. Si por algún puesto
+ * viejo no existiera un ciclo abierto, se crea uno para poder colgar la contratación.
+ */
+async function registrarContratacion(
+  admin: ReturnType<typeof createAdminClient>,
+  puestoId: string,
+  contratacion: ContratacionInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Validaciones de entrada. El nombre externo es opcional; el postulante NO.
+  if (contratacion.tipo === 'plataforma') {
+    if (!contratacion.postulanteId) {
+      return { ok: false, error: 'Elegí el postulante contratado.' }
+    }
+    // El postulante tiene que haber aplicado a este puesto
+    const { data: aplico } = await admin
+      .from('postulacion')
+      .select('id')
+      .eq('puesto_id', puestoId)
+      .eq('postulante_id', contratacion.postulanteId)
+      .maybeSingle()
+    if (!aplico) {
+      return { ok: false, error: 'El postulante seleccionado no aplicó a este puesto.' }
+    }
+  }
+
+  // Ciclo abierto más reciente
+  const { data: hist } = await admin
+    .from('historial_puesto')
+    .select('id')
+    .eq('puesto_id', puestoId)
+    .is('fecha_fin', null)
+    .order('fecha_inicio', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let historialId = (hist as { id: string } | null)?.id ?? null
+
+  // Edge: puesto sin ciclo abierto → crear uno para no perder la contratación
+  if (!historialId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: nuevo, error } = await (admin.from('historial_puesto') as any)
+      .insert({ puesto_id: puestoId })
+      .select('id')
+      .single()
+    if (error || !nuevo) return { ok: false, error: 'No se pudo registrar el ciclo del puesto.' }
+    historialId = (nuevo as { id: string }).id
+  }
+
+  const row =
+    contratacion.tipo === 'plataforma'
+      ? { historial_puesto_id: historialId, postulante_id: contratacion.postulanteId, nombre_externo: null }
+      : { historial_puesto_id: historialId, postulante_id: null, nombre_externo: contratacion.nombre.trim() || null }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('contratacion') as any).insert(row)
+  if (error) return { ok: false, error: 'No se pudo registrar la contratación.' }
+  return { ok: true }
+}
+
+/**
+ * Postulantes que aplicaron al puesto, para el selector "contraté a alguien de
+ * la plataforma". Solo accesible por el reclutador dueño del puesto.
+ */
+export async function getPostulantesDePuesto(
+  puestoId: string,
+): Promise<{ postulanteId: string; nombre: string }[]> {
+  const ctx = await getReclutadorContext()
+  if (!ctx) return []
+
+  const admin = createAdminClient()
+
+  // Verificar propiedad del puesto
+  const { data: puesto } = await admin
+    .from('puesto')
+    .select('id')
+    .eq('id', puestoId)
+    .eq('reclutador_id', ctx.reclutadorId)
+    .maybeSingle()
+  if (!puesto) return []
+
+  const { data } = await admin
+    .from('postulacion')
+    .select('postulante_id, perfil_postulante(nombre_completo)')
+    .eq('puesto_id', puestoId)
+    .order('fecha_postulacion', { ascending: false })
+
+  const seen = new Set<string>()
+  const out: { postulanteId: string; nombre: string }[] = []
+  for (const row of (data ?? []) as unknown[]) {
+    const r = row as { postulante_id: string; perfil_postulante: { nombre_completo: string } | null }
+    if (seen.has(r.postulante_id)) continue
+    seen.add(r.postulante_id)
+    out.push({ postulanteId: r.postulante_id, nombre: r.perfil_postulante?.nombre_completo ?? 'Sin nombre' })
+  }
+  return out
 }
 
 export async function publicarPuesto(
@@ -148,11 +256,20 @@ export async function editarPuesto(
   return { success: true, data: undefined }
 }
 
-export async function cerrarPuesto(puestoId: string): Promise<ActionResult> {
+export async function cerrarPuesto(
+  puestoId: string,
+  contratacion?: ContratacionInput | null,
+): Promise<ActionResult> {
   const ctx = await getReclutadorContext()
   if (!ctx) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
+
+  // Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
+  if (contratacion) {
+    const res = await registrarContratacion(admin, puestoId, contratacion)
+    if (!res.ok) return { success: false, error: res.error }
+  }
 
   // Cierre reversible: el puesto se desactiva pero sigue visible para el
   // reclutador y puede reactivarse. No se da de baja (fecha_baja_puesto).
@@ -183,11 +300,20 @@ export async function cerrarPuesto(puestoId: string): Promise<ActionResult> {
   return { success: true, data: undefined }
 }
 
-export async function eliminarPuesto(puestoId: string): Promise<ActionResult> {
+export async function eliminarPuesto(
+  puestoId: string,
+  contratacion?: ContratacionInput | null,
+): Promise<ActionResult> {
   const ctx = await getReclutadorContext()
   if (!ctx) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
+
+  // Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
+  if (contratacion) {
+    const res = await registrarContratacion(admin, puestoId, contratacion)
+    if (!res.ok) return { success: false, error: res.error }
+  }
 
   // Baja lógica: se registra fecha_baja_puesto. El puesto y sus postulaciones
   // desaparecen de las vistas del reclutador, pero se conservan en la base

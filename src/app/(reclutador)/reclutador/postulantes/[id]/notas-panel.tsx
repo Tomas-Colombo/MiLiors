@@ -47,7 +47,7 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
           fecha_creacion: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           puesto_id: null,
-          titulo_puesto: null,
+          titulo_puesto: result.data.titulo_puesto,
         },
         ...prev,
       ])

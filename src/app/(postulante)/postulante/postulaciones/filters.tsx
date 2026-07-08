@@ -1,135 +1,96 @@
 'use client'
 
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useCallback, useRef, useState } from 'react'
-import { SearchIcon, FilterIcon } from '@/components/icons'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useCallback, useRef } from 'react'
+import { Select } from '@/components/ui'
+import { SearchIcon, TrashIcon } from '@/components/icons'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 
-const ESTADO_OPTIONS = [
-  { label: 'Enviada', value: ESTADO_POSTULACION.ENVIADA },
-  { label: 'Vista', value: ESTADO_POSTULACION.VISTO },
-  { label: 'Descartada', value: ESTADO_POSTULACION.PROCESO_FINALIZADO },
-  { label: 'Cerrada', value: ESTADO_POSTULACION.CERRADA },
+const ESTADO_OPTS = [
+  { value: '', label: 'Todos los estados' },
+  { value: ESTADO_POSTULACION.ENVIADA, label: 'Enviada' },
+  { value: ESTADO_POSTULACION.VISTO, label: 'Vista' },
+  { value: ESTADO_POSTULACION.PROCESO_FINALIZADO, label: 'Descartada' },
+  { value: ESTADO_POSTULACION.CERRADA, label: 'Cerrada' },
 ]
 
-function pill(active: boolean) {
-  return [
-    'rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer select-none',
-    active
-      ? 'bg-primary-600 text-white shadow-sm'
-      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
-  ].join(' ')
-}
+const ORDEN_OPTS = [
+  { value: 'desc', label: 'Más nuevas primero' },
+  { value: 'asc', label: 'Más viejas primero' },
+]
 
 export function PostulacionesFilters() {
   const sp = useSearchParams()
   const router = useRouter()
+  const pathname = usePathname()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [filtersOpen, setFiltersOpen] = useState(false)
 
-  function update(key: string, value: string) {
-    const params = new URLSearchParams(sp.toString())
-    if (value) params.set(key, value)
-    else params.delete(key)
-    params.delete('page')
-    router.replace(`/postulante/postulaciones?${params.toString()}`)
-  }
+  const setParam = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(sp.toString())
+      if (value) params.set(key, value)
+      else params.delete(key)
+      params.delete('page')
+      router.replace(`${pathname}?${params.toString()}`)
+    },
+    [router, pathname, sp],
+  )
 
   const handleSearch = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => update('q', val), 380)
+      debounceRef.current = setTimeout(() => setParam('q', val), 380)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sp]
+    [setParam],
   )
 
   const q = sp.get('q') ?? ''
   const estado = sp.get('estado') ?? ''
-  const hasFilters = !!(q || estado)
+  const orden = sp.get('orden') === 'asc' ? 'asc' : 'desc'
+  const hasFilters = !!(q || estado || orden === 'asc')
 
   return (
-    <div className="space-y-5">
-      {/* Buscador + toggle */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <SearchIcon
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-          />
-          <input
-            type="search"
-            key={q}
-            defaultValue={q}
-            onChange={handleSearch}
-            placeholder="Buscar por título…"
-            className="h-10 w-full rounded-xl border border-neutral-200 bg-surface pl-9 pr-4 text-sm text-ink placeholder:text-neutral-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 transition-shadow"
-          />
-        </div>
+    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      <div className="relative w-full sm:w-56">
+        <SearchIcon
+          size={16}
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
+        />
+        <input
+          type="search"
+          key={q}
+          defaultValue={q}
+          onChange={handleSearch}
+          placeholder="Buscar por título…"
+          className="h-10 w-full rounded-md border border-neutral-300 bg-surface pl-9 pr-3.5 font-sans text-sm text-ink outline-none placeholder:text-neutral-400 transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50"
+        />
+      </div>
+      <div className="w-full sm:w-44">
+        <Select
+          options={ESTADO_OPTS}
+          value={estado}
+          onChange={(e) => setParam('estado', e.target.value)}
+          aria-label="Filtrar por estado"
+        />
+      </div>
+      <div className="w-full sm:w-48">
+        <Select
+          options={ORDEN_OPTS}
+          value={orden}
+          onChange={(e) => setParam('orden', e.target.value === 'asc' ? 'asc' : '')}
+          aria-label="Ordenar por fecha"
+        />
+      </div>
+      {hasFilters && (
         <button
           type="button"
-          onClick={() => setFiltersOpen((o) => !o)}
-          className={[
-            'flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors',
-            filtersOpen
-              ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
-              : 'border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
-          ].join(' ')}
+          onClick={() => router.replace(pathname)}
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 h-9 text-[12.5px] font-medium text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300 transition-colors whitespace-nowrap"
         >
-          <FilterIcon size={15} />
-          {filtersOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+          <TrashIcon size={14} />
+          Limpiar filtros
         </button>
-      </div>
-
-      {/* Filtros colapsables */}
-      {filtersOpen && (
-        <>
-          {/* Estado */}
-          <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-              Estado
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => update('estado', '')}
-                className={pill(estado === '')}
-              >
-                Todos
-              </button>
-              {ESTADO_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => update('estado', opt.value)}
-                  className={pill(estado === opt.value)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Separador + limpiar */}
-          <div className="border-t border-neutral-100 pt-4">
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => router.replace('/postulante/postulaciones')}
-                className={[
-                  'text-xs font-medium transition-colors',
-                  hasFilters
-                    ? 'text-neutral-500 hover:text-neutral-800'
-                    : 'cursor-not-allowed text-neutral-300',
-                ].join(' ')}
-                disabled={!hasFilters}
-              >
-                Limpiar filtros
-              </button>
-            </div>
-          </div>
-        </>
       )}
     </div>
   )

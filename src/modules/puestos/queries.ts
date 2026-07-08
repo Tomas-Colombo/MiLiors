@@ -144,6 +144,66 @@ export const getPuestoById = cache(async (
   }
 })
 
+export type ContratacionHistorial = {
+  id: string
+  nombre: string
+  fecha_contratacion: string
+  externo: boolean
+}
+
+/** Historial de contrataciones de un puesto propio del reclutador actual */
+export const getContratacionesDePuesto = cache(async (
+  puestoId: string,
+): Promise<ContratacionHistorial[]> => {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!reclutador) return []
+
+  // Verificar propiedad del puesto
+  const { data: puesto } = await supabase
+    .from('puesto')
+    .select('id')
+    .eq('id', puestoId)
+    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .maybeSingle()
+
+  if (!puesto) return []
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('contratacion')
+    .select(`
+      id, fecha_contratacion, nombre_externo,
+      perfil_postulante(nombre_completo),
+      historial_puesto!inner(puesto_id)
+    `)
+    .eq('historial_puesto.puesto_id', puestoId)
+    .order('fecha_contratacion', { ascending: false })
+
+  return ((data ?? []) as unknown[]).map((row: unknown) => {
+    const r = row as {
+      id: string
+      fecha_contratacion: string
+      nombre_externo: string | null
+      perfil_postulante: { nombre_completo: string } | null
+    }
+    const externo = !r.perfil_postulante
+    return {
+      id: r.id,
+      nombre: r.perfil_postulante?.nombre_completo ?? r.nombre_externo ?? 'Contratación externa',
+      fecha_contratacion: r.fecha_contratacion,
+      externo,
+    }
+  })
+})
+
 export const PUESTOS_PER_PAGE = 12
 
 /** Puestos activos disponibles para postulantes (SIN perfil_psicologico_deseado) */
@@ -292,6 +352,7 @@ export const getMisPostulaciones = async (filtros?: {
   page?: number
   estado?: string
   busqueda?: string
+  orden?: 'asc' | 'desc'
 }) => {
   const session = await verifySession()
   const supabase = await createClient()
@@ -320,7 +381,7 @@ export const getMisPostulaciones = async (filtros?: {
       ${puestoJoin}(id, titulo_puesto, empresa(nombre_empresa))
     `, { count: 'exact' })
     .eq('postulante_id', (postulante as { id: string }).id)
-    .order('fecha_postulacion', { ascending: false })
+    .order('fecha_postulacion', { ascending: filtros?.orden === 'asc' })
     .range(from, to)
 
   if (filtros?.estado) query = query.eq('estado', filtros.estado)

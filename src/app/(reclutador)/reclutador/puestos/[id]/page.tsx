@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge } from '@/components/ui'
-import { ChevronLeftIcon, EditIcon, BuildingIcon } from '@/components/icons'
-import { getPuestoById } from '@/modules/puestos/queries'
+import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon } from '@/components/icons'
+import { getPuestoById, getContratacionesDePuesto } from '@/modules/puestos/queries'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 
 export const metadata = { title: 'Detalle del puesto — TalentID' }
@@ -16,6 +16,8 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
 
   const puesto = await getPuestoById(id)
   if (!puesto) notFound()
+
+  const contrataciones = await getContratacionesDePuesto(id)
 
   return (
     <TyCGate>
@@ -117,6 +119,35 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
             <p className="text-[13px] leading-relaxed text-ink-soft whitespace-pre-wrap">
               {puesto.perfil_psicologico_deseado}
             </p>
+          </Card>
+        )}
+
+        {/* Historial de contrataciones */}
+        {contrataciones.length > 0 && (
+          <Card>
+            <h2 className="text-[14px] font-bold text-ink mb-3">Historial de contrataciones</h2>
+            <ul className="divide-y divide-neutral-100">
+              {contrataciones.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-tint text-primary-600">
+                      <CheckCircleIcon size={16} />
+                    </span>
+                    <span className="truncate text-[13px] font-medium text-ink">{c.nombre}</span>
+                    {c.externo && (
+                      <Badge tone="neutral" className="shrink-0 px-2 py-0.5 text-[10.5px]">Externo</Badge>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-[12px] text-neutral-400">
+                    {new Date(c.fecha_contratacion).toLocaleDateString('es-AR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </Card>
         )}
       </div>

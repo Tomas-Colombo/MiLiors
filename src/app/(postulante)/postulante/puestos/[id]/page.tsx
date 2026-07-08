@@ -9,11 +9,19 @@ import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
 import { PostularButton } from '../postular-button'
 
-type Props = { params: Promise<{ id: string }> }
+type Props = {
+  params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string>>
+}
 
-export default async function PuestoDetallePage({ params }: Props) {
+export default async function PuestoDetallePage({ params, searchParams }: Props) {
   await requireEneagramaCompleto()
   const { id } = await params
+  const { from } = await searchParams
+
+  const desdePostulaciones = from === 'postulaciones'
+  const volverHref = desdePostulaciones ? '/postulante/postulaciones' : '/postulante/puestos'
+  const volverLabel = desdePostulaciones ? 'Mis postulaciones' : 'Buscar puestos'
 
   const [puesto, yaPostulados, certificado] = await Promise.all([
     getPuestoPublicoById(id),
@@ -30,11 +38,11 @@ export default async function PuestoDetallePage({ params }: Props) {
       <div className="mx-auto max-w-2xl px-6 py-10 space-y-6">
         {/* Volver */}
         <Link
-          href="/postulante/puestos"
+          href={volverHref}
           className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink transition-colors"
         >
           <ChevronLeftIcon size={15} />
-          Buscar puestos
+          {volverLabel}
         </Link>
 
         {/* Banner certificado */}

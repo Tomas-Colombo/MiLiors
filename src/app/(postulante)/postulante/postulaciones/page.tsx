@@ -34,15 +34,17 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
   const page = Math.max(0, parseInt(sp.page ?? '0', 10))
   const q = sp.q ?? ''
   const estado = sp.estado ?? ''
+  const orden = sp.orden === 'asc' ? 'asc' : 'desc'
   const hasFilters = !!(q || estado)
 
-  const { items: postulaciones, total } = await getMisPostulaciones({ page, busqueda: q, estado })
+  const { items: postulaciones, total } = await getMisPostulaciones({ page, busqueda: q, estado, orden })
   const totalPages = Math.ceil(total / POSTULACIONES_PER_PAGE)
 
   function pageUrl(p: number) {
     const params = new URLSearchParams()
     if (q) params.set('q', q)
     if (estado) params.set('estado', estado)
+    if (orden === 'asc') params.set('orden', orden)
     if (p > 0) params.set('page', String(p))
     const qs = params.toString()
     return qs ? `/postulante/postulaciones?${qs}` : '/postulante/postulaciones'
@@ -97,21 +99,25 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                     </div>
 
                     <div className="flex flex-none items-center gap-4">
-                      <div className="flex w-28 justify-end">
-                        <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
-                          {estadoLabel[p.estado] ?? p.estado}
-                        </Badge>
-                      </div>
-                      <div className="flex w-24 justify-end">
+                      <div className="flex w-24 justify-start">
                         {p.puesto_id && (
                           <Link
-                            href={`/postulante/puestos/${p.puesto_id}`}
+                            href={`/postulante/puestos/${p.puesto_id}?from=postulaciones`}
                             className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors whitespace-nowrap"
                           >
                             Ver puesto
                             <ArrowRightIcon size={13} />
                           </Link>
                         )}
+                      </div>
+                      <div className="flex w-28 justify-end">
+                        <Badge
+                          tone={estadoTone[p.estado] ?? 'neutral'}
+                          dot
+                          className="w-full justify-center"
+                        >
+                          {estadoLabel[p.estado] ?? p.estado}
+                        </Badge>
                       </div>
                     </div>
                   </div>
