@@ -101,6 +101,125 @@ export async function reactivarCompetencia(id: string): Promise<ActionResult> {
   return { success: true, data: undefined }
 }
 
+// ─── Ubicación: provincias ───────────────────────────────────────────────────
+
+export async function crearProvincia(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const nombre = formData.get('nombre')?.toString().trim()
+  if (!nombre) return { success: false, error: 'Ingresá el nombre de la provincia.' }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('provincia') as any).insert({ nombre })
+  if (error?.code === '23505') return { success: false, error: 'Ya existe una provincia con ese nombre.' }
+  if (error) return { success: false, error: 'No se pudo crear la provincia.' }
+
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function renombrarProvincia(id: string, nombre: string): Promise<ActionResult> {
+  await requireAdmin()
+  const limpio = nombre.trim()
+  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('provincia') as any).update({ nombre: limpio }).eq('id', id)
+  if (error?.code === '23505') return { success: false, error: 'Ya existe una provincia con ese nombre.' }
+  if (error) return { success: false, error: 'No se pudo actualizar la provincia.' }
+
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function desactivarProvincia(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('provincia') as any)
+    .update({ fecha_baja: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { success: false, error: 'No se pudo desactivar.' }
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function reactivarProvincia(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('provincia') as any).update({ fecha_baja: null }).eq('id', id)
+  if (error) return { success: false, error: 'No se pudo reactivar.' }
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+// ─── Ubicación: localidades ──────────────────────────────────────────────────
+
+export async function crearLocalidad(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const provinciaId = formData.get('provincia_id')?.toString()
+  const nombre = formData.get('nombre')?.toString().trim()
+  const departamento = formData.get('departamento')?.toString().trim() || null
+  if (!provinciaId) return { success: false, error: 'Seleccioná una provincia primero.' }
+  if (!nombre) return { success: false, error: 'Ingresá el nombre de la localidad.' }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('localidad') as any).insert({
+    provincia_id: provinciaId,
+    nombre,
+    departamento,
+  })
+  if (error) return { success: false, error: 'No se pudo crear la localidad.' }
+
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function renombrarLocalidad(id: string, nombre: string): Promise<ActionResult> {
+  await requireAdmin()
+  const limpio = nombre.trim()
+  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('localidad') as any).update({ nombre: limpio }).eq('id', id)
+  if (error) return { success: false, error: 'No se pudo actualizar la localidad.' }
+
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function desactivarLocalidad(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('localidad') as any)
+    .update({ fecha_baja: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { success: false, error: 'No se pudo desactivar.' }
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function reactivarLocalidad(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('localidad') as any).update({ fecha_baja: null }).eq('id', id)
+  if (error) return { success: false, error: 'No se pudo reactivar.' }
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
 // ─── Preguntas eneagrama ─────────────────────────────────────────────────────
 
 // Nota: la creación de preguntas se maneja vía la API route POST /api/admin/preguntas

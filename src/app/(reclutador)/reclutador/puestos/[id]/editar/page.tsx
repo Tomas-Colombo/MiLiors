@@ -5,6 +5,7 @@ import { Card } from '@/components/ui'
 import { ChevronLeftIcon } from '@/components/icons'
 import { getPuestoById, getSectores } from '@/modules/puestos/queries'
 import { getFormularioDePuesto, formularioTieneRespuestas } from '@/modules/preselector/queries'
+import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
 import { EditarPuestoForm } from './editar-puesto-form'
 
 export const metadata = { title: 'Editar puesto — TalentID' }
@@ -15,13 +16,18 @@ type Params = Promise<{ id: string }>
 export default async function EditarPuestoPage({ params }: { params: Params }) {
   const { id } = await params
 
-  const [puesto, sectores, formularioPreselector, formularioBloqueado] = await Promise.all([
+  const [puesto, sectores, formularioPreselector, formularioBloqueado, provincias] = await Promise.all([
     getPuestoById(id),
     getSectores(),
     getFormularioDePuesto(id),
     formularioTieneRespuestas(id),
+    getProvincias(),
   ])
   if (!puesto) notFound()
+
+  const localidadesIniciales = puesto.provincia_id
+    ? await getLocalidadesPorProvincia(puesto.provincia_id)
+    : []
 
   return (
     <TyCGate>
@@ -46,6 +52,8 @@ export default async function EditarPuestoPage({ params }: { params: Params }) {
             sectores={sectores}
             formularioPreselector={formularioPreselector}
             formularioBloqueado={formularioBloqueado}
+            provincias={provincias}
+            localidadesIniciales={localidadesIniciales}
           />
         </Card>
       </div>

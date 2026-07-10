@@ -1,12 +1,13 @@
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card } from '@/components/ui'
 import { getSectores } from '@/modules/puestos/queries'
+import { getProvincias } from '@/modules/ubicacion/queries'
 import { NuevoPuestoForm } from './nuevo-puesto-form'
 
 export const metadata = { title: 'Nuevo puesto — TalentID' }
 
 export default async function NuevoPuestoPage() {
-  const sectores = await getSectores()
+  const [sectores, provincias] = await Promise.all([getSectores(), getProvincias()])
 
   return (
     <TyCGate>
@@ -17,7 +18,7 @@ export default async function NuevoPuestoPage() {
         </div>
 
         <Card>
-          <NuevoPuestoForm sectores={sectores} />
+          <NuevoPuestoForm sectores={sectores} provincias={provincias} />
         </Card>
       </div>
     </TyCGate>

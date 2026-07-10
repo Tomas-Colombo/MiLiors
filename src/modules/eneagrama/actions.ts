@@ -20,6 +20,8 @@ export async function guardarDatosBasicos(
 
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
+    provincia_id: formData.get('provincia_id') || '',
+    localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
     especificidad_puesto: formData.get('especificidad_puesto') || undefined,
     enlace_linkedin: formData.get('enlace_linkedin') || undefined,
@@ -48,6 +50,8 @@ export async function guardarDatosBasicos(
   const payload: any = {
     usuario_id: session.id,
     nombre_completo: parsed.data.nombre_completo,
+    provincia_id: parsed.data.provincia_id,
+    localidad_id: parsed.data.localidad_id,
     telefono: parsed.data.telefono || null,
     especificidad_puesto: parsed.data.especificidad_puesto || null,
     enlace_linkedin: parsed.data.enlace_linkedin || null,
@@ -62,8 +66,15 @@ export async function guardarDatosBasicos(
       .eq('id', (existente as { id: string }).id)
     error = result.error
   } else {
+    // Al crear el perfil por primera vez, el postulante queda visible para los
+    // reclutadores por defecto. Si no lo desea, puede desactivar la visibilidad
+    // desde su perfil. En la actualización nunca se toca este flag para respetar
+    // la elección previa del postulante.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (supabase.from('perfil_postulante') as any).insert(payload)
+    const result = await (supabase.from('perfil_postulante') as any).insert({
+      ...payload,
+      perfil_en_busqueda: true,
+    })
     error = result.error
   }
 

@@ -1,17 +1,24 @@
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, Chip, EmptyState } from '@/components/ui'
-import { SearchIcon, UsersIcon, SparklesIcon } from '@/components/icons'
-import { Input, Select } from '@/components/ui'
+import { UsersIcon, SparklesIcon } from '@/components/icons'
 import { buscarPostulantes } from '@/modules/postulantes/queries'
 import { getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
+import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
+import { PostulantesFilters } from './filters'
 
 export const metadata = { title: 'Buscar postulantes — TalentID' }
 
 // searchParams in Next.js App Router is a Promise — must be awaited
-type SearchParams = Promise<{ busqueda?: string; competencia?: string; page?: string }>
+type SearchParams = Promise<{
+  busqueda?: string
+  competencia?: string
+  provincia?: string
+  localidad?: string
+  page?: string
+}>
 
 export default async function BuscarPostulantesPage({
   searchParams,
@@ -19,18 +26,19 @@ export default async function BuscarPostulantesPage({
   searchParams: SearchParams
 }) {
   const sp = await searchParams
-  const [postulantes, competencias] = await Promise.all([
+  const [postulantes, competencias, provincias, localidades] = await Promise.all([
     buscarPostulantes({
       busqueda: sp.busqueda,
       competenciaId: sp.competencia,
+      provinciaId: sp.provincia,
+      localidadId: sp.localidad,
     }),
     getCompetenciasCatalogo(),
+    getProvincias(),
+    sp.provincia ? getLocalidadesPorProvincia(sp.provincia) : Promise.resolve([]),
   ])
 
-  const competenciaOpts = [
-    { value: '', label: 'Todas las competencias' },
-    ...competencias.map((c) => ({ value: c.id, label: c.nombre })),
-  ]
+  const competenciaOpts = competencias.map((c) => ({ value: c.id, label: c.nombre }))
 
   const { page, pageCount, slice } = paginar(postulantes, sp.page, 12)
 
@@ -45,39 +53,12 @@ export default async function BuscarPostulantesPage({
           </p>
         </div>
 
-        {/* Search form — pure GET, no JS required */}
-        <form method="GET" action="" className="flex flex-col gap-3 sm:flex-row">
-          <div className="flex-1">
-            <Input
-              name="busqueda"
-              defaultValue={sp.busqueda ?? ''}
-              placeholder="Buscar por nombre…"
-              leftIcon={<SearchIcon size={16} />}
-            />
-          </div>
-          <div className="w-full sm:w-56">
-            <Select
-              name="competencia"
-              options={competenciaOpts}
-              defaultValue={sp.competencia ?? ''}
-              aria-label="Filtrar por competencia"
-            />
-          </div>
-          <button
-            type="submit"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
-          >
-            Buscar
-          </button>
-          {(sp.busqueda || sp.competencia) && (
-            <Link
-              href="/reclutador/postulantes"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-300 bg-surface px-4 text-sm font-medium text-ink-soft hover:bg-neutral-50"
-            >
-              Limpiar
-            </Link>
-          )}
-        </form>
+        {/* Filtros live (sin botón de buscar) — imitan la sección de postulaciones */}
+        <PostulantesFilters
+          competencias={competenciaOpts}
+          provincias={provincias}
+          localidades={localidades}
+        />
 
         {/* Results */}
         {postulantes.length === 0 ? (
@@ -107,6 +88,11 @@ export default async function BuscarPostulantesPage({
                       </p>
                       {p.especificidad_puesto && (
                         <p className="text-[13px] text-muted mt-0.5">{p.especificidad_puesto}</p>
+                      )}
+                      {(p.nombre_localidad || p.nombre_provincia) && (
+                        <p className="text-[12px] text-neutral-400 mt-1">
+                          📍 {[p.nombre_localidad, p.nombre_provincia].filter(Boolean).join(', ')}
+                        </p>
                       )}
                     </div>
 

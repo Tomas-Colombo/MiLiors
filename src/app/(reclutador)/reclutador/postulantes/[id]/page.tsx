@@ -191,6 +191,11 @@ export default async function PostulanteDetallePage({
                   {postulante.especificidad_puesto && (
                     <p className="text-[13px] text-muted">{postulante.especificidad_puesto}</p>
                   )}
+                  {(postulante.nombre_localidad || postulante.nombre_provincia) && (
+                    <p className="text-[12px] text-neutral-400 mt-0.5">
+                      📍 {[postulante.nombre_localidad, postulante.nombre_provincia].filter(Boolean).join(', ')}
+                    </p>
+                  )}
                 </div>
               </div>
 

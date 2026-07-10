@@ -185,6 +185,8 @@ export async function publicarPuesto(
     idioma: formData.get('idioma'),
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
+    provincia_id: formData.get('provincia_id') || undefined,
+    localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
   })
@@ -206,6 +208,9 @@ export async function publicarPuesto(
     }
   }
 
+  // Modalidad remota → sin ubicación geográfica.
+  const esRemoto = parsed.data.ubicacion === 'REMOTO'
+
   const admin = createAdminClient()
   const puestoId = crypto.randomUUID()
 
@@ -216,6 +221,8 @@ export async function publicarPuesto(
     empresa_id: ctx.empresaId,
     ...parsed.data,
     sector_id: parsed.data.sector_id || null,
+    provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
+    localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     activo: true,
   })
 
@@ -247,6 +254,8 @@ export async function editarPuesto(
     idioma: formData.get('idioma'),
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
+    provincia_id: formData.get('provincia_id') || undefined,
+    localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
   })
@@ -268,10 +277,17 @@ export async function editarPuesto(
     }
   }
 
+  const esRemoto = parsed.data.ubicacion === 'REMOTO'
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: actualizados, error } = await (supabase.from('puesto') as any)
-    .update({ ...parsed.data, sector_id: parsed.data.sector_id || null })
+    .update({
+      ...parsed.data,
+      sector_id: parsed.data.sector_id || null,
+      provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
+      localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
+    })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
     .select('id')

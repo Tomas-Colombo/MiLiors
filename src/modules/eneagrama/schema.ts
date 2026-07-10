@@ -6,6 +6,8 @@ export const onboardingPostulanteSchema = z.object({
     .min(2, { message: 'Ingresá tu nombre completo.' })
     .max(120, { message: 'El nombre es demasiado largo.' })
     .trim(),
+  provincia_id: z.string().uuid({ message: 'Seleccioná tu provincia.' }),
+  localidad_id: z.string().uuid({ message: 'Seleccioná tu localidad.' }),
   telefono: z.string().optional(),
   especificidad_puesto: z.string().max(200).optional(),
   enlace_linkedin: z

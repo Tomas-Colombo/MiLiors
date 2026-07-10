@@ -14,8 +14,20 @@ export const puestoSchema = z.object({
     [UBICACION.REMOTO, UBICACION.HIBRIDO, UBICACION.LOCALIDADES],
     { message: 'Seleccioná la modalidad.' }
   ),
+  // Ubicación geográfica: obligatoria salvo que la modalidad sea REMOTO (ver superRefine).
+  provincia_id: z.string().uuid().optional().or(z.literal('')),
+  localidad_id: z.string().uuid().optional().or(z.literal('')),
   nivel_experiencia: z.string().max(100).optional(),
   perfil_psicologico_deseado: z.string().max(2000).optional(),
+}).superRefine((data, ctx) => {
+  if (data.ubicacion !== UBICACION.REMOTO) {
+    if (!data.provincia_id) {
+      ctx.addIssue({ code: 'custom', path: ['provincia_id'], message: 'Seleccioná la provincia.' })
+    }
+    if (!data.localidad_id) {
+      ctx.addIssue({ code: 'custom', path: ['localidad_id'], message: 'Seleccioná la localidad.' })
+    }
+  }
 })
 
 export type PuestoInput = z.infer<typeof puestoSchema>

@@ -9,6 +9,7 @@ import {
   FileIcon,
   HelpCircleIcon,
   ShieldIcon,
+  MapPinIcon,
 } from '@/components/icons'
 import { AppSidebar } from '@/components/shared/app-sidebar'
 
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: <HomeIcon size={18} />, exactMatch: true },
   { href: '/admin/sectores', label: 'Sectores', icon: <GridIcon size={18} /> },
   { href: '/admin/competencias', label: 'Competencias', icon: <BarChartIcon size={18} /> },
+  { href: '/admin/ubicaciones', label: 'Ubicaciones', icon: <MapPinIcon size={18} /> },
   { href: '/admin/postulantes', label: 'Postulantes', icon: <UsersIcon size={18} /> },
   { href: '/admin/empresas', label: 'Empresas', icon: <BuildingIcon size={18} /> },
   { href: '/admin/informes', label: 'Informes', icon: <FileIcon size={18} /> },

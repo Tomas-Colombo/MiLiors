@@ -4,6 +4,7 @@ import { Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilPostulanteForm } from './form'
 import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
+import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
 
 export const metadata = { title: 'Mi perfil — TalentID' }
 
@@ -11,7 +12,7 @@ async function getPerfilPostulante(userId: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, telefono, especificidad_puesto, enlace_linkedin, portfolio')
+    .select('id, nombre_completo, telefono, especificidad_puesto, enlace_linkedin, portfolio, provincia_id, localidad_id')
     .eq('usuario_id', userId)
     .single()
 
@@ -22,12 +23,21 @@ async function getPerfilPostulante(userId: string) {
     especificidad_puesto: string | null
     enlace_linkedin: string | null
     portfolio: string | null
+    provincia_id: string | null
+    localidad_id: string | null
   } | null
 }
 
 export default async function MiPerfilPostulantePage() {
   const session = await verifySession()
-  const [perfil, tyc] = await Promise.all([getPerfilPostulante(session.id), getTyCVigente()])
+  const [perfil, tyc, provincias] = await Promise.all([
+    getPerfilPostulante(session.id),
+    getTyCVigente(),
+    getProvincias(),
+  ])
+  const localidadesIniciales = perfil?.provincia_id
+    ? await getLocalidadesPorProvincia(perfil.provincia_id)
+    : []
 
   return (
     <div className="mx-auto max-w-xl px-6 py-10 space-y-8">
@@ -37,7 +47,12 @@ export default async function MiPerfilPostulantePage() {
       </div>
 
       <Card padding="lg">
-        <PerfilPostulanteForm perfil={perfil} email={session.email} />
+        <PerfilPostulanteForm
+          perfil={perfil}
+          email={session.email}
+          provincias={provincias}
+          localidadesIniciales={localidadesIniciales}
+        />
       </Card>
 
       <div>

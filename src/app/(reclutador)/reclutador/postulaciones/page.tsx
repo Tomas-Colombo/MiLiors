@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, EmptyState, Tooltip } from '@/components/ui'
-import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon } from '@/components/icons'
+import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon, WhatsAppIcon } from '@/components/icons'
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
 import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
@@ -193,12 +193,24 @@ export default async function PostulacionesRecibidasPage({
                         </a>
                       )}
                       {p.contacto.telefono && (
-                        <a
-                          href={`tel:${p.contacto.telefono}`}
-                          className="text-[12.5px] text-primary-600 hover:underline"
-                        >
-                          {p.contacto.telefono}
-                        </a>
+                        <span className="inline-flex items-center gap-1.5 text-[12.5px]">
+                          <a
+                            href={`tel:${p.contacto.telefono}`}
+                            className="text-primary-600 hover:underline"
+                          >
+                            {p.contacto.telefono}
+                          </a>
+                          <a
+                            href={`https://wa.me/${p.contacto.telefono.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Abrir chat de WhatsApp"
+                            title="Enviar mensaje por WhatsApp"
+                            className="text-[#25D366] hover:opacity-80 transition-opacity"
+                          >
+                            <WhatsAppIcon size={15} />
+                          </a>
+                        </span>
                       )}
                     </div>
 

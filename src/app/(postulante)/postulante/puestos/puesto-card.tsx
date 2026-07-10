@@ -31,6 +31,11 @@ export function PuestoCard({ puesto, actions, tieneFormulario }: Props) {
         <Badge tone="neutral">
           {UBICACION_LABEL[puesto.ubicacion] ?? puesto.ubicacion}
         </Badge>
+        {puesto.nombre_localidad && (
+          <Badge tone="neutral">
+            📍 {[puesto.nombre_localidad, puesto.nombre_provincia].filter(Boolean).join(', ')}
+          </Badge>
+        )}
         <Badge tone="neutral">
           {CARGA_HORARIA_LABEL[puesto.carga_horaria] ?? puesto.carga_horaria}
         </Badge>

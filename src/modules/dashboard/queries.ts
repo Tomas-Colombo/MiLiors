@@ -16,6 +16,14 @@ export type PostulacionMetrica = {
   fecha_postulacion: string
 }
 
+/** Una contratación cerrada, con los días que tardó el ciclo en concretarla.
+ *  Alimenta la métrica "tiempo promedio de contratación" del cliente. */
+export type ContratacionMetrica = {
+  puesto_id: string
+  /** Días entre la apertura del ciclo (historial_puesto.fecha_inicio) y la contratación. */
+  dias: number
+}
+
 export type DashboardMetrics = {
   /** false → el reclutador no tiene puestos activos (mostrar estado vacío). */
   hasActivePuestos: boolean
@@ -29,6 +37,9 @@ export type DashboardMetrics = {
   // Datos para los bloques interactivos (client-side)
   puestosActivosList: { id: string; titulo: string }[]
   postulaciones: PostulacionMetrica[]
+  /** Contrataciones de TODOS los puestos del reclutador (incluye cerrados y
+   *  eliminados): el tiempo de contratación se mide sobre búsquedas ya concluidas. */
+  contrataciones: ContratacionMetrica[]
 }
 
 const EMPTY: DashboardMetrics = {
@@ -40,6 +51,7 @@ const EMPTY: DashboardMetrics = {
   ranking: [],
   puestosActivosList: [],
   postulaciones: [],
+  contrataciones: [],
 }
 
 /**
@@ -92,6 +104,41 @@ export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => 
     puesto_id: string
   }[]
 
+  // Contrataciones ────────────────────────────────────────────────────────
+  // La métrica de tiempo de contratación se mide sobre ciclos ya concluidos,
+  // por lo que abarca TODOS los puestos del reclutador (incluidos los cerrados
+  // y los eliminados), no sólo los vigentes.
+  const { data: allPuestosData } = await admin
+    .from('puesto')
+    .select('id')
+    .eq('reclutador_id', reclutadorId)
+  const allPuestoIds = (allPuestosData ?? []).map((p) => (p as { id: string }).id)
+
+  let contrataciones: ContratacionMetrica[] = []
+  if (allPuestoIds.length > 0) {
+    const { data: contrData } = await admin
+      .from('contratacion')
+      .select('fecha_contratacion, historial_puesto!inner(puesto_id, fecha_inicio)')
+      .in('historial_puesto.puesto_id', allPuestoIds)
+
+    contrataciones = ((contrData ?? []) as unknown[]).flatMap((row) => {
+      const r = row as {
+        fecha_contratacion: string
+        historial_puesto: { puesto_id: string; fecha_inicio: string } | null
+      }
+      if (!r.historial_puesto) return []
+      const dias = Math.max(
+        0,
+        Math.round(
+          (new Date(r.fecha_contratacion).getTime() -
+            new Date(r.historial_puesto.fecha_inicio).getTime()) /
+            86_400_000,
+        ),
+      )
+      return [{ puesto_id: r.historial_puesto.puesto_id, dias }]
+    })
+  }
+
   // Bloque 1 ─────────────────────────────────────────────────────────────
   const puestosActivos = activos.length
   const postulacionesRecibidas = posts.length
@@ -130,5 +177,6 @@ export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => 
       estado: p.estado,
       fecha_postulacion: p.fecha_postulacion,
     })),
+    contrataciones,
   }
 })

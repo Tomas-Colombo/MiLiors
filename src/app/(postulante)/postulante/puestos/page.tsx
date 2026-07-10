@@ -9,6 +9,7 @@ import {
   getMisPostulacionesPuestoIds,
   PUESTOS_PER_PAGE,
 } from '@/modules/puestos/queries'
+import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getPuestosConFormulario } from '@/modules/preselector/queries'
 import { PostularButton } from './postular-button'
@@ -43,10 +44,14 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
       ? undefined
       : 'no_postulados'
 
-  const [sectores, yaPostuladosSet, certificado] = await Promise.all([
+  const provinciaFiltro = sp.provincia || undefined
+
+  const [sectores, yaPostuladosSet, certificado, provincias, localidadesFiltro] = await Promise.all([
     getSectores(),
     getMisPostulacionesPuestoIds(),
     getUltimoCertificado(),
+    getProvincias(),
+    provinciaFiltro ? getLocalidadesPorProvincia(provinciaFiltro) : Promise.resolve([]),
   ])
 
   const postulacionIds = [...yaPostuladosSet]
@@ -55,6 +60,8 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
     sectorId: sp.sector || undefined,
     cargaHoraria: sp.carga_horaria || undefined,
     ubicacion: sp.ubicacion || undefined,
+    provinciaId: provinciaFiltro,
+    localidadId: sp.localidad || undefined,
     busqueda: sp.q || undefined,
     diasDesde,
     page,
@@ -84,7 +91,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
         {/* Filtros */}
         <Card padding="lg">
           <Suspense fallback={<div className="h-36 animate-pulse rounded-lg bg-neutral-100" />}>
-            <PuestosFilters sectores={sectores} />
+            <PuestosFilters sectores={sectores} provincias={provincias} localidades={localidadesFiltro} />
           </Suspense>
         </Card>
 

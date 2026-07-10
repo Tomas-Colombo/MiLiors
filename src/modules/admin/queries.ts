@@ -57,6 +57,44 @@ export async function getSectoresAdmin() {
   return (data ?? []) as { id: string; nombre_sector: string; fecha_baja_s: string | null; created_at: string }[]
 }
 
+// ─── Ubicación: provincias y localidades ─────────────────────────────────────
+
+export type ProvinciaAdmin = {
+  id: string
+  nombre: string
+  codigo_indec: string | null
+  fecha_baja: string | null
+  created_at: string
+}
+
+export async function getProvinciasAdmin(): Promise<ProvinciaAdmin[]> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('provincia')
+    .select('id, nombre, codigo_indec, fecha_baja, created_at')
+    .order('nombre')
+  return (data ?? []) as ProvinciaAdmin[]
+}
+
+export type LocalidadAdmin = {
+  id: string
+  nombre: string
+  departamento: string | null
+  fecha_baja: string | null
+  created_at: string
+}
+
+export async function getLocalidadesAdmin(provinciaId: string): Promise<LocalidadAdmin[]> {
+  if (!provinciaId) return []
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('localidad')
+    .select('id, nombre, departamento, fecha_baja, created_at')
+    .eq('provincia_id', provinciaId)
+    .order('nombre')
+  return (data ?? []) as LocalidadAdmin[]
+}
+
 // ─── Competencias ────────────────────────────────────────────────────────────
 
 export async function getCompetenciasAdmin() {

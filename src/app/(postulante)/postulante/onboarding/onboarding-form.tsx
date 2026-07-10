@@ -3,6 +3,8 @@
 import { useActionState } from 'react'
 import { guardarDatosBasicos } from '@/modules/eneagrama/actions'
 import { Button, Field, Input, Card, Alert } from '@/components/ui'
+import type { SelectOption } from '@/components/ui/select'
+import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { UserIcon } from '@/components/icons'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -13,11 +15,21 @@ type Perfil = {
   especificidad_puesto: string | null
   enlace_linkedin: string | null
   portfolio: string | null
+  provincia_id: string | null
+  localidad_id: string | null
 } | null
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function OnboardingForm({ perfil }: { perfil: Perfil }) {
+export function OnboardingForm({
+  perfil,
+  provincias,
+  localidadesIniciales,
+}: {
+  perfil: Perfil
+  provincias: ProvinciaOption[]
+  localidadesIniciales: SelectOption[]
+}) {
   const [state, action, pending] = useActionState(guardarDatosBasicos, initialState)
 
   return (
@@ -37,6 +49,16 @@ export function OnboardingForm({ perfil }: { perfil: Perfil }) {
               status={state && !state.success && state.fieldErrors?.nombre_completo ? 'error' : undefined}
             />
           </Field>
+
+          <UbicacionSelector
+            provincias={provincias}
+            defaultProvinciaId={perfil?.provincia_id ?? undefined}
+            defaultLocalidadId={perfil?.localidad_id ?? undefined}
+            defaultLocalidades={localidadesIniciales}
+            required
+            provinciaError={state && !state.success ? state.fieldErrors?.provincia_id?.[0] : undefined}
+            localidadError={state && !state.success ? state.fieldErrors?.localidad_id?.[0] : undefined}
+          />
 
           <Field
             label="Teléfono"

@@ -3,6 +3,8 @@
 import { useActionState } from 'react'
 import { actualizarPerfilPostulante } from '@/modules/perfil/actions'
 import { Button, Field, Input, Alert } from '@/components/ui'
+import type { SelectOption } from '@/components/ui/select'
+import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { UserIcon, MailIcon } from '@/components/icons'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -13,11 +15,23 @@ type Perfil = {
   especificidad_puesto: string | null
   enlace_linkedin: string | null
   portfolio: string | null
+  provincia_id: string | null
+  localidad_id: string | null
 } | null
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function PerfilPostulanteForm({ perfil, email }: { perfil: Perfil; email: string }) {
+export function PerfilPostulanteForm({
+  perfil,
+  email,
+  provincias,
+  localidadesIniciales,
+}: {
+  perfil: Perfil
+  email: string
+  provincias: ProvinciaOption[]
+  localidadesIniciales: SelectOption[]
+}) {
   const [state, action, pending] = useActionState(actualizarPerfilPostulante, initialState)
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
 
@@ -60,6 +74,16 @@ export function PerfilPostulanteForm({ perfil, email }: { perfil: Perfil; email:
           status={fieldErrors.nombre_completo ? 'error' : 'default'}
         />
       </Field>
+
+      <UbicacionSelector
+        provincias={provincias}
+        defaultProvinciaId={perfil?.provincia_id ?? undefined}
+        defaultLocalidadId={perfil?.localidad_id ?? undefined}
+        defaultLocalidades={localidadesIniciales}
+        required
+        provinciaError={fieldErrors.provincia_id?.[0]}
+        localidadError={fieldErrors.localidad_id?.[0]}
+      />
 
       <Field
         label="Teléfono"

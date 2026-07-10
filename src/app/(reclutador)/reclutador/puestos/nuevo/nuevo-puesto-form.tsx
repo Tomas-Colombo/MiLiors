@@ -1,24 +1,29 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { Field, Input, Textarea, Select, Button, Alert } from '@/components/ui'
+import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { publicarPuesto } from '@/modules/puestos/actions'
-import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
+import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
 
 type Props = {
   sectores: { id: string; nombre_sector: string }[]
+  provincias: ProvinciaOption[]
 }
 
 // publicarPuesto returns ActionResult<{ puestoId: string }> — match the generic
 const initialState: ActionResult<{ puestoId: string }> = { success: false, error: '' }
 
-export function NuevoPuestoForm({ sectores }: Props) {
+export function NuevoPuestoForm({ sectores, provincias }: Props) {
   const [state, action, isPending] = useActionState(publicarPuesto, initialState)
+  const [modalidad, setModalidad] = useState('')
 
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
+  // La ubicación se pide siempre salvo que la modalidad sea remota.
+  const ubicacionAplica = modalidad !== UBICACION.REMOTO
 
   const sectorOptions = [
     { value: '', label: 'Sin sector' },
@@ -117,7 +122,8 @@ export function NuevoPuestoForm({ sectores }: Props) {
             name="ubicacion"
             options={ubicacionOptions}
             placeholder="Seleccioná la modalidad"
-            defaultValue=""
+            value={modalidad}
+            onChange={(e) => setModalidad(e.target.value)}
           />
         </Field>
 
@@ -134,6 +140,16 @@ export function NuevoPuestoForm({ sectores }: Props) {
           />
         </Field>
       </div>
+
+      {/* Ubicación geográfica: solo si la modalidad no es remota */}
+      {ubicacionAplica && (
+        <UbicacionSelector
+          provincias={provincias}
+          required
+          provinciaError={fieldErrors.provincia_id?.[0]}
+          localidadError={fieldErrors.localidad_id?.[0]}
+        />
+      )}
 
       <Field
         label="Perfil psicológico deseado"

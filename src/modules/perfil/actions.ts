@@ -24,6 +24,8 @@ export async function actualizarPerfilPostulante(
 
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
+    provincia_id: formData.get('provincia_id') || '',
+    localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
     especificidad_puesto: formData.get('especificidad_puesto') || undefined,
     enlace_linkedin: normalizeUrl(formData.get('enlace_linkedin')),
@@ -55,6 +57,8 @@ export async function actualizarPerfilPostulante(
   const { error } = await (supabase.from('perfil_postulante') as any)
     .update({
       nombre_completo: parsed.data.nombre_completo,
+      provincia_id: parsed.data.provincia_id,
+      localidad_id: parsed.data.localidad_id,
       telefono: parsed.data.telefono || null,
       especificidad_puesto: parsed.data.especificidad_puesto || null,
       enlace_linkedin: parsed.data.enlace_linkedin || null,

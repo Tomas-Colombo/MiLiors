@@ -99,6 +99,14 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
               </dd>
             </div>
             <div>
+              <dt className="text-muted">Ubicación</dt>
+              <dd className="font-medium text-ink">
+                {puesto.nombre_localidad
+                  ? [puesto.nombre_localidad, puesto.nombre_provincia].filter(Boolean).join(', ')
+                  : '—'}
+              </dd>
+            </div>
+            <div>
               <dt className="text-muted">Idioma requerido</dt>
               <dd className="font-medium text-ink">{puesto.idioma}</dd>
             </div>

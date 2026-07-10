@@ -17,10 +17,14 @@ export type PuestoItem = {
   fecha_baja_puesto: string | null
   empresa_id: string
   sector_id: string | null
+  provincia_id: string | null
+  localidad_id: string | null
   reclutador_id?: string | null
   // perfil_psicologico_deseado is intentionally excluded from the public type
   nombre_empresa?: string
   nombre_sector?: string
+  nombre_provincia?: string | null
+  nombre_localidad?: string | null
 }
 
 export type PuestoConContacto = PuestoItem & {
@@ -46,8 +50,9 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, perfil_psicologico_deseado,
-      empresa(nombre_empresa), sector_industrial(nombre_sector)
+      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      provincia(nombre), localidad(nombre)
     `)
     .eq('reclutador_id', (reclutador as { id: string }).id)
     .is('fecha_baja_puesto', null)
@@ -60,9 +65,12 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
       empresa_id: string; sector_id: string | null
+      provincia_id: string | null; localidad_id: string | null
       perfil_psicologico_deseado: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
+      provincia: { nombre: string } | null
+      localidad: { nombre: string } | null
     }
     return {
       id: r.id,
@@ -77,9 +85,13 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       fecha_baja_puesto: r.fecha_baja_puesto,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
+      provincia_id: r.provincia_id,
+      localidad_id: r.localidad_id,
       perfil_psicologico_deseado: r.perfil_psicologico_deseado,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
+      nombre_provincia: r.provincia?.nombre ?? null,
+      nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
 })
@@ -104,8 +116,9 @@ export const getPuestoById = cache(async (
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, perfil_psicologico_deseado,
-      empresa(nombre_empresa), sector_industrial(nombre_sector)
+      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      provincia(nombre), localidad(nombre)
     `)
     .eq('id', puestoId)
     .eq('reclutador_id', (reclutador as { id: string }).id)
@@ -120,9 +133,12 @@ export const getPuestoById = cache(async (
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
     empresa_id: string; sector_id: string | null
+    provincia_id: string | null; localidad_id: string | null
     perfil_psicologico_deseado: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
+    provincia: { nombre: string } | null
+    localidad: { nombre: string } | null
   }
 
   return {
@@ -138,9 +154,13 @@ export const getPuestoById = cache(async (
     fecha_baja_puesto: r.fecha_baja_puesto,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
+    provincia_id: r.provincia_id,
+    localidad_id: r.localidad_id,
     perfil_psicologico_deseado: r.perfil_psicologico_deseado,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
+    nombre_provincia: r.provincia?.nombre ?? null,
+    nombre_localidad: r.localidad?.nombre ?? null,
   }
 })
 
@@ -211,6 +231,8 @@ export const getPuestosActivos = async (filtros?: {
   sectorId?: string
   cargaHoraria?: string
   ubicacion?: string
+  provinciaId?: string
+  localidadId?: string
   busqueda?: string
   diasDesde?: number
   page?: number
@@ -229,8 +251,9 @@ export const getPuestosActivos = async (filtros?: {
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id,
-      empresa(nombre_empresa), sector_industrial(nombre_sector)
+      empresa_id, sector_id, provincia_id, localidad_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      provincia(nombre), localidad(nombre)
     `, { count: 'exact' })
     .eq('activo', true)
     .is('fecha_baja_puesto', null)
@@ -240,6 +263,8 @@ export const getPuestosActivos = async (filtros?: {
   if (filtros?.sectorId) query = query.eq('sector_id', filtros.sectorId)
   if (filtros?.cargaHoraria) query = query.eq('carga_horaria', filtros.cargaHoraria)
   if (filtros?.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
+  if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
+  if (filtros?.localidadId) query = query.eq('localidad_id', filtros.localidadId)
   if (filtros?.busqueda) query = query.ilike('titulo_puesto', `%${filtros.busqueda}%`)
   if (filtros?.diasDesde) {
     const since = new Date()
@@ -264,8 +289,11 @@ export const getPuestosActivos = async (filtros?: {
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
       empresa_id: string; sector_id: string | null
+      provincia_id: string | null; localidad_id: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
+      provincia: { nombre: string } | null
+      localidad: { nombre: string } | null
     }
     return {
       id: r.id,
@@ -280,8 +308,12 @@ export const getPuestosActivos = async (filtros?: {
       fecha_baja_puesto: r.fecha_baja_puesto,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
+      provincia_id: r.provincia_id,
+      localidad_id: r.localidad_id,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
+      nombre_provincia: r.provincia?.nombre ?? null,
+      nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
 
@@ -297,8 +329,9 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, reclutador_id,
-      empresa(nombre_empresa), sector_industrial(nombre_sector)
+      empresa_id, sector_id, reclutador_id, provincia_id, localidad_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      provincia(nombre), localidad(nombre)
     `)
     .eq('id', puestoId)
     .maybeSingle()
@@ -311,8 +344,11 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
     empresa_id: string; sector_id: string | null; reclutador_id: string | null
+    provincia_id: string | null; localidad_id: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
+    provincia: { nombre: string } | null
+    localidad: { nombre: string } | null
   }
 
   return {
@@ -329,8 +365,12 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
     reclutador_id: r.reclutador_id,
+    provincia_id: r.provincia_id,
+    localidad_id: r.localidad_id,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
+    nombre_provincia: r.provincia?.nombre ?? null,
+    nombre_localidad: r.localidad?.nombre ?? null,
   }
 })
 

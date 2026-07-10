@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { Field, Input, Textarea, Select, Button, Alert } from '@/components/ui'
+import type { SelectOption } from '@/components/ui/select'
+import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { editarPuesto } from '@/modules/puestos/actions'
-import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
+import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
 import type { FormularioPreselector } from '@/modules/preselector/queries'
@@ -17,16 +19,20 @@ type Props = {
   formularioPreselector: FormularioPreselector | null
   /** true cuando el formulario ya tiene respuestas de postulantes y no se puede modificar. */
   formularioBloqueado?: boolean
+  provincias: ProvinciaOption[]
+  localidadesIniciales: SelectOption[]
 }
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function EditarPuestoForm({ puestoId, puesto, sectores, formularioPreselector, formularioBloqueado }: Props) {
+export function EditarPuestoForm({ puestoId, puesto, sectores, formularioPreselector, formularioBloqueado, provincias, localidadesIniciales }: Props) {
   // editarPuesto signature is (puestoId, prevState, formData) — bind the id
   const boundAction = editarPuesto.bind(null, puestoId)
   const [state, action, isPending] = useActionState(boundAction, initialState)
+  const [modalidad, setModalidad] = useState(puesto.ubicacion)
 
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
+  const ubicacionAplica = modalidad !== UBICACION.REMOTO
 
   const sectorOptions = [
     { value: '', label: 'Sin sector' },
@@ -121,7 +127,8 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, formularioPresele
             id="ubicacion"
             name="ubicacion"
             options={ubicacionOptions}
-            defaultValue={puesto.ubicacion}
+            value={modalidad}
+            onChange={(e) => setModalidad(e.target.value)}
           />
         </Field>
 
@@ -139,6 +146,19 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, formularioPresele
           />
         </Field>
       </div>
+
+      {/* Ubicación geográfica: solo si la modalidad no es remota */}
+      {ubicacionAplica && (
+        <UbicacionSelector
+          provincias={provincias}
+          defaultProvinciaId={puesto.provincia_id ?? undefined}
+          defaultLocalidadId={puesto.localidad_id ?? undefined}
+          defaultLocalidades={localidadesIniciales}
+          required
+          provinciaError={fieldErrors.provincia_id?.[0]}
+          localidadError={fieldErrors.localidad_id?.[0]}
+        />
+      )}
 
       <Field
         label="Perfil psicológico deseado"

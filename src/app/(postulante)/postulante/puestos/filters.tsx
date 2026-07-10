@@ -13,6 +13,8 @@ const TIEMPO_OPTIONS = [
 ]
 
 type Sector = { id: string; nombre_sector: string }
+type Provincia = { id: string; nombre: string }
+type Localidad = { value: string; label: string }
 
 function pill(active: boolean) {
   return [
@@ -23,7 +25,15 @@ function pill(active: boolean) {
   ].join(' ')
 }
 
-export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
+export function PuestosFilters({
+  sectores,
+  provincias,
+  localidades,
+}: {
+  sectores: Sector[]
+  provincias: Provincia[]
+  localidades: Localidad[]
+}) {
   const sp = useSearchParams()
   const router = useRouter()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -33,6 +43,16 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
     const params = new URLSearchParams(sp.toString())
     if (value) params.set(key, value)
     else params.delete(key)
+    params.delete('page')
+    router.replace(`/postulante/puestos?${params.toString()}`)
+  }
+
+  // Al cambiar de provincia se limpia la localidad (depende de la provincia).
+  function updateProvincia(value: string) {
+    const params = new URLSearchParams(sp.toString())
+    if (value) params.set('provincia', value)
+    else params.delete('provincia')
+    params.delete('localidad')
     params.delete('page')
     router.replace(`/postulante/puestos?${params.toString()}`)
   }
@@ -52,9 +72,11 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
   const sector = sp.get('sector') ?? ''
   const carga = sp.get('carga_horaria') ?? ''
   const ubicacion = sp.get('ubicacion') ?? ''
+  const provincia = sp.get('provincia') ?? ''
+  const localidad = sp.get('localidad') ?? ''
   // "postulacion" defaults to "no_postulados" server-side, so we treat missing param as that value.
   const postulacion = sp.get('postulacion') ?? 'no_postulados'
-  const hasFilters = !!(q || dias || sector || carga || ubicacion || sp.get('postulacion'))
+  const hasFilters = !!(q || dias || sector || carga || ubicacion || provincia || localidad || sp.get('postulacion'))
 
   return (
     <div className="space-y-5">
@@ -160,6 +182,57 @@ export function PuestosFilters({ sectores }: { sectores: Sector[] }) {
                     {label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Provincia */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                Provincia
+              </p>
+              <div className="relative">
+                <select
+                  value={provincia}
+                  onChange={(e) => updateProvincia(e.target.value)}
+                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
+                >
+                  <option value="">Todas las provincias</option>
+                  {provincias.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
+                  ▾
+                </span>
+              </div>
+            </div>
+
+            {/* Localidad (depende de la provincia) */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                Localidad
+              </p>
+              <div className="relative">
+                <select
+                  value={localidad}
+                  onChange={(e) => update('localidad', e.target.value)}
+                  disabled={!provincia}
+                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400"
+                >
+                  <option value="">
+                    {provincia ? 'Todas las localidades' : 'Elegí una provincia'}
+                  </option>
+                  {localidades.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
+                  ▾
+                </span>
               </div>
             </div>
 

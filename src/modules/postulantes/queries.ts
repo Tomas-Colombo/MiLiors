@@ -12,6 +12,8 @@ export type PostulanteCard = {
   eneatipo_numero: number | null
   eneatipo_nombre: string | null
   competencias: { nombre: string }[]
+  nombre_provincia: string | null
+  nombre_localidad: string | null
 }
 
 export type PostulanteDetalle = PostulanteCard & {
@@ -39,6 +41,8 @@ export type PostulanteDetalle = PostulanteCard & {
 export const buscarPostulantes = cache(async (filtros?: {
   competenciaId?: string
   busqueda?: string
+  provinciaId?: string
+  localidadId?: string
 }): Promise<PostulanteCard[]> => {
   const supabase = await createClient()
 
@@ -47,7 +51,8 @@ export const buscarPostulantes = cache(async (filtros?: {
   let query: any = supabase
     .from('perfil_postulante')
     .select(`
-      id, nombre_completo, especificidad_puesto, perfil_en_busqueda,
+      id, nombre_completo, especificidad_puesto, perfil_en_busqueda, provincia_id, localidad_id,
+      provincia(nombre), localidad(nombre),
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
     .eq('perfil_en_busqueda', true)
@@ -55,6 +60,8 @@ export const buscarPostulantes = cache(async (filtros?: {
   if (filtros?.busqueda) {
     query = query.ilike('nombre_completo', `%${filtros.busqueda}%`)
   }
+  if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
+  if (filtros?.localidadId) query = query.eq('localidad_id', filtros.localidadId)
 
   const { data: postulantes } = await query
 
@@ -94,6 +101,8 @@ export const buscarPostulantes = cache(async (filtros?: {
       nombre_completo: string
       especificidad_puesto: string | null
       perfil_en_busqueda: boolean
+      provincia: { nombre: string } | null
+      localidad: { nombre: string } | null
       test_eneagrama: {
         tiene_empate_dominante: boolean
         test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
@@ -108,6 +117,8 @@ export const buscarPostulantes = cache(async (filtros?: {
       eneatipo_numero: primerDominante?.numero_eneatipo ?? null,
       eneatipo_nombre: primerDominante?.nombre ?? null,
       competencias: (competenciasPorPostulante[r.id] ?? []).map((c) => ({ nombre: c.nombre })),
+      nombre_provincia: r.provincia?.nombre ?? null,
+      nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
 })
@@ -155,7 +166,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     .select(`
       id, nombre_completo, especificidad_puesto, perfil_en_busqueda,
       telefono, enlace_linkedin, portfolio, ultima_conexion,
-      usuario(email),
+      usuario(email), provincia(nombre), localidad(nombre),
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
     .eq('id', postulanteId)
@@ -173,6 +184,8 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     portfolio: string | null
     ultima_conexion: string | null
     usuario: { email: string } | null
+    provincia: { nombre: string } | null
+    localidad: { nombre: string } | null
     test_eneagrama: {
       tiene_empate_dominante: boolean
       test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
@@ -259,6 +272,8 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     eneatipo_numero: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ?? null,
     eneatipo_nombre: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,
     competencias,
+    nombre_provincia: p.provincia?.nombre ?? null,
+    nombre_localidad: p.localidad?.nombre ?? null,
     email: contactoLiberado ? (p.usuario?.email ?? null) : null,
     telefono: contactoLiberado ? p.telefono : null,
     enlace_linkedin: contactoLiberado ? p.enlace_linkedin : null,
