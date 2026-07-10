@@ -4,6 +4,7 @@ import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card } from '@/components/ui'
 import { ChevronLeftIcon } from '@/components/icons'
 import { getPuestoById, getSectores } from '@/modules/puestos/queries'
+import { getFormularioDePuesto, formularioTieneRespuestas } from '@/modules/preselector/queries'
 import { EditarPuestoForm } from './editar-puesto-form'
 
 export const metadata = { title: 'Editar puesto — TalentID' }
@@ -14,7 +15,12 @@ type Params = Promise<{ id: string }>
 export default async function EditarPuestoPage({ params }: { params: Params }) {
   const { id } = await params
 
-  const [puesto, sectores] = await Promise.all([getPuestoById(id), getSectores()])
+  const [puesto, sectores, formularioPreselector, formularioBloqueado] = await Promise.all([
+    getPuestoById(id),
+    getSectores(),
+    getFormularioDePuesto(id),
+    formularioTieneRespuestas(id),
+  ])
   if (!puesto) notFound()
 
   return (
@@ -34,7 +40,13 @@ export default async function EditarPuestoPage({ params }: { params: Params }) {
         </div>
 
         <Card>
-          <EditarPuestoForm puestoId={id} puesto={puesto} sectores={sectores} />
+          <EditarPuestoForm
+            puestoId={id}
+            puesto={puesto}
+            sectores={sectores}
+            formularioPreselector={formularioPreselector}
+            formularioBloqueado={formularioBloqueado}
+          />
         </Card>
       </div>
     </TyCGate>

@@ -96,5 +96,6 @@ export async function eliminarNota(notaId: string, postulanteId: string): Promis
 
   if (error) return { success: false, error: 'No se pudo eliminar la nota.' }
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
+  revalidatePath('/reclutador/notas')
   return { success: true, data: undefined }
 }

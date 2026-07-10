@@ -7,16 +7,21 @@ import { editarPuesto } from '@/modules/puestos/actions'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
+import type { FormularioPreselector } from '@/modules/preselector/queries'
+import { FormularioPreselectorEditor } from '../../formulario-preselector-editor'
 
 type Props = {
   puestoId: string
   puesto: PuestoItem & { perfil_psicologico_deseado: string | null }
   sectores: { id: string; nombre_sector: string }[]
+  formularioPreselector: FormularioPreselector | null
+  /** true cuando el formulario ya tiene respuestas de postulantes y no se puede modificar. */
+  formularioBloqueado?: boolean
 }
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function EditarPuestoForm({ puestoId, puesto, sectores }: Props) {
+export function EditarPuestoForm({ puestoId, puesto, sectores, formularioPreselector, formularioBloqueado }: Props) {
   // editarPuesto signature is (puestoId, prevState, formData) — bind the id
   const boundAction = editarPuesto.bind(null, puestoId)
   const [state, action, isPending] = useActionState(boundAction, initialState)
@@ -150,6 +155,14 @@ export function EditarPuestoForm({ puestoId, puesto, sectores }: Props) {
           status={fieldErrors.perfil_psicologico_deseado ? 'error' : 'default'}
         />
       </Field>
+
+      <div className="border-t border-neutral-100 pt-5">
+        <FormularioPreselectorEditor
+          initialFormulario={formularioPreselector}
+          fieldErrors={fieldErrors}
+          readOnly={formularioBloqueado}
+        />
+      </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <Link

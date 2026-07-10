@@ -9,6 +9,7 @@ import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosNotas } from './filtros-notas'
 import { NotaContenido } from './nota-contenido'
+import { EliminarNotaBtn } from './eliminar-nota-btn'
 
 export const metadata = { title: 'Mis notas — TalentID' }
 
@@ -193,15 +194,18 @@ function NotaCard({
   return (
     <Card>
       <div className="space-y-3">
-        {/* Candidate link */}
-        <Link
-          href={`/reclutador/postulantes/${nota.postulante_id}`}
-          className={`text-[15px] font-semibold hover:underline ${
-            isDeleted ? 'text-muted' : 'text-primary-600'
-          }`}
-        >
-          {candidatoNombre}
-        </Link>
+        {/* Candidate link + delete */}
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            href={`/reclutador/postulantes/${nota.postulante_id}`}
+            className={`text-[15px] font-semibold hover:underline ${
+              isDeleted ? 'text-muted' : 'text-primary-600'
+            }`}
+          >
+            {candidatoNombre}
+          </Link>
+          <EliminarNotaBtn notaId={nota.id} postulanteId={nota.postulante_id} />
+        </div>
 
         {/* Note content */}
         <NotaContenido contenido={nota.contenido} />

@@ -11,6 +11,7 @@ export type TipoEnergeticoHD = Database['public']['Enums']['tipo_energetico_hd']
 export type PerfilHD = Database['public']['Enums']['perfil_hd']
 export type AutoridadHD = Database['public']['Enums']['autoridad_hd']
 export type EstrategiaHD = Database['public']['Enums']['estrategia_hd']
+export type TipoPreguntaPreselector = Database['public']['Enums']['tipo_pregunta_preselector']
 
 // Session payload (lo que vive en el token/cookie de Supabase Auth)
 export type SessionUser = {

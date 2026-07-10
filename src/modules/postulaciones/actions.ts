@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { ActionResult } from '@/lib/types/domain'
-import { ESTADO_POSTULACION_LABEL } from '@/lib/constants/enums'
+import { ESTADO_POSTULACION_LABEL, TIPO_PREGUNTA_PRESELECTOR } from '@/lib/constants/enums'
+import { getFormularioDePuesto } from '@/modules/preselector/queries'
+import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/preselector/evaluador'
 
 // Helper: send email via Resend (no SDK — native fetch)
 async function enviarEmailCambioEstado(
@@ -80,20 +82,21 @@ async function getDatosEmail(postulacionId: string) {
   }
 }
 
-export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
-  const session = await verifySession()
-  const supabase = await createClient()
-
+// Helper: resolve the current applicant's profile and verify their certificate
+// is valid (present and non-stale). Shared by both application flows.
+async function verificarPostulanteConCertificado(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  usuarioId: string,
+): Promise<{ ok: true; postulanteId: string } | { ok: false; error: string }> {
   const { data: postulante } = await supabase
     .from('perfil_postulante')
     .select('id')
-    .eq('usuario_id', session.id)
+    .eq('usuario_id', usuarioId)
     .single()
 
-  if (!postulante) return { success: false, error: 'Perfil no encontrado.' }
+  if (!postulante) return { ok: false, error: 'Perfil no encontrado.' }
 
   const postulanteId = (postulante as { id: string }).id
-  const admin = createAdminClient()
 
   // Guard: must have a valid (non-stale) certificate to apply
   const { data: cert } = await supabase
@@ -105,15 +108,34 @@ export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
     .single()
 
   if (!cert) {
-    return { success: false, error: 'Necesitás generar tu certificado de perfil antes de postularte.' }
+    return { ok: false, error: 'Necesitás generar tu certificado de perfil antes de postularte.' }
   }
   if ((cert as { desactualizado: boolean }).desactualizado) {
-    return { success: false, error: 'Tu certificado está desactualizado. Generá uno nuevo antes de postularte.' }
+    return { ok: false, error: 'Tu certificado está desactualizado. Generá uno nuevo antes de postularte.' }
   }
+
+  return { ok: true, postulanteId }
+}
+
+export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const guard = await verificarPostulanteConCertificado(supabase, session.id)
+  if (!guard.ok) return { success: false, error: guard.error }
+
+  // Guard: a puesto with a pre-screening form can only be applied to via
+  // postularAPuestoConFormulario (the form cannot be bypassed).
+  const formulario = await getFormularioDePuesto(puestoId)
+  if (formulario) {
+    return { success: false, error: 'Este puesto requiere completar el formulario de preselección para postularte.' }
+  }
+
+  const admin = createAdminClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (admin.from('postulacion') as any).insert({
-    postulante_id: postulanteId,
+    postulante_id: guard.postulanteId,
     puesto_id: puestoId,
     estado: 'ENVIADA',
   })
@@ -126,6 +148,116 @@ export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
   revalidatePath('/postulante/puestos')
   revalidatePath('/postulante/postulaciones')
   return { success: true, data: undefined }
+}
+
+export async function postularAPuestoConFormulario(
+  puestoId: string,
+  _prevState: ActionResult<{ descartada: boolean }>,
+  formData: FormData,
+): Promise<ActionResult<{ descartada: boolean }>> {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const guard = await verificarPostulanteConCertificado(supabase, session.id)
+  if (!guard.ok) return { success: false, error: guard.error }
+
+  // The question set is always loaded server-side — never trusted from the client.
+  const formulario = await getFormularioDePuesto(puestoId)
+  if (!formulario || formulario.preguntas.length === 0) {
+    return { success: false, error: 'Este puesto no tiene formulario de preselección.' }
+  }
+
+  // Every question must be answered; option answers must reference an option
+  // belonging to that question.
+  const respuestas: { preguntaId: string; opcionId: string | null; textoLibre: string | null }[] = []
+  const fieldErrors: Record<string, string[]> = {}
+
+  for (const pregunta of formulario.preguntas) {
+    const raw = formData.get(`respuesta_${pregunta.id}`)
+    const valor = typeof raw === 'string' ? raw.trim() : ''
+
+    if (!valor) {
+      fieldErrors[`respuesta_${pregunta.id}`] = ['Respondé esta pregunta.']
+      continue
+    }
+
+    if (pregunta.tipo === TIPO_PREGUNTA_PRESELECTOR.OPCIONES) {
+      const opcion = pregunta.opciones.find((o) => o.id === valor)
+      if (!opcion) {
+        fieldErrors[`respuesta_${pregunta.id}`] = ['Seleccioná una opción válida.']
+        continue
+      }
+      respuestas.push({ preguntaId: pregunta.id, opcionId: opcion.id, textoLibre: null })
+    } else {
+      respuestas.push({ preguntaId: pregunta.id, opcionId: null, textoLibre: valor })
+    }
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { success: false, error: 'Respondé todas las preguntas del formulario.', fieldErrors }
+  }
+
+  const admin = createAdminClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: postulacion, error } = await (admin.from('postulacion') as any)
+    .insert({
+      postulante_id: guard.postulanteId,
+      puesto_id: puestoId,
+      estado: 'ENVIADA',
+    })
+    .select('id')
+    .single()
+
+  if (error || !postulacion) {
+    if (error?.code === '23505') return { success: false, error: 'Ya postulaste a este puesto.' }
+    return { success: false, error: 'No se pudo registrar la postulación.' }
+  }
+
+  const postulacionId = (postulacion as { id: string }).id
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: respuestasError } = await (admin.from('respuesta_preselector') as any).insert(
+    respuestas.map((r) => ({
+      postulacion_id: postulacionId,
+      pregunta_id: r.preguntaId,
+      opcion_id: r.opcionId,
+      texto_libre: r.textoLibre,
+    }))
+  )
+
+  if (respuestasError) {
+    // No transactions in supabase-js: best-effort cleanup of the orphan postulacion
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('postulacion') as any).delete().eq('id', postulacionId)
+    return { success: false, error: 'No se pudieron guardar tus respuestas. Intentá de nuevo.' }
+  }
+
+  const evaluacion = evaluarRespuestasCriticas(
+    formulario.preguntas.map((p) => ({
+      id: p.id,
+      texto: p.texto,
+      esCritica: p.esCritica,
+      opciones: p.opciones.map((o) => ({ id: o.id, esValida: o.esValida })),
+    })),
+    respuestas.map((r) => ({ preguntaId: r.preguntaId, opcionId: r.opcionId })),
+  )
+
+  let descartada = false
+  if (!evaluacion.aprobado) {
+    descartada = true
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('postulacion') as any)
+      .update({
+        estado: 'PROCESO_FINALIZADO',
+        motivo_descarte: construirMotivoDescarte(evaluacion.preguntasFalladas),
+      })
+      .eq('id', postulacionId)
+  }
+
+  revalidatePath('/postulante/puestos')
+  revalidatePath('/postulante/postulaciones')
+  return { success: true, data: { descartada } }
 }
 
 export async function avanzarEstadoPostulacion(

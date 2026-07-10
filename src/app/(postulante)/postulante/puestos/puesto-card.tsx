@@ -7,9 +7,10 @@ import type { PuestoItem } from '@/modules/puestos/queries'
 type Props = {
   puesto: PuestoItem
   actions: React.ReactNode
+  tieneFormulario?: boolean
 }
 
-export function PuestoCard({ puesto, actions }: Props) {
+export function PuestoCard({ puesto, actions, tieneFormulario }: Props) {
   return (
     <Card padding="md" className="flex flex-col gap-3 h-full">
       {/* Cabecera */}
@@ -38,6 +39,9 @@ export function PuestoCard({ puesto, actions }: Props) {
         )}
         {puesto.nivel_experiencia && (
           <Badge tone="neutral">{puesto.nivel_experiencia}</Badge>
+        )}
+        {tieneFormulario && (
+          <Badge tone="info">Con formulario de preselección</Badge>
         )}
       </div>
 

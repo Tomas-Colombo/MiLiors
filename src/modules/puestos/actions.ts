@@ -7,6 +7,8 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { puestoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
+import { parseFormularioPreselectorField } from '@/modules/preselector/schema'
+import { persistirFormularioPreselector, eliminarFormularioPreselector } from '@/modules/preselector/service'
 
 /**
  * Contratación opcional al cerrar/eliminar un puesto.
@@ -195,6 +197,15 @@ export async function publicarPuesto(
     }
   }
 
+  const formulario = parseFormularioPreselectorField(formData.get('formulario_preselector'))
+  if (formulario.kind === 'invalid') {
+    return {
+      success: false,
+      error: formulario.error,
+      fieldErrors: formulario.fieldErrors ?? { formulario_preselector: [formulario.error] },
+    }
+  }
+
   const admin = createAdminClient()
   const puestoId = crypto.randomUUID()
 
@@ -209,6 +220,11 @@ export async function publicarPuesto(
   })
 
   if (error) return { success: false, error: 'No se pudo publicar el puesto.' }
+
+  if (formulario.kind === 'valid') {
+    const resultado = await persistirFormularioPreselector(admin, puestoId, formulario.data)
+    if (!resultado.ok) return { success: false, error: resultado.error }
+  }
 
   await registrarApertura(puestoId, ctx.empresaId, parsed.data.titulo_puesto)
 
@@ -243,14 +259,41 @@ export async function editarPuesto(
     }
   }
 
+  const formulario = parseFormularioPreselectorField(formData.get('formulario_preselector'))
+  if (formulario.kind === 'invalid') {
+    return {
+      success: false,
+      error: formulario.error,
+      fieldErrors: formulario.fieldErrors ?? { formulario_preselector: [formulario.error] },
+    }
+  }
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('puesto') as any)
+  const { data: actualizados, error } = await (supabase.from('puesto') as any)
     .update({ ...parsed.data, sector_id: parsed.data.sector_id || null })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
+    .select('id')
 
   if (error) return { success: false, error: 'No se pudo actualizar el puesto.' }
+  // Zero matched rows means the puesto belongs to another recruiter (or does not
+  // exist); the admin-client form persistence below bypasses RLS, so ownership
+  // must be proven here before touching the formulario.
+  if (!actualizados || actualizados.length === 0) {
+    return { success: false, error: 'No autorizado.' }
+  }
+
+  if (formulario.kind === 'valid') {
+    const admin = createAdminClient()
+    const resultado = await persistirFormularioPreselector(admin, puestoId, formulario.data)
+    if (!resultado.ok) return { success: false, error: resultado.error }
+  } else if (formulario.kind === 'empty') {
+    const admin = createAdminClient()
+    const resultado = await eliminarFormularioPreselector(admin, puestoId)
+    if (!resultado.ok) return { success: false, error: resultado.error }
+  }
+
   revalidatePath(`/reclutador/puestos/${puestoId}`)
   revalidatePath('/reclutador/puestos')
   return { success: true, data: undefined }

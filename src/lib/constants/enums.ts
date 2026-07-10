@@ -190,6 +190,16 @@ export const IDIOMAS_COMUNES = [
   'Otro',
 ] as const
 
+export const TIPO_PREGUNTA_PRESELECTOR = {
+  OPCIONES: 'OPCIONES',
+  TEXTO_LIBRE: 'TEXTO_LIBRE',
+} as const
+
+export const TIPO_PREGUNTA_PRESELECTOR_LABEL: Record<string, string> = {
+  OPCIONES: 'Opciones',
+  TEXTO_LIBRE: 'Texto libre',
+}
+
 // Rutas por rol (para uso en proxy y redirecciones)
 export const RUTAS_POR_ROL: Record<string, string> = {
   ADMIN: '/admin',

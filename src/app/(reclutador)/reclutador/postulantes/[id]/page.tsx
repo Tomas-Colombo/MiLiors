@@ -29,6 +29,10 @@ import { getPostulanteDetalle, getNotasPrivadas } from '@/modules/postulantes/qu
 import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { INFORME_SECTION_LABELS, INFORME_SECTION_ORDER } from '@/lib/types/informe'
+import { verifySession } from '@/lib/dal'
+import { createClient } from '@/lib/supabase/server'
+import { getFormularioDePuesto, getRespuestasDePostulacion } from '@/modules/preselector/queries'
+import { evaluarRespuestasCriticas } from '@/modules/preselector/evaluador'
 import { NotasPanel } from './notas-panel'
 
 // The informe is stored as a JSON string with the InformeJSON shape.
@@ -76,16 +80,77 @@ export default async function PostulanteDetallePage({
     getNotasPrivadas(id),
   ])
 
-  // Auto-mark as VISTO when the recruiter opens the profile from the applications list
+  // Postulación-scoped data (motivo de descarte + respuestas del formulario preselector).
+  // Guarded by ownership: the postulación must belong to this applicant AND to a job post
+  // owned by the current recruiter — otherwise an arbitrary ?postulacion= id could leak
+  // another candidate's confidential answers.
+  let motivoDescarte: string | null = null
+  let respuestasFormulario: { preguntaTexto: string; respuestaTexto: string; fallidaCritica: boolean }[] = []
+
   if (postulacionId) {
+    const session = await verifySession()
+    const supabase = await createClient()
     const admin = (await import('@/lib/supabase/server-admin')).createAdminClient()
-    const { data: p } = await admin
-      .from('postulacion')
-      .select('estado')
-      .eq('id', postulacionId)
+
+    const { data: reclutador } = await supabase
+      .from('perfil_reclutador')
+      .select('id')
+      .eq('usuario_id', session.id)
       .single()
-    if (p && (p as { estado: string }).estado === ESTADO_POSTULACION.ENVIADA) {
-      await avanzarEstadoPostulacion(postulacionId, 'VISTO')
+
+    if (reclutador) {
+      const reclutadorId = (reclutador as { id: string }).id
+      const { data: p } = await admin
+        .from('postulacion')
+        .select('estado, motivo_descarte, puesto_id, postulante_id, puesto(reclutador_id)')
+        .eq('id', postulacionId)
+        .maybeSingle()
+
+      if (p) {
+        const row = p as {
+          estado: string
+          motivo_descarte: string | null
+          puesto_id: string
+          postulante_id: string
+          puesto: { reclutador_id: string | null } | null
+        }
+        const pertenece = row.postulante_id === id && row.puesto?.reclutador_id === reclutadorId
+
+        if (pertenece) {
+          motivoDescarte = row.motivo_descarte
+
+          // Auto-mark as VISTO when the recruiter opens the profile from the applications list
+          if (row.estado === ESTADO_POSTULACION.ENVIADA) {
+            await avanzarEstadoPostulacion(postulacionId, 'VISTO')
+          }
+
+          const [formulario, respuestas] = await Promise.all([
+            getFormularioDePuesto(row.puesto_id),
+            getRespuestasDePostulacion(postulacionId),
+          ])
+
+          if (formulario && respuestas.length > 0) {
+            const evaluacion = evaluarRespuestasCriticas(
+              formulario.preguntas.map((preg) => ({
+                id: preg.id,
+                texto: preg.texto,
+                esCritica: preg.esCritica,
+                opciones: preg.opciones.map((o) => ({ id: o.id, esValida: o.esValida })),
+              })),
+              respuestas.map((r) => ({ preguntaId: r.preguntaId, opcionId: r.opcionId })),
+            )
+            const falladas = new Set(
+              evaluacion.aprobado ? [] : evaluacion.preguntasFalladas.map((f) => f.preguntaId),
+            )
+
+            respuestasFormulario = respuestas.map((r) => ({
+              preguntaTexto: r.preguntaTexto,
+              respuestaTexto: r.opcionTexto ?? r.textoLibre ?? '—',
+              fallidaCritica: falladas.has(r.preguntaId),
+            }))
+          }
+        }
+      }
     }
   }
 
@@ -104,6 +169,13 @@ export default async function PostulanteDetallePage({
           <ChevronLeftIcon size={16} />
           {volver.label}
         </Link>
+
+        {/* Descarte automático por formulario preselector */}
+        {motivoDescarte && (
+          <Alert tone="error" title="Descartada automáticamente">
+            {motivoDescarte}
+          </Alert>
+        )}
 
         {/* Header card */}
         <Card>
@@ -179,6 +251,28 @@ export default async function PostulanteDetallePage({
                     <dd className="font-medium text-ink">{postulante.humanDesign.estrategia_hd}</dd>
                   </div>
                 </dl>
+              </Card>
+            )}
+
+            {/* Respuestas del formulario preselector */}
+            {respuestasFormulario.length > 0 && (
+              <Card>
+                <h2 className="text-[14px] font-bold text-ink mb-3">Respuestas del formulario preselector</h2>
+                <ul className="space-y-3">
+                  {respuestasFormulario.map((r, i) => (
+                    <li key={i} className="text-[13px]">
+                      <p className="font-semibold text-ink">{r.preguntaTexto}</p>
+                      <p className={r.fallidaCritica ? 'text-error' : 'text-ink-soft'}>
+                        {r.respuestaTexto}
+                        {r.fallidaCritica && (
+                          <Badge tone="error" className="ml-2 align-middle">
+                            Crítica no aprobada
+                          </Badge>
+                        )}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
               </Card>
             )}
 

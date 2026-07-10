@@ -10,6 +10,7 @@ import {
   PUESTOS_PER_PAGE,
 } from '@/modules/puestos/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
+import { getPuestosConFormulario } from '@/modules/preselector/queries'
 import { PostularButton } from './postular-button'
 import { PuestosFilters } from './filters'
 import { PuestoCard } from './puesto-card'
@@ -60,6 +61,8 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
     postulacion,
     postulacionIds,
   })
+
+  const puestosConFormulario = await getPuestosConFormulario(puestos.map((p) => p.id))
 
   const sinCertificado = !certificado
   const certDesactualizado = certificado?.desactualizado === true
@@ -118,11 +121,13 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
                 <PuestoCard
                   key={puesto.id}
                   puesto={puesto}
+                  tieneFormulario={puestosConFormulario.has(puesto.id)}
                   actions={
                     <PostularButton
                       puestoId={puesto.id}
                       yaPostulo={yaPostuladosSet.has(puesto.id)}
                       disabled={bloqueado}
+                      tieneFormulario={puestosConFormulario.has(puesto.id)}
                     />
                   }
                 />

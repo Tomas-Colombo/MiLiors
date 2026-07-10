@@ -461,7 +461,7 @@ export const getPostulacionesRecibidas = cache(async () => {
   const { data: postulaciones } = await admin
     .from('postulacion')
     .select(`
-      id, estado, is_favorito, fecha_postulacion, updated_at, postulante_id, puesto_id,
+      id, estado, is_favorito, fecha_postulacion, updated_at, postulante_id, puesto_id, motivo_descarte,
       puesto(id, titulo_puesto),
       perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
         usuario(email))
@@ -491,7 +491,7 @@ export const getPostulacionesRecibidas = cache(async () => {
     const r = row as {
       id: string; estado: string; is_favorito: boolean
       fecha_postulacion: string; updated_at: string
-      postulante_id: string; puesto_id: string
+      postulante_id: string; puesto_id: string; motivo_descarte: string | null
       puesto: { id: string; titulo_puesto: string } | null
       perfil_postulante: {
         id: string; nombre_completo: string
@@ -520,6 +520,7 @@ export const getPostulacionesRecibidas = cache(async () => {
       ultima_conexion: r.perfil_postulante?.ultima_conexion ?? null,
       contacto,
       tiene_nota: (notaCountMap.get(r.postulante_id) ?? 0) > 0,
+      motivo_descarte: r.motivo_descarte,
     }
   })
 })

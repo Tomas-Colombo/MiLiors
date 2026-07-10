@@ -6,6 +6,7 @@ import { Field, Input, Textarea, Select, Button, Alert } from '@/components/ui'
 import { publicarPuesto } from '@/modules/puestos/actions'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
+import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
 
 type Props = {
   sectores: { id: string; nombre_sector: string }[]
@@ -148,6 +149,10 @@ export function NuevoPuestoForm({ sectores }: Props) {
           status={fieldErrors.perfil_psicologico_deseado ? 'error' : 'default'}
         />
       </Field>
+
+      <div className="border-t border-neutral-100 pt-5">
+        <FormularioPreselectorEditor fieldErrors={fieldErrors} />
+      </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <Link

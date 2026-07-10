@@ -1,11 +1,13 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { Card, Badge, EmptyState } from '@/components/ui'
+import { Card, Badge, EmptyState, Tooltip } from '@/components/ui'
 import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon } from '@/components/icons'
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
+import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
+import { VerRespuestasBtn } from './ver-respuestas-btn'
 import { FavoritoToggle } from './favorito-toggle'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
 import { paginar } from '@/lib/pagination'
@@ -92,6 +94,9 @@ export default async function PostulacionesRecibidasPage({
 
   const { page, pageCount, slice } = paginar(filtered, pageParam)
 
+  // Only the visible page needs the "has preselector answers" flag for the button.
+  const conRespuestas = await getPostulacionesConRespuestas(slice.map((p) => p.id))
+
   return (
     <TyCGate>
       <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
@@ -143,6 +148,15 @@ export default async function PostulacionesRecibidasPage({
                       <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
                         {estadoLabel[p.estado] ?? p.estado}
                       </Badge>
+                      {/* Auto-discard indicator — motivo_descarte is only set by the
+                          preselector's automatic evaluation, never by a manual "Descartar" */}
+                      {p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO && p.motivo_descarte && (
+                        <Tooltip content={p.motivo_descarte}>
+                          <Badge tone="error" className="cursor-help">
+                            Descartada automáticamente
+                          </Badge>
+                        </Tooltip>
+                      )}
                       {/* Note indicator */}
                       {p.tiene_nota && (
                         <span
@@ -213,6 +227,9 @@ export default async function PostulacionesRecibidasPage({
                         <SparklesIcon size={14} />
                         Asistente IA
                       </Link>
+                      {conRespuestas.has(p.id) && (
+                        <VerRespuestasBtn postulacionId={p.id} nombrePostulante={p.nombre_completo} />
+                      )}
                     </div>
                     <PostulacionAcciones postulacionId={p.id} estadoActual={p.estado} />
                   </div>

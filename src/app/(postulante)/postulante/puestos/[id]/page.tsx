@@ -6,6 +6,7 @@ import { Card, Badge } from '@/components/ui'
 import { ChevronLeftIcon, CalendarIcon, BuildingIcon, ArrowRightIcon, AlertTriangleIcon } from '@/components/icons'
 import { getPuestoPublicoById, getMisPostulacionesPuestoIds } from '@/modules/puestos/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
+import { getFormularioDePuesto } from '@/modules/preselector/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
 import { PostularButton } from '../postular-button'
 
@@ -23,15 +24,25 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
   const volverHref = desdePostulaciones ? '/postulante/postulaciones' : '/postulante/puestos'
   const volverLabel = desdePostulaciones ? 'Mis postulaciones' : 'Buscar puestos'
 
-  const [puesto, yaPostulados, certificado] = await Promise.all([
+  const [puesto, yaPostulados, certificado, formulario] = await Promise.all([
     getPuestoPublicoById(id),
     getMisPostulacionesPuestoIds(),
     getUltimoCertificado(),
+    getFormularioDePuesto(id),
   ])
 
   if (!puesto) notFound()
 
   const bloqueado = !certificado || certificado.desactualizado
+
+  // Sanitized for the applicant: never send esCritica / esValida to the client —
+  // that would let a candidate read which options are "correct" from the payload.
+  const preguntasPublicas = formulario?.preguntas.map((p) => ({
+    id: p.id,
+    texto: p.texto,
+    tipo: p.tipo,
+    opciones: p.opciones.map((o) => ({ id: o.id, texto: o.texto })),
+  }))
 
   return (
     <TyCGate>
@@ -94,6 +105,7 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
                 puestoId={puesto.id}
                 yaPostulo={yaPostulados.has(puesto.id)}
                 disabled={bloqueado}
+                preguntas={preguntasPublicas}
               />
             </div>
           </div>
@@ -111,6 +123,9 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
             )}
             {puesto.nivel_experiencia && (
               <Badge tone="neutral">{puesto.nivel_experiencia}</Badge>
+            )}
+            {preguntasPublicas && preguntasPublicas.length > 0 && (
+              <Badge tone="info">Con formulario de preselección</Badge>
             )}
           </div>
 
