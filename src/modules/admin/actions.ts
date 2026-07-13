@@ -101,6 +101,120 @@ export async function reactivarCompetencia(id: string): Promise<ActionResult> {
   return { success: true, data: undefined }
 }
 
+// ─── Carreras ────────────────────────────────────────────────────────────────
+
+export async function crearCarrera(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const nombre = formData.get('nombre')?.toString().trim()
+  if (!nombre) return { success: false, error: 'Ingresá el nombre de la carrera.' }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('carrera') as any).insert({ nombre })
+  if (error?.code === '23505') return { success: false, error: 'Ya existe una carrera con ese nombre.' }
+  if (error) return { success: false, error: 'No se pudo crear la carrera.' }
+
+  revalidatePath('/admin/carreras')
+  return { success: true, data: undefined }
+}
+
+export async function renombrarCarrera(id: string, nuevoNombre: string): Promise<ActionResult> {
+  await requireAdmin()
+  const limpio = nuevoNombre.trim()
+  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('carrera') as any).update({ nombre: limpio }).eq('id', id)
+  if (error?.code === '23505') return { success: false, error: 'Ya existe una carrera con ese nombre.' }
+  if (error) return { success: false, error: 'No se pudo actualizar la carrera.' }
+
+  revalidatePath('/admin/carreras')
+  return { success: true, data: undefined }
+}
+
+export async function desactivarCarrera(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('carrera') as any)
+    .update({ fecha_baja: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { success: false, error: 'No se pudo desactivar.' }
+  revalidatePath('/admin/carreras')
+  return { success: true, data: undefined }
+}
+
+export async function reactivarCarrera(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('carrera') as any).update({ fecha_baja: null }).eq('id', id)
+  if (error) return { success: false, error: 'No se pudo reactivar.' }
+  revalidatePath('/admin/carreras')
+  return { success: true, data: undefined }
+}
+
+/**
+ * Promueve un valor libre de `carrera_otra` a una carrera del catálogo:
+ * crea la carrera si no existe (o reusa la activa con ese nombre) y
+ * re-vincula todos los perfiles que tenían ese texto libre.
+ */
+export async function promoverCarreraOtra(nombre: string): Promise<ActionResult> {
+  await requireAdmin()
+  const limpio = nombre.trim()
+  if (!limpio) return { success: false, error: 'Nombre inválido.' }
+
+  const admin = createAdminClient()
+
+  // 1. Buscar una carrera activa existente con ese nombre (case-insensitive).
+  const { data: existente } = await admin
+    .from('carrera')
+    .select('id')
+    .is('fecha_baja', null)
+    .ilike('nombre', limpio)
+    .maybeSingle()
+
+  let carreraId = (existente as { id: string } | null)?.id ?? null
+
+  if (!carreraId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: creada, error } = await (admin.from('carrera') as any)
+      .insert({ nombre: limpio })
+      .select('id')
+      .single()
+    if (error?.code === '23505') {
+      // Carrera creada concurrentemente entre el select y el insert: reintentar el lookup.
+      const { data: recheck } = await admin
+        .from('carrera')
+        .select('id')
+        .is('fecha_baja', null)
+        .ilike('nombre', limpio)
+        .maybeSingle()
+      carreraId = (recheck as { id: string } | null)?.id ?? null
+      if (!carreraId) return { success: false, error: 'No se pudo promover la carrera.' }
+    } else if (error || !creada) {
+      return { success: false, error: 'No se pudo crear la carrera.' }
+    } else {
+      carreraId = (creada as { id: string }).id
+    }
+  }
+
+  // 2. Re-vincular perfiles que tenían ese texto libre.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (admin.from('perfil_postulante') as any)
+    .update({ carrera_id: carreraId, carrera_otra: null })
+    .ilike('carrera_otra', limpio)
+
+  if (updateError) return { success: false, error: 'No se pudo re-vincular a los postulantes.' }
+
+  revalidatePath('/admin/carreras')
+  return { success: true, data: undefined }
+}
+
 // ─── Ubicación: provincias ───────────────────────────────────────────────────
 
 export async function crearProvincia(

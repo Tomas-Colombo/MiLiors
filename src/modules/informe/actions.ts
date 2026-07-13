@@ -16,13 +16,17 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   // Basic profile
   const { data: perfil } = await supabase
     .from('perfil_postulante')
-    .select('nombre_completo, especificidad_puesto')
+    .select('nombre_completo, carrera_otra, carrera:carrera_id(nombre)')
     .eq('id', postulanteId)
     .eq('usuario_id', session.id)
     .single()
 
   if (!perfil) return null
-  const perfilTyped = perfil as { nombre_completo: string; especificidad_puesto: string | null }
+  const perfilTyped = perfil as {
+    nombre_completo: string
+    carrera_otra: string | null
+    carrera: { nombre: string } | null
+  }
 
   // Dominantes via tabla intermedia
   const { data: test } = await supabase
@@ -89,7 +93,7 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
 
   return {
     nombreCompleto: perfilTyped.nombre_completo,
-    especificidadPuesto: perfilTyped.especificidad_puesto,
+    especificidadPuesto: perfilTyped.carrera?.nombre ?? perfilTyped.carrera_otra ?? null,
     dominantes,
     tieneEmpateDominante: testTyped.tiene_empate_dominante,
     humanDesign: hd ? (hd as { id: string; tipo_energetico: string; energy_type_classification: string | null; autoridad_hd: string; perfil_hd: string; estrategia_hd: string; veces_guardado: number }) : null,

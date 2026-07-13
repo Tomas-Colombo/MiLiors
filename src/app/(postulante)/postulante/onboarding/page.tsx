@@ -1,6 +1,7 @@
 import { verifySession } from '@/lib/dal'
 import { getPerfilPostulante } from '@/modules/eneagrama/queries'
 import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getCarreras } from '@/modules/carreras/queries'
 import { OnboardingForm } from './onboarding-form'
 import { SparklesIcon } from '@/components/icons'
 
@@ -10,6 +11,7 @@ export default async function OnboardingPage() {
   await verifySession()
   const perfil = await getPerfilPostulante()
   const provincias = await getProvincias()
+  const carreras = await getCarreras()
   const localidadesIniciales = perfil?.provincia_id
     ? await getLocalidadesPorProvincia(perfil.provincia_id)
     : []
@@ -36,6 +38,7 @@ export default async function OnboardingPage() {
         <OnboardingForm
           perfil={perfil}
           provincias={provincias}
+          carreras={carreras}
           localidadesIniciales={localidadesIniciales}
         />
       </div>

@@ -5,6 +5,7 @@ import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilPostulanteForm } from './form'
 import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
 import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getCarreras } from '@/modules/carreras/queries'
 
 export const metadata = { title: 'Mi perfil — TalentID' }
 
@@ -12,7 +13,7 @@ async function getPerfilPostulante(userId: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, telefono, especificidad_puesto, enlace_linkedin, portfolio, provincia_id, localidad_id')
+    .select('id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, provincia_id, localidad_id')
     .eq('usuario_id', userId)
     .single()
 
@@ -20,7 +21,8 @@ async function getPerfilPostulante(userId: string) {
     id: string
     nombre_completo: string
     telefono: string | null
-    especificidad_puesto: string | null
+    carrera_id: string | null
+    carrera_otra: string | null
     enlace_linkedin: string | null
     portfolio: string | null
     provincia_id: string | null
@@ -30,10 +32,11 @@ async function getPerfilPostulante(userId: string) {
 
 export default async function MiPerfilPostulantePage() {
   const session = await verifySession()
-  const [perfil, tyc, provincias] = await Promise.all([
+  const [perfil, tyc, provincias, carreras] = await Promise.all([
     getPerfilPostulante(session.id),
     getTyCVigente(),
     getProvincias(),
+    getCarreras(),
   ])
   const localidadesIniciales = perfil?.provincia_id
     ? await getLocalidadesPorProvincia(perfil.provincia_id)
@@ -51,6 +54,7 @@ export default async function MiPerfilPostulantePage() {
           perfil={perfil}
           email={session.email}
           provincias={provincias}
+          carreras={carreras}
           localidadesIniciales={localidadesIniciales}
         />
       </Card>
