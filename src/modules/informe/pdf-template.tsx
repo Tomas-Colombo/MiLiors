@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import type { InformePersonalidadJSON, BloqueCompetencia } from '@/lib/types/informe'
-import { BLOQUES_ORDEN, TALENTOS_ACLARACION, barrasAString } from './competencias'
+import { BLOQUES_ORDEN, TALENTOS_ACLARACION } from './competencias'
 
 const colors = {
   primary: '#5b4be6',
@@ -49,7 +49,6 @@ const styles = StyleSheet.create({
   compHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   compName: { fontSize: 10, color: colors.ink, fontFamily: 'Helvetica-Bold' },
   compNivel: { fontSize: 9, color: colors.primary },
-  compBarras: { fontSize: 10, color: colors.primary, letterSpacing: 1 },
   compDesc: { fontSize: 9, color: colors.soft, lineHeight: 1.5, marginTop: 1 },
   // Talentos / cómo trabajás
   itemBlock: { marginBottom: 9 },
@@ -125,9 +124,7 @@ export function InformePDF({ informe, email, fechaGeneracion }: InformePDFProps)
                   <View key={c.nombre} style={styles.compRow}>
                     <View style={styles.compHead}>
                       <Text style={styles.compName}>{c.nombre}</Text>
-                      <Text style={styles.compNivel}>
-                        {c.nivel}  <Text style={styles.compBarras}>{barrasAString(c.barras)}</Text>
-                      </Text>
+                      <Text style={styles.compNivel}>{c.nivel}</Text>
                     </View>
                     {c.descripcion ? <Text style={styles.compDesc}>{c.descripcion}</Text> : null}
                   </View>

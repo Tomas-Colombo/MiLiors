@@ -35,18 +35,21 @@ export async function GET(
   // Verify ownership
   const { data: perfil } = await admin
     .from('perfil_postulante')
-    .select('usuario_id')
+    .select('usuario_id, nombre_completo')
     .eq('id', certTyped.postulante_id)
     .single()
 
-  if (!perfil || (perfil as { usuario_id: string }).usuario_id !== user.id) {
+  const perfilTyped = perfil as { usuario_id: string; nombre_completo: string } | null
+  if (!perfilTyped || perfilTyped.usuario_id !== user.id) {
     return new Response('No autorizado', { status: 403 })
   }
 
-  // Generate signed URL (1 hour)
+  // Generate signed URL (1 hour). `download` fuerza la descarga directa
+  // (Content-Disposition: attachment) en vez de previsualizar el PDF.
+  const nombreArchivo = `Certificado-TalentID-${perfilTyped.nombre_completo.replace(/\s+/g, '-')}.pdf`
   const { data: signedUrl, error } = await admin.storage
     .from('certificados')
-    .createSignedUrl(certTyped.url_archivo, 3600)
+    .createSignedUrl(certTyped.url_archivo, 3600, { download: nombreArchivo })
 
   if (error || !signedUrl) {
     return new Response('No se pudo generar el enlace de descarga', { status: 500 })
