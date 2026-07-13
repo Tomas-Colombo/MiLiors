@@ -2,7 +2,7 @@ import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { createClient } from '@/lib/supabase/server'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { getUltimoCertificado } from '@/modules/certificado/queries'
+import { getUltimoCertificado, getCertificadoContenido } from '@/modules/certificado/queries'
 import { getInformeActual } from '@/modules/informe/queries'
 import { CertificadoUI } from './certificado-ui'
 
@@ -14,9 +14,10 @@ export default async function CertificadoPage() {
 
   const supabase = await createClient()
 
-  const [certificado, informe] = await Promise.all([
+  const [certificado, informe, contenido] = await Promise.all([
     getUltimoCertificado(),
     getInformeActual(),
+    getCertificadoContenido(),
   ])
 
   // Fetch formación + competencia counts to drive requirements display
@@ -65,6 +66,7 @@ export default async function CertificadoPage() {
         </div>
         <CertificadoUI
           certificado={certificado}
+          contenido={contenido}
           informeListo={informe?.estado_informe === 'LISTO'}
           informeDesactualizado={informe?.desactualizado ?? false}
           tieneFormacion={tieneFormacion}

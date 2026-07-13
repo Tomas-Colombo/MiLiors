@@ -5,7 +5,9 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { aiProvider } from '@/lib/ai'
 import { buildAsistentePrompts } from './prompts'
+import { informeToPlainText } from '@/modules/informe/format'
 import type { ActionResult } from '@/lib/types/domain'
+import type { InformePersonalidadJSON } from '@/lib/types/informe'
 
 export async function consultarAsistente(
   postulanteId: string,
@@ -78,7 +80,7 @@ export async function consultarAsistente(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: informeRaw } = await (admin as any)
     .from('informe_personalidad')
-    .select('contenido_informe')
+    .select('contenido_json')
     .eq('postulante_id', postulanteId)
     .eq('estado_informe', 'LISTO')
     .maybeSingle()
@@ -114,7 +116,7 @@ export async function consultarAsistente(
   }
 
   const informePersonalidad = informeRaw
-    ? (informeRaw as { contenido_informe: string | null }).contenido_informe
+    ? informeToPlainText((informeRaw as { contenido_json: InformePersonalidadJSON | null }).contenido_json)
     : null
 
   const notasPrivadas = (notasRes.data ?? []).map(

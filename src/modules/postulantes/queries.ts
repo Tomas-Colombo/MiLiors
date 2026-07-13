@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import type { InformePersonalidadJSON } from '@/lib/types/informe'
 
 /** UUID v4-ish check — used to distinguish real carrera ids from the 'OTRAS' sentinel */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -37,7 +38,7 @@ export type PostulanteDetalle = PostulanteCard & {
     estrategia_hd: string
   } | null
   // Informe (solo si perfil_en_busqueda y estado LISTO)
-  informe: string | null
+  informe: InformePersonalidadJSON | null
 }
 
 /** Buscar postulantes con perfil_en_busqueda=true */
@@ -251,16 +252,16 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     .maybeSingle()
 
   // Informe: visible if searchable OR applied to this recruiter's jobs — admin to bypass RLS
-  let informeContenido: string | null = null
+  let informeContenido: InformePersonalidadJSON | null = null
   if (p.perfil_en_busqueda || postuloAlReclutador) {
     const { data: informe } = await admin
       .from('informe_personalidad')
-      .select('contenido_informe, estado_informe')
+      .select('contenido_json, estado_informe')
       .eq('postulante_id', postulanteId)
       .eq('estado_informe', 'LISTO')
       .maybeSingle()
     informeContenido = informe
-      ? (informe as { contenido_informe: string | null }).contenido_informe
+      ? (informe as { contenido_json: InformePersonalidadJSON | null }).contenido_json
       : null
   }
 

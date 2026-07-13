@@ -3,18 +3,35 @@
 import { useState, useTransition } from 'react'
 import { Alert, Badge, Button, Card } from '@/components/ui'
 import { crearCertificado } from '@/modules/certificado/actions'
-import type { CertificadoData } from '@/modules/certificado/queries'
-import { ArrowRightIcon, FileIcon, ShieldIcon, SparklesIcon } from '@/components/icons'
+import type { CertificadoData, CertificadoContenido } from '@/modules/certificado/queries'
+import { CertificadoDisplay } from '@/modules/certificado/certificado-display'
+import { ArrowRightIcon, SparklesIcon } from '@/components/icons'
 
 type Props = {
   certificado: CertificadoData | null
+  contenido: CertificadoContenido | null
   informeListo: boolean
   informeDesactualizado: boolean
   tieneFormacion: boolean
   tieneCompetencia: boolean
 }
 
-export function CertificadoUI({ certificado, informeListo, informeDesactualizado, tieneFormacion, tieneCompetencia }: Props) {
+function formatFecha(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+  } catch {
+    return iso
+  }
+}
+
+export function CertificadoUI({
+  certificado,
+  contenido,
+  informeListo,
+  informeDesactualizado,
+  tieneFormacion,
+  tieneCompetencia,
+}: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
@@ -51,76 +68,96 @@ export function CertificadoUI({ certificado, informeListo, informeDesactualizado
     )
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Current certificate state */}
-      {certificado ? (
-        <Card padding="lg">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] bg-primary-50">
-                <ShieldIcon size={20} className="text-primary-600" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[13.5px] font-semibold text-ink">Certificado</span>
-                  {certificado.desactualizado
-                    ? <Badge tone="warning">Desactualizado</Badge>
-                    : <Badge tone="success" dot>Verificado</Badge>
-                  }
-                </div>
-                <p className="mt-0.5 text-xs text-muted">
-                  Emitido el{' '}
-                  {new Date(certificado.timestamp_firma).toLocaleDateString('es-AR', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </p>
-                <p className="mt-0.5 font-mono text-[10px] text-faint">{certificado.id}</p>
-              </div>
+  // ── Certificado emitido: status + descarga + previsualización ────────────────
+  if (certificado) {
+    return (
+      <div className="space-y-5">
+        {/* Aviso de desactualización */}
+        {certificado.desactualizado && (
+          <Alert tone="warning" title="Tu certificado está desactualizado">
+            Modificaste tu perfil desde que lo emitiste. Generá uno nuevo para reflejar los cambios.
+            <div className="mt-3">
+              <Button
+                variant="primary"
+                size="sm"
+                loading={isPending}
+                onClick={handleGenerar}
+                disabled={isPending || !puedeGenerar}
+              >
+                Generar nuevo certificado
+              </Button>
             </div>
-          </div>
+          </Alert>
+        )}
+        {error && <Alert tone="error" title={error} />}
+        {exito && (
+          <Alert tone="success" title="¡Certificado generado!">
+            Tu certificado se actualizó con los datos más recientes.
+          </Alert>
+        )}
 
-          <div className="mt-4 flex flex-wrap gap-3">
+        {/* Status + descarga */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Badge tone={certificado.desactualizado ? 'warning' : 'success'} dot>
+              {certificado.desactualizado ? 'Desactualizado' : 'Verificado'}
+            </Badge>
+            <span className="text-xs text-muted">Emitido el {formatFecha(certificado.timestamp_firma)}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {certificado.url_archivo && (
               <Button
-                size="sm"
                 variant="secondary"
-                leftIcon={<FileIcon size={15} />}
+                size="sm"
                 onClick={() => window.open(`/api/certificado/descargar/${certificado.id}`, '_blank')}
               >
-                Descargar PDF
+                Descargar certificado
               </Button>
             )}
             <Button
-              size="sm"
               variant="ghost"
+              size="sm"
               rightIcon={<ArrowRightIcon size={14} />}
               onClick={() => window.open(`/verificar/${certificado.id}`, '_blank')}
             >
               Ver verificación pública
             </Button>
           </div>
-        </Card>
-      ) : (
-        <Card padding="lg">
-          <div className="flex items-center gap-3 text-muted">
-            <FileIcon size={20} />
-            <span className="text-sm">Todavía no generaste un certificado.</span>
-          </div>
-        </Card>
-      )}
-
-      {/* Generate new certificate */}
-      <Card padding="lg">
-        <div className="mb-4 flex items-center gap-2">
-          <SparklesIcon size={16} className="text-primary-600" />
-          <span className="text-[13px] font-semibold text-ink">
-            {certificado ? 'Emitir nuevo certificado' : 'Generar mi certificado'}
-          </span>
         </div>
-        <p className="mb-3 text-xs text-muted">
+
+        {/* Previsualización del contenido */}
+        {contenido && (
+          <>
+            <Card padding="lg">
+              <h2 className="text-xl font-extrabold text-ink">{contenido.nombre}</h2>
+              <p className="mt-1 text-sm text-muted">{contenido.email}</p>
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
+                ✓ Perfil verificado por TalentID
+              </span>
+            </Card>
+
+            <Card padding="lg">
+              <CertificadoDisplay data={contenido} />
+            </Card>
+          </>
+        )}
+
+        <p className="text-right text-xs text-muted">
+          El certificado se marca como desactualizado al modificar tu perfil o tu informe.
+        </p>
+      </div>
+    )
+  }
+
+  // ── Sin certificado: previsualización de lo que se va a certificar + emitir ──
+  return (
+    <div className="space-y-5">
+      <Card padding="lg">
+        <div className="mb-3 flex items-center gap-2">
+          <SparklesIcon size={16} className="text-primary-600" />
+          <span className="text-[13px] font-semibold text-ink">Generar mi certificado</span>
+        </div>
+        <p className="mb-4 text-xs text-muted">
           El certificado incluye tu perfil de personalidad (Eneatipo y Human Design si está cargado),
           formación académica, experiencia y competencias. Incluye un código QR verificable por
           cualquier reclutador.
@@ -140,36 +177,32 @@ export function CertificadoUI({ certificado, informeListo, informeDesactualizado
           ))}
         </ul>
 
-        {exito && (
-          <div className="mb-4">
-            <Alert tone="success" title="¡Certificado generado!">
-              Ya podés descargarlo desde arriba.
-            </Alert>
-          </div>
-        )}
         {error && (
           <div className="mb-4">
             <Alert tone="error" title={error} />
           </div>
         )}
 
-        <Button
-          onClick={handleGenerar}
-          loading={isPending}
-          disabled={isPending || !puedeGenerar}
-          className="w-full"
-        >
-          {isPending
-            ? 'Generando certificado...'
-            : certificado
-              ? 'Generar nuevo certificado'
-              : 'Generar certificado'}
+        <Button onClick={handleGenerar} loading={isPending} disabled={isPending || !puedeGenerar} className="w-full">
+          {isPending ? 'Generando certificado...' : 'Generar certificado'}
         </Button>
 
-        {isPending && (
-          <p className="mt-2 text-center text-xs text-muted">Esto puede tardar unos segundos…</p>
-        )}
+        {isPending && <p className="mt-2 text-center text-xs text-muted">Esto puede tardar unos segundos…</p>}
       </Card>
+
+      {/* Previsualización de lo que se certificará */}
+      {contenido && (
+        <>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-muted">Previsualización</p>
+          <Card padding="lg">
+            <h2 className="text-xl font-extrabold text-ink">{contenido.nombre}</h2>
+            <p className="mt-1 text-sm text-muted">{contenido.email}</p>
+          </Card>
+          <Card padding="lg">
+            <CertificadoDisplay data={contenido} />
+          </Card>
+        </>
+      )}
     </div>
   )
 }

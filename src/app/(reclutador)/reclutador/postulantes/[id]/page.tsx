@@ -28,26 +28,12 @@ function tiempoRelativo(fecha: string | null): string | null {
 import { getPostulanteDetalle, getNotasPrivadas } from '@/modules/postulantes/queries'
 import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
-import { INFORME_SECTION_LABELS, INFORME_SECTION_ORDER } from '@/lib/types/informe'
+import { InformeDisplay } from '@/modules/informe/informe-display'
 import { verifySession } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { getFormularioDePuesto, getRespuestasDePostulacion } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas } from '@/modules/preselector/evaluador'
 import { NotasPanel } from './notas-panel'
-
-// The informe is stored as a JSON string with the InformeJSON shape.
-// Parse it so recruiters see structured sections instead of raw JSON.
-function parseInforme(raw: string): Record<string, string> | null {
-  try {
-    const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, string>
-    }
-  } catch {
-    // not JSON — caller falls back to plain text
-  }
-  return null
-}
 
 export const metadata = { title: 'Detalle de postulante — TalentID' }
 
@@ -360,37 +346,8 @@ export default async function PostulanteDetallePage({
                       Ocultar ▴
                     </span>
                   </summary>
-                  <div className="px-[22px] pb-5 pt-1 space-y-5">
-                    {(() => {
-                      const secciones = parseInforme(postulante.informe!)
-                      if (!secciones) {
-                        // Fallback: raw content wasn't JSON, show as plain text
-                        return (
-                          <div className="text-[13px] leading-relaxed text-ink-soft whitespace-pre-wrap">
-                            {postulante.informe}
-                          </div>
-                        )
-                      }
-                      return INFORME_SECTION_ORDER.map((key) => {
-                        const text = secciones[key]
-                        if (!text) return null
-                        return (
-                          <section key={key}>
-                            <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-primary-600">
-                              {INFORME_SECTION_LABELS[key]}
-                            </h3>
-                            <div className="space-y-2 text-[13px] leading-relaxed text-ink">
-                              {text
-                                .split(/\n\n+/)
-                                .filter(Boolean)
-                                .map((p, i) => (
-                                  <p key={i}>{p.trim()}</p>
-                                ))}
-                            </div>
-                          </section>
-                        )
-                      })
-                    })()}
+                  <div className="px-[22px] pb-5 pt-1">
+                    <InformeDisplay data={postulante.informe!} variant="compact" />
                   </div>
                 </details>
               </Card>

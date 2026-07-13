@@ -4,7 +4,7 @@ import { useTransition, useState } from 'react'
 import { Alert, Skeleton, Card, Badge, Button } from '@/components/ui'
 import { generarInforme } from '@/modules/informe/actions'
 import type { InformeData } from '@/modules/informe/queries'
-import { INFORME_SECTION_LABELS, INFORME_SECTION_ORDER } from '@/lib/types/informe'
+import { InformeDisplay } from '@/modules/informe/informe-display'
 
 type Props = {
   informe: InformeData | null
@@ -12,11 +12,7 @@ type Props = {
 
 function formatFecha(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    })
+    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
   } catch {
     return iso
   }
@@ -26,74 +22,62 @@ export function InformeVisor({ informe }: Props) {
   const [isPending, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
 
-  function handleReintentar() {
+  function handleGenerar() {
     setActionError(null)
     startTransition(async () => {
       const result = await generarInforme()
-      if (!result.success) {
-        setActionError(result.error)
-      }
+      if (!result.success) setActionError(result.error)
     })
   }
 
   // ── LISTO ──────────────────────────────────────────────────────────────────
-  if (informe?.estado_informe === 'LISTO') {
-    let contenidoJSON: Record<string, string> | null = null
-    try {
-      if (informe.contenido_informe) {
-        const parsed = JSON.parse(informe.contenido_informe)
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          contenidoJSON = parsed as Record<string, string>
-        }
-      }
-    } catch {
-      // not JSON — will fall back to plain text
-    }
+  if (informe?.estado_informe === 'LISTO' && informe.contenido_json) {
+    const data = informe.contenido_json
+    const desactualizado = informe.desactualizado
 
     return (
-      <div className="space-y-4">
-        {/* Status row */}
-        <div className="flex items-center justify-between">
-          <Badge tone="success" dot>Generado</Badge>
-          {informe.fecha_generacion && (
-            <span className="text-xs text-muted">
-              {formatFecha(informe.fecha_generacion)}
-            </span>
-          )}
+      <div className="space-y-5">
+        {/* Aviso de desactualización */}
+        {desactualizado && (
+          <Alert tone="warning" title="Tu informe está desactualizado">
+            Modificaste tu Eneagrama o tu Human Design. Actualizá el informe para reflejar los cambios.
+            <div className="mt-3">
+              <Button variant="primary" size="sm" loading={isPending} onClick={handleGenerar} disabled={isPending}>
+                Actualizar informe
+              </Button>
+            </div>
+          </Alert>
+        )}
+        {actionError && <Alert tone="error" title="No se pudo actualizar">{actionError}</Alert>}
+
+        {/* Status + descarga */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Badge tone={desactualizado ? 'warning' : 'success'} dot>
+              {desactualizado ? 'Desactualizado' : 'Generado'}
+            </Badge>
+            {informe.fecha_generacion && (
+              <span className="text-xs text-muted">{formatFecha(informe.fecha_generacion)}</span>
+            )}
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => window.open('/api/informe/descargar', '_blank')}>
+            Descargar informe de personalidad
+          </Button>
         </div>
 
-        {/* Structured sections if parseable, otherwise plain text */}
-        {contenidoJSON ? (
-          <div className="space-y-4">
-            {INFORME_SECTION_ORDER.map((key) => {
-              const text = contenidoJSON![key]
-              if (!text) return null
-              return (
-                <Card key={key} padding="lg">
-                  <h2 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-primary-600">
-                    {INFORME_SECTION_LABELS[key]}
-                  </h2>
-                  <div className="space-y-2 text-[14px] leading-relaxed text-ink">
-                    {text.split(/\n\n+/).filter(Boolean).map((p, i) => (
-                      <p key={i}>{p.trim()}</p>
-                    ))}
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
-        ) : informe.contenido_informe ? (
-          <Card padding="lg">
-            <div className="space-y-4 text-[14.5px] leading-relaxed text-ink">
-              {informe.contenido_informe.split(/\n\n+/).filter(Boolean).map((p, i) => (
-                <p key={i}>{p.trim()}</p>
-              ))}
-            </div>
-          </Card>
-        ) : null}
+        {/* Encabezado */}
+        <Card padding="lg">
+          <h2 className="text-xl font-extrabold text-ink">{data.nombre}</h2>
+          {data.subtitulo && <p className="mt-1 text-sm text-muted">{data.subtitulo}</p>}
+        </Card>
 
-        <p className="text-xs text-muted text-right">
-          Se actualiza automáticamente al rehacer el Eneagrama o al modificar el Human Design.
+        {/* Contenido estructurado */}
+        <Card padding="lg">
+          <InformeDisplay data={data} variant="full" />
+        </Card>
+
+        <p className="text-right text-xs text-muted">
+          Se marca como desactualizado al rehacer el Eneagrama o modificar el Human Design.
         </p>
       </div>
     )
@@ -106,47 +90,46 @@ export function InformeVisor({ informe }: Props) {
         <Alert tone="error" title="No se pudo generar el informe">
           Hubo un problema al generar tu informe de personalidad. Podés reintentarlo ahora.
         </Alert>
-        {actionError && (
-          <Alert tone="error" title="Error en el reintento">{actionError}</Alert>
-        )}
-        <Button variant="primary" loading={isPending} onClick={handleReintentar} disabled={isPending}>
+        {actionError && <Alert tone="error" title="Error en el reintento">{actionError}</Alert>}
+        <Button variant="primary" loading={isPending} onClick={handleGenerar} disabled={isPending}>
           Reintentar
         </Button>
       </div>
     )
   }
 
-  // ── PENDIENTE / null ───────────────────────────────────────────────────────
+  // ── Sin contenido visible: null / PENDIENTE / LISTO en formato viejo ─────────
   const estaGenerando = isPending
-  const quedoAtascado = !isPending && informe?.estado_informe === 'PENDIENTE'
+  // Informe LISTO pero sin contenido_json (heredado del formato anterior):
+  // necesita generarse en el nuevo formato.
+  const esFormatoViejo = !estaGenerando && informe?.estado_informe === 'LISTO'
+  const quedoAtascado = !estaGenerando && informe?.estado_informe === 'PENDIENTE'
 
   return (
     <div className="space-y-4">
       <Card padding="lg">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {estaGenerando ? (
-                <Badge tone="info" dot>Generando...</Badge>
-              ) : quedoAtascado ? (
-                <Badge tone="warning">Pendiente</Badge>
-              ) : (
-                <Badge tone="neutral">Sin generar</Badge>
-              )}
-            </div>
+            {estaGenerando ? (
+              <Badge tone="info" dot>Generando...</Badge>
+            ) : esFormatoViejo || quedoAtascado ? (
+              <Badge tone="warning">{esFormatoViejo ? 'Formato anterior' : 'Pendiente'}</Badge>
+            ) : (
+              <Badge tone="neutral">Sin generar</Badge>
+            )}
             {informe?.updated_at && (
-              <span className="text-xs text-muted">
-                Última actividad: {formatFecha(informe.updated_at)}
-              </span>
+              <span className="text-xs text-muted">Última actividad: {formatFecha(informe.updated_at)}</span>
             )}
           </div>
 
           <p className="text-sm text-muted">
             {estaGenerando
-              ? 'Generando tu informe de personalidad con el modelo de IA. Puede tardar unos minutos.'
+              ? 'Generando tu informe de personalidad. Puede tardar unos segundos.'
+              : esFormatoViejo
+              ? 'Tenés un informe de una versión anterior. Generalo de nuevo para verlo con el formato actual.'
               : quedoAtascado
               ? 'La generación quedó interrumpida. Podés volver a intentarlo.'
-              : 'El informe se genera automáticamente al completar el Eneagrama o al guardar el Human Design.'}
+              : 'El informe se genera automáticamente al completar el Eneagrama.'}
           </p>
 
           {estaGenerando && (
@@ -154,20 +137,17 @@ export function InformeVisor({ informe }: Props) {
               <Skeleton className="h-3 w-3/4" />
               <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-5/6" />
-              <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-2/3" />
             </div>
           )}
         </div>
       </Card>
 
-      {actionError && (
-        <Alert tone="error" title="Error al generar">{actionError}</Alert>
-      )}
+      {actionError && <Alert tone="error" title="Error al generar">{actionError}</Alert>}
 
-      {quedoAtascado && (
-        <Button variant="primary" loading={isPending} onClick={handleReintentar} disabled={isPending}>
-          Reintentar generación
+      {!estaGenerando && (
+        <Button variant="primary" loading={isPending} onClick={handleGenerar} disabled={isPending}>
+          {esFormatoViejo || quedoAtascado ? 'Generar informe' : 'Generar informe ahora'}
         </Button>
       )}
     </div>
