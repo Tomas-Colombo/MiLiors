@@ -17,12 +17,17 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
   // 1. Verify informe is LISTO and get postulante data
   const { data: postulante } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, especificidad_puesto')
+    .select('id, nombre_completo, carrera_otra, carrera:carrera_id(nombre)')
     .eq('usuario_id', session.id)
     .single()
 
   if (!postulante) return { success: false, error: 'Perfil no encontrado.' }
-  const postulanteTyped = postulante as { id: string; nombre_completo: string; especificidad_puesto: string | null }
+  const postulanteTyped = postulante as {
+    id: string
+    nombre_completo: string
+    carrera_otra: string | null
+    carrera: { nombre: string } | null
+  }
 
   const { data: informe } = await supabase
     .from('informe_personalidad')

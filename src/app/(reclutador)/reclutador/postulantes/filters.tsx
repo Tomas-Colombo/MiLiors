@@ -8,15 +8,22 @@ import { SearchIcon, TrashIcon } from '@/components/icons'
 type CompetenciaOpt = { value: string; label: string }
 type Provincia = { id: string; nombre: string }
 type Localidad = { value: string; label: string }
+type CarreraOpt = { value: string; label: string }
+
+const OPCION_OTRAS_CARRERA = { value: 'OTRAS', label: 'Otras (cargadas por postulantes)' }
 
 export function PostulantesFilters({
   competencias,
   provincias,
   localidades,
+  carreras,
+  carrerasOtras,
 }: {
   competencias: CompetenciaOpt[]
   provincias: Provincia[]
   localidades: Localidad[]
+  carreras: CarreraOpt[]
+  carrerasOtras?: CarreraOpt[]
 }) {
   const sp = useSearchParams()
   const router = useRouter()
@@ -47,6 +54,19 @@ export function PostulantesFilters({
     [router, pathname, sp],
   )
 
+  // Al cambiar de carrera se limpia carreraOtra (depende de haber elegido "Otras").
+  const setCarrera = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(sp.toString())
+      if (value) params.set('carrera', value)
+      else params.delete('carrera')
+      params.delete('carreraOtra')
+      params.delete('page')
+      router.replace(`${pathname}?${params.toString()}`)
+    },
+    [router, pathname, sp],
+  )
+
   const handleSearch = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value
@@ -60,9 +80,12 @@ export function PostulantesFilters({
   const competencia = sp.get('competencia') ?? ''
   const provincia = sp.get('provincia') ?? ''
   const localidad = sp.get('localidad') ?? ''
-  const hasFilters = !!(busqueda || competencia || provincia || localidad)
+  const carrera = sp.get('carrera') ?? ''
+  const carreraOtra = sp.get('carreraOtra') ?? ''
+  const hasFilters = !!(busqueda || competencia || provincia || localidad || carrera || carreraOtra)
 
   const provinciaOpts = provincias.map((p) => ({ value: p.id, label: p.nombre }))
+  const carreraOpts = [...carreras, OPCION_OTRAS_CARRERA]
 
   return (
     <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center">
@@ -115,6 +138,33 @@ export function PostulantesFilters({
             placeholder="Todas las localidades"
             onValueChange={(value) => {
               if (value) setParam('localidad', value)
+            }}
+          />
+        </div>
+      )}
+      <div className="w-full sm:w-56">
+        <SearchableSelect
+          key={carrera}
+          name="carrera"
+          options={carreraOpts}
+          defaultValue={carrera}
+          placeholder="Todas las carreras"
+          onValueChange={(value) => {
+            if (value) setCarrera(value)
+          }}
+        />
+      </div>
+      {/* El segundo select solo aparece si se eligió la opción "Otras". */}
+      {carrera === 'OTRAS' && (
+        <div className="w-full sm:w-56">
+          <SearchableSelect
+            key={`${carrera}-${carreraOtra}`}
+            name="carreraOtra"
+            options={carrerasOtras ?? []}
+            defaultValue={carreraOtra}
+            placeholder="Todas las carreras cargadas"
+            onValueChange={(value) => {
+              if (value) setParam('carreraOtra', value)
             }}
           />
         </div>

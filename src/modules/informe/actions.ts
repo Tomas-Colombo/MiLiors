@@ -14,13 +14,17 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   // Perfil básico
   const { data: perfil } = await supabase
     .from('perfil_postulante')
-    .select('nombre_completo, especificidad_puesto')
+    .select('nombre_completo, carrera_otra, carrera:carrera_id(nombre)')
     .eq('id', postulanteId)
     .eq('usuario_id', session.id)
     .single()
 
   if (!perfil) return null
-  const perfilTyped = perfil as { nombre_completo: string; especificidad_puesto: string | null }
+  const perfilTyped = perfil as {
+    nombre_completo: string
+    carrera_otra: string | null
+    carrera: { nombre: string } | null
+  }
 
   // Test de Eneagrama vigente
   const { data: test } = await supabase
@@ -53,7 +57,7 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
 
   return {
     nombre: perfilTyped.nombre_completo,
-    especificidadPuesto: perfilTyped.especificidad_puesto,
+    especificidadPuesto: perfilTyped.carrera?.nombre ?? perfilTyped.carrera_otra ?? null,
     scores,
     humanDesign: hd
       ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })

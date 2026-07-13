@@ -5,6 +5,7 @@ import { guardarDatosBasicos } from '@/modules/eneagrama/actions'
 import { Button, Field, Input, Card, Alert } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
+import { CarreraSelector, type CarreraOption } from '@/components/shared/carrera-selector'
 import { UserIcon } from '@/components/icons'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -12,7 +13,8 @@ type Perfil = {
   id: string
   nombre_completo: string
   telefono: string | null
-  especificidad_puesto: string | null
+  carrera_id: string | null
+  carrera_otra: string | null
   enlace_linkedin: string | null
   portfolio: string | null
   provincia_id: string | null
@@ -24,10 +26,12 @@ const initialState: ActionResult = { success: false, error: '' }
 export function OnboardingForm({
   perfil,
   provincias,
+  carreras,
   localidadesIniciales,
 }: {
   perfil: Perfil
   provincias: ProvinciaOption[]
+  carreras: CarreraOption[]
   localidadesIniciales: SelectOption[]
 }) {
   const [state, action, pending] = useActionState(guardarDatosBasicos, initialState)
@@ -72,16 +76,14 @@ export function OnboardingForm({
             />
           </Field>
 
-          <Field
-            label="Tipo de puesto que buscás"
-            error={state && !state.success ? state.fieldErrors?.especificidad_puesto?.[0] : undefined}
-          >
-            <Input
-              name="especificidad_puesto"
-              placeholder="Ej: Desarrollador Frontend, Analista de RRHH…"
-              defaultValue={perfil?.especificidad_puesto ?? ''}
-            />
-          </Field>
+          <CarreraSelector
+            carreras={carreras}
+            defaultCarreraId={perfil?.carrera_id}
+            defaultCarreraOtra={perfil?.carrera_otra}
+            required
+            carreraIdError={state && !state.success ? state.fieldErrors?.carrera_id?.[0] : undefined}
+            carreraOtraError={state && !state.success ? state.fieldErrors?.carrera_otra?.[0] : undefined}
+          />
 
           <Field
             label="LinkedIn"

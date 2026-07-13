@@ -95,6 +95,66 @@ export async function getLocalidadesAdmin(provinciaId: string): Promise<Localida
   return (data ?? []) as LocalidadAdmin[]
 }
 
+// ─── Carreras ────────────────────────────────────────────────────────────────
+
+export type CarreraAdmin = {
+  id: string
+  nombre: string
+  fecha_baja: string | null
+  created_at: string
+}
+
+export async function getCarrerasAdmin(): Promise<CarreraAdmin[]> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('carrera')
+    .select('id, nombre, fecha_baja, created_at')
+    .order('nombre')
+  return (data ?? []) as CarreraAdmin[]
+}
+
+export type CarreraOtraAdmin = {
+  nombre: string
+  cantidad: number
+  primeraFecha: string
+}
+
+export async function getCarrerasOtrasAdmin(params?: {
+  q?: string
+  desde?: string
+  hasta?: string
+}): Promise<CarreraOtraAdmin[]> {
+  const admin = createAdminClient()
+  let query = admin
+    .from('perfil_postulante')
+    .select('carrera_otra, created_at')
+    .not('carrera_otra', 'is', null)
+
+  if (params?.q) query = query.ilike('carrera_otra', `%${params.q}%`)
+  if (params?.desde) query = query.gte('created_at', params.desde)
+  if (params?.hasta) query = query.lte('created_at', params.hasta)
+
+  const { data } = await query
+  const rows = (data ?? []) as { carrera_otra: string | null; created_at: string }[]
+
+  const agregados = new Map<string, { cantidad: number; primeraFecha: string }>()
+  for (const r of rows) {
+    if (!r.carrera_otra) continue
+    const nombre = r.carrera_otra
+    const actual = agregados.get(nombre)
+    if (!actual) {
+      agregados.set(nombre, { cantidad: 1, primeraFecha: r.created_at })
+    } else {
+      actual.cantidad += 1
+      if (r.created_at < actual.primeraFecha) actual.primeraFecha = r.created_at
+    }
+  }
+
+  return Array.from(agregados.entries())
+    .map(([nombre, { cantidad, primeraFecha }]) => ({ nombre, cantidad, primeraFecha }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+}
+
 // ─── Competencias ────────────────────────────────────────────────────────────
 
 export async function getCompetenciasAdmin() {

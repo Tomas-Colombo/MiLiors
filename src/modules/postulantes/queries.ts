@@ -5,10 +5,13 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
 
+/** UUID v4-ish check — used to distinguish real carrera ids from the 'OTRAS' sentinel */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export type PostulanteCard = {
   id: string
   nombre_completo: string
-  especificidad_puesto: string | null
+  carrera: string | null
   perfil_en_busqueda: boolean
   eneatipo_numero: number | null
   eneatipo_nombre: string | null
@@ -44,6 +47,8 @@ export const buscarPostulantes = cache(async (filtros?: {
   busqueda?: string
   provinciaId?: string
   localidadId?: string
+  carrera?: string
+  carreraOtra?: string
 }): Promise<PostulanteCard[]> => {
   const supabase = await createClient()
 
@@ -52,7 +57,7 @@ export const buscarPostulantes = cache(async (filtros?: {
   let query: any = supabase
     .from('perfil_postulante')
     .select(`
-      id, nombre_completo, especificidad_puesto, perfil_en_busqueda, provincia_id, localidad_id,
+      id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, provincia_id, localidad_id,
       provincia(nombre), localidad(nombre),
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
@@ -63,6 +68,12 @@ export const buscarPostulantes = cache(async (filtros?: {
   }
   if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
   if (filtros?.localidadId) query = query.eq('localidad_id', filtros.localidadId)
+  if (filtros?.carrera && UUID_RE.test(filtros.carrera)) {
+    query = query.eq('carrera_id', filtros.carrera)
+  }
+  if (filtros?.carreraOtra) {
+    query = query.ilike('carrera_otra', `%${filtros.carreraOtra}%`)
+  }
 
   const { data: postulantes } = await query
 
@@ -100,7 +111,8 @@ export const buscarPostulantes = cache(async (filtros?: {
     const r = row as {
       id: string
       nombre_completo: string
-      especificidad_puesto: string | null
+      carrera_otra: string | null
+      carrera: { nombre: string } | null
       perfil_en_busqueda: boolean
       provincia: { nombre: string } | null
       localidad: { nombre: string } | null
@@ -113,7 +125,7 @@ export const buscarPostulantes = cache(async (filtros?: {
     return {
       id: r.id,
       nombre_completo: r.nombre_completo,
-      especificidad_puesto: r.especificidad_puesto,
+      carrera: r.carrera?.nombre ?? r.carrera_otra ?? null,
       perfil_en_busqueda: r.perfil_en_busqueda,
       eneatipo_numero: primerDominante?.numero_eneatipo ?? null,
       eneatipo_nombre: primerDominante?.nombre ?? null,
@@ -165,7 +177,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
   const { data: postulante } = await admin
     .from('perfil_postulante')
     .select(`
-      id, nombre_completo, especificidad_puesto, perfil_en_busqueda,
+      id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda,
       telefono, enlace_linkedin, portfolio, ultima_conexion,
       usuario(email), provincia(nombre), localidad(nombre),
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
@@ -178,7 +190,8 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
   const p = postulante as {
     id: string
     nombre_completo: string
-    especificidad_puesto: string | null
+    carrera_otra: string | null
+    carrera: { nombre: string } | null
     perfil_en_busqueda: boolean
     telefono: string | null
     enlace_linkedin: string | null
@@ -268,7 +281,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
   return {
     id: p.id,
     nombre_completo: p.nombre_completo,
-    especificidad_puesto: p.especificidad_puesto,
+    carrera: p.carrera?.nombre ?? p.carrera_otra ?? null,
     perfil_en_busqueda: p.perfil_en_busqueda,
     eneatipo_numero: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ?? null,
     eneatipo_nombre: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,

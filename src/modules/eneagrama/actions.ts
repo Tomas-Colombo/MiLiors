@@ -23,7 +23,8 @@ export async function guardarDatosBasicos(
     provincia_id: formData.get('provincia_id') || '',
     localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
-    especificidad_puesto: formData.get('especificidad_puesto') || undefined,
+    carrera_id: formData.get('carrera_id') || undefined,
+    carrera_otra: formData.get('carrera_otra') || undefined,
     enlace_linkedin: formData.get('enlace_linkedin') || undefined,
     portfolio: formData.get('portfolio') || undefined,
   }
@@ -53,7 +54,8 @@ export async function guardarDatosBasicos(
     provincia_id: parsed.data.provincia_id,
     localidad_id: parsed.data.localidad_id,
     telefono: parsed.data.telefono || null,
-    especificidad_puesto: parsed.data.especificidad_puesto || null,
+    carrera_id: parsed.data.carrera_id || null,
+    carrera_otra: parsed.data.carrera_otra || null,
     enlace_linkedin: parsed.data.enlace_linkedin || null,
     portfolio: parsed.data.portfolio || null,
   }

@@ -9,7 +9,8 @@ export const onboardingPostulanteSchema = z.object({
   provincia_id: z.string().uuid({ message: 'Seleccioná tu provincia.' }),
   localidad_id: z.string().uuid({ message: 'Seleccioná tu localidad.' }),
   telefono: z.string().optional(),
-  especificidad_puesto: z.string().max(200).optional(),
+  carrera_id: z.string().uuid().optional().or(z.literal('')),
+  carrera_otra: z.string().max(200, { message: 'El título es demasiado largo.' }).trim().optional().or(z.literal('')),
   enlace_linkedin: z
     .string()
     .url({ message: 'Ingresá una URL válida.' })
@@ -20,6 +21,13 @@ export const onboardingPostulanteSchema = z.object({
     .url({ message: 'Ingresá una URL válida.' })
     .optional()
     .or(z.literal('')),
+}).superRefine((data, ctx) => {
+  if (!data.carrera_id && !data.carrera_otra) {
+    ctx.addIssue({ code: 'custom', path: ['carrera_id'], message: 'Seleccioná tu carrera.' })
+  }
+  if (data.carrera_id && data.carrera_otra) {
+    ctx.addIssue({ code: 'custom', path: ['carrera_otra'], message: 'Elegí una carrera del listado o ingresá el título, no ambos.' })
+  }
 })
 
 export const guardarRespuestaSchema = z.object({

@@ -5,6 +5,7 @@ import { actualizarPerfilPostulante } from '@/modules/perfil/actions'
 import { Button, Field, Input, Alert } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
+import { CarreraSelector, type CarreraOption } from '@/components/shared/carrera-selector'
 import { UserIcon, MailIcon } from '@/components/icons'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -12,7 +13,8 @@ type Perfil = {
   id: string
   nombre_completo: string
   telefono: string | null
-  especificidad_puesto: string | null
+  carrera_id: string | null
+  carrera_otra: string | null
   enlace_linkedin: string | null
   portfolio: string | null
   provincia_id: string | null
@@ -25,11 +27,13 @@ export function PerfilPostulanteForm({
   perfil,
   email,
   provincias,
+  carreras,
   localidadesIniciales,
 }: {
   perfil: Perfil
   email: string
   provincias: ProvinciaOption[]
+  carreras: CarreraOption[]
   localidadesIniciales: SelectOption[]
 }) {
   const [state, action, pending] = useActionState(actualizarPerfilPostulante, initialState)
@@ -100,19 +104,14 @@ export function PerfilPostulanteForm({
         />
       </Field>
 
-      <Field
-        label="Tipo de puesto que buscás"
-        htmlFor="especificidad_puesto"
-        error={fieldErrors.especificidad_puesto?.[0]}
-      >
-        <Input
-          id="especificidad_puesto"
-          name="especificidad_puesto"
-          placeholder="Ej: Desarrollador Frontend, Analista de RRHH…"
-          defaultValue={perfil?.especificidad_puesto ?? ''}
-          status={fieldErrors.especificidad_puesto ? 'error' : 'default'}
-        />
-      </Field>
+      <CarreraSelector
+        carreras={carreras}
+        defaultCarreraId={perfil?.carrera_id}
+        defaultCarreraOtra={perfil?.carrera_otra}
+        required
+        carreraIdError={fieldErrors.carrera_id?.[0]}
+        carreraOtraError={fieldErrors.carrera_otra?.[0]}
+      />
 
       <Field
         label="LinkedIn"

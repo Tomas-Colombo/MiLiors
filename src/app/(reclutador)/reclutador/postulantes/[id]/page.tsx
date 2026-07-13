@@ -174,8 +174,8 @@ export default async function PostulanteDetallePage({
                 </span>
                 <div>
                   <h1 className="text-xl font-extrabold text-ink">{postulante.nombre_completo}</h1>
-                  {postulante.especificidad_puesto && (
-                    <p className="text-[13px] text-muted">{postulante.especificidad_puesto}</p>
+                  {postulante.carrera && (
+                    <p className="text-[13px] text-muted">{postulante.carrera}</p>
                   )}
                   {(postulante.nombre_localidad || postulante.nombre_provincia) && (
                     <p className="text-[12px] text-neutral-400 mt-0.5">
@@ -408,7 +408,7 @@ export default async function PostulanteDetallePage({
               {tiempoRelativo(postulante.ultima_conexion) && (
                 <p className="mt-3 pt-3 border-t border-neutral-100 text-[12px] text-neutral-400">
                   Último acceso:{' '}
-                  <span className="text-neutral-500">
+                  <span className="font-semibold text-ink">
                     {tiempoRelativo(postulante.ultima_conexion)}
                   </span>
                 </p>

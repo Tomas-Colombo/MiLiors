@@ -5,6 +5,7 @@ import { UsersIcon, SparklesIcon } from '@/components/icons'
 import { buscarPostulantes } from '@/modules/postulantes/queries'
 import { getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
 import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getCarreras, getCarrerasOtras } from '@/modules/carreras/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { PostulantesFilters } from './filters'
@@ -17,6 +18,8 @@ type SearchParams = Promise<{
   competencia?: string
   provincia?: string
   localidad?: string
+  carrera?: string
+  carreraOtra?: string
   page?: string
 }>
 
@@ -26,16 +29,20 @@ export default async function BuscarPostulantesPage({
   searchParams: SearchParams
 }) {
   const sp = await searchParams
-  const [postulantes, competencias, provincias, localidades] = await Promise.all([
+  const [postulantes, competencias, provincias, localidades, carreras, carrerasOtras] = await Promise.all([
     buscarPostulantes({
       busqueda: sp.busqueda,
       competenciaId: sp.competencia,
       provinciaId: sp.provincia,
       localidadId: sp.localidad,
+      carrera: sp.carrera,
+      carreraOtra: sp.carreraOtra,
     }),
     getCompetenciasCatalogo(),
     getProvincias(),
     sp.provincia ? getLocalidadesPorProvincia(sp.provincia) : Promise.resolve([]),
+    getCarreras(),
+    sp.carrera === 'OTRAS' ? getCarrerasOtras() : Promise.resolve([]),
   ])
 
   const competenciaOpts = competencias.map((c) => ({ value: c.id, label: c.nombre }))
@@ -58,6 +65,8 @@ export default async function BuscarPostulantesPage({
           competencias={competenciaOpts}
           provincias={provincias}
           localidades={localidades}
+          carreras={carreras}
+          carrerasOtras={carrerasOtras}
         />
 
         {/* Results */}
@@ -86,8 +95,8 @@ export default async function BuscarPostulantesPage({
                       <p className="font-semibold text-ink text-[15px] leading-snug">
                         {p.nombre_completo}
                       </p>
-                      {p.especificidad_puesto && (
-                        <p className="text-[13px] text-muted mt-0.5">{p.especificidad_puesto}</p>
+                      {p.carrera && (
+                        <p className="text-[13px] text-muted mt-0.5">{p.carrera}</p>
                       )}
                       {(p.nombre_localidad || p.nombre_provincia) && (
                         <p className="text-[12px] text-neutral-400 mt-1">
