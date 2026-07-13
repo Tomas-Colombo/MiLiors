@@ -2,10 +2,11 @@ import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
+import type { InformePersonalidadJSON } from '@/lib/types/informe'
 
 export type InformeData = {
   id: string
-  contenido_informe: string | null
+  contenido_json: InformePersonalidadJSON | null
   estado_informe: 'PENDIENTE' | 'LISTO' | 'ERROR'
   fecha_generacion: string
   updated_at: string
@@ -26,7 +27,7 @@ export const getInformeActual = cache(async (): Promise<InformeData | null> => {
 
   const { data } = await supabase
     .from('informe_personalidad')
-    .select('id, contenido_informe, estado_informe, fecha_generacion, updated_at, desactualizado')
+    .select('id, contenido_json, estado_informe, fecha_generacion, updated_at, desactualizado')
     .eq('postulante_id', (postulante as { id: string }).id)
     .single()
 

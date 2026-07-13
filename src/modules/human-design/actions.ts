@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { humanDesignSchema } from './schema'
-import { generarInforme } from '@/modules/informe/actions'
 import type { ActionResult } from '@/lib/types/domain'
 
 export async function guardarHumanDesign(
@@ -82,21 +81,24 @@ export async function guardarHumanDesign(
 
   if (error) return { success: false, error: 'No se pudo guardar el Human Design.' }
 
+  // Editar HD → informe y certificado quedan DESACTUALIZADOS. No se regenera
+  // automáticamente: el postulante toca "Actualizar" en /postulante/informe.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin.from('certificado_pdf') as any)
     .update({ desactualizado: true })
     .eq('postulante_id', postulanteId)
+  // Solo marcamos el informe si ya hay uno generado (LISTO); si todavía no existe,
+  // se generará al completar el Eneagrama, ya con el HD incluido.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('informe_personalidad') as any)
+    .update({ desactualizado: true })
+    .eq('postulante_id', postulanteId)
+    .eq('estado_informe', 'LISTO')
 
   revalidatePath('/postulante/human-design')
   revalidatePath('/postulante/perfil')
   revalidatePath('/postulante')
-
-  // Auto-regenerar el informe de personalidad (errores son no-fatales)
-  try {
-    await generarInforme()
-  } catch (e) {
-    console.error('[human-design] Error auto-generando informe:', e)
-  }
+  revalidatePath('/postulante/informe')
 
   return { success: true, data: undefined }
 }

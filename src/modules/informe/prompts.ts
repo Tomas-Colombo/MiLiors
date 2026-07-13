@@ -1,106 +1,88 @@
-import type { FormacionItem, ExperienciaItem, IdiomaItem, CompetenciaItem } from '@/modules/perfil-tecnico/queries'
-import type { HumanDesignData } from '@/modules/human-design/queries'
+/**
+ * Prompt del Informe de Personalidad (rediseño 2026).
+ *
+ * El LLM recibe el resultado YA CALCULADO del motor y SOLO escribe prosa en
+ * 3ª persona. Tiene prohibido calcular niveles, barras o rankings.
+ */
 
-export type DominanteInfo = {
-  numero: number
+import { COMO_TRABAJAS_TITULOS, type MotorResultado } from './competencias'
+
+export type InformePromptContext = {
   nombre: string
-  puntajeCrudo: number
-  porcentaje: number
-}
-
-export type InformeContext = {
-  nombreCompleto: string
   especificidadPuesto: string | null
-  dominantes: DominanteInfo[]
-  tieneEmpateDominante: boolean
-  humanDesign: HumanDesignData | null
-  formaciones: FormacionItem[]
-  experiencias: ExperienciaItem[]
-  idiomas: IdiomaItem[]
-  competencias: CompetenciaItem[]
+  motor: MotorResultado
+  humanDesign: {
+    tipo_energetico: string
+    autoridad_hd: string
+    perfil_hd: string
+    estrategia_hd: string
+  } | null
 }
 
-export function buildInformePrompts(ctx: InformeContext): { systemPrompt: string; userPrompt: string } {
-  const systemPrompt = `Sos un psicólogo organizacional experto en Eneagrama y Human Design aplicados al desarrollo profesional.
-Tu tarea es generar un Informe de Personalidad Profesional para un candidato laboral.
+export function buildInformePrompts(ctx: InformePromptContext): { systemPrompt: string; userPrompt: string } {
+  const { motor } = ctx
+  const titulos = COMO_TRABAJAS_TITULOS.join('\n  - ')
 
-FORMATO DE SALIDA OBLIGATORIO:
-Respondé ÚNICAMENTE con un objeto JSON válido con exactamente estas 5 claves (sin markdown, sin bloques de código, sin texto adicional):
+  const systemPrompt = `Sos un consultor de talento experto en Eneagrama y Human Design aplicados al mundo laboral.
+Escribís en español de Argentina, en TERCERA PERSONA (ej: "${primerNombre(ctx.nombre)} presenta...", "Su enfoque comercial...").
+Tono consultivo, cálido y concreto. Prohibido el "tú" y el "vos": siempre 3ª persona.
+
+Recibís un perfil YA CALCULADO por un motor determinístico. Tu ÚNICA tarea es redactar prosa.
+PROHIBIDO: calcular o mencionar niveles, barras, puntajes, porcentajes o rankings; el motor ya los resolvió.
+PROHIBIDO: inventar competencias o talentos distintos a los provistos.
+
+EXTENSIÓN (respetala, no infles): cada descripción de competencia = 1 oración; cada talento = 2-4 oraciones; cada ítem de "cómo trabajás" = 2-4 oraciones; la descripción de personalidad = 1 párrafo (4-6 oraciones).
+
+FORMATO DE SALIDA: respondé ÚNICAMENTE con un objeto JSON válido (sin markdown, sin texto extra) con esta forma EXACTA:
 {
-  "perfil_personalidad": "...",
-  "fortalezas_laborales": "...",
-  "areas_desarrollo": "...",
-  "compatibilidad_entorno": "...",
-  "recomendaciones_reclutadores": "..."
+  "subtitulo": "string — posicionamiento breve, ~6-10 palabras, ej 'Perfil comercial y relacional con impulso creativo'",
+  "descripcionPersonalidad": "string — un párrafo en 3ª persona: inteligencia emocional, orientación, energía, estilo de liderazgo y forma de comunicar",
+  "competenciasDesc": [ { "nombre": "string — EXACTO como se listó", "descripcion": "string — 1 oración en 3ª persona" } ],
+  "talentosDesc": [ { "nombre": "string — EXACTO como se listó", "descripcion": "string — 2-4 oraciones en 3ª persona" } ],
+  "comoTrabajas": [ { "titulo": "string — EXACTO de la lista", "texto": "string — 2-4 oraciones en 3ª persona" } ]
 }
 
-GUÍA DE CONTENIDO POR SECCIÓN (en español de Argentina, tono profesional y empático):
-- perfil_personalidad: Análisis del eneatipo en relación al perfil profesional (~200 palabras). Dirigido al candidato en segunda persona ("Tu perfil...").
-- fortalezas_laborales: Fortalezas clave aplicadas al entorno laboral (~200 palabras).
-- areas_desarrollo: Áreas de crecimiento y desafíos a trabajar (~150 palabras).
-- compatibilidad_entorno: Tipos de entornos y culturas organizacionales donde el candidato prospera (~200 palabras).
-- recomendaciones_reclutadores: Guía para entrevistadores sobre cómo aprovechar el perfil (~150 palabras).
+REGLAS DE ARMADO:
+- "competenciasDesc" debe tener una entrada por CADA competencia provista (13), usando el mismo "nombre".
+- "talentosDesc" debe tener una entrada por CADA talento del top-4 provisto (4), usando el mismo "nombre".
+- "comoTrabajas" debe tener EXACTAMENTE estos ${COMO_TRABAJAS_TITULOS.length} títulos, en este orden, combinando el estilo dominante y el secundario:
+  - ${titulos}`
 
-REGLAS:
-- No inventar rasgos no sustentados por el Eneatipo o el Human Design
-- Si no hay datos de Human Design, omitir ese análisis en las secciones
-- No mencionar el número de eneatipo como etiqueta técnica — integrarlo naturalmente al texto
-- Si hay empate de eneatipos dominantes, analizá confluencias y tensiones entre ambos`
+  const competenciasStr = motor.competencias
+    .map(c => `  - ${c.nombre} [${c.bloque}] → nivel ${c.nivel}`)
+    .join('\n')
 
-  const formacionStr = ctx.formaciones.length > 0
-    ? ctx.formaciones.map(f => `  - ${f.titulo} en ${f.institucion}${f.fecha_graduacion ? ` (${f.fecha_graduacion})` : ''}`).join('\n')
-    : '  - No especificada'
-
-  const expStr = ctx.experiencias.length > 0
-    ? ctx.experiencias.map(e => `  - ${e.puesto} en ${e.empresa} (${e.fecha_inicio} → ${e.fecha_fin ?? 'actualidad'})`).join('\n')
-    : '  - Sin experiencia laboral registrada'
-
-  const idiomasStr = ctx.idiomas.length > 0
-    ? ctx.idiomas.map(i => `${i.nombre} (${i.nivel_idioma})`).join(', ')
-    : 'No especificados'
-
-  const competenciasStr = ctx.competencias.length > 0
-    ? ctx.competencias.map(c => c.nombre).join(', ')
-    : 'No especificadas'
+  const talentosStr = motor.talentosTop.map((t, i) => `  ${i + 1}. ${t.nombre} (nivel ${t.nivel})`).join('\n')
 
   const hdStr = ctx.humanDesign
     ? `Human Design:
   - Tipo energético: ${ctx.humanDesign.tipo_energetico}
-  - Categoría de energía: ${ctx.humanDesign.energy_type_classification ?? 'No especificada'}
   - Autoridad interna: ${ctx.humanDesign.autoridad_hd}
   - Perfil: ${ctx.humanDesign.perfil_hd}
   - Estrategia: ${ctx.humanDesign.estrategia_hd}`
-    : 'Human Design: No proporcionado'
+    : 'Human Design: no proporcionado (no lo menciones).'
 
-  let eneatipoStr: string
-  if (ctx.tieneEmpateDominante) {
-    eneatipoStr = `Eneatipos dominantes (EMPATE):
-${ctx.dominantes.map(d => `  - Tipo ${d.numero} — ${d.nombre} (puntaje: ${d.puntajeCrudo}, ${d.porcentaje}%)`).join('\n')}
-Nota: el candidato presenta puntaje idéntico en estos tipos. Analizá las confluencias y divergencias entre ambos.`
-  } else {
-    const d = ctx.dominantes[0]
-    eneatipoStr = `Eneatipo: ${d.numero} — ${d.nombre}`
-  }
+  const userPrompt = `Redactá el informe para el siguiente perfil y devolvé SOLO el JSON.
 
-  const userPrompt = `Generá el Informe de Personalidad Profesional para el siguiente candidato y devolvé SOLO el JSON:
+CANDIDATO:
+Nombre: ${ctx.nombre}
+Búsqueda laboral: ${ctx.especificidadPuesto ?? 'no especificada'}
 
-DATOS DEL CANDIDATO:
-Nombre: ${ctx.nombreCompleto}
-Búsqueda laboral: ${ctx.especificidadPuesto ?? 'No especificada'}
+ESTILO (Eneagrama):
+  - Dominante: Eneatipo ${motor.estiloDominante.numero} — ${motor.estiloDominante.nombre}
+  - Secundario: Eneatipo ${motor.estiloSecundario.numero} — ${motor.estiloSecundario.nombre}
 
-PERFIL PSICOLÓGICO:
-${eneatipoStr}
 ${hdStr}
 
-PERFIL TÉCNICO:
-Formación académica:
-${formacionStr}
+COMPETENCIAS (13, con su nivel ya calculado — NO recalcules):
+${competenciasStr}
 
-Experiencia laboral:
-${expStr}
-
-Idiomas: ${idiomasStr}
-Competencias clave: ${competenciasStr}`
+TOP-4 TALENTOS (ya rankeados — escribí 1 párrafo por cada uno):
+${talentosStr}`
 
   return { systemPrompt, userPrompt }
+}
+
+function primerNombre(nombre: string): string {
+  return nombre.trim().split(/\s+/)[0] || nombre
 }

@@ -15,15 +15,19 @@ const colors = {
 }
 
 const styles = StyleSheet.create({
+  // paddingTop/Bottom dan margen en las páginas de continuación; el header lo
+  // compensa con marginTop negativo para quedar a tope en la portada.
   page: {
     backgroundColor: '#f6f7f9',
-    padding: 0,
+    paddingTop: 24,
+    paddingBottom: 24,
     fontFamily: 'Helvetica',
   },
   header: {
     backgroundColor: colors.primary,
     paddingVertical: 32,
     paddingHorizontal: 40,
+    marginTop: -24,
   },
   headerBrand: {
     fontSize: 22,

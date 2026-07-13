@@ -333,31 +333,46 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
   await (admin.from('resultado_puntaje_eneagrama') as any)
     .upsert(filasPuntaje, { onConflict: 'test_eneagrama_id,eneatipo_numero' })
 
-  // Crear/reiniciar informe_personalidad en PENDIENTE
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: informeExistente } = await (supabase.from('informe_personalidad') as any)
-    .select('id')
+  // Informe de personalidad: la primera vez se genera automáticamente; al REHACER
+  // el test (ya había un informe LISTO) solo se marca DESACTUALIZADO — el postulante
+  // lo regenera manualmente desde /postulante/informe (ahorra créditos de IA).
+  const { data: informeExistente } = await supabase
+    .from('informe_personalidad')
+    .select('id, estado_informe, contenido_json')
     .eq('postulante_id', testTyped.postulante_id)
     .single()
 
-  if (!informeExistente) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('informe_personalidad') as any).insert({
-      postulante_id: testTyped.postulante_id,
-      estado_informe: 'PENDIENTE',
-    })
-  } else {
+  const infPrev = informeExistente as { id: string; estado_informe: string; contenido_json: unknown } | null
+  // "Ya generado" en el FORMATO NUEVO: exige contenido_json. Un informe LISTO
+  // heredado del formato viejo (sin contenido_json) debe regenerarse, no solo
+  // marcarse desactualizado (si no, el visor no tiene nada que mostrar).
+  const yaGenerado = !!infPrev && infPrev.estado_informe === 'LISTO' && infPrev.contenido_json != null
+
+  if (yaGenerado) {
+    // Rehacer test → informe y certificado quedan desactualizados (sin regenerar).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
-      .update({ estado_informe: 'PENDIENTE', contenido_informe: null })
-      .eq('id', (informeExistente as { id: string }).id)
-  }
-
-  // Auto-generate personality report. Errors are non-fatal — user can retry from /postulante/informe.
-  try {
-    await generarInforme()
-  } catch (e) {
-    console.error('[eneagrama] Error auto-generando informe:', e)
+      .update({ desactualizado: true })
+      .eq('id', infPrev!.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('certificado_pdf') as any)
+      .update({ desactualizado: true })
+      .eq('postulante_id', testTyped.postulante_id)
+  } else {
+    // Primera vez (o generación previa fallida): asegurar registro y auto-generar.
+    if (!infPrev) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (admin.from('informe_personalidad') as any).insert({
+        postulante_id: testTyped.postulante_id,
+        estado_informe: 'PENDIENTE',
+      })
+    }
+    // Auto-generación inicial. Errores no-fatales — se reintenta desde la sección.
+    try {
+      await generarInforme()
+    } catch (e) {
+      console.error('[eneagrama] Error auto-generando informe:', e)
+    }
   }
 
   revalidatePath('/postulante')

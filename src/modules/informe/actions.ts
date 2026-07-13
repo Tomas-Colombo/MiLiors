@@ -4,16 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
-import { generarInformePersonalidad } from './service'
+import { generarInformePersonalidad, type InformeContext } from './service'
 import type { ActionResult } from '@/lib/types/domain'
-import type { InformeContext } from './prompts'
-import type { FormacionItem, ExperienciaItem, IdiomaItem, CompetenciaItem } from '@/modules/perfil-tecnico/queries'
 
 async function recopilarContexto(postulanteId: string): Promise<InformeContext | null> {
   const session = await verifySession()
   const supabase = await createClient()
 
-  // Basic profile
+  // Perfil básico
   const { data: perfil } = await supabase
     .from('perfil_postulante')
     .select('nombre_completo, especificidad_puesto')
@@ -24,88 +22,55 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   if (!perfil) return null
   const perfilTyped = perfil as { nombre_completo: string; especificidad_puesto: string | null }
 
-  // Dominantes via tabla intermedia
+  // Test de Eneagrama vigente
   const { data: test } = await supabase
     .from('test_eneagrama')
-    .select('tiene_empate_dominante, test_eneagrama_dominante(puntaje_crudo, porcentaje, eneatipo(numero_eneatipo, nombre))')
-    .eq('postulante_id', postulanteId)
-    .single()
-
-  if (!test) return null
-
-  const testTyped = test as {
-    tiene_empate_dominante: boolean
-    test_eneagrama_dominante: {
-      puntaje_crudo: number
-      porcentaje: number
-      eneatipo: { numero_eneatipo: number; nombre: string }
-    }[]
-  }
-
-  if (testTyped.test_eneagrama_dominante.length === 0) return null
-
-  const dominantes = testTyped.test_eneagrama_dominante.map(d => ({
-    numero: d.eneatipo.numero_eneatipo,
-    nombre: d.eneatipo.nombre,
-    puntajeCrudo: d.puntaje_crudo,
-    porcentaje: Number(d.porcentaje),
-  }))
-
-  // Human Design (optional)
-  const { data: hd } = await supabase
-    .from('human_design')
-    .select('id, tipo_energetico, autoridad_hd, perfil_hd, estrategia_hd')
-    .eq('postulante_id', postulanteId)
-    .single()
-
-  // Technical profile
-  const { data: pt } = await supabase
-    .from('perfil_tecnico')
     .select('id')
     .eq('postulante_id', postulanteId)
     .single()
 
-  let formaciones: FormacionItem[] = []
-  let experiencias: ExperienciaItem[] = []
-  let idiomas: IdiomaItem[] = []
-  let competencias: CompetenciaItem[] = []
+  if (!test) return null
+  const testId = (test as { id: string }).id
 
-  if (pt) {
-    const ptId = (pt as { id: string }).id
-    const [f, e, i, c] = await Promise.all([
-      supabase.from('formacion_academica').select('id, institucion, titulo, fecha_graduacion').eq('perfil_tecnico_id', ptId),
-      supabase.from('experiencia_laboral').select('id, empresa, puesto, fecha_inicio, fecha_fin, descripcion').eq('perfil_tecnico_id', ptId),
-      supabase.from('idioma').select('id, nombre, nivel_idioma').eq('perfil_tecnico_id', ptId),
-      supabase.from('postulante_competencia').select('competencia_id, competencia(id, nombre)').eq('perfil_tecnico_id', ptId),
-    ])
-    formaciones = (f.data ?? []) as FormacionItem[]
-    experiencias = (e.data ?? []) as ExperienciaItem[]
-    idiomas = (i.data ?? []) as IdiomaItem[]
-    competencias = (c.data ?? []).map((row: unknown) => {
-      const r = row as { competencia: { id: string; nombre: string } | null }
-      return r.competencia ? { id: r.competencia.id, nombre: r.competencia.nombre } : null
-    }).filter((x): x is CompetenciaItem => x !== null)
-  }
+  // Los 9 scores (porcentaje por eneatipo)
+  const { data: puntajes } = await supabase
+    .from('resultado_puntaje_eneagrama')
+    .select('eneatipo_numero, porcentaje')
+    .eq('test_eneagrama_id', testId)
+
+  const filas = (puntajes ?? []) as { eneatipo_numero: number; porcentaje: number }[]
+  if (filas.length === 0) return null
+
+  const scores: Record<number, number> = {}
+  for (const f of filas) scores[f.eneatipo_numero] = Number(f.porcentaje)
+
+  // Human Design (opcional)
+  const { data: hd } = await supabase
+    .from('human_design')
+    .select('tipo_energetico, autoridad_hd, perfil_hd, estrategia_hd')
+    .eq('postulante_id', postulanteId)
+    .single()
 
   return {
-    nombreCompleto: perfilTyped.nombre_completo,
+    nombre: perfilTyped.nombre_completo,
     especificidadPuesto: perfilTyped.especificidad_puesto,
-    dominantes,
-    tieneEmpateDominante: testTyped.tiene_empate_dominante,
-    humanDesign: hd ? (hd as { id: string; tipo_energetico: string; energy_type_classification: string | null; autoridad_hd: string; perfil_hd: string; estrategia_hd: string; veces_guardado: number }) : null,
-    formaciones,
-    experiencias,
-    idiomas,
-    competencias,
+    scores,
+    humanDesign: hd
+      ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })
+      : null,
   }
 }
 
 /**
- * Generates (or regenerates) the applicant's personality report.
- * Can be called from:
- *   - Completing the Enneagram test (automatic)
- *   - "Retry" button in the UI (manual, on ERROR)
- *   - Saving Human Design (automatic)
+ * Genera (o regenera) el informe de personalidad del postulante.
+ *
+ * Se usa desde:
+ *   - Completar el Eneagrama inicial (automático, vía módulo eneagrama).
+ *   - Botón "Actualizar" en la sección (manual) — solo si está desactualizado.
+ *   - Botón "Reintentar" (manual) cuando quedó en ERROR.
+ *
+ * REGLA: si ya existe un informe LISTO y NO está desactualizado, no se regenera
+ * (evita gastar créditos de IA sin necesidad).
  */
 export async function generarInforme(): Promise<ActionResult> {
   const session = await verifySession()
@@ -123,23 +88,31 @@ export async function generarInforme(): Promise<ActionResult> {
 
   const { data: informeExistente } = await supabase
     .from('informe_personalidad')
-    .select('id, estado_informe, contenido_informe')
+    .select('id, estado_informe, contenido_json, desactualizado')
     .eq('postulante_id', postulanteId)
     .order('updated_at', { ascending: false })
     .limit(1)
     .single()
 
-  let informeId: string
-  // ¿Hay un informe válido previo que NO debemos destruir si la regeneración falla?
-  // (p. ej. una caída transitoria del proveedor de IA no debe borrar un informe bueno)
-  let teniaInformeValido = false
+  const prev = informeExistente as {
+    id: string
+    estado_informe: string
+    contenido_json: unknown
+    desactualizado: boolean
+  } | null
 
-  if (informeExistente) {
-    const prev = informeExistente as { id: string; estado_informe: string; contenido_informe: string | null }
+  const teniaInformeValido = !!prev && prev.estado_informe === 'LISTO' && prev.contenido_json != null
+
+  // Bloqueo: no permitir actualizar un informe que ya está al día.
+  if (teniaInformeValido && !prev!.desactualizado) {
+    return { success: false, error: 'El informe ya está actualizado.' }
+  }
+
+  let informeId: string
+  if (prev) {
     informeId = prev.id
-    teniaInformeValido = prev.estado_informe === 'LISTO' && !!prev.contenido_informe
-    // Marcamos PENDIENTE pero NO borramos el contenido: si la generación falla,
-    // el informe anterior sigue intacto y se restaura a LISTO (ver fallarGeneracion).
+    // Marcamos PENDIENTE sin borrar el contenido: si la generación falla,
+    // el informe anterior sigue intacto (ver fallarGeneracion).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
       .update({ estado_informe: 'PENDIENTE' })
@@ -154,8 +127,6 @@ export async function generarInforme(): Promise<ActionResult> {
     informeId = (nuevo as { id: string }).id
   }
 
-  // Fallo de generación: si había un informe válido previo lo conservamos
-  // (restauramos a LISTO sin tocar el contenido); si no, marcamos ERROR.
   async function fallarGeneracion(mensaje: string): Promise<ActionResult> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin.from('informe_personalidad') as any)
@@ -177,7 +148,6 @@ export async function generarInforme(): Promise<ActionResult> {
   }
 
   const resultado = await generarInformePersonalidad(ctx)
-
   if (!resultado.ok) {
     return fallarGeneracion(`No se pudo generar el informe: ${resultado.motivo}`)
   }
@@ -186,7 +156,8 @@ export async function generarInforme(): Promise<ActionResult> {
   const { error: saveError } = await (admin.from('informe_personalidad') as any)
     .update({
       estado_informe: 'LISTO',
-      contenido_informe: JSON.stringify(resultado.contenido_json),
+      contenido_json: resultado.contenido_json,
+      contenido_informe: null,
       fecha_generacion: new Date().toISOString(),
       desactualizado: false,
     })
@@ -201,4 +172,3 @@ export async function generarInforme(): Promise<ActionResult> {
   revalidatePath('/postulante')
   return { success: true, data: undefined }
 }
-
