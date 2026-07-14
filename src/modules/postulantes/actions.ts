@@ -4,8 +4,18 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getNotasPrivadas } from './queries'
 import type { ActionResult } from '@/lib/types/domain'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
+
+export type NotaData = {
+  id: string
+  contenido: string
+  fecha_creacion: string
+  updated_at: string
+  puesto_id: string | null
+  titulo_puesto: string | null
+}
 
 async function getReclutadorId(): Promise<string | null> {
   const session = await verifySession()
@@ -29,29 +39,20 @@ export async function crearNota(
 
   const admin = createAdminClient()
 
-  // Etiquetamos la nota con un puesto para que se pueda distinguir a qué
-  // postulación pertenece cuando el candidato aplicó a varias. Si el llamador
-  // no indica un puesto, usamos el de la última postulación del candidato a
-  // una búsqueda de este reclutador.
-  let puestoIdFinal = puestoId ?? null
+  // La nota solo se etiqueta con un puesto si el llamador lo indica
+  // explícitamente. Sin puesto, queda como nota suelta del postulante
+  // (puesto_id = null): el reclutador puede querer anotar algo del candidato
+  // sin asociarlo a ninguna postulación.
+  const puestoIdFinal = puestoId ?? null
   let tituloPuesto: string | null = null
-  if (!puestoIdFinal) {
+  if (puestoIdFinal) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: ultima } = await (admin.from('postulacion') as any)
-      .select('puesto_id, puesto!inner(titulo_puesto, reclutador_id)')
-      .eq('postulante_id', postulanteId)
-      .eq('puesto.reclutador_id', reclutadorId)
-      .order('fecha_postulacion', { ascending: false })
-      .limit(1)
+    const { data: puesto } = await (admin.from('puesto') as any)
+      .select('titulo_puesto')
+      .eq('id', puestoIdFinal)
+      .eq('reclutador_id', reclutadorId)
       .maybeSingle()
-    if (ultima) {
-      const row = ultima as {
-        puesto_id: string
-        puesto: { titulo_puesto: string } | null
-      }
-      puestoIdFinal = row.puesto_id
-      tituloPuesto = row.puesto?.titulo_puesto ?? null
-    }
+    tituloPuesto = (puesto as { titulo_puesto: string } | null)?.titulo_puesto ?? null
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +69,18 @@ export async function crearNota(
   await marcarActividadPuesto(puestoIdFinal)
 
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
+  revalidatePath('/reclutador/postulaciones')
   return { success: true, data: { titulo_puesto: tituloPuesto } }
+}
+
+/** Notas privadas del reclutador para un postulante — versión llamable desde el cliente */
+export async function getNotasDePostulante(
+  postulanteId: string,
+): Promise<ActionResult<NotaData[]>> {
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return { success: false, error: 'No autorizado.' }
+  const notas = await getNotasPrivadas(postulanteId)
+  return { success: true, data: notas }
 }
 
 export async function editarNota(notaId: string, contenido: string): Promise<ActionResult> {
@@ -101,6 +113,7 @@ export async function eliminarNota(notaId: string, postulanteId: string): Promis
 
   if (error) return { success: false, error: 'No se pudo eliminar la nota.' }
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
+  revalidatePath('/reclutador/postulaciones')
   revalidatePath('/reclutador/notas')
   return { success: true, data: undefined }
 }

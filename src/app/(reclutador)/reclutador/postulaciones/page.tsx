@@ -8,6 +8,7 @@ import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
 import { VerRespuestasBtn } from './ver-respuestas-btn'
+import { NotasModalBtn } from './notas-modal-btn'
 import { FavoritoToggle } from './favorito-toggle'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
 import { paginar } from '@/lib/pagination'
@@ -242,6 +243,11 @@ export default async function PostulacionesRecibidasPage({
                       {conRespuestas.has(p.id) && (
                         <VerRespuestasBtn postulacionId={p.id} nombrePostulante={p.nombre_completo} />
                       )}
+                      <NotasModalBtn
+                        postulanteId={p.postulante_id}
+                        puestoId={p.puesto_id}
+                        nombrePostulante={p.nombre_completo}
+                      />
                     </div>
                     <PostulacionAcciones postulacionId={p.id} estadoActual={p.estado} />
                   </div>

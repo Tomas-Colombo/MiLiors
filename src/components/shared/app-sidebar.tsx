@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSyncExternalStore, useTransition } from 'react'
 import {
-  SparklesIcon,
   LogOutIcon,
   SettingsIcon,
   PanelLeftCloseIcon,
@@ -88,12 +87,12 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
       {/* Brand + colapsar */}
       <div className={['mb-6 flex items-center px-1', collapsed ? 'flex-col gap-3' : 'justify-between gap-2'].join(' ')}>
         <div className="flex min-w-0 items-center gap-2.5 px-2">
-          <div
-            className="flex h-8 w-8 flex-none items-center justify-center rounded-[9px]"
-            style={{ background: 'var(--sidebar-logo-gradient)', boxShadow: '0 4px 12px rgba(91,79,232,0.4)' }}
-          >
-            <SparklesIcon size={16} className="text-white" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/LogoTalentID.svg"
+            alt="TalentID"
+            className="h-11 w-11 flex-none object-contain"
+          />
           {!collapsed && (
             <div className="min-w-0">
               <div
