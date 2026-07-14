@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { Badge, EmptyState, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
-import { BuildingIcon, PlusIcon } from '@/components/icons'
+import { BuildingIcon, PlusIcon, AlertTriangleIcon, AlertCircleIcon } from '@/components/icons'
+import { cn } from '@/lib/utils'
 import { getMisPuestos } from '@/modules/puestos/queries'
 import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
@@ -73,15 +74,33 @@ export default async function MisPuestosPage({
             : null
         return (
           <div className="flex flex-col items-center gap-1.5">
-            <Badge tone={p.activo ? 'success' : 'neutral'} dot>
-              {p.activo ? 'Activo' : 'Cerrado'}
-            </Badge>
+            {alerta ? (
+              // Con alerta, el puntito verde alcanza como señal de "activo":
+              // el cartel de advertencia queda como protagonista.
+              <span
+                className="h-2 w-2 rounded-full bg-success-solid"
+                title="Activo"
+                aria-label="Activo"
+              />
+            ) : (
+              <Badge tone={p.activo ? 'success' : 'neutral'} dot>
+                {p.activo ? 'Activo' : 'Cerrado'}
+              </Badge>
+            )}
             {alerta && (
               <span
-                className={`w-fit max-w-[130px] rounded-md px-2 py-1 text-center text-[11px] font-semibold leading-[1.25] ${
-                  alerta.tone === 'error' ? 'bg-error-bg text-error' : 'bg-warning-bg text-warning'
-                }`}
+                className={cn(
+                  'inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11.5px] font-semibold leading-none',
+                  alerta.tone === 'error'
+                    ? 'border-error-border bg-error-bg text-error'
+                    : 'border-warning-border bg-warning-bg text-warning',
+                )}
               >
+                {alerta.tone === 'error' ? (
+                  <AlertCircleIcon size={13} strokeWidth={2.5} className="flex-none" />
+                ) : (
+                  <AlertTriangleIcon size={13} strokeWidth={2.5} className="flex-none" />
+                )}
                 {alerta.label}
               </span>
             )}

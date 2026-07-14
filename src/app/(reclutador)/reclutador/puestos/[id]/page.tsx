@@ -48,8 +48,8 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
             tone={alerta.tone}
             title={
               alerta.tone === 'error'
-                ? '🔴 Este puesto se cierra mañana por inactividad'
-                : `⚠️ Este puesto está inactivo hace ${alerta.diasInactivo} días`
+                ? 'Este puesto se cierra mañana por inactividad'
+                : `Este puesto está inactivo hace ${alerta.diasInactivo} días`
             }
           >
             Si no registramos actividad tuya durante {diasInactividadCierre} días —revisar
@@ -76,9 +76,19 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge tone={puesto.activo ? 'success' : 'neutral'} dot>
-                  {puesto.activo ? 'Activo' : 'Cerrado'}
-                </Badge>
+                {alerta ? (
+                  // El cartel de arriba ya comunica el estado; acá el puntito
+                  // verde basta como señal de que sigue activo.
+                  <span
+                    className="h-2 w-2 rounded-full bg-success-solid"
+                    title="Activo"
+                    aria-label="Activo"
+                  />
+                ) : (
+                  <Badge tone={puesto.activo ? 'success' : 'neutral'} dot>
+                    {puesto.activo ? 'Activo' : 'Cerrado'}
+                  </Badge>
+                )}
                 <span className="text-[12px] text-neutral-400">
                   Publicado el{' '}
                   {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
