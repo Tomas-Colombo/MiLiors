@@ -15,6 +15,9 @@ export type PuestoItem = {
   activo: boolean
   fecha_publicacion: string
   fecha_baja_puesto: string | null
+  // Solo se completa en las vistas propias del reclutador (getMisPuestos); no se
+  // expone a los postulantes. Base de la alerta de cierre por inactividad.
+  fecha_ultima_actividad?: string
   empresa_id: string
   sector_id: string | null
   provincia_id: string | null
@@ -49,7 +52,7 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
     .from('puesto')
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
-      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
+      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
       empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
       empresa(nombre_empresa), sector_industrial(nombre_sector),
       provincia(nombre), localidad(nombre)
@@ -64,6 +67,7 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       idioma: string; carga_horaria: string; ubicacion: string
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
+      fecha_ultima_actividad: string
       empresa_id: string; sector_id: string | null
       provincia_id: string | null; localidad_id: string | null
       perfil_psicologico_deseado: string | null
@@ -83,6 +87,7 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       activo: r.activo,
       fecha_publicacion: r.fecha_publicacion,
       fecha_baja_puesto: r.fecha_baja_puesto,
+      fecha_ultima_actividad: r.fecha_ultima_actividad,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
       provincia_id: r.provincia_id,
@@ -115,7 +120,7 @@ export const getPuestoById = cache(async (
     .from('puesto')
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
-      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
+      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
       empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
       empresa(nombre_empresa), sector_industrial(nombre_sector),
       provincia(nombre), localidad(nombre)
@@ -132,6 +137,7 @@ export const getPuestoById = cache(async (
     idioma: string; carga_horaria: string; ubicacion: string
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
+    fecha_ultima_actividad: string
     empresa_id: string; sector_id: string | null
     provincia_id: string | null; localidad_id: string | null
     perfil_psicologico_deseado: string | null
@@ -152,6 +158,7 @@ export const getPuestoById = cache(async (
     activo: r.activo,
     fecha_publicacion: r.fecha_publicacion,
     fecha_baja_puesto: r.fecha_baja_puesto,
+    fecha_ultima_actividad: r.fecha_ultima_actividad,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
     provincia_id: r.provincia_id,

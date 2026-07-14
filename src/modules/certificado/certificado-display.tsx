@@ -20,11 +20,15 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
+  const prosa = data.perfilIntegrado ?? data.personalidad
+  const parrafos = prosa ? prosa.split(/\n\n+/).map(p => p.trim()).filter(Boolean) : []
+  const competenciasTitulo = data.perfilIntegrado ? 'Otras competencias' : 'Competencias'
+
   return (
     <div className="space-y-6">
-      {/* Perfil de personalidad */}
+      {/* Perfil profesional integrado (personalidad + trayectoria técnica) */}
       <section>
-        <SectionTitle>Perfil de personalidad</SectionTitle>
+        <SectionTitle>{data.perfilIntegrado ? 'Perfil profesional' : 'Perfil de personalidad'}</SectionTitle>
         <span className="inline-flex rounded bg-primary-50 px-2.5 py-1 text-[13px] font-semibold text-primary-600">
           Eneatipo {data.eneatipoNumero} — {data.eneatipoNombre}
         </span>
@@ -34,9 +38,9 @@ export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
             Autoridad {data.humanDesign.autoridad_hd} · Perfil {data.humanDesign.perfil_hd}
           </p>
         )}
-        {data.personalidad && (
-          <p className="mt-2 text-[13.5px] leading-relaxed text-ink">{data.personalidad}</p>
-        )}
+        {parrafos.map((p, i) => (
+          <p key={i} className="mt-2 text-[13.5px] leading-relaxed text-ink">{p}</p>
+        ))}
       </section>
 
       {/* Formación académica */}
@@ -79,7 +83,7 @@ export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
         <section className="grid gap-6 sm:grid-cols-2">
           {data.competencias.length > 0 && (
             <div>
-              <SectionTitle>Competencias</SectionTitle>
+              <SectionTitle>{competenciasTitulo}</SectionTitle>
               <div className="flex flex-wrap gap-1.5">
                 {data.competencias.map((c, i) => (
                   <span key={i} className="rounded bg-neutral-100 px-2 py-0.5 text-[12.5px] text-soft">

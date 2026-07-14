@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useActionState, useState } from 'react'
-import { Field, Input, Textarea, Select, Button, Alert } from '@/components/ui'
+import { Field, Input, Textarea, Select, Button, Alert, Modal } from '@/components/ui'
+import { AlertTriangleIcon } from '@/components/icons'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { publicarPuesto } from '@/modules/puestos/actions'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION } from '@/lib/constants/enums'
@@ -12,14 +14,24 @@ import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
 type Props = {
   sectores: { id: string; nombre_sector: string }[]
   provincias: ProvinciaOption[]
+  /** Período de inactividad configurado por el admin (para el copy del modal). */
+  diasInactividad: number
 }
 
 // publicarPuesto returns ActionResult<{ puestoId: string }> — match the generic
 const initialState: ActionResult<{ puestoId: string }> = { success: false, error: '' }
 
-export function NuevoPuestoForm({ sectores, provincias }: Props) {
+export function NuevoPuestoForm({ sectores, provincias, diasInactividad }: Props) {
+  const router = useRouter()
   const [state, action, isPending] = useActionState(publicarPuesto, initialState)
   const [modalidad, setModalidad] = useState('')
+
+  // Tras publicar con éxito mostramos un modal de advertencia (no toast: requiere
+  // acción del usuario). El botón —y cualquier cierre— navega al puesto creado.
+  const puestoId = state.success ? state.data?.puestoId : undefined
+  const irAlPuesto = () => {
+    if (puestoId) router.push(`/reclutador/puestos/${puestoId}`)
+  }
 
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
   // La ubicación se pide siempre salvo que la modalidad sea remota.
@@ -34,6 +46,7 @@ export function NuevoPuestoForm({ sectores, provincias }: Props) {
   const ubicacionOptions = Object.entries(UBICACION_LABEL).map(([v, l]) => ({ value: v, label: l }))
 
   return (
+    <>
     <form action={action} className="space-y-5">
       {!state.success && state.error && (
         <Alert tone="error" title={state.error} />
@@ -182,5 +195,33 @@ export function NuevoPuestoForm({ sectores, provincias }: Props) {
         </Button>
       </div>
     </form>
+
+    <Modal
+      open={!!puestoId}
+      onClose={irAlPuesto}
+      icon={
+        <span
+          className="flex h-11 w-11 items-center justify-center rounded-full"
+          style={{ backgroundColor: '#FEF3C7' }}
+        >
+          <AlertTriangleIcon size={22} strokeWidth={2} style={{ color: '#F59E0B' }} />
+        </span>
+      }
+      title="Tu puesto fue publicado"
+      footer={
+        <Button className="flex-1" onClick={irAlPuesto}>
+          Entendido, ir al puesto
+        </Button>
+      }
+    >
+      <p>Los postulantes ya pueden encontrar esta búsqueda.</p>
+      <p className="mt-3">
+        ⚠️ Tené en cuenta que si no registramos actividad tuya en este puesto durante{' '}
+        <strong>{diasInactividad} días</strong> (revisar postulaciones, cambiar estados o
+        editar el puesto), lo cerraremos automáticamente para no mantener búsquedas sin
+        atención activa.
+      </p>
+    </Modal>
+    </>
   )
 }

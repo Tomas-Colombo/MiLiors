@@ -691,8 +691,8 @@ function SeccionCompetencias({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-[15px] font-bold text-ink">Competencias</h2>
-          <p className="text-[13px] text-muted">Seleccioná hasta {MAX} competencias del catálogo, o agregá las tuyas.</p>
+          <h2 className="text-[15px] font-bold text-ink">Habilidades y tecnologías</h2>
+          <p className="text-[13px] text-muted">Seleccioná hasta {MAX} habilidades y tecnologías del catálogo, o agregá las tuyas.</p>
         </div>
         <span className="shrink-0 rounded-full bg-primary-ghost-hover px-3 py-1 text-[12px] font-semibold text-primary-600">
           {total}/{MAX} seleccionadas
@@ -722,7 +722,7 @@ function SeccionCompetencias({
           )}
         </div>
         {seleccionadas.length === 0 ? (
-          <p className="text-[13px] text-neutral-400">Todavía no seleccionaste ninguna competencia.</p>
+          <p className="text-[13px] text-neutral-400">Todavía no seleccionaste ninguna habilidad o tecnología.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {seleccionadas.map((s) => (
@@ -754,7 +754,7 @@ function SeccionCompetencias({
             value={query}
             onChange={(e) => { setQuery(e.target.value); setFeedback(null) }}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar o escribir una competencia…"
+            placeholder="Buscar o escribir una habilidad o tecnología…"
             disabled={total >= MAX}
             className="h-10 w-full rounded-md border border-neutral-300 bg-surface pl-9 pr-4 text-sm text-ink placeholder:text-neutral-400 outline-none transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400"
           />
@@ -791,7 +791,7 @@ function SeccionCompetencias({
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-5 text-center text-[13px] text-muted">
-            No hay competencias que coincidan con &ldquo;<strong>{queryTrimmed}</strong>&rdquo;.{' '}
+            No hay habilidades ni tecnologías que coincidan con &ldquo;<strong>{queryTrimmed}</strong>&rdquo;.{' '}
             {canAddCustom && (
               <>Presioná Enter o tocá <strong>Agregar</strong> para crearla.</>
             )}
@@ -836,7 +836,7 @@ const TAB_ITEMS = [
   { id: 'formacion', label: 'Formación' },
   { id: 'experiencia', label: 'Experiencia' },
   { id: 'idiomas', label: 'Idiomas' },
-  { id: 'competencias', label: 'Competencias' },
+  { id: 'competencias', label: 'Habilidades y tecnologías' },
 ]
 
 export function PerfilTecnicoUI({

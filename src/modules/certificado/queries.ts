@@ -3,6 +3,8 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { competenciasNoIntegradas } from './sintesis-service'
+import type { CertificadoSintesisJSON, SintesisEstado } from '@/lib/types/certificado'
 
 export type CertificadoData = {
   id: string
@@ -57,8 +59,14 @@ export type CertificadoContenido = {
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
+  /** Competencias a mostrar como lista: todas si no hay síntesis, o solo las NO integradas si la hay. */
   competencias: { nombre: string }[]
+  /** Párrafo del informe (fallback cuando aún no hay síntesis integrada). */
   personalidad?: string
+  /** Perfil profesional integrado (síntesis). Cuando existe, reemplaza a `personalidad`. */
+  perfilIntegrado?: string
+  /** Estado de la síntesis integrada para dirigir la UI. */
+  sintesisEstado: SintesisEstado
 }
 
 export const getCertificadoContenido = cache(async (): Promise<CertificadoContenido | null> => {
@@ -103,18 +111,24 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
       .single(),
     supabase
       .from('perfil_tecnico')
-      .select('id')
+      .select('id, sintesis_certificado, sintesis_estado')
       .eq('postulante_id', postulanteTyped.id)
       .single(),
   ])
+
+  const ptTyped = pt as {
+    id: string
+    sintesis_certificado: CertificadoSintesisJSON | null
+    sintesis_estado: SintesisEstado
+  } | null
 
   let formaciones: CertificadoContenido['formaciones'] = []
   let experiencias: CertificadoContenido['experiencias'] = []
   let idiomas: CertificadoContenido['idiomas'] = []
   let competencias: CertificadoContenido['competencias'] = []
 
-  if (pt) {
-    const ptId = (pt as { id: string }).id
+  if (ptTyped) {
+    const ptId = ptTyped.id
     const [f, e, i, c] = await Promise.all([
       supabase.from('formacion_academica').select('titulo, institucion, fecha_graduacion').eq('perfil_tecnico_id', ptId),
       supabase.from('experiencia_laboral').select('puesto, empresa, fecha_inicio, fecha_fin').eq('perfil_tecnico_id', ptId),
@@ -131,6 +145,16 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
 
   const informeJson = (informe as { contenido_json: { descripcionPersonalidad?: string } | null } | null)?.contenido_json
 
+  // Si hay síntesis integrada LISTA, mostramos el perfil integrado y dejamos en
+  // la lista solo las competencias que NO se integraron (las integradas ya van
+  // dentro de la prosa). Sin síntesis, fallback a la descripción del informe y
+  // todas las competencias.
+  const sintesis = ptTyped?.sintesis_estado === 'LISTO' ? ptTyped.sintesis_certificado : null
+  const perfilIntegrado = sintesis?.perfilIntegrado
+  const competenciasVisibles = sintesis
+    ? competenciasNoIntegradas(competencias.map(c => c.nombre), sintesis.competenciasIntegradas).map(nombre => ({ nombre }))
+    : competencias
+
   return {
     nombre: postulanteTyped.nombre_completo,
     email: session.email,
@@ -142,8 +166,10 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     formaciones,
     experiencias,
     idiomas,
-    competencias,
+    competencias: competenciasVisibles,
     personalidad: informeJson?.descripcionPersonalidad,
+    perfilIntegrado,
+    sintesisEstado: ptTyped?.sintesis_estado ?? 'PENDIENTE',
   }
 })
 

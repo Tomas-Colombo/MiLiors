@@ -29,17 +29,32 @@ export default async function CertificadoPage() {
 
   let tieneFormacion = false
   let tieneCompetencia = false
+  let sintesisEstado: 'PENDIENTE' | 'LISTO' | 'ERROR' = 'PENDIENTE'
+  let sintesisDesactualizada = false
 
   if (postulante) {
     const pid = (postulante as { id: string }).id
     const { data: pt } = await supabase
       .from('perfil_tecnico')
-      .select('id')
+      .select('id, sintesis_estado, sintesis_certificado')
       .eq('postulante_id', pid)
       .single()
 
     if (pt) {
-      const ptId = (pt as { id: string }).id
+      const ptTyped = pt as {
+        id: string
+        sintesis_estado: 'PENDIENTE' | 'LISTO' | 'ERROR'
+        sintesis_certificado: { generadaAt?: string } | null
+      }
+      const ptId = ptTyped.id
+      sintesisEstado = ptTyped.sintesis_estado ?? 'PENDIENTE'
+
+      // Desactualizada si el informe se regeneró DESPUÉS de la síntesis.
+      const generadaAt = ptTyped.sintesis_certificado?.generadaAt
+      if (sintesisEstado === 'LISTO' && generadaAt && informe?.fecha_generacion) {
+        sintesisDesactualizada = new Date(generadaAt) < new Date(informe.fecha_generacion)
+      }
+
       const [{ count: formCount }, { count: compCount }] = await Promise.all([
         supabase
           .from('formacion_academica')
@@ -71,6 +86,8 @@ export default async function CertificadoPage() {
           informeDesactualizado={informe?.desactualizado ?? false}
           tieneFormacion={tieneFormacion}
           tieneCompetencia={tieneCompetencia}
+          sintesisEstado={sintesisEstado}
+          sintesisDesactualizada={sintesisDesactualizada}
         />
       </div>
     </TyCGate>

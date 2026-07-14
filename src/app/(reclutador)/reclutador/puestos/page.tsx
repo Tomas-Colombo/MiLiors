@@ -5,6 +5,8 @@ import { Badge, EmptyState, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon, PlusIcon } from '@/components/icons'
 import { getMisPuestos } from '@/modules/puestos/queries'
+import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
+import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { PuestoAcciones } from './puesto-acciones'
@@ -21,7 +23,10 @@ export default async function MisPuestosPage({
 }) {
   const { orden, estado, q: qRaw, page: pageParam } = await searchParams
   const q = qRaw?.trim().toLowerCase() ?? ''
-  const puestos = await getMisPuestos()
+  const [puestos, { diasInactividadCierre }] = await Promise.all([
+    getMisPuestos(),
+    getConfiguracionSistema(),
+  ])
 
   // Filtro por estado (activo / cerrado) y búsqueda por título sobre los datos ya cargados
   const filtered = puestos.filter((p) => {
@@ -57,11 +62,32 @@ export default async function MisPuestosPage({
     {
       key: 'estado',
       header: 'Estado',
-      cell: (p) => (
-        <Badge tone={p.activo ? 'success' : 'neutral'} dot>
-          {p.activo ? 'Activo' : 'Cerrado'}
-        </Badge>
-      ),
+      align: 'center',
+      width: '1.5fr',
+      cell: (p) => {
+        // La alerta solo aplica a puestos activos (los cerrados ya no corren
+        // riesgo de cierre automático).
+        const alerta =
+          p.activo && p.fecha_ultima_actividad
+            ? calcularAlertaInactividad(p.fecha_ultima_actividad, diasInactividadCierre)
+            : null
+        return (
+          <div className="flex flex-col items-center gap-1.5">
+            <Badge tone={p.activo ? 'success' : 'neutral'} dot>
+              {p.activo ? 'Activo' : 'Cerrado'}
+            </Badge>
+            {alerta && (
+              <span
+                className={`w-fit max-w-[130px] rounded-md px-2 py-1 text-center text-[11px] font-semibold leading-[1.25] ${
+                  alerta.tone === 'error' ? 'bg-error-bg text-error' : 'bg-warning-bg text-warning'
+                }`}
+              >
+                {alerta.label}
+              </span>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'publicado',

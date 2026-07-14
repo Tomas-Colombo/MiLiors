@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
@@ -9,6 +8,7 @@ import { puestoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 import { parseFormularioPreselectorField } from '@/modules/preselector/schema'
 import { persistirFormularioPreselector, eliminarFormularioPreselector } from '@/modules/preselector/service'
+import { marcarActividadPuesto } from './actividad'
 
 /**
  * Contratación opcional al cerrar/eliminar un puesto.
@@ -236,7 +236,9 @@ export async function publicarPuesto(
   await registrarApertura(puestoId, ctx.empresaId, parsed.data.titulo_puesto)
 
   revalidatePath('/reclutador/puestos')
-  redirect(`/reclutador/puestos/${puestoId}`)
+  // No redirigimos: el cliente muestra el modal de advertencia (cierre por
+  // inactividad) y navega al puesto cuando el reclutador lo confirma.
+  return { success: true, data: { puestoId } }
 }
 
 export async function editarPuesto(
@@ -309,6 +311,9 @@ export async function editarPuesto(
     const resultado = await eliminarFormularioPreselector(admin, puestoId)
     if (!resultado.ok) return { success: false, error: resultado.error }
   }
+
+  // Editar el puesto cuenta como actividad del reclutador.
+  await marcarActividadPuesto(puestoId)
 
   revalidatePath(`/reclutador/puestos/${puestoId}`)
   revalidatePath('/reclutador/puestos')

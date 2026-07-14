@@ -172,8 +172,11 @@ export type CertificadoPDFProps = {
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
+  /** Competencias a listar: cuando hay perfil integrado, son solo las NO integradas. */
   competencias: { nombre: string }[]
-  /** Texto de perfil de personalidad del informe (sección perfil_personalidad) */
+  /** Perfil profesional integrado (personalidad + trayectoria técnica), en 3ª persona. */
+  perfilIntegrado?: string
+  /** Fallback: párrafo de personalidad del informe (si no hay perfil integrado). */
   personalidad?: string
   timestampFirma: string
   certificadoId: string
@@ -201,11 +204,14 @@ export function CertificadoPDF({
   experiencias,
   idiomas,
   competencias,
+  perfilIntegrado,
   personalidad,
   timestampFirma,
   certificadoId,
   qrBase64,
 }: CertificadoPDFProps) {
+  const prosa = perfilIntegrado ?? personalidad
+  const parrafos = prosa ? prosa.split(/\n\n+/).map(p => p.trim()).filter(Boolean) : []
   const fechaFirma = new Date(timestampFirma).toLocaleDateString('es-AR', {
     day: '2-digit',
     month: 'long',
@@ -235,9 +241,9 @@ export function CertificadoPDF({
             </View>
           </View>
 
-          {/* Sección: Perfil de personalidad */}
+          {/* Sección: Perfil profesional integrado */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Perfil de Personalidad</Text>
+            <Text style={styles.sectionTitle}>{perfilIntegrado ? 'Perfil Profesional' : 'Perfil de Personalidad'}</Text>
             <View style={styles.eneatipoRow}>
               <View style={styles.eneatipoTag}>
                 <Text style={styles.eneatipoText}>Eneatipo {eneatipoNumero} — {eneatipoNombre}</Text>
@@ -251,14 +257,9 @@ export function CertificadoPDF({
                 </Text>
               </View>
             )}
-            {personalidad && (
-              <View style={{ marginTop: 10 }}>
-                <Text style={[styles.bodyText, { marginBottom: 3, fontFamily: 'Helvetica-Bold', color: colors.soft }]}>
-                  Síntesis:
-                </Text>
-                <Text style={styles.bodyText}>{personalidad}</Text>
-              </View>
-            )}
+            {parrafos.map((p, i) => (
+              <Text key={i} style={[styles.bodyText, { marginTop: 8 }]}>{p}</Text>
+            ))}
           </View>
 
           {/* Sección: Formación académica */}
@@ -295,7 +296,7 @@ export function CertificadoPDF({
           <View style={[styles.section, styles.row]}>
             {competencias.length > 0 && (
               <View style={styles.col}>
-                <Text style={styles.sectionTitle}>Competencias</Text>
+                <Text style={styles.sectionTitle}>{perfilIntegrado ? 'Otras Competencias' : 'Competencias'}</Text>
                 <Text style={styles.bodyText}>{competencias.map(c => c.nombre).join(' · ')}</Text>
               </View>
             )}

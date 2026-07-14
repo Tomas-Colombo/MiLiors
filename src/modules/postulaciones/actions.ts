@@ -8,6 +8,7 @@ import type { ActionResult } from '@/lib/types/domain'
 import { ESTADO_POSTULACION_LABEL, TIPO_PREGUNTA_PRESELECTOR } from '@/lib/constants/enums'
 import { getFormularioDePuesto } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/preselector/evaluador'
+import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 
 // Helper: send email via Resend (no SDK — native fetch)
 async function enviarEmailCambioEstado(
@@ -284,6 +285,14 @@ export async function avanzarEstadoPostulacion(
     .eq('id', postulacionId)
 
   if (error) return { success: false, error: 'No se pudo actualizar el estado.' }
+
+  // Actividad del reclutador sobre el puesto (evita el cierre automático).
+  const { data: post } = await admin
+    .from('postulacion')
+    .select('puesto_id')
+    .eq('id', postulacionId)
+    .single()
+  if (post) await marcarActividadPuesto((post as { puesto_id: string }).puesto_id)
 
   // Send email (non-blocking: failure is logged but doesn't halt)
   const datos = await getDatosEmail(postulacionId)

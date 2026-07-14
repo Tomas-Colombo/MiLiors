@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { Alert, Badge, Button, Card } from '@/components/ui'
-import { crearCertificado } from '@/modules/certificado/actions'
+import { crearCertificado, regenerarSintesisCertificado } from '@/modules/certificado/actions'
 import type { CertificadoData, CertificadoContenido } from '@/modules/certificado/queries'
+import type { SintesisEstado } from '@/lib/types/certificado'
 import { CertificadoDisplay } from '@/modules/certificado/certificado-display'
 import { ArrowRightIcon, SparklesIcon } from '@/components/icons'
 
@@ -14,6 +15,8 @@ type Props = {
   informeDesactualizado: boolean
   tieneFormacion: boolean
   tieneCompetencia: boolean
+  sintesisEstado: SintesisEstado
+  sintesisDesactualizada: boolean
 }
 
 function formatFecha(iso: string): string {
@@ -24,6 +27,85 @@ function formatFecha(iso: string): string {
   }
 }
 
+/**
+ * Generación/actualización de la síntesis integrada — mismo patrón que el
+ * informe: no se muestra nada cuando está LISTA y al día. El botón aparece solo
+ * si nunca se generó (o dio error) o si el informe quedó más nuevo que ella.
+ */
+function SintesisPanel({
+  sintesisEstado,
+  sintesisDesactualizada,
+  tieneCompetencia,
+}: {
+  sintesisEstado: SintesisEstado
+  sintesisDesactualizada: boolean
+  tieneCompetencia: boolean
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function handleRegenerar() {
+    setError(null)
+    startTransition(async () => {
+      const result = await regenerarSintesisCertificado()
+      if (!result.success) setError(result.error)
+    })
+  }
+
+  const nuncaGenerada = sintesisEstado !== 'LISTO' // PENDIENTE (nunca) o ERROR
+  const necesitaActualizar = sintesisEstado === 'LISTO' && sintesisDesactualizada
+
+  // Al día y ya generada → sin cartel ni botón.
+  if (!nuncaGenerada && !necesitaActualizar) return null
+
+  // Desactualizada: aviso + botón para actualizar (como el informe).
+  if (necesitaActualizar) {
+    return (
+      <>
+        <Alert tone="warning" title="Tu perfil integrado está desactualizado">
+          Actualizaste tu informe de personalidad. Regeneralo para reflejar los cambios.
+          <div className="mt-3">
+            <Button
+              variant="primary"
+              size="sm"
+              loading={isPending}
+              onClick={handleRegenerar}
+              disabled={isPending || !tieneCompetencia}
+            >
+              Actualizar perfil integrado
+            </Button>
+          </div>
+        </Alert>
+        {error && <Alert tone="error" title={error} />}
+      </>
+    )
+  }
+
+  // Nunca generada / error: botón para generar.
+  return (
+    <div className="space-y-3">
+      {sintesisEstado === 'ERROR' && (
+        <Alert tone="error" title="No se pudo generar el perfil integrado">
+          Hubo un problema al generarlo. Podés reintentarlo ahora.
+        </Alert>
+      )}
+      {error && <Alert tone="error" title={error} />}
+      <Button
+        variant="primary"
+        loading={isPending}
+        onClick={handleRegenerar}
+        disabled={isPending || !tieneCompetencia}
+        leftIcon={<SparklesIcon size={14} />}
+      >
+        {sintesisEstado === 'ERROR' ? 'Reintentar' : 'Generar perfil integrado'}
+      </Button>
+      {!tieneCompetencia && (
+        <p className="text-xs text-muted">Necesitás al menos una habilidad o tecnología cargada.</p>
+      )}
+    </div>
+  )
+}
+
 export function CertificadoUI({
   certificado,
   contenido,
@@ -31,6 +113,8 @@ export function CertificadoUI({
   informeDesactualizado,
   tieneFormacion,
   tieneCompetencia,
+  sintesisEstado,
+  sintesisDesactualizada,
 }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +133,9 @@ export function CertificadoUI({
     })
   }
 
-  const puedeGenerar = informeListo && !informeDesactualizado && tieneFormacion && tieneCompetencia
+  const sintesisLista = sintesisEstado === 'LISTO'
+  const puedeGenerar =
+    informeListo && !informeDesactualizado && tieneFormacion && tieneCompetencia && sintesisLista
 
   if (!informeListo) {
     return (
@@ -95,6 +181,12 @@ export function CertificadoUI({
             Tu certificado se actualizó con los datos más recientes.
           </Alert>
         )}
+
+        <SintesisPanel
+          sintesisEstado={sintesisEstado}
+          sintesisDesactualizada={sintesisDesactualizada}
+          tieneCompetencia={tieneCompetencia}
+        />
 
         {/* Status + descarga */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -149,26 +241,32 @@ export function CertificadoUI({
     )
   }
 
-  // ── Sin certificado: previsualización de lo que se va a certificar + emitir ──
+  // ── Sin certificado: síntesis + previsualización + emitir ────────────────────
   return (
     <div className="space-y-5">
+      <SintesisPanel
+        sintesisEstado={sintesisEstado}
+        sintesisDesactualizada={sintesisDesactualizada}
+        tieneCompetencia={tieneCompetencia}
+      />
+
       <Card padding="lg">
         <div className="mb-3 flex items-center gap-2">
           <SparklesIcon size={16} className="text-primary-600" />
           <span className="text-[13px] font-semibold text-ink">Generar mi certificado</span>
         </div>
         <p className="mb-4 text-xs text-muted">
-          El certificado incluye tu perfil de personalidad (Eneatipo y Human Design si está cargado),
-          formación académica, experiencia y competencias. Incluye un código QR verificable por
-          cualquier reclutador.
+          El certificado incluye tu perfil profesional integrado, formación académica, experiencia,
+          habilidades y tecnologías e idiomas. Incluye un código QR verificable por cualquier reclutador.
         </p>
 
         {/* Requirements checklist */}
         <ul className="mb-4 space-y-1">
           {[
             { label: 'Informe de personalidad generado', ok: informeListo && !informeDesactualizado },
+            { label: 'Perfil profesional integrado generado', ok: sintesisLista },
             { label: 'Al menos una formación académica', ok: tieneFormacion },
-            { label: 'Al menos una competencia', ok: tieneCompetencia },
+            { label: 'Al menos una habilidad o tecnología', ok: tieneCompetencia },
           ].map(({ label, ok }) => (
             <li key={label} className={`flex items-center gap-2 text-xs ${ok ? 'text-success' : 'text-muted'}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-success' : 'bg-neutral-300'}`} />

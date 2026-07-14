@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { Card, Badge } from '@/components/ui'
+import { Card, Badge, Alert } from '@/components/ui'
 import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon } from '@/components/icons'
 import { getPuestoById, getContratacionesDePuesto } from '@/modules/puestos/queries'
+import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
+import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 
 export const metadata = { title: 'Detalle del puesto — TalentID' }
@@ -17,7 +19,16 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
   const puesto = await getPuestoById(id)
   if (!puesto) notFound()
 
-  const contrataciones = await getContratacionesDePuesto(id)
+  const [contrataciones, { diasInactividadCierre }] = await Promise.all([
+    getContratacionesDePuesto(id),
+    getConfiguracionSistema(),
+  ])
+
+  // Alerta de cierre automático por inactividad (solo puestos activos).
+  const alerta =
+    puesto.activo && puesto.fecha_ultima_actividad
+      ? calcularAlertaInactividad(puesto.fecha_ultima_actividad, diasInactividadCierre)
+      : null
 
   return (
     <TyCGate>
@@ -30,6 +41,23 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
           <ChevronLeftIcon size={16} />
           Volver a mis puestos
         </Link>
+
+        {/* Advertencia de cierre automático por inactividad */}
+        {alerta && (
+          <Alert
+            tone={alerta.tone}
+            title={
+              alerta.tone === 'error'
+                ? '🔴 Este puesto se cierra mañana por inactividad'
+                : `⚠️ Este puesto está inactivo hace ${alerta.diasInactivo} días`
+            }
+          >
+            Si no registramos actividad tuya durante {diasInactividadCierre} días —revisar
+            postulaciones, cambiar el estado de una postulación o editar el puesto—, lo
+            cerraremos automáticamente para no mantener búsquedas sin atención activa. Realizá
+            alguna de esas acciones para mantenerlo activo.
+          </Alert>
+        )}
 
         {/* Header card */}
         <Card>

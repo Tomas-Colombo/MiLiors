@@ -1,9 +1,11 @@
 import { getEmpresasAdmin } from '@/modules/admin/queries'
+import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon } from '@/components/icons'
 import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { ConfigInactividad } from './config-inactividad'
 
 export const metadata = { title: 'Empresas — Admin TalentID' }
 
@@ -28,7 +30,10 @@ export default async function EmpresasPage({
   searchParams: Promise<{ q?: string; estado?: string; page?: string }>
 }) {
   const sp = await searchParams
-  const todas = await getEmpresasAdmin()
+  const [todas, { diasInactividadCierre }] = await Promise.all([
+    getEmpresasAdmin(),
+    getConfiguracionSistema(),
+  ])
 
   const q = sp.q?.trim().toLowerCase() ?? ''
   const estado = sp.estado ?? ''
@@ -109,6 +114,10 @@ export default async function EmpresasPage({
       <p className="mt-1 text-[13px] text-muted">
         {todas.length} empresas registradas. Vista de solo lectura en MVP.
       </p>
+
+      <div className="mt-6">
+        <ConfigInactividad diasActual={diasInactividadCierre} />
+      </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchInput placeholder="Buscar empresa o reclutador…" />

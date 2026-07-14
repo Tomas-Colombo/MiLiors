@@ -427,6 +427,34 @@ export async function publicarTyC(
   return { success: true, data: undefined }
 }
 
+// ─── Configuración del sistema ───────────────────────────────────────────────
+
+/**
+ * Actualiza el período (en días) tras el cual un puesto sin actividad del
+ * reclutador se cierra automáticamente. Lo consume la función SQL
+ * `cerrar_puestos_inactivos()` y las alertas/copys del frontend.
+ */
+export async function actualizarDiasInactividad(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const dias = Number(formData.get('dias'))
+  if (!Number.isInteger(dias) || dias < 1 || dias > 3650) {
+    return { success: false, error: 'Ingresá un número entero de días entre 1 y 3650.' }
+  }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('configuracion_sistema') as any)
+    .update({ dias_inactividad_cierre: dias, updated_at: new Date().toISOString() })
+    .eq('id', true)
+  if (error) return { success: false, error: 'No se pudo actualizar la configuración.' }
+
+  revalidatePath('/admin/empresas')
+  return { success: true, data: undefined }
+}
+
 // ─── Moderación postulantes ──────────────────────────────────────────────────
 
 export async function desactivarPostulante(postulanteId: string): Promise<ActionResult> {

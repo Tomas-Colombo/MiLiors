@@ -27,6 +27,7 @@ function tiempoRelativo(fecha: string | null): string | null {
 }
 import { getPostulanteDetalle, getNotasPrivadas } from '@/modules/postulantes/queries'
 import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
+import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { InformeDisplay } from '@/modules/informe/informe-display'
 import { verifySession } from '@/lib/dal'
@@ -104,6 +105,11 @@ export default async function PostulanteDetallePage({
 
         if (pertenece) {
           motivoDescarte = row.motivo_descarte
+
+          // Ver el detalle de una postulación cuenta como actividad del
+          // reclutador sobre el puesto (evita el cierre automático), incluso
+          // cuando la postulación ya estaba en VISTO y no cambia de estado.
+          await marcarActividadPuesto(row.puesto_id)
 
           // Auto-mark as VISTO when the recruiter opens the profile from the applications list
           if (row.estado === ESTADO_POSTULACION.ENVIADA) {

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { ActionResult } from '@/lib/types/domain'
+import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 
 async function getReclutadorId(): Promise<string | null> {
   const session = await verifySession()
@@ -62,6 +63,10 @@ export async function crearNota(
   })
 
   if (error) return { success: false, error: 'No se pudo guardar la nota.' }
+
+  // Guardar una nota sobre un candidato del puesto cuenta como actividad.
+  await marcarActividadPuesto(puestoIdFinal)
+
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
   return { success: true, data: { titulo_puesto: tituloPuesto } }
 }
