@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useTransition, useState, useEffect } from 'react'
 import { Button, Modal, Alert, Tooltip, SearchableSelect, Input, Radio } from '@/components/ui'
-import { AlertTriangleIcon, TrashIcon, Spinner } from '@/components/icons'
+import { AlertTriangleIcon, TrashIcon, SparklesIcon, Spinner } from '@/components/icons'
 import {
   cerrarPuesto,
   reactivarPuesto,
@@ -104,7 +104,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
 
   return (
     <div className="flex flex-col gap-2 items-center">
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
         <Link
           href={`/reclutador/puestos/${puestoId}`}
           className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
@@ -123,6 +123,15 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
         >
           Editar
         </Link>
+        <Tooltip content="Asistente IA">
+          <Link
+            href={`/reclutador/puestos/${puestoId}/asistente`}
+            aria-label="Asistente IA"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-neutral-300 bg-surface text-primary-600 hover:bg-primary-tint"
+          >
+            <SparklesIcon size={14} />
+          </Link>
+        </Tooltip>
         {activo ? (
           <button
             type="button"
