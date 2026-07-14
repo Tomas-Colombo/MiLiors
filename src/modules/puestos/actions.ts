@@ -182,6 +182,7 @@ export async function publicarPuesto(
     titulo_puesto: formData.get('titulo_puesto'),
     descripcion_texto: formData.get('descripcion_texto') || undefined,
     sector_id: formData.get('sector_id') || undefined,
+    carrera_id: formData.get('carrera_id') || undefined,
     idioma: formData.get('idioma'),
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
@@ -221,6 +222,7 @@ export async function publicarPuesto(
     empresa_id: ctx.empresaId,
     ...parsed.data,
     sector_id: parsed.data.sector_id || null,
+    carrera_id: parsed.data.carrera_id || null,
     provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
     localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     activo: true,
@@ -253,6 +255,7 @@ export async function editarPuesto(
     titulo_puesto: formData.get('titulo_puesto'),
     descripcion_texto: formData.get('descripcion_texto') || undefined,
     sector_id: formData.get('sector_id') || undefined,
+    carrera_id: formData.get('carrera_id') || undefined,
     idioma: formData.get('idioma'),
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
@@ -287,6 +290,7 @@ export async function editarPuesto(
     .update({
       ...parsed.data,
       sector_id: parsed.data.sector_id || null,
+      carrera_id: parsed.data.carrera_id || null,
       provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
       localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     })

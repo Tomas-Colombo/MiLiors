@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useState } from 'react'
-import { Field, Input, Textarea, Select, Button, Alert } from '@/components/ui'
+import { Field, Input, Textarea, Select, SearchableSelect, Button, Alert } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { editarPuesto } from '@/modules/puestos/actions'
@@ -10,12 +10,14 @@ import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION } from '@/lib/constants
 import type { ActionResult } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
 import type { FormularioPreselector } from '@/modules/preselector/queries'
+import type { CarreraOption } from '@/modules/carreras/queries'
 import { FormularioPreselectorEditor } from '../../formulario-preselector-editor'
 
 type Props = {
   puestoId: string
   puesto: PuestoItem & { perfil_psicologico_deseado: string | null }
   sectores: { id: string; nombre_sector: string }[]
+  carreras: CarreraOption[]
   formularioPreselector: FormularioPreselector | null
   /** true cuando el formulario ya tiene respuestas de postulantes y no se puede modificar. */
   formularioBloqueado?: boolean
@@ -25,7 +27,7 @@ type Props = {
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function EditarPuestoForm({ puestoId, puesto, sectores, formularioPreselector, formularioBloqueado, provincias, localidadesIniciales }: Props) {
+export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formularioPreselector, formularioBloqueado, provincias, localidadesIniciales }: Props) {
   // editarPuesto signature is (puestoId, prevState, formData) — bind the id
   const boundAction = editarPuesto.bind(null, puestoId)
   const [state, action, isPending] = useActionState(boundAction, initialState)
@@ -85,6 +87,19 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, formularioPresele
             name="sector_id"
             options={sectorOptions}
             defaultValue={puesto.sector_id ?? ''}
+          />
+        </Field>
+
+        <Field
+          label="Carrera (opcional)"
+          error={fieldErrors.carrera_id?.[0]}
+          hint="Ayuda a que los postulantes encuentren tu puesto al filtrar por carrera."
+        >
+          <SearchableSelect
+            name="carrera_id"
+            options={carreras}
+            placeholder="Elegí una carrera…"
+            defaultValue={puesto.carrera_id ?? ''}
           />
         </Field>
 

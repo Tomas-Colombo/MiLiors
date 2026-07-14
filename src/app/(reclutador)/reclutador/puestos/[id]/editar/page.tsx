@@ -6,6 +6,7 @@ import { ChevronLeftIcon } from '@/components/icons'
 import { getPuestoById, getSectores } from '@/modules/puestos/queries'
 import { getFormularioDePuesto, formularioTieneRespuestas } from '@/modules/preselector/queries'
 import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getCarreras } from '@/modules/carreras/queries'
 import { EditarPuestoForm } from './editar-puesto-form'
 
 export const metadata = { title: 'Editar puesto — TalentID' }
@@ -16,12 +17,13 @@ type Params = Promise<{ id: string }>
 export default async function EditarPuestoPage({ params }: { params: Params }) {
   const { id } = await params
 
-  const [puesto, sectores, formularioPreselector, formularioBloqueado, provincias] = await Promise.all([
+  const [puesto, sectores, formularioPreselector, formularioBloqueado, provincias, carreras] = await Promise.all([
     getPuestoById(id),
     getSectores(),
     getFormularioDePuesto(id),
     formularioTieneRespuestas(id),
     getProvincias(),
+    getCarreras(),
   ])
   if (!puesto) notFound()
 
@@ -50,6 +52,7 @@ export default async function EditarPuestoPage({ params }: { params: Params }) {
             puestoId={id}
             puesto={puesto}
             sectores={sectores}
+            carreras={carreras}
             formularioPreselector={formularioPreselector}
             formularioBloqueado={formularioBloqueado}
             provincias={provincias}

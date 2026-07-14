@@ -3,15 +3,17 @@ import { Card } from '@/components/ui'
 import { getSectores } from '@/modules/puestos/queries'
 import { getProvincias } from '@/modules/ubicacion/queries'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
+import { getCarreras } from '@/modules/carreras/queries'
 import { NuevoPuestoForm } from './nuevo-puesto-form'
 
 export const metadata = { title: 'Nuevo puesto — TalentID' }
 
 export default async function NuevoPuestoPage() {
-  const [sectores, provincias, { diasInactividadCierre }] = await Promise.all([
+  const [sectores, provincias, { diasInactividadCierre }, carreras] = await Promise.all([
     getSectores(),
     getProvincias(),
     getConfiguracionSistema(),
+    getCarreras(),
   ])
 
   return (
@@ -26,6 +28,7 @@ export default async function NuevoPuestoPage() {
           <NuevoPuestoForm
             sectores={sectores}
             provincias={provincias}
+            carreras={carreras}
             diasInactividad={diasInactividadCierre}
           />
         </Card>

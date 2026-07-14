@@ -5,6 +5,7 @@ export const puestoSchema = z.object({
   titulo_puesto: z.string().min(3, { message: 'Ingresá el título del puesto.' }).max(200).trim(),
   descripcion_texto: z.string().max(3000).optional(),
   sector_id: z.string().uuid({ message: 'Seleccioná un sector.' }).optional().or(z.literal('')),
+  carrera_id: z.string().uuid({ message: 'Seleccioná una carrera.' }).optional().or(z.literal('')),
   idioma: z.string().min(2, { message: 'Ingresá el idioma requerido.' }).max(80).trim(),
   carga_horaria: z.enum(
     [CARGA_HORARIA.TIEMPO_COMPLETO, CARGA_HORARIA.MEDIO_TIEMPO, CARGA_HORARIA.POR_HORAS_FREELANCE],

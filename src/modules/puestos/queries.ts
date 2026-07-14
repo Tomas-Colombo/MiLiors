@@ -20,12 +20,14 @@ export type PuestoItem = {
   fecha_ultima_actividad?: string
   empresa_id: string
   sector_id: string | null
+  carrera_id: string | null
   provincia_id: string | null
   localidad_id: string | null
   reclutador_id?: string | null
   // perfil_psicologico_deseado is intentionally excluded from the public type
   nombre_empresa?: string
   nombre_sector?: string
+  nombre_carrera: string | null
   nombre_provincia?: string | null
   nombre_localidad?: string | null
 }
@@ -53,8 +55,8 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
-      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      empresa_id, sector_id, carrera_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
       provincia(nombre), localidad(nombre)
     `)
     .eq('reclutador_id', (reclutador as { id: string }).id)
@@ -68,11 +70,12 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
       fecha_ultima_actividad: string
-      empresa_id: string; sector_id: string | null
+      empresa_id: string; sector_id: string | null; carrera_id: string | null
       provincia_id: string | null; localidad_id: string | null
       perfil_psicologico_deseado: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
+      carrera: { nombre: string } | null
       provincia: { nombre: string } | null
       localidad: { nombre: string } | null
     }
@@ -90,11 +93,13 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       fecha_ultima_actividad: r.fecha_ultima_actividad,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
+      carrera_id: r.carrera_id,
       provincia_id: r.provincia_id,
       localidad_id: r.localidad_id,
       perfil_psicologico_deseado: r.perfil_psicologico_deseado,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
+      nombre_carrera: r.carrera?.nombre ?? null,
       nombre_provincia: r.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
@@ -121,8 +126,8 @@ export const getPuestoById = cache(async (
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
-      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      empresa_id, sector_id, carrera_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
       provincia(nombre), localidad(nombre)
     `)
     .eq('id', puestoId)
@@ -138,11 +143,12 @@ export const getPuestoById = cache(async (
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
     fecha_ultima_actividad: string
-    empresa_id: string; sector_id: string | null
+    empresa_id: string; sector_id: string | null; carrera_id: string | null
     provincia_id: string | null; localidad_id: string | null
     perfil_psicologico_deseado: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
+    carrera: { nombre: string } | null
     provincia: { nombre: string } | null
     localidad: { nombre: string } | null
   }
@@ -161,11 +167,13 @@ export const getPuestoById = cache(async (
     fecha_ultima_actividad: r.fecha_ultima_actividad,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
+    carrera_id: r.carrera_id,
     provincia_id: r.provincia_id,
     localidad_id: r.localidad_id,
     perfil_psicologico_deseado: r.perfil_psicologico_deseado,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
+    nombre_carrera: r.carrera?.nombre ?? null,
     nombre_provincia: r.provincia?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }
@@ -236,6 +244,7 @@ export const PUESTOS_PER_PAGE = 12
 /** Puestos activos disponibles para postulantes (SIN perfil_psicologico_deseado) */
 export const getPuestosActivos = async (filtros?: {
   sectorId?: string
+  carreraId?: string
   cargaHoraria?: string
   ubicacion?: string
   provinciaId?: string
@@ -258,8 +267,8 @@ export const getPuestosActivos = async (filtros?: {
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, provincia_id, localidad_id,
-      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      empresa_id, sector_id, carrera_id, provincia_id, localidad_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
       provincia(nombre), localidad(nombre)
     `, { count: 'exact' })
     .eq('activo', true)
@@ -268,6 +277,7 @@ export const getPuestosActivos = async (filtros?: {
     .range(from, to)
 
   if (filtros?.sectorId) query = query.eq('sector_id', filtros.sectorId)
+  if (filtros?.carreraId) query = query.eq('carrera_id', filtros.carreraId)
   if (filtros?.cargaHoraria) query = query.eq('carga_horaria', filtros.cargaHoraria)
   if (filtros?.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
   if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
@@ -295,10 +305,11 @@ export const getPuestosActivos = async (filtros?: {
       idioma: string; carga_horaria: string; ubicacion: string
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
-      empresa_id: string; sector_id: string | null
+      empresa_id: string; sector_id: string | null; carrera_id: string | null
       provincia_id: string | null; localidad_id: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
+      carrera: { nombre: string } | null
       provincia: { nombre: string } | null
       localidad: { nombre: string } | null
     }
@@ -315,10 +326,12 @@ export const getPuestosActivos = async (filtros?: {
       fecha_baja_puesto: r.fecha_baja_puesto,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
+      carrera_id: r.carrera_id,
       provincia_id: r.provincia_id,
       localidad_id: r.localidad_id,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
+      nombre_carrera: r.carrera?.nombre ?? null,
       nombre_provincia: r.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
@@ -336,8 +349,8 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, reclutador_id, provincia_id, localidad_id,
-      empresa(nombre_empresa), sector_industrial(nombre_sector),
+      empresa_id, sector_id, carrera_id, reclutador_id, provincia_id, localidad_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
       provincia(nombre), localidad(nombre)
     `)
     .eq('id', puestoId)
@@ -350,10 +363,11 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     idioma: string; carga_horaria: string; ubicacion: string
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
-    empresa_id: string; sector_id: string | null; reclutador_id: string | null
+    empresa_id: string; sector_id: string | null; carrera_id: string | null; reclutador_id: string | null
     provincia_id: string | null; localidad_id: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
+    carrera: { nombre: string } | null
     provincia: { nombre: string } | null
     localidad: { nombre: string } | null
   }
@@ -371,11 +385,13 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     fecha_baja_puesto: r.fecha_baja_puesto,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
+    carrera_id: r.carrera_id,
     reclutador_id: r.reclutador_id,
     provincia_id: r.provincia_id,
     localidad_id: r.localidad_id,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
+    nombre_carrera: r.carrera?.nombre ?? null,
     nombre_provincia: r.provincia?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }

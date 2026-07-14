@@ -3,7 +3,9 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 import { SearchIcon, FilterIcon } from '@/components/icons'
+import { SearchableSelect } from '@/components/ui'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
+import type { CarreraOption } from '@/modules/carreras/queries'
 
 const TIEMPO_OPTIONS = [
   { label: 'Todo', value: '' },
@@ -29,10 +31,12 @@ export function PuestosFilters({
   sectores,
   provincias,
   localidades,
+  carreras,
 }: {
   sectores: Sector[]
   provincias: Provincia[]
   localidades: Localidad[]
+  carreras: CarreraOption[]
 }) {
   const sp = useSearchParams()
   const router = useRouter()
@@ -74,12 +78,46 @@ export function PuestosFilters({
   const ubicacion = sp.get('ubicacion') ?? ''
   const provincia = sp.get('provincia') ?? ''
   const localidad = sp.get('localidad') ?? ''
+  const carrera = sp.get('carrera') ?? ''
   // "postulacion" defaults to "no_postulados" server-side, so we treat missing param as that value.
   const postulacion = sp.get('postulacion') ?? 'no_postulados'
-  const hasFilters = !!(q || dias || sector || carga || ubicacion || provincia || localidad || sp.get('postulacion'))
+  const hasFilters = !!(q || dias || sector || carga || ubicacion || provincia || localidad || carrera || sp.get('postulacion'))
 
   return (
     <div className="space-y-5">
+      {/* Filtro principal: carrera. Es el filtro más relevante para el postulante,
+          por eso va primero, a todo el ancho y siempre visible (no depende de
+          "Mostrar filtros"). Estilo sobrio, consistente con el resto de filtros. */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+            Carrera
+          </p>
+          {carrera && (
+            <button
+              type="button"
+              onClick={() => update('carrera', '')}
+              className="text-xs font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
+            >
+              Quitar
+            </button>
+          )}
+        </div>
+        {/* Solo navega al elegir una opción: SearchableSelect emite '' en cada tipeo
+            y eso remontaría el componente (key) borrando lo escrito. Limpiar es
+            explícito, vía "Quitar" o "Limpiar filtros". */}
+        <SearchableSelect
+          key={carrera}
+          name="carrera"
+          options={carreras}
+          defaultValue={carrera}
+          placeholder="Elegí tu carrera para ver los puestos más relevantes…"
+          onValueChange={(value) => {
+            if (value) update('carrera', value)
+          }}
+        />
+      </div>
+
       {/* Buscador + toggle */}
       <div className="flex gap-2">
         <div className="relative flex-1">

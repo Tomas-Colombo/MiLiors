@@ -12,6 +12,7 @@ import {
 import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getPuestosConFormulario } from '@/modules/preselector/queries'
+import { getCarreras } from '@/modules/carreras/queries'
 import { PostularButton } from './postular-button'
 import { PuestosFilters } from './filters'
 import { PuestoCard } from './puesto-card'
@@ -45,19 +46,22 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
       : 'no_postulados'
 
   const provinciaFiltro = sp.provincia || undefined
+  const carreraFiltro = sp.carrera || undefined
 
-  const [sectores, yaPostuladosSet, certificado, provincias, localidadesFiltro] = await Promise.all([
+  const [sectores, yaPostuladosSet, certificado, provincias, localidadesFiltro, carreras] = await Promise.all([
     getSectores(),
     getMisPostulacionesPuestoIds(),
     getUltimoCertificado(),
     getProvincias(),
     provinciaFiltro ? getLocalidadesPorProvincia(provinciaFiltro) : Promise.resolve([]),
+    getCarreras(),
   ])
 
   const postulacionIds = [...yaPostuladosSet]
 
   const { items: puestos, total } = await getPuestosActivos({
     sectorId: sp.sector || undefined,
+    carreraId: carreraFiltro,
     cargaHoraria: sp.carga_horaria || undefined,
     ubicacion: sp.ubicacion || undefined,
     provinciaId: provinciaFiltro,
@@ -91,7 +95,12 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
         {/* Filtros */}
         <Card padding="lg">
           <Suspense fallback={<div className="h-36 animate-pulse rounded-lg bg-neutral-100" />}>
-            <PuestosFilters sectores={sectores} provincias={provincias} localidades={localidadesFiltro} />
+            <PuestosFilters
+              sectores={sectores}
+              provincias={provincias}
+              localidades={localidadesFiltro}
+              carreras={carreras}
+            />
           </Suspense>
         </Card>
 
@@ -115,7 +124,16 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
         )}
 
         {/* Resultados */}
-        {puestos.length === 0 ? (
+        {puestos.length === 0 && carreraFiltro ? (
+          <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
+            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning-solid" />
+            <p className="text-sm font-medium text-warning">
+              No encontramos puestos para {carreras.find((c) => c.value === carreraFiltro)?.label ?? 'esta carrera'}.
+              Esto no significa que no existan: puede haber puestos que apliquen a tu perfil sin una
+              carrera asignada. Probá buscando sin este filtro o ajustando los demás.
+            </p>
+          </div>
+        ) : puestos.length === 0 ? (
           <EmptyState
             icon={<BuildingIcon size={24} />}
             title="No encontramos puestos"

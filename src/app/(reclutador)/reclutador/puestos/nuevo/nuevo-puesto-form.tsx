@@ -3,17 +3,19 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useActionState, useState } from 'react'
-import { Field, Input, Textarea, Select, Button, Alert, Modal } from '@/components/ui'
+import { Field, Input, Textarea, Select, SearchableSelect, Button, Alert, Modal } from '@/components/ui'
 import { AlertTriangleIcon } from '@/components/icons'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { publicarPuesto } from '@/modules/puestos/actions'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
+import type { CarreraOption } from '@/modules/carreras/queries'
 import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
 
 type Props = {
   sectores: { id: string; nombre_sector: string }[]
   provincias: ProvinciaOption[]
+  carreras: CarreraOption[]
   /** Período de inactividad configurado por el admin (para el copy del modal). */
   diasInactividad: number
 }
@@ -21,7 +23,7 @@ type Props = {
 // publicarPuesto returns ActionResult<{ puestoId: string }> — match the generic
 const initialState: ActionResult<{ puestoId: string }> = { success: false, error: '' }
 
-export function NuevoPuestoForm({ sectores, provincias, diasInactividad }: Props) {
+export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactividad }: Props) {
   const router = useRouter()
   const [state, action, isPending] = useActionState(publicarPuesto, initialState)
   const [modalidad, setModalidad] = useState('')
@@ -92,6 +94,18 @@ export function NuevoPuestoForm({ sectores, provincias, diasInactividad }: Props
             name="sector_id"
             options={sectorOptions}
             defaultValue=""
+          />
+        </Field>
+
+        <Field
+          label="Carrera (opcional)"
+          error={fieldErrors.carrera_id?.[0]}
+          hint="Ayuda a que los postulantes encuentren tu puesto al filtrar por carrera."
+        >
+          <SearchableSelect
+            name="carrera_id"
+            options={carreras}
+            placeholder="Elegí una carrera…"
           />
         </Field>
 
