@@ -75,6 +75,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // ─── Política de sesión: revocación (todos) + inactividad (admin) ───────────
+  // Se omite en prefetch para no gastar una consulta por cada link precargado.
+  // La actividad la actualiza el heartbeat del cliente, no el proxy, así los
+  // prefetch/RSC no mantienen viva la sesión sin interacción real del usuario.
+  const isPrefetch =
+    request.headers.get('next-router-prefetch') === '1' ||
+    request.headers.get('purpose') === 'prefetch' ||
+    (request.headers.get('sec-purpose')?.includes('prefetch') ?? false)
+
+  if (!isPrefetch) {
+    // check_session() devuelve el motivo de cierre ('revocada' | 'inactividad') o null.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: motivo } = await (supabase.rpc as any)('check_session')
+    if (motivo) {
+      await supabase.auth.signOut()
+      const cierre = NextResponse.redirect(new URL(`/login?motivo=${motivo}`, request.url))
+      // Propagar las cookies de limpieza de sesión que signOut() escribió en `response`.
+      response.cookies.getAll().forEach((cookie) => cierre.cookies.set(cookie))
+      return cierre
+    }
+  }
+
   // Verificar rol para rutas de rol específico
   const rol = user.user_metadata?.rol as string | undefined
   for (const [prefix, requiredRole] of Object.entries(ROLE_PATHS)) {

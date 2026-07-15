@@ -119,9 +119,20 @@ export async function iniciarSesion(
   // Update last login timestamp on the role profile (fire-and-forget: failure doesn't block login)
   const admin = createAdminClient()
   const profileTable = rol === 'POSTULANTE' ? 'perfil_postulante' : 'perfil_reclutador'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin.from(profileTable) as any)
     .update({ ultima_conexion: new Date().toISOString() })
     .eq('usuario_id', data.user.id)
+
+  // Reiniciar el estado de sesión: arranca el reloj de inactividad y limpia una
+  // revocación previa (así un usuario revocado puede volver a entrar).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('sesion_actividad') as any).upsert({
+    usuario_id: data.user.id,
+    ultima_actividad: new Date().toISOString(),
+    revocada: false,
+    actualizado_en: new Date().toISOString(),
+  })
 
   revalidatePath('/', 'layout')
   redirect(RUTAS_POR_ROL[rol])
@@ -133,6 +144,15 @@ export async function cerrarSesion(): Promise<void> {
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
   redirect('/login')
+}
+
+// Cierre disparado por el watcher de inactividad del cliente (sólo admin).
+// Usa el signOut() nativo; el motivo alimenta el aviso en el login.
+export async function cerrarSesionPorInactividad(): Promise<void> {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login?motivo=inactividad')
 }
 
 // ─── Recuperar contraseña ────────────────────────────────────────────────────

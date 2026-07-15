@@ -13,6 +13,7 @@ import {
   NotebookIcon,
 } from '@/components/icons'
 import { AppSidebar } from '@/components/shared/app-sidebar'
+import { InactivityWatcher } from '@/components/admin/inactivity-watcher'
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: <HomeIcon size={18} />, exactMatch: true },
@@ -46,6 +47,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+
+      <InactivityWatcher />
     </div>
   )
 }

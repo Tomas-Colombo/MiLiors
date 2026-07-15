@@ -1,12 +1,26 @@
 import { LoginForm } from './login-form'
 import { VerificarWidget } from './verificar-widget'
+import { Alert } from '@/components/ui'
 import Link from 'next/link'
 
 export const metadata = {
   title: 'Iniciar sesión — TalentID',
 }
 
-export default function LoginPage() {
+// Motivos por los que la política de sesión pudo haber cerrado la sesión.
+const MOTIVO_MENSAJE: Record<string, string> = {
+  inactividad: 'Cerramos tu sesión por inactividad. Volvé a ingresar.',
+  revocada: 'Un administrador finalizó tu sesión. Volvé a ingresar.',
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ motivo?: string }>
+}) {
+  const { motivo } = await searchParams
+  const aviso = motivo ? MOTIVO_MENSAJE[motivo] : undefined
+
   return (
     <div className="py-8">
       <div className="mb-8 flex flex-col items-center gap-3">
@@ -21,6 +35,8 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-muted">Ingresá a tu cuenta de TalentID</p>
         </div>
       </div>
+
+      {aviso && <Alert tone="info" title={aviso} className="mb-4" />}
 
       <LoginForm />
 
