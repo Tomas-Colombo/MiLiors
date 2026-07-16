@@ -9,6 +9,7 @@ import type { ActionResult } from '@/lib/types/domain'
 import { parseFormularioPreselectorField } from '@/modules/preselector/schema'
 import { persistirFormularioPreselector, eliminarFormularioPreselector } from '@/modules/preselector/service'
 import { marcarActividadPuesto } from './actividad'
+import { getCicloMasReciente } from './ciclos'
 
 /**
  * Contratación opcional al cerrar/eliminar un puesto.
@@ -73,45 +74,21 @@ async function registrarApertura(puestoId: string, empresaId: string, tituloPues
 }
 
 /**
- * Registra la contratación en el CICLO abierto del puesto (historial_puesto con
- * fecha_fin IS NULL). Debe llamarse ANTES de cerrar el ciclo. Si por algún puesto
- * viejo no existiera un ciclo abierto, se crea uno para poder colgar la contratación.
+ * Registra la contratación en el último CICLO del puesto (historial_puesto).
+ * Debe llamarse ANTES de cerrar el ciclo.
+ *
+ * Usa el ciclo más reciente y no el abierto: al eliminar un puesto que ya estaba
+ * cerrado, la contratación pertenece a su último ciclo. Crear uno nuevo lo contaría
+ * como reapertura y ensuciaría la analítica.
  */
 async function registrarContratacion(
   admin: ReturnType<typeof createAdminClient>,
   puestoId: string,
   contratacion: ContratacionInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  // Validaciones de entrada. El nombre externo es opcional; el postulante NO.
-  if (contratacion.tipo === 'plataforma') {
-    if (!contratacion.postulanteId) {
-      return { ok: false, error: 'Elegí el postulante contratado.' }
-    }
-    // El postulante tiene que haber aplicado a este puesto
-    const { data: aplico } = await admin
-      .from('postulacion')
-      .select('id')
-      .eq('puesto_id', puestoId)
-      .eq('postulante_id', contratacion.postulanteId)
-      .maybeSingle()
-    if (!aplico) {
-      return { ok: false, error: 'El postulante seleccionado no aplicó a este puesto.' }
-    }
-  }
+  let historialId = await getCicloMasReciente(puestoId)
 
-  // Ciclo abierto más reciente
-  const { data: hist } = await admin
-    .from('historial_puesto')
-    .select('id')
-    .eq('puesto_id', puestoId)
-    .is('fecha_fin', null)
-    .order('fecha_inicio', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  let historialId = (hist as { id: string } | null)?.id ?? null
-
-  // Edge: puesto sin ciclo abierto → crear uno para no perder la contratación
+  // Edge: puesto sin ningún ciclo → crear uno para no perder la contratación.
   if (!historialId) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: nuevo, error } = await (admin.from('historial_puesto') as any)
@@ -122,20 +99,46 @@ async function registrarContratacion(
     historialId = (nuevo as { id: string }).id
   }
 
+  // Validaciones de entrada. El nombre externo es opcional; el postulante NO.
+  if (contratacion.tipo === 'plataforma') {
+    if (!contratacion.postulanteId) {
+      return { ok: false, error: 'Elegí el postulante contratado.' }
+    }
+    // Tiene que haber aplicado al ciclo que estamos cerrando, no a uno anterior.
+    // Un mismo postulante puede tener una postulación por ciclo, así que el filtro
+    // por ciclo es también lo que garantiza una única fila.
+    const { data: aplico } = await admin
+      .from('postulacion')
+      .select('id')
+      .eq('historial_puesto_id', historialId)
+      .eq('postulante_id', contratacion.postulanteId)
+      .maybeSingle()
+    if (!aplico) {
+      return { ok: false, error: 'El postulante seleccionado no aplicó a este puesto.' }
+    }
+  }
+
   const row =
     contratacion.tipo === 'plataforma'
       ? { historial_puesto_id: historialId, postulante_id: contratacion.postulanteId, nombre_externo: null }
       : { historial_puesto_id: historialId, postulante_id: null, nombre_externo: contratacion.nombre.trim() || null }
 
+  // Upsert: contratacion es UNIQUE por ciclo y el reclutador puede registrarla dos
+  // veces sobre el mismo (cerrar y después eliminar). La última respuesta gana.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('contratacion') as any).insert(row)
+  const { error } = await (admin.from('contratacion') as any)
+    .upsert(row, { onConflict: 'historial_puesto_id' })
   if (error) return { ok: false, error: 'No se pudo registrar la contratación.' }
   return { ok: true }
 }
 
 /**
- * Postulantes que aplicaron al puesto, para el selector "contraté a alguien de
- * la plataforma". Solo accesible por el reclutador dueño del puesto.
+ * Postulantes que aplicaron al ciclo vigente del puesto, para el selector
+ * "contraté a alguien de la plataforma". Solo accesible por el reclutador dueño.
+ *
+ * Se limita al ciclo actual porque es contra ese ciclo que registrarContratacion
+ * valida: ofrecer candidatos de reaperturas anteriores sería ofrecer opciones que
+ * después rebotan.
  */
 export async function getPostulantesDePuesto(
   puestoId: string,
@@ -154,10 +157,13 @@ export async function getPostulantesDePuesto(
     .maybeSingle()
   if (!puesto) return []
 
+  const cicloId = await getCicloMasReciente(puestoId)
+  if (!cicloId) return []
+
   const { data } = await admin
     .from('postulacion')
     .select('postulante_id, perfil_postulante(nombre_completo)')
-    .eq('puesto_id', puestoId)
+    .eq('historial_puesto_id', cicloId)
     .order('fecha_postulacion', { ascending: false })
 
   const seen = new Set<string>()
@@ -414,31 +420,68 @@ export async function eliminarPuesto(
   return { success: true, data: undefined }
 }
 
+/**
+ * Cuántas postulaciones quedan archivadas si se reactiva el puesto: las del ciclo
+ * que se está por dejar atrás. Alimenta el aviso del modal de reactivación.
+ */
+export async function contarPostulacionesDelUltimoCiclo(puestoId: string): Promise<number> {
+  const ctx = await getReclutadorContext()
+  if (!ctx) return 0
+
+  const admin = createAdminClient()
+
+  const { data: puesto } = await admin
+    .from('puesto')
+    .select('id')
+    .eq('id', puestoId)
+    .eq('reclutador_id', ctx.reclutadorId)
+    .maybeSingle()
+  if (!puesto) return 0
+
+  const cicloId = await getCicloMasReciente(puestoId)
+  if (!cicloId) return 0
+
+  const { count } = await admin
+    .from('postulacion')
+    .select('id', { count: 'exact', head: true })
+    .eq('historial_puesto_id', cicloId)
+
+  return count ?? 0
+}
+
+/**
+ * Reactiva un puesto cerrado abriendo un CICLO nuevo (registrarApertura).
+ *
+ * Las postulaciones del ciclo anterior no se tocan: quedan CERRADA y colgadas de
+ * su ciclo, fuera del tablero. El puesto arranca limpio y quien había postulado
+ * antes del cierre puede volver a aplicar, porque el UNIQUE es por ciclo.
+ */
 export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
   const ctx = await getReclutadorContext()
   if (!ctx) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
 
+  // El .eq('activo', false) hace la reactivación idempotente: si el puesto ya está
+  // activo (doble click), no matchea ninguna fila y no abrimos un segundo ciclo.
+  // Dos ciclos abiertos partirían las postulaciones en dos tableros y contarían
+  // como reapertura en la analítica.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('puesto') as any)
+  const { data: actualizados, error } = await (admin.from('puesto') as any)
     .update({ activo: true, fecha_baja_puesto: null })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
+    .eq('activo', false)
+    .select('titulo_puesto')
 
   if (error) return { success: false, error: 'No se pudo reactivar el puesto.' }
 
-  const supabase = await createClient()
-  const { data: puesto } = await supabase
-    .from('puesto')
-    .select('titulo_puesto')
-    .eq('id', puestoId)
-    .single()
-
-  if (puesto) {
-    await registrarApertura(puestoId, ctx.empresaId, (puesto as { titulo_puesto: string }).titulo_puesto)
+  if (actualizados && actualizados.length > 0) {
+    const { titulo_puesto } = actualizados[0] as { titulo_puesto: string }
+    await registrarApertura(puestoId, ctx.empresaId, titulo_puesto)
   }
 
   revalidatePath('/reclutador/puestos')
+  revalidatePath('/reclutador/postulaciones')
   return { success: true, data: undefined }
 }

@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Select, SearchableSelect } from '@/components/ui'
-import { StarIcon, TrashIcon } from '@/components/icons'
+import { StarIcon, TrashIcon, CalendarIcon } from '@/components/icons'
 import { SearchInput } from '@/components/shared/list-controls'
 
 type Puesto = { id: string; titulo_puesto: string; sinPostulaciones?: boolean }
@@ -12,9 +12,11 @@ type Props = {
   puestos: Puesto[]
   totalVisible: number
   totalTotal: number
+  /** Sólo ofrecemos el toggle si el reclutador tiene algún puesto reabierto. */
+  hayCiclosAnteriores: boolean
 }
 
-export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Props) {
+export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal, hayCiclosAnteriores }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -94,7 +96,22 @@ export function FiltrosPostulaciones({ puestos, totalVisible, totalTotal }: Prop
         />
         Favoritos
       </button>
-      {(searchParams.get('q') || searchParams.get('puesto') || searchParams.get('estado') || searchParams.get('favoritos')) && (
+      {hayCiclosAnteriores && (
+        <button
+          type="button"
+          onClick={() => setParam('ciclos', searchParams.get('ciclos') === 'todos' ? '' : 'todos')}
+          aria-pressed={searchParams.get('ciclos') === 'todos'}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+            searchParams.get('ciclos') === 'todos'
+              ? 'bg-primary-tint text-primary-600'
+              : 'bg-neutral-100 text-muted hover:text-ink'
+          }`}
+        >
+          <CalendarIcon size={14} />
+          Ciclos anteriores
+        </button>
+      )}
+      {(searchParams.get('q') || searchParams.get('puesto') || searchParams.get('estado') || searchParams.get('favoritos') || searchParams.get('ciclos')) && (
         <button
           type="button"
           onClick={() => {

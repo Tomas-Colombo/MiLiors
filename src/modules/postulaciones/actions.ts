@@ -9,6 +9,7 @@ import { ESTADO_POSTULACION_LABEL, TIPO_PREGUNTA_PRESELECTOR } from '@/lib/const
 import { getFormularioDePuesto } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/preselector/evaluador'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
+import { getCicloAbierto } from '@/modules/puestos/ciclos'
 
 // Helper: send email via Resend (no SDK — native fetch)
 async function enviarEmailCambioEstado(
@@ -132,12 +133,19 @@ export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
     return { success: false, error: 'Este puesto requiere completar el formulario de preselección para postularte.' }
   }
 
+  // La postulación cuelga del ciclo vigente del puesto. Sin ciclo abierto el puesto
+  // está cerrado y no admite postulaciones: la UI ya no lo ofrece, pero la action
+  // es la que tiene que garantizarlo.
+  const cicloId = await getCicloAbierto(puestoId)
+  if (!cicloId) return { success: false, error: 'Este puesto ya no recibe postulaciones.' }
+
   const admin = createAdminClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (admin.from('postulacion') as any).insert({
     postulante_id: guard.postulanteId,
     puesto_id: puestoId,
+    historial_puesto_id: cicloId,
     estado: 'ENVIADA',
   })
 
@@ -198,6 +206,9 @@ export async function postularAPuestoConFormulario(
     return { success: false, error: 'Respondé todas las preguntas del formulario.', fieldErrors }
   }
 
+  const cicloId = await getCicloAbierto(puestoId)
+  if (!cicloId) return { success: false, error: 'Este puesto ya no recibe postulaciones.' }
+
   const admin = createAdminClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,6 +216,7 @@ export async function postularAPuestoConFormulario(
     .insert({
       postulante_id: guard.postulanteId,
       puesto_id: puestoId,
+      historial_puesto_id: cicloId,
       estado: 'ENVIADA',
     })
     .select('id')

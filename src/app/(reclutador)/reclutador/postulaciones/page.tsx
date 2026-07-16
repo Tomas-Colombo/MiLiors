@@ -50,16 +50,22 @@ function tiempoRelativo(fecha: string | null): string | null {
   return years === 1 ? 'hace 1 año' : `hace ${years} años`
 }
 
-type SearchParams = Promise<{ puesto?: string; estado?: string; favoritos?: string; q?: string; page?: string }>
+type SearchParams = Promise<{ puesto?: string; estado?: string; favoritos?: string; q?: string; page?: string; ciclos?: string }>
 
 export default async function PostulacionesRecibidasPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos, q: qRaw, page: pageParam } = await searchParams
+  const { puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos, q: qRaw, page: pageParam, ciclos: filtroCiclos } = await searchParams
   const q = qRaw?.trim().toLowerCase() ?? ''
-  const postulaciones = await getPostulacionesRecibidas()
+  const todas = await getPostulacionesRecibidas()
+
+  // Un puesto reabierto arranca con el tablero limpio: las postulaciones de ciclos
+  // anteriores son historial y solo se muestran a pedido.
+  const verCiclosAnteriores = filtroCiclos === 'todos'
+  const hayCiclosAnteriores = todas.some((p) => !p.es_ciclo_actual)
+  const postulaciones = verCiclosAnteriores ? todas : todas.filter((p) => p.es_ciclo_actual)
 
   // Build the list of unique job posts for the filter dropdown
   const puestosMap = new Map<string, string>()
@@ -114,6 +120,7 @@ export default async function PostulacionesRecibidasPage({
               puestos={puestosOpts}
               totalVisible={filtered.length}
               totalTotal={postulaciones.length}
+              hayCiclosAnteriores={hayCiclosAnteriores}
             />
           </Suspense>
         )}

@@ -473,7 +473,18 @@ export const getMisPostulaciones = async (filtros?: {
   return { items, total: count ?? 0 }
 }
 
-/** IDs de puestos a los que ya postuló el postulante (para deshabilitar botón) */
+/**
+ * IDs de puestos donde el postulante ya aplicó AL CICLO VIGENTE (para deshabilitar
+ * el botón).
+ *
+ * Las postulaciones de ciclos ya cerrados no cuentan: si el puesto se reactivó,
+ * abrió un ciclo nuevo y el postulante puede volver a aplicar. Filtrar por ciclo
+ * abierto en vez de por puesto es lo que evita que quien postuló antes del cierre
+ * quede bloqueado para siempre.
+ *
+ * Se resuelve en dos pasos en vez de con un embed !inner: la FK a historial_puesto
+ * es compuesta (id, puesto_id) y no vale la pena atarse a cómo PostgREST la resuelve.
+ */
 export const getMisPostulacionesPuestoIds = cache(async (): Promise<Set<string>> => {
   const session = await verifySession()
   const supabase = await createClient()
@@ -486,15 +497,36 @@ export const getMisPostulacionesPuestoIds = cache(async (): Promise<Set<string>>
 
   if (!postulante) return new Set()
 
-  const { data } = await supabase
+  const { data: postulaciones } = await supabase
     .from('postulacion')
-    .select('puesto_id')
+    .select('puesto_id, historial_puesto_id')
     .eq('postulante_id', (postulante as { id: string }).id)
 
-  return new Set((data ?? []).map((r: unknown) => (r as { puesto_id: string }).puesto_id))
+  const filas = (postulaciones ?? []) as { puesto_id: string; historial_puesto_id: string }[]
+  if (filas.length === 0) return new Set()
+
+  const { data: ciclosAbiertos } = await supabase
+    .from('historial_puesto')
+    .select('id')
+    .in('id', [...new Set(filas.map((r) => r.historial_puesto_id))])
+    .is('fecha_fin', null)
+
+  const abiertos = new Set(
+    ((ciclosAbiertos ?? []) as { id: string }[]).map((c) => c.id),
+  )
+
+  return new Set(
+    filas.filter((r) => abiertos.has(r.historial_puesto_id)).map((r) => r.puesto_id),
+  )
 })
 
-/** Postulaciones recibidas en los puestos del reclutador actual */
+/**
+ * Postulaciones recibidas en los puestos del reclutador actual.
+ *
+ * Cada fila trae `es_ciclo_actual`: las de ciclos anteriores (reaperturas previas)
+ * son historial y la página las esconde salvo pedido explícito, para que reactivar
+ * un puesto no arrastre candidatos viejos al tablero.
+ */
 export const getPostulacionesRecibidas = cache(async () => {
   const session = await verifySession()
   const supabase = await createClient()
@@ -524,13 +556,28 @@ export const getPostulacionesRecibidas = cache(async () => {
   const { data: postulaciones } = await admin
     .from('postulacion')
     .select(`
-      id, estado, is_favorito, fecha_postulacion, updated_at, postulante_id, puesto_id, motivo_descarte,
+      id, estado, is_favorito, fecha_postulacion, updated_at, postulante_id, puesto_id,
+      historial_puesto_id, motivo_descarte,
       puesto(id, titulo_puesto),
       perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
         usuario(email))
     `)
     .in('puesto_id', puestoIds)
     .order('fecha_postulacion', { ascending: false })
+
+  // Step 2b: ciclo vigente de cada puesto. Viene ordenado por fecha_inicio desc,
+  // así que el primero de cada puesto es el actual (esté abierto o cerrado: un
+  // puesto cerrado sigue teniendo su último ciclo como el relevante).
+  const { data: ciclos } = await admin
+    .from('historial_puesto')
+    .select('id, puesto_id, fecha_inicio')
+    .in('puesto_id', puestoIds)
+    .order('fecha_inicio', { ascending: false })
+
+  const cicloActualPorPuesto = new Map<string, string>()
+  for (const c of (ciclos ?? []) as { id: string; puesto_id: string }[]) {
+    if (!cicloActualPorPuesto.has(c.puesto_id)) cicloActualPorPuesto.set(c.puesto_id, c.id)
+  }
 
   // Step 3: load note counts per applicant for this recruiter
   const postulanteIds = (postulaciones ?? []).map(
@@ -554,7 +601,8 @@ export const getPostulacionesRecibidas = cache(async () => {
     const r = row as {
       id: string; estado: string; is_favorito: boolean
       fecha_postulacion: string; updated_at: string
-      postulante_id: string; puesto_id: string; motivo_descarte: string | null
+      postulante_id: string; puesto_id: string; historial_puesto_id: string
+      motivo_descarte: string | null
       puesto: { id: string; titulo_puesto: string } | null
       perfil_postulante: {
         id: string; nombre_completo: string
@@ -584,6 +632,7 @@ export const getPostulacionesRecibidas = cache(async () => {
       contacto,
       tiene_nota: (notaCountMap.get(r.postulante_id) ?? 0) > 0,
       motivo_descarte: r.motivo_descarte,
+      es_ciclo_actual: cicloActualPorPuesto.get(r.puesto_id) === r.historial_puesto_id,
     }
   })
 })
