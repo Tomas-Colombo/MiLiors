@@ -155,7 +155,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
           <button
             type="button"
             aria-label="Eliminar puesto"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-400 hover:bg-[#fceeed] hover:text-error disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-400 hover:bg-error-bg hover:text-error disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => abrirModal('eliminar')}
             disabled={isPending}
           >
@@ -170,7 +170,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
         open={modo !== null}
         onClose={cerrarModal}
         icon={
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fceeed] text-error">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-error-bg text-error">
             <AlertTriangleIcon size={22} strokeWidth={2} />
           </span>
         }
