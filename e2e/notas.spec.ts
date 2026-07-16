@@ -8,7 +8,9 @@ import { loginAs } from './fixtures/auth'
 
 async function getFirstCandidateUrl(page: import('@playwright/test').Page): Promise<string | null> {
   await page.goto('/reclutador/postulantes')
-  const candidateLink = page.getByRole('link', { name: /ver perfil|ver candidato/i }).first()
+  // Each candidate card is a Link wrapping the card body — there is no "Ver perfil"
+  // label to match on, so target the detail route directly.
+  const candidateLink = page.locator('a[href^="/reclutador/postulantes/"]').first()
   const count = await candidateLink.count()
   if (count === 0) return null
   return candidateLink.getAttribute('href')
