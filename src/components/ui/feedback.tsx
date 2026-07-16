@@ -71,7 +71,7 @@ export function Toast({ title, description, onClose, className }: ToastProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-[11px] bg-neutral-900 px-[15px] py-[13px] text-white shadow-toast",
+        "flex items-center gap-3 rounded-[11px] bg-neutral-900 px-[15px] py-[13px] text-neutral-0 shadow-toast",
         className,
       )}
     >
@@ -80,10 +80,10 @@ export function Toast({ title, description, onClose, className }: ToastProps) {
       </span>
       <div className="flex-1">
         <div className="text-[13.5px] font-semibold">{title}</div>
-        {description && <div className="text-xs text-white/60">{description}</div>}
+        {description && <div className="text-xs text-neutral-0/60">{description}</div>}
       </div>
       {onClose && (
-        <button type="button" onClick={onClose} aria-label="Cerrar" className="cursor-pointer text-white/60">
+        <button type="button" onClick={onClose} aria-label="Cerrar" className="cursor-pointer text-neutral-0/60">
           <CloseIcon size={16} />
         </button>
       )}

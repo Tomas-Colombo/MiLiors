@@ -764,7 +764,7 @@ function SeccionCompetencias({
             type="button"
             onClick={addCustom}
             disabled={total >= MAX}
-            className="shrink-0 rounded-md bg-ink px-4 text-[13px] font-semibold text-white hover:bg-ink/85 disabled:opacity-40 transition-opacity"
+            className="shrink-0 rounded-md bg-ink px-4 text-[13px] font-semibold text-neutral-0 hover:bg-ink/85 disabled:opacity-40 transition-opacity"
           >
             + Agregar &ldquo;{queryTrimmed}&rdquo;
           </button>
