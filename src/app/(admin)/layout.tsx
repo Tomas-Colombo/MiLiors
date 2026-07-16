@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { verifySession } from '@/lib/dal'
 import {
@@ -13,6 +14,7 @@ import {
   NotebookIcon,
 } from '@/components/icons'
 import { AppSidebar } from '@/components/shared/app-sidebar'
+import { FilterMemory } from '@/components/shared/filter-memory'
 import { InactivityWatcher } from '@/components/admin/inactivity-watcher'
 
 const NAV_ITEMS = [
@@ -47,6 +49,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+
+      <Suspense fallback={null}>
+        <FilterMemory />
+      </Suspense>
 
       <InactivityWatcher />
     </div>

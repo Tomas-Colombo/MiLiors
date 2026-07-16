@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { TyCGate } from '@/components/shared/tyc-gate'
+import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge, Alert } from '@/components/ui'
 import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon } from '@/components/icons'
 import { getPuestoById, getContratacionesDePuesto } from '@/modules/puestos/queries'
@@ -34,13 +35,13 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
     <TyCGate>
       <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
         {/* Back */}
-        <Link
+        <VolverLink
           href="/reclutador/puestos"
           className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
         >
           <ChevronLeftIcon size={16} />
           Volver a mis puestos
-        </Link>
+        </VolverLink>
 
         {/* Advertencia de cierre automático por inactividad */}
         {alerta && (

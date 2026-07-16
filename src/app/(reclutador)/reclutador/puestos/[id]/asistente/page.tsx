@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { TyCGate } from '@/components/shared/tyc-gate'
+import { VolverLink } from '@/components/shared/volver-link'
 import { ChevronLeftIcon, SparklesIcon } from '@/components/icons'
 import { getPuestoById, getPostulacionesRecibidas } from '@/modules/puestos/queries'
 import { AsistenteFavoritos, type FavoritoItem } from './asistente-favoritos'
@@ -35,13 +35,13 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
     <TyCGate>
       <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
         {/* Back */}
-        <Link
+        <VolverLink
           href="/reclutador/puestos"
           className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
         >
           <ChevronLeftIcon size={16} />
           Volver a mis puestos
-        </Link>
+        </VolverLink>
 
         {/* Header */}
         <div className="flex items-center gap-3">

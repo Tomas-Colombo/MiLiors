@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { verifySession } from '@/lib/dal'
 import { AppSidebar } from '@/components/shared/app-sidebar'
+import { FilterMemory } from '@/components/shared/filter-memory'
 import {
   HomeIcon,
   BuildingIcon,
@@ -30,6 +32,9 @@ export default async function ReclutadorLayout({ children }: { children: React.R
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+      <Suspense fallback={null}>
+        <FilterMemory />
+      </Suspense>
     </div>
   )
 }

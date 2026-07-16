@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { TyCGate } from '@/components/shared/tyc-gate'
+import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge } from '@/components/ui'
 import { ChevronLeftIcon, BuildingIcon, UserIcon, CalendarIcon, ArrowRightIcon } from '@/components/icons'
 import { getReclutadorPublico } from '@/modules/puestos/queries'
@@ -22,13 +23,13 @@ export default async function ReclutadorPublicoPage({ params }: Props) {
     <TyCGate>
       <div className="mx-auto max-w-2xl px-6 py-10 space-y-6">
         {/* Volver */}
-        <Link
+        <VolverLink
           href="/postulante/puestos"
           className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink transition-colors"
         >
           <ChevronLeftIcon size={15} />
           Buscar puestos
-        </Link>
+        </VolverLink>
 
         {/* Header */}
         <Card padding="lg">

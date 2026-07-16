@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { TyCGate } from '@/components/shared/tyc-gate'
+import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge } from '@/components/ui'
 import { ChevronLeftIcon, CalendarIcon, BuildingIcon, ArrowRightIcon, AlertTriangleIcon } from '@/components/icons'
 import { getPuestoPublicoById, getMisPostulacionesPuestoIds } from '@/modules/puestos/queries'
@@ -48,13 +49,13 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
     <TyCGate>
       <div className="mx-auto max-w-2xl px-6 py-10 space-y-6">
         {/* Volver */}
-        <Link
+        <VolverLink
           href={volverHref}
           className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink transition-colors"
         >
           <ChevronLeftIcon size={15} />
           {volverLabel}
-        </Link>
+        </VolverLink>
 
         {/* Banner certificado */}
         {bloqueado && (

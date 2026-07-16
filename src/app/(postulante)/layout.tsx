@@ -1,6 +1,8 @@
+import { Suspense } from 'react'
 import { verifySession } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { AppSidebar } from '@/components/shared/app-sidebar'
+import { FilterMemory } from '@/components/shared/filter-memory'
 import {
   HomeIcon,
   UserIcon,
@@ -69,6 +71,9 @@ export default async function PostulanteLayout({ children }: { children: React.R
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+      <Suspense fallback={null}>
+        <FilterMemory />
+      </Suspense>
     </div>
   )
 }
