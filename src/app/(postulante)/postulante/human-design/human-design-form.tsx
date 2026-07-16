@@ -112,7 +112,7 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
         </div>
       )}
 
-      <div className="rounded-xl border border-neutral-200 bg-surface shadow-card divide-y divide-neutral-100">
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-card divide-y divide-neutral-100">
         {/* Aviso adaptado al estado: primera vez vs. actualización */}
         <div className="px-5 py-4 bg-warning-bg">
           <p className="text-sm font-semibold text-warning">
