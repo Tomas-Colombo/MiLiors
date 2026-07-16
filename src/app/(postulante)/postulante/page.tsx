@@ -241,7 +241,7 @@ export default async function PostulanteDashboard() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 rounded-[9px] px-3 py-2.5 transition-colors group hover:bg-primary-tint"
+                    className="flex items-center gap-3 rounded-[9px] px-3 py-2.5 transition-colors group hover:bg-accent-violet-bg"
                     style={{ color: 'var(--color-ink)' }}
                   >
                     <span className="flex-none" style={{ color: 'var(--color-accent-violet)' }}>{item.icon}</span>
