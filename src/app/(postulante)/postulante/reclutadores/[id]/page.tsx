@@ -7,17 +7,23 @@ import { Card, Badge } from '@/components/ui'
 import { ChevronLeftIcon, BuildingIcon, UserIcon, CalendarIcon, ArrowRightIcon } from '@/components/icons'
 import { getReclutadorPublico } from '@/modules/puestos/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
+import { paginar } from '@/lib/pagination'
+import { Paginador } from '@/components/shared/list-controls'
 
-type Props = { params: Promise<{ id: string }> }
+type Props = {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ page?: string }>
+}
 
-export default async function ReclutadorPublicoPage({ params }: Props) {
+export default async function ReclutadorPublicoPage({ params, searchParams }: Props) {
   await requireEneagramaCompleto()
-  const { id } = await params
+  const [{ id }, { page: pageParam }] = await Promise.all([params, searchParams])
 
   const reclutador = await getReclutadorPublico(id)
   if (!reclutador) notFound()
 
   const { nombre_reclutador, empresa, puestos_activos } = reclutador
+  const { page, pageCount, slice } = paginar(puestos_activos, pageParam)
 
   return (
     <TyCGate>
@@ -79,7 +85,7 @@ export default async function ReclutadorPublicoPage({ params }: Props) {
             </Card>
           ) : (
             <div className="space-y-3">
-              {puestos_activos.map((puesto) => (
+              {slice.map((puesto) => (
                 <Card key={puesto.id} padding="md" className="space-y-3">
                   {/* Título + fecha */}
                   <div className="flex items-start justify-between gap-3">
@@ -133,6 +139,8 @@ export default async function ReclutadorPublicoPage({ params }: Props) {
               ))}
             </div>
           )}
+
+          <Paginador page={page} pageCount={pageCount} />
         </section>
       </div>
     </TyCGate>
