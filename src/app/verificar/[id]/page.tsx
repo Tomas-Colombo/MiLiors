@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { getCertificadoParaVerificar } from '@/modules/certificado/queries'
 import { SparklesIcon } from '@/components/icons'
@@ -5,6 +6,22 @@ import { BackButton } from './back-button'
 import { CopyId } from './copy-id'
 
 export const metadata = { title: 'Verificar Certificado — TalentID' }
+
+// El header y la card de este certificado son siempre claros (documento
+// tipo "papel"), sin importar el tema del sitio. Se fijan los tokens
+// semánticos a sus valores de modo claro para que no se inviertan bajo
+// `.dark` y el texto quede ilegible sobre el fondo blanco fijo.
+const LIGHT_CARD_VARS = {
+  '--color-ink': '#1c2030',
+  '--color-muted': '#6b7280',
+  '--color-faint': '#9aa0ab',
+  '--color-neutral-100': '#f1f2f5',
+  '--color-neutral-200': '#ecedf1',
+  '--color-success-bg': '#e3f7ed',
+  '--color-success-border': '#b9eccf',
+  '--color-error-bg': '#fbe6e5',
+  '--color-error-border': '#f3c0bd',
+} as CSSProperties
 
 // Fondo hexagonal como SVG inline (muy sutil, opacidad ~4%)
 const HexPattern = () => (
@@ -38,7 +55,10 @@ export default async function VerificarPage({
   const cert = await getCertificadoParaVerificar(id)
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-surface-page">
+    <div
+      className="relative flex min-h-screen flex-col overflow-hidden bg-surface-page"
+      style={LIGHT_CARD_VARS}
+    >
       {/* Hex background */}
       <HexPattern />
 
