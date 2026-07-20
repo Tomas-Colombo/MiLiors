@@ -115,6 +115,17 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: 'Helvetica-Bold',
   },
+  fortalezaItem: {
+    marginBottom: 10,
+    paddingLeft: 10,
+    borderLeft: `2px solid ${colors.primaryTint}`,
+  },
+  fortalezaTitulo: {
+    fontSize: 10,
+    color: colors.ink,
+    fontFamily: 'Helvetica-Bold',
+    marginBottom: 3,
+  },
   itemSub: {
     fontSize: 9,
     color: colors.muted,
@@ -174,8 +185,14 @@ export type CertificadoPDFProps = {
   idiomas: { nombre: string; nivel_idioma: string }[]
   /** Competencias a listar: cuando hay perfil integrado, son solo las NO integradas. */
   competencias: { nombre: string }[]
+  /** "¿Qué estudiaste / qué buscás?" declarado en el perfil — nunca vacío al emitir. */
+  objetivo?: string
   /** Perfil profesional integrado (personalidad + trayectoria técnica), en 3ª persona. */
   perfilIntegrado?: string
+  /** Cruces personalidad × perfil técnico. Ausente en síntesis v1. */
+  fortalezas?: { titulo: string; texto: string }[]
+  /** Entorno donde despliega su potencial. Ausente en síntesis v1. */
+  contextoIdeal?: string
   /** Fallback: párrafo de personalidad del informe (si no hay perfil integrado). */
   personalidad?: string
   timestampFirma: string
@@ -204,7 +221,10 @@ export function CertificadoPDF({
   experiencias,
   idiomas,
   competencias,
+  objetivo,
   perfilIntegrado,
+  fortalezas,
+  contextoIdeal,
   personalidad,
   timestampFirma,
   certificadoId,
@@ -244,6 +264,12 @@ export function CertificadoPDF({
           {/* Sección: Perfil profesional integrado */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{perfilIntegrado ? 'Perfil Profesional' : 'Perfil de Personalidad'}</Text>
+            {objetivo && (
+              <Text style={[styles.bodyText, { marginBottom: 6 }]}>
+                <Text style={{ fontFamily: 'Helvetica-Bold', color: colors.ink }}>Qué estudió / qué busca: </Text>
+                {objetivo}
+              </Text>
+            )}
             <View style={styles.eneatipoRow}>
               <View style={styles.eneatipoTag}>
                 <Text style={styles.eneatipoText}>Eneatipo {eneatipoNumero} — {eneatipoNombre}</Text>
@@ -261,6 +287,28 @@ export function CertificadoPDF({
               <Text key={i} style={[styles.bodyText, { marginTop: 8 }]}>{p}</Text>
             ))}
           </View>
+
+          {/* Sección: Fortalezas en acción — cada rasgo anclado en el perfil técnico */}
+          {fortalezas && fortalezas.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Fortalezas en Acción</Text>
+              {fortalezas.map((f, i) => (
+                // wrap={false} evita que una fortaleza quede partida entre dos páginas.
+                <View key={i} style={styles.fortalezaItem} wrap={false}>
+                  <Text style={styles.fortalezaTitulo}>{f.titulo}</Text>
+                  <Text style={styles.bodyText}>{f.texto}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Sección: Contexto donde rinde mejor */}
+          {contextoIdeal && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Contexto Donde Rinde Mejor</Text>
+              <Text style={styles.bodyText}>{contextoIdeal}</Text>
+            </View>
+          )}
 
           {/* Sección: Formación académica */}
           {formaciones.length > 0 && (

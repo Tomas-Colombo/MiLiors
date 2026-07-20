@@ -12,10 +12,7 @@ export function BackButton() {
   }
 
   return (
-    <button
-      onClick={handleBack}
-      className="flex items-center gap-1 text-sm font-medium text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
-    >
+    <button onClick={handleBack} className="vf-back">
       <ChevronLeftIcon size={15} />
       Volver
     </button>

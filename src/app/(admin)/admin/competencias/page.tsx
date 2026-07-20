@@ -6,7 +6,7 @@ import { CrearCompetenciaForm, CompetenciaAcciones } from './competencias-ui'
 import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Competencias — Admin TalentID' }
+export const metadata = { title: 'Habilidades/Tecnologías — Admin TalentID' }
 
 type Competencia = {
   id: string
@@ -77,9 +77,9 @@ export default async function CompetenciasPage({
 
   return (
     <div className="mx-auto max-w-4xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Competencias laborales</h1>
+      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Habilidades y tecnologías</h1>
       <p className="mt-1 text-[13px] text-muted">
-        Las competencias inactivas se conservan como baja lógica y no se eliminan.
+        Las habilidades/tecnologías inactivas se conservan como baja lógica y no se eliminan.
       </p>
 
       <div className="mt-8 rounded-xl border border-neutral-200 bg-surface p-6 shadow-card">
@@ -87,7 +87,7 @@ export default async function CompetenciasPage({
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <SearchInput placeholder="Buscar competencia…" />
+        <SearchInput placeholder="Buscar habilidad/tecnología…" />
         <FilterSelect paramKey="estado" options={ESTADO_OPTS} ariaLabel="Filtrar por estado" className="w-full sm:w-44" />
         <ClearFilters keys={['q', 'estado']} />
         {filtradas.length !== todas.length && (
@@ -102,7 +102,7 @@ export default async function CompetenciasPage({
           <EmptyState
             icon={<BarChartIcon size={22} />}
             title="Sin resultados"
-            description="No hay competencias que coincidan con los filtros aplicados."
+            description="No hay habilidades/tecnologías que coincidan con los filtros aplicados."
           />
         ) : (
           <Table columns={columns} rows={slice} rowKey={row => row.id} />

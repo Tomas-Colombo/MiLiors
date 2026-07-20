@@ -89,32 +89,33 @@ export function PostulantesFilters({
 
   return (
     <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center">
-      <div className="relative w-full sm:w-56">
-        <SearchIcon
-          size={16}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
-        />
-        <input
-          type="search"
-          key={busqueda}
-          defaultValue={busqueda}
-          onChange={handleSearch}
-          placeholder="Buscar por nombre…"
-          className="h-10 w-full rounded-md border border-neutral-300 bg-surface pl-9 pr-3.5 font-sans text-sm text-ink outline-none placeholder:text-neutral-400 transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50"
-        />
-      </div>
       <div className="w-full sm:w-56">
         <SearchableSelect
-          key={competencia}
-          name="competencia"
-          options={competencias}
-          defaultValue={competencia}
-          placeholder="Todas las competencias"
+          key={carrera}
+          name="carrera"
+          options={carreraOpts}
+          defaultValue={carrera}
+          placeholder="Todas las carreras"
           onValueChange={(value) => {
-            if (value) setParam('competencia', value)
+            if (value) setCarrera(value)
           }}
         />
       </div>
+      {/* El segundo select solo aparece si se eligió la opción "Otras". */}
+      {carrera === 'OTRAS' && (
+        <div className="w-full sm:w-56">
+          <SearchableSelect
+            key={`${carrera}-${carreraOtra}`}
+            name="carreraOtra"
+            options={carrerasOtras ?? []}
+            defaultValue={carreraOtra}
+            placeholder="Todas las carreras cargadas"
+            onValueChange={(value) => {
+              if (value) setParam('carreraOtra', value)
+            }}
+          />
+        </div>
+      )}
       <div className="w-full sm:w-56">
         <SearchableSelect
           key={provincia}
@@ -144,31 +145,30 @@ export function PostulantesFilters({
       )}
       <div className="w-full sm:w-56">
         <SearchableSelect
-          key={carrera}
-          name="carrera"
-          options={carreraOpts}
-          defaultValue={carrera}
-          placeholder="Todas las carreras"
+          key={competencia}
+          name="competencia"
+          options={competencias}
+          defaultValue={competencia}
+          placeholder="Todas las habilidades/tecnologías"
           onValueChange={(value) => {
-            if (value) setCarrera(value)
+            if (value) setParam('competencia', value)
           }}
         />
       </div>
-      {/* El segundo select solo aparece si se eligió la opción "Otras". */}
-      {carrera === 'OTRAS' && (
-        <div className="w-full sm:w-56">
-          <SearchableSelect
-            key={`${carrera}-${carreraOtra}`}
-            name="carreraOtra"
-            options={carrerasOtras ?? []}
-            defaultValue={carreraOtra}
-            placeholder="Todas las carreras cargadas"
-            onValueChange={(value) => {
-              if (value) setParam('carreraOtra', value)
-            }}
-          />
-        </div>
-      )}
+      <div className="relative w-full sm:w-56">
+        <SearchIcon
+          size={16}
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
+        />
+        <input
+          type="search"
+          key={busqueda}
+          defaultValue={busqueda}
+          onChange={handleSearch}
+          placeholder="Buscar por nombre…"
+          className="h-10 w-full rounded-md border border-neutral-300 bg-surface pl-9 pr-3.5 font-sans text-sm text-ink outline-none placeholder:text-neutral-400 transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50"
+        />
+      </div>
       {hasFilters && (
         <button
           type="button"

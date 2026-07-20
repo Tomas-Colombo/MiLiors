@@ -108,14 +108,14 @@ export function EneatipoRadar({ puntajes, dominantes = [], size = 480 }: Props) 
             stroke="#E8E4FF"
             strokeWidth={idx === 2 ? 1.5 : 1}
             strokeDasharray={idx === 2 ? undefined : '3 3'}
-            style={{ stroke: 'var(--color-border-soft)' }}
+            style={{ stroke: 'var(--color-chart-grid)' }}
           />
         )
       })}
 
       {/* Axes */}
       {axes.map((ax, i) => (
-        <line key={i} x1={cx} y1={cy} x2={ax.x2.toFixed(2)} y2={ax.y2.toFixed(2)} strokeWidth={1} style={{ stroke: 'var(--color-border-soft)' }} />
+        <line key={i} x1={cx} y1={cy} x2={ax.x2.toFixed(2)} y2={ax.y2.toFixed(2)} strokeWidth={1} style={{ stroke: 'var(--color-chart-grid)' }} />
       ))}
 
       {/* User polygon */}

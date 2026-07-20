@@ -15,6 +15,8 @@ type Props = {
   informeDesactualizado: boolean
   tieneFormacion: boolean
   tieneCompetencia: boolean
+  /** "¿Qué estudiaste / qué buscás?" cargado en el perfil — eje del certificado, nunca puede faltar. */
+  tieneObjetivo: boolean
   sintesisEstado: SintesisEstado
   sintesisDesactualizada: boolean
 }
@@ -36,10 +38,12 @@ function SintesisPanel({
   sintesisEstado,
   sintesisDesactualizada,
   tieneCompetencia,
+  tieneObjetivo,
 }: {
   sintesisEstado: SintesisEstado
   sintesisDesactualizada: boolean
   tieneCompetencia: boolean
+  tieneObjetivo: boolean
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -63,14 +67,14 @@ function SintesisPanel({
     return (
       <>
         <Alert tone="warning" title="Tu perfil integrado está desactualizado">
-          Actualizaste tu informe de personalidad. Regeneralo para reflejar los cambios.
+          No refleja tus datos más recientes. Regeneralo para ponerlo al día.
           <div className="mt-3">
             <Button
               variant="primary"
               size="sm"
               loading={isPending}
               onClick={handleRegenerar}
-              disabled={isPending || !tieneCompetencia}
+              disabled={isPending || !tieneCompetencia || !tieneObjetivo}
             >
               Actualizar perfil integrado
             </Button>
@@ -94,12 +98,21 @@ function SintesisPanel({
         variant="primary"
         loading={isPending}
         onClick={handleRegenerar}
-        disabled={isPending || !tieneCompetencia}
+        disabled={isPending || !tieneCompetencia || !tieneObjetivo}
         leftIcon={<SparklesIcon size={14} />}
       >
         {sintesisEstado === 'ERROR' ? 'Reintentar' : 'Generar perfil integrado'}
       </Button>
-      {!tieneCompetencia && (
+      {!tieneObjetivo && (
+        <p className="text-xs text-muted">
+          Completá &quot;¿Qué estudiaste / qué buscás?&quot; en{' '}
+          <a href="/postulante/mi-perfil" className="font-semibold text-primary-600 underline">
+            tu perfil
+          </a>{' '}
+          antes de generarlo.
+        </p>
+      )}
+      {tieneObjetivo && !tieneCompetencia && (
         <p className="text-xs text-muted">Necesitás al menos una habilidad o tecnología cargada.</p>
       )}
     </div>
@@ -113,6 +126,7 @@ export function CertificadoUI({
   informeDesactualizado,
   tieneFormacion,
   tieneCompetencia,
+  tieneObjetivo,
   sintesisEstado,
   sintesisDesactualizada,
 }: Props) {
@@ -135,7 +149,7 @@ export function CertificadoUI({
 
   const sintesisLista = sintesisEstado === 'LISTO'
   const puedeGenerar =
-    informeListo && !informeDesactualizado && tieneFormacion && tieneCompetencia && sintesisLista
+    informeListo && !informeDesactualizado && tieneFormacion && tieneCompetencia && tieneObjetivo && sintesisLista
 
   if (!informeListo) {
     return (
@@ -186,6 +200,7 @@ export function CertificadoUI({
           sintesisEstado={sintesisEstado}
           sintesisDesactualizada={sintesisDesactualizada}
           tieneCompetencia={tieneCompetencia}
+          tieneObjetivo={tieneObjetivo}
         />
 
         {/* Status + descarga */}
@@ -248,6 +263,7 @@ export function CertificadoUI({
         sintesisEstado={sintesisEstado}
         sintesisDesactualizada={sintesisDesactualizada}
         tieneCompetencia={tieneCompetencia}
+        tieneObjetivo={tieneObjetivo}
       />
 
       <Card padding="lg">
@@ -256,7 +272,8 @@ export function CertificadoUI({
           <span className="text-[13px] font-semibold text-ink">Generar mi certificado</span>
         </div>
         <p className="mb-4 text-xs text-muted">
-          El certificado incluye tu perfil profesional integrado, formación académica, experiencia,
+          El certificado cruza tu informe de personalidad con tu perfil técnico: un perfil profesional en
+          prosa, tus fortalezas en acción y el contexto donde rendís mejor, más tu formación, experiencia,
           habilidades y tecnologías e idiomas. Incluye un código QR verificable por cualquier reclutador.
         </p>
 
@@ -264,6 +281,7 @@ export function CertificadoUI({
         <ul className="mb-4 space-y-1">
           {[
             { label: 'Informe de personalidad generado', ok: informeListo && !informeDesactualizado },
+            { label: '¿Qué estudiaste / qué buscás? cargado en tu perfil', ok: tieneObjetivo },
             { label: 'Perfil profesional integrado generado', ok: sintesisLista },
             { label: 'Al menos una formación académica', ok: tieneFormacion },
             { label: 'Al menos una habilidad o tecnología', ok: tieneCompetencia },

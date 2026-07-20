@@ -12,7 +12,7 @@ import {
 import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getPuestosConFormulario } from '@/modules/preselector/queries'
-import { getCarreras } from '@/modules/carreras/queries'
+import { getCarreras, getMiCarreraId } from '@/modules/carreras/queries'
 import { PostularButton } from './postular-button'
 import { PuestosFilters } from './filters'
 import { PuestoCard } from './puesto-card'
@@ -37,25 +37,32 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
 
   const page = Math.max(0, parseInt(sp.page ?? '0', 10))
   const diasDesde = sp.dias ? parseInt(sp.dias, 10) : undefined
-  // Default to "no_postulados" so the first view only shows jobs the user hasn't applied to yet.
-  // Passing 'todos' explicitly resets the filter to show everything.
+  // Default to "todos" (undefined) so the first view shows every job. The user narrows
+  // down explicitly with 'postulados' / 'no_postulados'.
   const postulacion = (sp.postulacion === 'postulados' || sp.postulacion === 'no_postulados')
     ? sp.postulacion
-    : sp.postulacion === 'todos'
-      ? undefined
-      : 'no_postulados'
+    : undefined
 
   const provinciaFiltro = sp.provincia || undefined
   const carreraFiltro = sp.carrera || undefined
 
-  const [sectores, yaPostuladosSet, certificado, provincias, localidadesFiltro, carreras] = await Promise.all([
+  const [sectores, yaPostuladosSet, certificado, provincias, localidadesFiltro, carreras, miCarreraId] = await Promise.all([
     getSectores(),
     getMisPostulacionesPuestoIds(),
     getUltimoCertificado(),
     getProvincias(),
     provinciaFiltro ? getLocalidadesPorProvincia(provinciaFiltro) : Promise.resolve([]),
     getCarreras(),
+    getMiCarreraId(),
   ])
+
+  // La carrera cargada en el perfil del postulante va primero en el selector.
+  const carrerasOrdenadas = miCarreraId
+    ? [
+        ...carreras.filter((c) => c.value === miCarreraId),
+        ...carreras.filter((c) => c.value !== miCarreraId),
+      ]
+    : carreras
 
   const postulacionIds = [...yaPostuladosSet]
 
@@ -99,7 +106,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
               sectores={sectores}
               provincias={provincias}
               localidades={localidadesFiltro}
-              carreras={carreras}
+              carreras={carrerasOrdenadas}
             />
           </Suspense>
         </Card>

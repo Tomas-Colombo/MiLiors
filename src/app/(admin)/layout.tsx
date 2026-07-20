@@ -20,7 +20,7 @@ import { InactivityWatcher } from '@/components/admin/inactivity-watcher'
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: <HomeIcon size={18} />, exactMatch: true },
   { href: '/admin/sectores', label: 'Sectores', icon: <GridIcon size={18} /> },
-  { href: '/admin/competencias', label: 'Competencias', icon: <BarChartIcon size={18} /> },
+  { href: '/admin/competencias', label: 'Habilidades/Tecnologías', icon: <BarChartIcon size={18} /> },
   { href: '/admin/ubicaciones', label: 'Ubicaciones', icon: <MapPinIcon size={18} /> },
   { href: '/admin/carreras', label: 'Carreras', icon: <NotebookIcon size={18} /> },
   { href: '/admin/postulantes', label: 'Postulantes', icon: <UsersIcon size={18} /> },

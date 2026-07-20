@@ -21,11 +21,11 @@ export function CrearCompetenciaForm() {
   return (
     <div className="space-y-3">
       <form ref={formRef} action={action} className="flex items-end gap-3">
-        <Field label="Nueva competencia" htmlFor="nombre" className="flex-1">
+        <Field label="Nueva habilidad/tecnología" htmlFor="nombre" className="flex-1">
           <Input
             id="nombre"
             name="nombre"
-            placeholder="Ej: Liderazgo, Trabajo en equipo, Comunicación…"
+            placeholder="Ej: React, Python, Excel, Inglés…"
             required
             status={!state.success && state.error ? 'error' : 'default'}
           />
@@ -35,7 +35,7 @@ export function CrearCompetenciaForm() {
         </Button>
       </form>
 
-      {state.success && <Alert tone="success" title="Competencia creada correctamente." />}
+      {state.success && <Alert tone="success" title="Habilidad/tecnología creada correctamente." />}
       {!state.success && state.error && <Alert tone="error" title={state.error} />}
     </div>
   )
@@ -47,7 +47,7 @@ export function CompetenciaAcciones({ id, activa }: { id: string; activa: boolea
   const [isPending, startTransition] = useTransition()
 
   function handleDesactivar() {
-    if (!confirm('¿Desactivar esta competencia? Seguirá existiendo como baja lógica.')) return
+    if (!confirm('¿Desactivar esta habilidad/tecnología? Seguirá existiendo como baja lógica.')) return
     startTransition(async () => {
       await desactivarCompetencia(id)
     })

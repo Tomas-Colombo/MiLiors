@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { getUltimoCertificado, getCertificadoContenido } from '@/modules/certificado/queries'
 import { getInformeActual } from '@/modules/informe/queries'
+import { SINTESIS_VERSION, type CertificadoSintesisJSON } from '@/lib/types/certificado'
 import { CertificadoUI } from './certificado-ui'
 
 export const metadata = { title: 'Mi Certificado — TalentID' }
@@ -31,6 +32,7 @@ export default async function CertificadoPage() {
   let tieneCompetencia = false
   let sintesisEstado: 'PENDIENTE' | 'LISTO' | 'ERROR' = 'PENDIENTE'
   let sintesisDesactualizada = false
+  let pdfPrevioALaSintesis = false
 
   if (postulante) {
     const pid = (postulante as { id: string }).id
@@ -44,15 +46,33 @@ export default async function CertificadoPage() {
       const ptTyped = pt as {
         id: string
         sintesis_estado: 'PENDIENTE' | 'LISTO' | 'ERROR'
-        sintesis_certificado: { generadaAt?: string } | null
+        sintesis_certificado: CertificadoSintesisJSON | null
       }
       const ptId = ptTyped.id
       sintesisEstado = ptTyped.sintesis_estado ?? 'PENDIENTE'
 
-      // Desactualizada si el informe se regeneró DESPUÉS de la síntesis.
-      const generadaAt = ptTyped.sintesis_certificado?.generadaAt
-      if (sintesisEstado === 'LISTO' && generadaAt && informe?.fecha_generacion) {
-        sintesisDesactualizada = new Date(generadaAt) < new Date(informe.fecha_generacion)
+      if (sintesisEstado === 'LISTO') {
+        // Desactualizada si el informe se regeneró DESPUÉS de la síntesis...
+        const generadaAt = ptTyped.sintesis_certificado?.generadaAt
+        const informeMasNuevo =
+          !!generadaAt &&
+          !!informe?.fecha_generacion &&
+          new Date(generadaAt) < new Date(informe.fecha_generacion)
+
+        // ...o si se generó con un esquema anterior, que no trae fortalezas ni contexto.
+        const esquemaViejo = (ptTyped.sintesis_certificado?.version ?? 1) < SINTESIS_VERSION
+
+        sintesisDesactualizada = informeMasNuevo || esquemaViejo
+
+        // El PDF vive congelado en Storage: si se firmó ANTES de la síntesis que
+        // debería contener, lo que se descarga no es lo que se previsualiza. Es un
+        // hecho derivable del dato, así que no depende de que alguien se acuerde de
+        // prender `certificado_pdf.desactualizado` — ese flag sigue cubriendo los
+        // casos que NO se pueden derivar (cambios de eneagrama, HD, perfil técnico).
+        pdfPrevioALaSintesis =
+          !!generadaAt &&
+          !!certificado?.timestamp_firma &&
+          new Date(certificado.timestamp_firma) < new Date(generadaAt)
       }
 
       const [{ count: formCount }, { count: compCount }] = await Promise.all([
@@ -80,12 +100,17 @@ export default async function CertificadoPage() {
           </p>
         </div>
         <CertificadoUI
-          certificado={certificado}
+          certificado={
+            certificado && pdfPrevioALaSintesis
+              ? { ...certificado, desactualizado: true }
+              : certificado
+          }
           contenido={contenido}
           informeListo={informe?.estado_informe === 'LISTO'}
           informeDesactualizado={informe?.desactualizado ?? false}
           tieneFormacion={tieneFormacion}
           tieneCompetencia={tieneCompetencia}
+          tieneObjetivo={!!contenido?.objetivo}
           sintesisEstado={sintesisEstado}
           sintesisDesactualizada={sintesisDesactualizada}
         />

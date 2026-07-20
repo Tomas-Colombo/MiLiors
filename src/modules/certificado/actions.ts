@@ -8,7 +8,7 @@ import { generarPDFBuffer } from './generate-pdf'
 import { generarSintesisCertificado, competenciasNoIntegradas } from './sintesis-service'
 import type { ActionResult } from '@/lib/types/domain'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
-import type { CertificadoSintesisJSON } from '@/lib/types/certificado'
+import { clavesDescartadas, estaDescartada, type CertificadoSintesisJSON } from '@/lib/types/certificado'
 import type { FormacionItem, ExperienciaItem, IdiomaItem, CompetenciaItem } from '@/modules/perfil-tecnico/queries'
 
 export async function crearCertificado(): Promise<ActionResult<{ certificadoId: string }>> {
@@ -100,6 +100,12 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     }
   }
 
+  // El objetivo mostrado en el PDF es el que estaba vigente cuando se generó la
+  // síntesis (documento firmado = congelado). Fallback a la carrera actual solo
+  // para síntesis previas a v3, que no lo guardaban.
+  const objetivo =
+    ptSintesis.sintesis_certificado.objetivo ?? postulanteTyped.carrera?.nombre ?? postulanteTyped.carrera_otra ?? undefined
+
   let formaciones: FormacionItem[] = []
   let experiencias: ExperienciaItem[] = []
   let idiomas: IdiomaItem[] = []
@@ -107,19 +113,25 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
 
   {
     const ptId = ptSintesis.id
+    // Mismo orden que la previsualización (`getCertificadoContenido`): sin ORDER BY
+    // el PDF puede listar formación y experiencia en otro orden que lo que el
+    // postulante vio en pantalla.
     const [f, e, i, c] = await Promise.all([
       supabase
         .from('formacion_academica')
         .select('id, institucion, titulo, fecha_graduacion')
-        .eq('perfil_tecnico_id', ptId),
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_graduacion', { ascending: false }),
       supabase
         .from('experiencia_laboral')
         .select('id, empresa, puesto, fecha_inicio, fecha_fin, descripcion')
-        .eq('perfil_tecnico_id', ptId),
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_inicio', { ascending: false }),
       supabase
         .from('idioma')
         .select('id, nombre, nivel_idioma')
-        .eq('perfil_tecnico_id', ptId),
+        .eq('perfil_tecnico_id', ptId)
+        .order('nombre'),
       supabase
         .from('postulante_competencia')
         .select('competencia_id, competencia(id, nombre)')
@@ -134,6 +146,8 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
         return r.competencia ?? null
       })
       .filter((x): x is CompetenciaItem => x !== null)
+      // Mismo criterio que la previsualización (`getCertificadoContenido`).
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
   }
 
   // 5. Guard: require at least 1 formación and 1 competencia
@@ -148,10 +162,18 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
   const certificadoId = crypto.randomUUID()
   const timestampFirma = new Date().toISOString()
 
-  // Perfil integrado (síntesis del certificado) + competencias que NO se integraron
+  // Perfil integrado (síntesis del certificado) + competencias que NO se integraron.
+  // El PDF firmado excluye lo que el triage descartó por no ser relevante para la
+  // búsqueda declarada, igual que la previsualización (`getCertificadoContenido`).
   const sintesis = ptSintesis.sintesis_certificado
+  const formacionesDescartadas = clavesDescartadas(sintesis.descartados, 'formacion')
+  const experienciasDescartadas = clavesDescartadas(sintesis.descartados, 'experiencia')
+  const competenciasDescartadas = clavesDescartadas(sintesis.descartados, 'competencia')
+
+  const formacionesRelevantes = formaciones.filter(f => !estaDescartada(formacionesDescartadas, f.id))
+  const experienciasRelevantes = experiencias.filter(e => !estaDescartada(experienciasDescartadas, e.id))
   const noIntegradas = competenciasNoIntegradas(
-    competencias.map(c => c.nombre),
+    competencias.map(c => c.nombre).filter(nombre => !estaDescartada(competenciasDescartadas, nombre)),
     sintesis.competenciasIntegradas,
   ).map(nombre => ({ nombre }))
 
@@ -166,11 +188,14 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
       humanDesign: hd
         ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })
         : null,
-      formaciones,
-      experiencias,
+      formaciones: formacionesRelevantes,
+      experiencias: experienciasRelevantes,
       idiomas,
       competencias: noIntegradas,
+      objetivo,
       perfilIntegrado: sintesis.perfilIntegrado,
+      fortalezas: sintesis.fortalezas,
+      contextoIdeal: sintesis.contextoIdeal,
       timestampFirma,
       certificadoId,
     })
@@ -264,6 +289,17 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     return { success: false, error: 'El informe está desactualizado. Regeneralo antes de la síntesis.' }
   }
 
+  // "¿Qué estudiaste / qué buscás?" es el eje del certificado: sin esto no hay
+  // contra qué medir la relevancia del resto del perfil técnico, así que nunca
+  // puede estar vacío al generar la síntesis.
+  const objetivo = postulanteTyped.carrera?.nombre ?? postulanteTyped.carrera_otra ?? null
+  if (!objetivo) {
+    return {
+      success: false,
+      error: 'Completá "¿Qué estudiaste / qué buscás?" en tu perfil antes de generar la síntesis.',
+    }
+  }
+
   // Perfil técnico + estado previo de la síntesis.
   const { data: pt } = await supabase
     .from('perfil_tecnico')
@@ -283,39 +319,83 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
 
   const teniaSintesisValida = ptTyped.sintesis_estado === 'LISTO' && ptTyped.sintesis_certificado != null
 
-  // Material técnico a integrar.
-  const [{ data: exp }, { data: comp }] = await Promise.all([
+  // Material técnico a integrar — el perfil técnico completo, no solo un extracto.
+  const [{ data: exp }, { data: comp }, { data: form }, { data: idi }] = await Promise.all([
     supabase
       .from('experiencia_laboral')
-      .select('puesto, empresa, descripcion')
+      .select('id, puesto, empresa, fecha_inicio, fecha_fin, descripcion')
       .eq('perfil_tecnico_id', ptTyped.id)
       .order('fecha_inicio', { ascending: false }),
     supabase
       .from('postulante_competencia')
       .select('competencia(nombre)')
       .eq('perfil_tecnico_id', ptTyped.id),
+    supabase
+      .from('formacion_academica')
+      .select('id, titulo, institucion, fecha_graduacion')
+      .eq('perfil_tecnico_id', ptTyped.id)
+      .order('fecha_graduacion', { ascending: false }),
+    supabase
+      .from('idioma')
+      .select('nombre, nivel_idioma')
+      .eq('perfil_tecnico_id', ptTyped.id),
   ])
 
-  const experiencias = ((exp ?? []) as { puesto: string; empresa: string; descripcion: string | null }[])
+  const experiencias = (
+    (exp ?? []) as {
+      id: string
+      puesto: string
+      empresa: string
+      fecha_inicio: string
+      fecha_fin: string | null
+      descripcion: string | null
+    }[]
+  ).map(e => ({
+    id: e.id,
+    puesto: e.puesto,
+    empresa: e.empresa,
+    fechaInicio: e.fecha_inicio,
+    fechaFin: e.fecha_fin,
+    descripcion: e.descripcion,
+  }))
+
   const competenciasTecnicas = ((comp ?? []) as { competencia: { nombre: string } | null }[])
     .map(r => r.competencia?.nombre)
     .filter((n): n is string => !!n)
+
+  const formaciones = (
+    (form ?? []) as { id: string; titulo: string; institucion: string; fecha_graduacion: string | null }[]
+  ).map(f => ({ id: f.id, titulo: f.titulo, institucion: f.institucion, fechaGraduacion: f.fecha_graduacion }))
+
+  const idiomas = ((idi ?? []) as { nombre: string; nivel_idioma: string }[]).map(i => ({
+    nombre: i.nombre,
+    nivel: i.nivel_idioma,
+  }))
 
   if (competenciasTecnicas.length === 0) {
     return { success: false, error: 'Necesitás al menos una competencia técnica para generar la síntesis.' }
   }
 
-  // Marcamos PENDIENTE sin borrar el contenido anterior.
+  // Marcamos PENDIENTE sin borrar el contenido anterior. Si esta escritura falla,
+  // cortamos acá: la llamada al LLM cuesta plata y no la vamos a poder guardar.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('perfil_tecnico') as any)
+  const { error: marcarError } = await (admin.from('perfil_tecnico') as any)
     .update({ sintesis_estado: 'PENDIENTE' })
     .eq('id', ptTyped.id)
 
+  if (marcarError) {
+    console.error('[certificado/sintesis] No se pudo marcar PENDIENTE:', marcarError.message)
+    return { success: false, error: 'No se pudo iniciar la generación. Intentá de nuevo.' }
+  }
+
   async function fallar(motivo: string): Promise<ActionResult> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('perfil_tecnico') as any)
+    const { error: revertError } = await (admin.from('perfil_tecnico') as any)
       .update({ sintesis_estado: teniaSintesisValida ? 'LISTO' : 'ERROR' })
       .eq('id', ptTyped!.id)
+    if (revertError) {
+      console.error('[certificado/sintesis] No se pudo revertir el estado:', revertError.message)
+    }
     revalidatePath('/postulante/certificado')
     return {
       success: false,
@@ -323,13 +403,23 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     }
   }
 
+  const informeJson = informeTyped.contenido_json
+
   const resultado = await generarSintesisCertificado({
     nombre: postulanteTyped.nombre_completo,
-    subtitulo: informeTyped.contenido_json.subtitulo ?? null,
-    descripcionPersonalidad: informeTyped.contenido_json.descripcionPersonalidad,
-    talentos: informeTyped.contenido_json.talentosTop.map(t => t.nombre),
+    objetivo,
+    subtitulo: informeJson.subtitulo ?? null,
+    descripcionPersonalidad: informeJson.descripcionPersonalidad,
+    talentos: (informeJson.talentosTop ?? []).map(t => ({ nombre: t.nombre, descripcion: t.descripcion })),
+    // Solo las más marcadas: son anclas para tejer, no una lista a mostrar.
+    competenciasDestacadas: (informeJson.competencias ?? [])
+      .filter(c => c.nivel === 'Alto' || c.nivel === 'Medio-Alto')
+      .map(c => ({ nombre: c.nombre, nivel: c.nivel })),
+    comoTrabaja: (informeJson.comoTrabajas ?? []).map(i => ({ titulo: i.titulo, texto: i.texto })),
     competenciasTecnicas,
+    formaciones,
     experiencias,
+    idiomas,
   })
 
   if (!resultado.ok) {
@@ -344,6 +434,24 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   if (saveError) {
     console.error('[certificado/sintesis] Error al guardar:', saveError.message)
     return fallar('La síntesis se generó pero no se pudo guardar.')
+  }
+
+  // El PDF emitido lleva la síntesis adentro y vive congelado en Storage: al
+  // cambiarla, el archivo descargable queda viejo aunque la previsualización
+  // (que lee datos vivos) ya muestre la nueva. Marcarlo desactualizado es lo que
+  // le ofrece al postulante re-emitirlo. Mismo patrón que eneagrama/human-design.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: marcarCertError } = await (admin.from('certificado_pdf') as any)
+    .update({ desactualizado: true })
+    .eq('postulante_id', postulanteTyped.id)
+
+  if (marcarCertError) {
+    // No es fatal: la síntesis ya se guardó bien. Pero sin esto el postulante se
+    // descarga un PDF viejo creyendo que está al día, así que queda en el log.
+    console.error(
+      '[certificado/sintesis] No se pudo marcar el certificado como desactualizado:',
+      marcarCertError.message,
+    )
   }
 
   revalidatePath('/postulante/certificado')

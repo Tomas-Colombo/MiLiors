@@ -2,8 +2,12 @@ import type { CertificadoContenido } from './queries'
 
 /**
  * Render presentacional del contenido del certificado — mismas secciones que el
- * PDF (candidato, perfil de personalidad, formación, experiencia, competencias,
- * idiomas). Sin estado ni hooks; homogéneo con `InformeDisplay`.
+ * PDF (candidato, perfil profesional, fortalezas, contexto, formación,
+ * experiencia, competencias, idiomas). Sin estado ni hooks; homogéneo con
+ * `InformeDisplay`.
+ *
+ * Fortalezas y contexto sólo existen en síntesis v2+: las anteriores renderizan
+ * igual, sin esas secciones.
  */
 
 const MESES = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -29,6 +33,11 @@ export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
       {/* Perfil profesional integrado (personalidad + trayectoria técnica) */}
       <section>
         <SectionTitle>{data.perfilIntegrado ? 'Perfil profesional' : 'Perfil de personalidad'}</SectionTitle>
+        {data.objetivo && (
+          <p className="mb-2 text-[13.5px] text-ink">
+            <span className="font-semibold">Qué estudió / qué busca:</span> {data.objetivo}
+          </p>
+        )}
         <span className="inline-flex rounded bg-primary-50 px-2.5 py-1 text-[13px] font-semibold text-primary-600">
           Eneatipo {data.eneatipoNumero} — {data.eneatipoNombre}
         </span>
@@ -42,6 +51,29 @@ export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
           <p key={i} className="mt-2 text-[13.5px] leading-relaxed text-ink">{p}</p>
         ))}
       </section>
+
+      {/* Fortalezas en acción — cada rasgo anclado en evidencia del perfil técnico */}
+      {data.fortalezas && data.fortalezas.length > 0 && (
+        <section>
+          <SectionTitle>Fortalezas en acción</SectionTitle>
+          <div className="space-y-3">
+            {data.fortalezas.map((f, i) => (
+              <div key={i} className="border-l-2 border-primary-100 pl-3">
+                <p className="text-[13.5px] font-semibold text-ink">{f.titulo}</p>
+                <p className="mt-0.5 text-[13.5px] leading-relaxed text-soft">{f.texto}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Contexto donde rinde mejor */}
+      {data.contextoIdeal && (
+        <section>
+          <SectionTitle>Contexto donde rinde mejor</SectionTitle>
+          <p className="text-[13.5px] leading-relaxed text-ink">{data.contextoIdeal}</p>
+        </section>
+      )}
 
       {/* Formación académica */}
       {data.formaciones.length > 0 && (
@@ -105,6 +137,20 @@ export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
               </div>
             </div>
           )}
+        </section>
+      )}
+
+      {/* Transparencia: qué se dejó fuera del certificado y por qué */}
+      {data.descartados && data.descartados.length > 0 && (
+        <section>
+          <SectionTitle>No incluido en este certificado</SectionTitle>
+          <div className="space-y-1.5">
+            {data.descartados.map((d, i) => (
+              <p key={i} className="text-[12.5px] leading-relaxed text-muted">
+                <span className="font-semibold">{d.label}</span> — {d.motivo}
+              </p>
+            ))}
+          </div>
         </section>
       )}
     </div>

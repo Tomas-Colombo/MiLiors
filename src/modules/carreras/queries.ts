@@ -1,8 +1,22 @@
 import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { verifySession } from '@/lib/dal'
 
 export type CarreraOption = { value: string; label: string }
+
+/** carrera_id que el postulante actual tiene cargada en su perfil (null si no tiene una del catálogo). */
+export const getMiCarreraId = cache(async (): Promise<string | null> => {
+  const session = await verifySession()
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('perfil_postulante')
+    .select('carrera_id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  return (data as { carrera_id: string | null } | null)?.carrera_id ?? null
+})
 
 /** Carreras activas, ordenadas alfabéticamente (para el selector). */
 export const getCarreras = cache(async (): Promise<CarreraOption[]> => {

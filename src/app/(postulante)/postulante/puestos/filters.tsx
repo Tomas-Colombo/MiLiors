@@ -79,46 +79,15 @@ export function PuestosFilters({
   const provincia = sp.get('provincia') ?? ''
   const localidad = sp.get('localidad') ?? ''
   const carrera = sp.get('carrera') ?? ''
-  // "postulacion" defaults to "no_postulados" server-side, so we treat missing param as that value.
-  const postulacion = sp.get('postulacion') ?? 'no_postulados'
+  // "postulacion" defaults to "todos" server-side, so we treat a missing param as that value.
+  const postulacion = sp.get('postulacion') ?? 'todos'
   const hasFilters = !!(q || dias || sector || carga || ubicacion || provincia || localidad || carrera || sp.get('postulacion'))
 
   return (
     <div className="space-y-5">
-      {/* Filtro principal: carrera. Es el filtro más relevante para el postulante,
-          por eso va primero, a todo el ancho y siempre visible (no depende de
-          "Mostrar filtros"). Estilo sobrio, consistente con el resto de filtros. */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-            Carrera
-          </p>
-          {carrera && (
-            <button
-              type="button"
-              onClick={() => update('carrera', '')}
-              className="text-xs font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
-            >
-              Quitar
-            </button>
-          )}
-        </div>
-        {/* Solo navega al elegir una opción: SearchableSelect emite '' en cada tipeo
-            y eso remontaría el componente (key) borrando lo escrito. Limpiar es
-            explícito, vía "Quitar" o "Limpiar filtros". */}
-        <SearchableSelect
-          key={carrera}
-          name="carrera"
-          options={carreras}
-          defaultValue={carrera}
-          placeholder="Elegí tu carrera para ver los puestos más relevantes…"
-          onValueChange={(value) => {
-            if (value) update('carrera', value)
-          }}
-        />
-      </div>
-
-      {/* Buscador + toggle */}
+      {/* Buscador + toggle: lo único siempre visible. Todos los filtros (incluida
+          la carrera) quedan ocultos hasta que el usuario abre "Mostrar filtros",
+          para que el apartado quede simétrico. */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <SearchIcon
@@ -152,6 +121,37 @@ export function PuestosFilters({
       {/* Filtros colapsables */}
       {filtersOpen && (
         <>
+          {/* Carrera: filtro principal, a todo el ancho. */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                Carrera
+              </p>
+              {carrera && (
+                <button
+                  type="button"
+                  onClick={() => update('carrera', '')}
+                  className="text-xs font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+            {/* Solo navega al elegir una opción: SearchableSelect emite '' en cada tipeo
+                y eso remontaría el componente (key) borrando lo escrito. Limpiar es
+                explícito, vía "Quitar" o "Limpiar filtros". */}
+            <SearchableSelect
+              key={carrera}
+              name="carrera"
+              options={carreras}
+              defaultValue={carrera}
+              placeholder="Seleccioná una carrera"
+              onValueChange={(value) => {
+                if (value) update('carrera', value)
+              }}
+            />
+          </div>
+
           {/* Filtros en grilla */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Publicados */}
@@ -223,57 +223,6 @@ export function PuestosFilters({
               </div>
             </div>
 
-            {/* Provincia */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                Provincia
-              </p>
-              <div className="relative">
-                <select
-                  value={provincia}
-                  onChange={(e) => updateProvincia(e.target.value)}
-                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
-                >
-                  <option value="">Todas las provincias</option>
-                  {provincias.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
-                  ▾
-                </span>
-              </div>
-            </div>
-
-            {/* Localidad (depende de la provincia) */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                Localidad
-              </p>
-              <div className="relative">
-                <select
-                  value={localidad}
-                  onChange={(e) => update('localidad', e.target.value)}
-                  disabled={!provincia}
-                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400"
-                >
-                  <option value="">
-                    {provincia ? 'Todas las localidades' : 'Elegí una provincia'}
-                  </option>
-                  {localidades.map((l) => (
-                    <option key={l.value} value={l.value}>
-                      {l.label}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
-                  ▾
-                </span>
-              </div>
-            </div>
-
             {/* Dedicación */}
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
@@ -299,6 +248,56 @@ export function PuestosFilters({
                 ))}
               </div>
             </div>
+
+            {/* Provincia */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                Provincia
+              </p>
+              <div className="relative">
+                <select
+                  value={provincia}
+                  onChange={(e) => updateProvincia(e.target.value)}
+                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
+                >
+                  <option value="">Todas las provincias</option>
+                  {provincias.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
+                  ▾
+                </span>
+              </div>
+            </div>
+
+            {/* Localidad: solo se muestra cuando hay una provincia seleccionada. */}
+            {provincia && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                  Localidad
+                </p>
+                <div className="relative">
+                  <select
+                    value={localidad}
+                    onChange={(e) => update('localidad', e.target.value)}
+                    className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
+                  >
+                    <option value="">Todas las localidades</option>
+                    {localidades.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
+                    ▾
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Mis postulaciones */}
             <div className="space-y-2 sm:col-span-2">

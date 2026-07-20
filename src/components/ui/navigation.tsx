@@ -20,7 +20,7 @@ export function NavItem({ icon, label, active, href, onClick, trailing }: NavIte
   const content = (
     <>
       <span className={cn("flex-none", active ? "text-primary-600" : "text-muted")}>{icon}</span>
-      <span className="flex-1">{label}</span>
+      <span className="flex-1 leading-tight">{label}</span>
       {trailing}
     </>
   );

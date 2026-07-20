@@ -4,7 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { competenciasNoIntegradas } from './sintesis-service'
-import type { CertificadoSintesisJSON, SintesisEstado } from '@/lib/types/certificado'
+import {
+  clavesDescartadas,
+  estaDescartada,
+  type CertificadoSintesisJSON,
+  type SintesisDescarte,
+  type SintesisEstado,
+  type SintesisFortaleza,
+} from '@/lib/types/certificado'
 
 export type CertificadoData = {
   id: string
@@ -48,6 +55,8 @@ export const getUltimoCertificado = cache(async (): Promise<CertificadoData | nu
 export type CertificadoContenido = {
   nombre: string
   email: string
+  /** "¿Qué estudiaste / qué buscás?" vigente en el perfil — nunca vacío para poder previsualizar. */
+  objetivo: string | null
   eneatipoNumero: number
   eneatipoNombre: string
   humanDesign: {
@@ -65,8 +74,14 @@ export type CertificadoContenido = {
   personalidad?: string
   /** Perfil profesional integrado (síntesis). Cuando existe, reemplaza a `personalidad`. */
   perfilIntegrado?: string
+  /** Cruces personalidad × perfil técnico. Vacío en síntesis v1. */
+  fortalezas?: SintesisFortaleza[]
+  /** Entorno donde despliega su potencial. Ausente en síntesis v1. */
+  contextoIdeal?: string
   /** Estado de la síntesis integrada para dirigir la UI. */
   sintesisEstado: SintesisEstado
+  /** Ítems del perfil técnico que el triage dejó fuera del certificado, con motivo. */
+  descartados?: SintesisDescarte[]
 }
 
 export const getCertificadoContenido = cache(async (): Promise<CertificadoContenido | null> => {
@@ -75,12 +90,18 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
 
   const { data: postulante } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo')
+    .select('id, nombre_completo, carrera_otra, carrera:carrera_id(nombre)')
     .eq('usuario_id', session.id)
     .single()
 
   if (!postulante) return null
-  const postulanteTyped = postulante as { id: string; nombre_completo: string }
+  const postulanteTyped = postulante as {
+    id: string
+    nombre_completo: string
+    carrera_otra: string | null
+    carrera: { nombre: string } | null
+  }
+  const objetivo = postulanteTyped.carrera?.nombre ?? postulanteTyped.carrera_otra ?? null
 
   // Eneatipo dominante (requerido para el perfil de personalidad)
   const { data: test } = await supabase
@@ -127,37 +148,64 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   let idiomas: CertificadoContenido['idiomas'] = []
   let competencias: CertificadoContenido['competencias'] = []
 
+  // Si hay síntesis integrada LISTA, el triage ya evaluó qué ítems no aportan a
+  // la búsqueda declarada — se calcula antes para poder filtrarlos acá mismo.
+  const sintesis = ptTyped?.sintesis_estado === 'LISTO' ? ptTyped.sintesis_certificado : null
+  const formacionesDescartadas = clavesDescartadas(sintesis?.descartados, 'formacion')
+  const experienciasDescartadas = clavesDescartadas(sintesis?.descartados, 'experiencia')
+  const competenciasDescartadas = clavesDescartadas(sintesis?.descartados, 'competencia')
+
   if (ptTyped) {
     const ptId = ptTyped.id
     const [f, e, i, c] = await Promise.all([
-      supabase.from('formacion_academica').select('titulo, institucion, fecha_graduacion').eq('perfil_tecnico_id', ptId),
-      supabase.from('experiencia_laboral').select('puesto, empresa, fecha_inicio, fecha_fin').eq('perfil_tecnico_id', ptId),
-      supabase.from('idioma').select('nombre, nivel_idioma').eq('perfil_tecnico_id', ptId),
+      // El mismo orden que usa el PDF (`crearCertificado`): sin ORDER BY, Postgres
+      // devuelve las filas en orden arbitrario y la previsualización puede no
+      // coincidir con el archivo descargado.
+      supabase
+        .from('formacion_academica')
+        .select('id, titulo, institucion, fecha_graduacion')
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_graduacion', { ascending: false }),
+      supabase
+        .from('experiencia_laboral')
+        .select('id, puesto, empresa, fecha_inicio, fecha_fin')
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_inicio', { ascending: false }),
+      supabase.from('idioma').select('nombre, nivel_idioma').eq('perfil_tecnico_id', ptId).order('nombre'),
       supabase.from('postulante_competencia').select('competencia(nombre)').eq('perfil_tecnico_id', ptId),
     ])
-    formaciones = (f.data ?? []) as CertificadoContenido['formaciones']
-    experiencias = (e.data ?? []) as CertificadoContenido['experiencias']
+    formaciones = ((f.data ?? []) as { id: string; titulo: string; institucion: string; fecha_graduacion: string | null }[])
+      .filter(item => !estaDescartada(formacionesDescartadas, item.id))
+      .map(({ titulo, institucion, fecha_graduacion }) => ({ titulo, institucion, fecha_graduacion }))
+    experiencias = ((e.data ?? []) as { id: string; puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[])
+      .filter(item => !estaDescartada(experienciasDescartadas, item.id))
+      .map(({ puesto, empresa, fecha_inicio, fecha_fin }) => ({ puesto, empresa, fecha_inicio, fecha_fin }))
     idiomas = (i.data ?? []) as CertificadoContenido['idiomas']
     competencias = ((c.data ?? []) as { competencia: { nombre: string } | null }[])
       .map(row => row.competencia)
       .filter((x): x is { nombre: string } => x !== null)
+      // Ordenar acá y no en la query: PostgREST no ordena el padre por una columna
+      // del embed. Sin esto, previsualización y PDF pueden listarlas distinto.
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
   }
 
   const informeJson = (informe as { contenido_json: { descripcionPersonalidad?: string } | null } | null)?.contenido_json
 
-  // Si hay síntesis integrada LISTA, mostramos el perfil integrado y dejamos en
-  // la lista solo las competencias que NO se integraron (las integradas ya van
-  // dentro de la prosa). Sin síntesis, fallback a la descripción del informe y
-  // todas las competencias.
-  const sintesis = ptTyped?.sintesis_estado === 'LISTO' ? ptTyped.sintesis_certificado : null
+  // Perfil integrado: dejamos en la lista solo las competencias que ni se
+  // integraron a la prosa ni descartó el triage. Sin síntesis, fallback a la
+  // descripción del informe y todas las competencias.
   const perfilIntegrado = sintesis?.perfilIntegrado
   const competenciasVisibles = sintesis
-    ? competenciasNoIntegradas(competencias.map(c => c.nombre), sintesis.competenciasIntegradas).map(nombre => ({ nombre }))
+    ? competenciasNoIntegradas(
+        competencias.map(c => c.nombre).filter(nombre => !estaDescartada(competenciasDescartadas, nombre)),
+        sintesis.competenciasIntegradas,
+      ).map(nombre => ({ nombre }))
     : competencias
 
   return {
     nombre: postulanteTyped.nombre_completo,
     email: session.email,
+    objetivo,
     eneatipoNumero: dominante.numero_eneatipo,
     eneatipoNombre: dominante.nombre,
     humanDesign: hd
@@ -169,7 +217,10 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     competencias: competenciasVisibles,
     personalidad: informeJson?.descripcionPersonalidad,
     perfilIntegrado,
+    fortalezas: sintesis?.fortalezas,
+    contextoIdeal: sintesis?.contextoIdeal,
     sintesisEstado: ptTyped?.sintesis_estado ?? 'PENDIENTE',
+    descartados: sintesis?.descartados,
   }
 })
 

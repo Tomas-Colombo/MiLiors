@@ -145,6 +145,7 @@
   --color-accent-light: #8B7FFF;
   --color-surface-badge: #EEEDFE;
   --color-border-soft: #E8E4FF;
+  --color-chart-grid: var(--color-border-soft);
 
   /* Layout */
   --app-sidebar-width: 248px;
@@ -202,6 +203,10 @@
 
   --color-surface-badge: #242838;
   --color-border-soft: #2d3142;
+  /* Más contraste que --color-border-soft/--color-line: con esos tokens las
+     líneas de grilla del radar de eneatipo (1px, algunas punteadas) seguían
+     ilegibles sobre --color-surface en modo oscuro. */
+  --color-chart-grid: var(--color-neutral-400);
 
   --sidebar-border: #34304f;
 
