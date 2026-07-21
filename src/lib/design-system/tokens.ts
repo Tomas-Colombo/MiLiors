@@ -9,47 +9,47 @@
 
 export const colors = {
   primary: {
-    50: "#eeedfd",
-    100: "#d7d2fa",
-    300: "#a99ef2",
-    500: "#7c6bec",
-    600: "#5b4be6", // base
-    700: "#4334c2",
-    hover: "#4f40d4",
-    active: "#4334c2",
-    tint: "#eeedfd",
-    tintHover: "#e2defb",
-    ghostHover: "#f4f3fe",
-    ring: "#eeedfd",
+    50: "#f1edff",
+    100: "#e4dbfe",
+    300: "#b6a4ff",
+    500: "#9d80fe",
+    600: "#7c5cfc", // base
+    700: "#5d3ce1",
+    hover: "#6e4fec",
+    active: "#5d3ce1",
+    tint: "#f1edff",
+    tintHover: "#e6ddfe",
+    ghostHover: "#f6f2ff",
+    ring: "#f1edff",
   },
   neutral: {
     0: "#ffffff",
     50: "#f6f7f9",
     100: "#f1f2f5",
     150: "#f4f5f7",
-    200: "#ecedf1",
-    300: "#e2e4e9",
-    400: "#9aa0ab",
-    500: "#6b7280",
-    700: "#4b5160",
-    900: "#1c2030",
+    200: "#e6e7f0",
+    300: "#dbdde9",
+    400: "#9aa0b6",
+    500: "#6b7085",
+    700: "#3c414f",
+    900: "#1a1d29",
     disabled: "#c9c7d4",
   },
   surface: {
-    page: "#f6f7f9",
+    page: "#faf3f7",
     base: "#ffffff",
-    line: "#ecedf1",
-    lineStrong: "#e2e4e9",
+    line: "#e6e7f0",
+    lineStrong: "#dbdde9",
     divider: "#f1f2f5",
   },
   text: {
-    ink: "#1c2030",
-    soft: "#4b5160",
-    muted: "#6b7280",
-    faint: "#9aa0ab",
+    ink: "#1a1d29",
+    soft: "#3c414f",
+    muted: "#6b7085",
+    faint: "#9aa0b6",
   },
   accent: {
-    violet: { fg: "#6d5de8", bg: "#edebfd" },
+    violet: { fg: "#7c5cfc", bg: "#f1edff" },
     green: { fg: "#2bb673", bg: "#e3f7ed" },
     amber: { fg: "#f5a524", bg: "#fef1dc" },
     blue: { fg: "#3b82f6", bg: "#e4effe" },
@@ -63,11 +63,11 @@ export const colors = {
 } as const;
 
 export const gradients = {
-  brand: "linear-gradient(135deg, #6e5deb, #5039d8)",
-  brandSoft: "linear-gradient(150deg, #6e5deb, #5039d8)",
-  promo: "linear-gradient(155deg, #6e5deb, #5039d8)",
-  avatar: "linear-gradient(135deg, #a99ef2, #6d5de8)",
-  progress: "linear-gradient(90deg, #7c6bec, #5b4be6)",
+  brand: "linear-gradient(135deg, #9d80fe, #5d3ce1)",
+  brandSoft: "linear-gradient(150deg, #9d80fe, #5d3ce1)",
+  promo: "linear-gradient(155deg, #9d80fe, #5d3ce1)",
+  avatar: "linear-gradient(135deg, #b6a4ff, #9d80fe)",
+  progress: "linear-gradient(90deg, #9d80fe, #7c5cfc)",
 } as const;
 
 /** Escala de espaciado basada en una unidad de 8px (medio paso de 4px). */
@@ -95,9 +95,9 @@ export const shadows = {
   cardRaised: "0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04)",
   md: "0 6px 16px rgba(16,24,40,.10)", // dropdown
   lg: "0 20px 48px rgba(16,24,40,.18)", // modal
-  primary: "0 4px 12px rgba(91,75,230,.30)",
-  primaryHover: "0 6px 16px rgba(91,75,230,.40)",
-  promo: "0 10px 28px rgba(91,75,230,.28)",
+  primary: "0 4px 12px rgba(124,92,252,.30)",
+  primaryHover: "0 6px 16px rgba(124,92,252,.40)",
+  promo: "0 10px 28px rgba(124,92,252,.28)",
   toast: "0 10px 28px rgba(16,24,40,.22)",
 } as const;
 

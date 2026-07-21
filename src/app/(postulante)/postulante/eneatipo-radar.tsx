@@ -105,7 +105,7 @@ export function EneatipoRadar({ puntajes, dominantes = [], size = 480 }: Props) 
             key={idx}
             d={d}
             fill="none"
-            stroke="#E8E4FF"
+            stroke="#e9e3fb"
             strokeWidth={idx === 2 ? 1.5 : 1}
             strokeDasharray={idx === 2 ? undefined : '3 3'}
             style={{ stroke: 'var(--color-chart-grid)' }}
@@ -119,7 +119,7 @@ export function EneatipoRadar({ puntajes, dominantes = [], size = 480 }: Props) 
       ))}
 
       {/* User polygon */}
-      <path d={radarPath} fill="rgba(91,79,232,0.13)" stroke="#5B4FE8" strokeWidth={2} strokeLinejoin="round" />
+      <path d={radarPath} fill="rgba(124,92,252,0.13)" stroke="#7c5cfc" strokeWidth={2} strokeLinejoin="round" />
 
       {/* Vertex dots — los dominantes se destacan con un anillo y radio mayor */}
       {radarPoints.map((p, i) => {
@@ -127,13 +127,13 @@ export function EneatipoRadar({ puntajes, dominantes = [], size = 480 }: Props) 
         return (
           <g key={i}>
             {esDominante && (
-              <circle cx={p.x.toFixed(2)} cy={p.y.toFixed(2)} r={7} fill="none" stroke="#5B4FE8" strokeWidth={1.5} opacity={0.35} />
+              <circle cx={p.x.toFixed(2)} cy={p.y.toFixed(2)} r={7} fill="none" stroke="#7c5cfc" strokeWidth={1.5} opacity={0.35} />
             )}
             <circle
               cx={p.x.toFixed(2)}
               cy={p.y.toFixed(2)}
               r={esDominante ? 5 : 3.5}
-              fill="#5B4FE8"
+              fill="#7c5cfc"
               stroke="white"
               strokeWidth={1.5}
             />

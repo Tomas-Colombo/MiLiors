@@ -2,13 +2,13 @@ import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/render
 
 // Design System palette
 const colors = {
-  primary: '#5b4be6',
-  primaryTint: '#eeedfd',
-  ink: '#1c2030',
-  soft: '#4b5160',
-  muted: '#6b7280',
-  faint: '#9aa0ab',
-  neutral200: '#ecedf1',
+  primary: '#7c5cfc',
+  primaryTint: '#f1edff',
+  ink: '#1a1d29',
+  soft: '#3c414f',
+  muted: '#6b7085',
+  faint: '#9aa0b6',
+  neutral200: '#e6e7f0',
   white: '#ffffff',
   successFg: '#178a52',
   successBg: '#e3f7ed',
@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
   // paddingTop/Bottom dan margen en las páginas de continuación; el header lo
   // compensa con marginTop negativo para quedar a tope en la portada.
   page: {
-    backgroundColor: '#f6f7f9',
+    backgroundColor: '#faf3f7',
     paddingTop: 24,
     paddingBottom: 24,
     fontFamily: 'Helvetica',

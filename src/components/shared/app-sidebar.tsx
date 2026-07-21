@@ -224,7 +224,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
                   href={settingsHref}
                   aria-label="Configuración de perfil"
                   className="flex-none transition-colors"
-                  style={{ color: pathname.startsWith(settingsHref) ? '#8B7FFF' : 'var(--sidebar-item-text)' }}
+                  style={{ color: pathname.startsWith(settingsHref) ? 'var(--color-accent-light)' : 'var(--sidebar-item-text)' }}
                 >
                   <SettingsIcon size={13} />
                 </Link>
@@ -242,7 +242,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
             aria-label="Configuración de perfil"
             title="Configuración de perfil"
             className="flex justify-center transition-colors"
-            style={{ color: pathname.startsWith(settingsHref) ? '#8B7FFF' : 'var(--sidebar-item-text)' }}
+            style={{ color: pathname.startsWith(settingsHref) ? 'var(--color-accent-light)' : 'var(--sidebar-item-text)' }}
           >
             <SettingsIcon size={16} />
           </Link>

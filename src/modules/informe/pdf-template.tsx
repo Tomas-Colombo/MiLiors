@@ -3,20 +3,20 @@ import type { InformePersonalidadJSON, BloqueCompetencia } from '@/lib/types/inf
 import { BLOQUES_ORDEN, TALENTOS_ACLARACION } from './competencias'
 
 const colors = {
-  primary: '#5b4be6',
-  primaryTint: '#eeedfd',
-  ink: '#1c2030',
-  soft: '#4b5160',
-  muted: '#6b7280',
-  faint: '#9aa0ab',
-  neutral200: '#ecedf1',
+  primary: '#7c5cfc',
+  primaryTint: '#f1edff',
+  ink: '#1a1d29',
+  soft: '#3c414f',
+  muted: '#6b7085',
+  faint: '#9aa0b6',
+  neutral200: '#e6e7f0',
   white: '#ffffff',
 }
 
 const styles = StyleSheet.create({
   // paddingTop/Bottom dan margen en las páginas de continuación; el header lo
   // compensa con marginTop negativo para quedar a tope en la portada.
-  page: { backgroundColor: '#f6f7f9', paddingTop: 24, paddingBottom: 24, fontFamily: 'Helvetica' },
+  page: { backgroundColor: '#faf3f7', paddingTop: 24, paddingBottom: 24, fontFamily: 'Helvetica' },
   header: { backgroundColor: colors.primary, paddingVertical: 30, paddingHorizontal: 40, marginTop: -24 },
   headerBrand: { fontSize: 20, color: colors.white, fontFamily: 'Helvetica-Bold', letterSpacing: 0.5 },
   headerTitle: {

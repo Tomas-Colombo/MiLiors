@@ -7,8 +7,8 @@ import { PostulacionesLineChart, type ChartPoint } from './postulaciones-line-ch
 
 // Colores propios del bloque de métricas (fijados por la identidad visual).
 const LABEL = '#8B86A8'
-const HINT = '#B8B3DC'
-const OVER = '#5B4FE8'
+const HINT = '#b3aec2'
+const OVER = '#7c5cfc'
 const UNDER = '#E24B4A'
 
 type Range = 'mes' | '3meses' | '6meses' | 'anio'

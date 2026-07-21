@@ -5,7 +5,7 @@ import { getDashboardMetrics } from '@/modules/dashboard/queries'
 import { MetricasCliente } from './metricas-cliente'
 
 const LABEL = '#8B86A8'
-const HINT = '#B8B3DC'
+const HINT = '#b3aec2'
 const ALERT = '#E24B4A'
 
 /** Card compacta de métrica rápida (Bloque 1). */

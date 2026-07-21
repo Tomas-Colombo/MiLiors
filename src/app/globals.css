@@ -27,50 +27,50 @@
   --font-heading: var(--font-fraunces), Georgia, serif;
 
   /* ----- Color · Primario (violeta de marca) ---------------------------- */
-  --color-primary-50: #eeedfd;
-  --color-primary-100: #d7d2fa;
-  --color-primary-300: #a99ef2;
-  --color-primary-500: #7c6bec;
-  --color-primary-600: #5b4be6; /* tono base */
-  --color-primary-700: #4334c2;
+  --color-primary-50: #f1edff;
+  --color-primary-100: #e4dbfe;
+  --color-primary-300: #b6a4ff;
+  --color-primary-500: #9d80fe;
+  --color-primary-600: #7c5cfc; /* tono base */
+  --color-primary-700: #5d3ce1;
   /* tonos de interacción del primario */
-  --color-primary-hover: #4f40d4;
-  --color-primary-active: #4334c2;
+  --color-primary-hover: #6e4fec;
+  --color-primary-active: #5d3ce1;
   /* fondos tonales / hovers de marca */
-  --color-primary-tint: #eeedfd; /* fondo tonal */
-  --color-primary-tint-hover: #e2defb; /* hover tonal */
-  --color-primary-ghost-hover: #f4f3fe; /* hover ghost */
-  --color-primary-ring: #eeedfd; /* anillo de foco */
+  --color-primary-tint: #f1edff; /* fondo tonal */
+  --color-primary-tint-hover: #e6ddfe; /* hover tonal */
+  --color-primary-ghost-hover: #f6f2ff; /* hover ghost */
+  --color-primary-ring: #f1edff; /* anillo de foco */
 
   /* ----- Color · Neutrales fríos ---------------------------------------- */
   --color-neutral-0: #ffffff;
   --color-neutral-50: #f6f7f9; /* fondo de página */
   --color-neutral-100: #f1f2f5; /* divisores suaves / chips neutros */
   --color-neutral-150: #f4f5f7; /* separador de filas de tabla */
-  --color-neutral-200: #ecedf1; /* borde por defecto */
-  --color-neutral-300: #e2e4e9; /* borde fuerte */
-  --color-neutral-400: #9aa0ab; /* texto faint / placeholders */
-  --color-neutral-500: #6b7280; /* texto secundario */
-  --color-neutral-700: #4b5160; /* texto fuerte */
-  --color-neutral-900: #1c2030; /* texto principal */
+  --color-neutral-200: #e6e7f0; /* borde por defecto */
+  --color-neutral-300: #dbdde9; /* borde fuerte */
+  --color-neutral-400: #9aa0b6; /* texto faint / placeholders */
+  --color-neutral-500: #6b7085; /* texto secundario */
+  --color-neutral-700: #3c414f; /* texto fuerte */
+  --color-neutral-900: #1a1d29; /* texto principal */
   --color-neutral-disabled: #c9c7d4; /* texto/relleno deshabilitado */
 
   /* alias semánticos de superficie y texto */
-  --color-page: #F7F6FB;
+  --color-page: #faf3f7;
   --color-surface: #ffffff;
-  --color-surface-page: #F7F6FB; /* alias bg-surface-page */
-  --color-line: #ecedf1;
-  --color-line-strong: #e2e4e9;
+  --color-surface-page: #faf3f7; /* alias bg-surface-page */
+  --color-line: #e6e7f0;
+  --color-line-strong: #dbdde9;
   --color-divider: #f1f2f5;
-  --color-ink: #1c2030;
-  --color-ink-soft: #4b5160;
-  --color-soft: #4b5160;   /* alias text-soft (usado en registro-form y eneagrama-wizard) */
-  --color-muted: #6b7280;
-  --color-faint: #9aa0ab;
+  --color-ink: #1a1d29;
+  --color-ink-soft: #3c414f;
+  --color-soft: #3c414f;   /* alias text-soft (usado en registro-form y eneagrama-wizard) */
+  --color-muted: #6b7085;
+  --color-faint: #9aa0b6;
 
   /* ----- Color · Acentos semánticos (KPIs / íconos / gráficos) ---------- */
-  --color-accent-violet: #6d5de8;
-  --color-accent-violet-bg: #edebfd;
+  --color-accent-violet: #7c5cfc;
+  --color-accent-violet-bg: #f1edff;
   --color-accent-green: #2bb673;
   --color-accent-green-bg: #e3f7ed;
   --color-accent-amber: #f5a524;
@@ -116,9 +116,9 @@
   --shadow-card-raised: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-md: 0 6px 16px rgba(16, 24, 40, 0.1); /* dropdowns */
   --shadow-lg: 0 20px 48px rgba(16, 24, 40, 0.18); /* modales */
-  --shadow-primary: 0 4px 12px rgba(91, 75, 230, 0.3); /* botón primario */
-  --shadow-primary-hover: 0 6px 16px rgba(91, 75, 230, 0.4);
-  --shadow-promo: 0 10px 28px rgba(91, 75, 230, 0.28); /* card promocional */
+  --shadow-primary: 0 4px 12px rgba(124, 92, 252, 0.3); /* botón primario */
+  --shadow-primary-hover: 0 6px 16px rgba(124, 92, 252, 0.4);
+  --shadow-promo: 0 10px 28px rgba(124, 92, 252, 0.28); /* card promocional */
   --shadow-toast: 0 10px 28px rgba(16, 24, 40, 0.22);
 }
 
@@ -126,11 +126,11 @@
    Gradientes y duraciones de marca (fuera de @theme: se consumen vía var())
    ========================================================================= */
 :root {
-  --gradient-brand: linear-gradient(135deg, #6e5deb, #5039d8);
-  --gradient-brand-soft: linear-gradient(150deg, #6e5deb, #5039d8);
-  --gradient-promo: linear-gradient(155deg, #6e5deb, #5039d8);
-  --gradient-avatar: linear-gradient(135deg, #a99ef2, #6d5de8);
-  --gradient-progress: linear-gradient(90deg, #7c6bec, #5b4be6);
+  --gradient-brand: linear-gradient(135deg, #9d80fe, #5d3ce1);
+  --gradient-brand-soft: linear-gradient(150deg, #9d80fe, #5d3ce1);
+  --gradient-promo: linear-gradient(155deg, #9d80fe, #5d3ce1);
+  --gradient-avatar: linear-gradient(135deg, #b6a4ff, #9d80fe);
+  --gradient-progress: linear-gradient(90deg, #9d80fe, #7c5cfc);
 
   /* Sidebar oscuro */
   --sidebar-bg: #1E1B3A;
@@ -143,9 +143,20 @@
 
   /* Acento extendido para el dashboard */
   --color-accent-light: #8B7FFF;
-  --color-surface-badge: #EEEDFE;
-  --color-border-soft: #E8E4FF;
+  --color-surface-badge: #f1edff;
+  --color-border-soft: #e9e3fb;
   --color-chart-grid: var(--color-border-soft);
+
+  /* Cita destacada */
+  --quote-bg: #faf9ff;
+  --quote-border: #7c5cfc;
+  --quote-text: #4a3d7a;
+
+  /* Fondo de página (mesh gradient sobre el lienzo rosado) */
+  --page-mesh:
+    radial-gradient(760px 460px at 12% -4%,  rgba(124, 92, 252, .22), transparent 62%),
+    radial-gradient(880px 560px at 104% 12%, rgba(236, 120, 170, .24), transparent 64%),
+    radial-gradient(720px 640px at 60% 114%, rgba(120, 175, 240, .20), transparent 62%);
 
   /* Layout */
   --app-sidebar-width: 248px;
@@ -210,6 +221,11 @@
 
   --sidebar-border: #34304f;
 
+  --page-mesh:
+    radial-gradient(760px 460px at 12% -4%,  rgba(139, 127, 255, .16), transparent 62%),
+    radial-gradient(880px 560px at 104% 12%, rgba(214, 100, 150, .14), transparent 64%),
+    radial-gradient(720px 640px at 60% 114%, rgba(100, 150, 220, .13), transparent 62%);
+
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
   --shadow-card-raised: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -231,7 +247,9 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-page);
+  background-color: var(--color-page);
+  background-image: var(--page-mesh);
+  background-attachment: fixed;
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -239,8 +257,17 @@ body {
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+/* El wrapper `bg-surface-page` (utilidad de Tailwind, sólo fija background-color)
+   se usa como lienzo de página en los layouts de admin/reclutador/postulante y
+   auth; se le suma el mismo mesh que al body para que no se pierda detrás de
+   ese div de altura completa. */
+.bg-surface-page {
+  background-image: var(--page-mesh);
+  background-attachment: fixed;
+}
+
 ::selection {
-  background: #dcd8fb;
+  background: #e6ddfe;
 }
 
 /* =========================================================================
