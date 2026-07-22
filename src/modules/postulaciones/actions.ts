@@ -316,6 +316,42 @@ export async function avanzarEstadoPostulacion(
   return { success: true, data: undefined }
 }
 
+export async function revertirDescarte(postulacionId: string): Promise<ActionResult> {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  // Verify the recruiter owns the post
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!reclutador) return { success: false, error: 'No autorizado.' }
+
+  const admin = createAdminClient()
+
+  // Vuelve a "Vista" y limpia el motivo (si no, un descarte manual posterior
+  // heredaría el motivo del descarte automático anterior).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('postulacion') as any)
+    .update({ estado: 'VISTO', motivo_descarte: null })
+    .eq('id', postulacionId)
+
+  if (error) return { success: false, error: 'No se pudo revertir el descarte.' }
+
+  // Actividad del reclutador sobre el puesto (evita el cierre automático).
+  const { data: post } = await admin
+    .from('postulacion')
+    .select('puesto_id')
+    .eq('id', postulacionId)
+    .single()
+  if (post) await marcarActividadPuesto((post as { puesto_id: string }).puesto_id)
+
+  revalidatePath('/reclutador/postulaciones')
+  return { success: true, data: undefined }
+}
+
 export async function toggleFavoritoPostulacion(
   postulacionId: string,
   isFavorito: boolean,

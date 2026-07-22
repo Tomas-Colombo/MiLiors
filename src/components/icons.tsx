@@ -329,6 +329,13 @@ export const ShuffleIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const Undo2Icon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+  </Icon>
+);
+
 export const EyeOffIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />

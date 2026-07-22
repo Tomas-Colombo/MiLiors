@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useState } from 'react'
-import { FancySelect, SearchableSelect } from '@/components/ui'
+import { FancySelect, SearchableSelect, Tooltip } from '@/components/ui'
 import { StarIcon, TrashIcon, CalendarIcon, FilterIcon } from '@/components/icons'
 import { SearchInput } from '@/components/shared/list-controls'
 
@@ -161,19 +161,27 @@ export function FiltrosPostulaciones({
             Favoritos
           </button>
           {hayCiclosAnteriores && (
-            <button
-              type="button"
-              onClick={() => setParam('ciclos', searchParams.get('ciclos') === 'todos' ? '' : 'todos')}
-              aria-pressed={searchParams.get('ciclos') === 'todos'}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
-                searchParams.get('ciclos') === 'todos'
-                  ? 'bg-primary-tint text-primary-600'
-                  : 'bg-neutral-100 text-muted hover:text-ink'
-              }`}
+            <Tooltip
+              content={
+                <span className="block w-32 whitespace-normal leading-snug">
+                  Postulaciones de convocatorias anteriores ya cerradas de este puesto.
+                </span>
+              }
             >
-              <CalendarIcon size={14} />
-              Ciclos anteriores
-            </button>
+              <button
+                type="button"
+                onClick={() => setParam('ciclos', searchParams.get('ciclos') === 'todos' ? '' : 'todos')}
+                aria-pressed={searchParams.get('ciclos') === 'todos'}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+                  searchParams.get('ciclos') === 'todos'
+                    ? 'bg-primary-tint text-primary-600'
+                    : 'bg-neutral-100 text-muted hover:text-ink'
+                }`}
+              >
+                <CalendarIcon size={14} />
+                Ciclos anteriores
+              </button>
+            </Tooltip>
           )}
           {hayFiltrosActivos && (
             <button

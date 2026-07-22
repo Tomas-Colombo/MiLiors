@@ -11,6 +11,7 @@ import { VerPerfilBtn } from './ver-perfil-btn'
 import { VerRespuestasBtn } from './ver-respuestas-btn'
 import { NotasModalBtn } from './notas-modal-btn'
 import { FavoritoToggle } from './favorito-toggle'
+import { RevertirDescarteBtn } from './revertir-descarte-btn'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
@@ -101,6 +102,13 @@ export default async function PostulacionesRecibidasPage({
     return true
   })
 
+  // El conteo del encabezado responde al filtro de puesto: si hay uno elegido,
+  // se muestra el total de ese puesto en particular (no el total del reclutador).
+  const totalPuesto = filtroPuesto
+    ? postulaciones.filter((p) => p.puesto_id === filtroPuesto).length
+    : postulaciones.length
+  const tituloPuestoFiltrado = puestosOpts.find((p) => p.id === filtroPuesto)?.titulo_puesto
+
   const { page, pageCount, slice } = paginar(filtered, pageParam)
 
   // Only the visible page needs the "has preselector answers" flag for the button.
@@ -112,7 +120,8 @@ export default async function PostulacionesRecibidasPage({
         <div>
           <h1 className="text-2xl font-extrabold text-ink">Postulaciones recibidas</h1>
           <p className="mt-1 text-muted">
-            {postulaciones.length} postulación{postulaciones.length !== 1 ? 'es' : ''} en total
+            {totalPuesto} postulación{totalPuesto !== 1 ? 'es' : ''}{' '}
+            {tituloPuestoFiltrado ? `para ${tituloPuestoFiltrado}` : 'en total'}
           </p>
         </div>
 
@@ -169,14 +178,17 @@ export default async function PostulacionesRecibidasPage({
                           </Badge>
                         </Tooltip>
                       )}
+                      {/* Deshacer un descarte manual o un click accidental */}
+                      {p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO && (
+                        <RevertirDescarteBtn postulacionId={p.id} />
+                      )}
                       {/* Note indicator */}
                       {p.tiene_nota && (
-                        <span
-                          title="Tiene notas privadas"
-                          className="inline-flex items-center text-warning-solid"
-                        >
-                          <FileTextIcon size={14} />
-                        </span>
+                        <Tooltip content="Tiene notas privadas cargadas">
+                          <span className="inline-flex items-center text-warning-solid">
+                            <FileTextIcon size={14} />
+                          </span>
+                        </Tooltip>
                       )}
                       <FavoritoToggle postulacionId={p.id} isFavorito={p.is_favorito} />
                     </div>
