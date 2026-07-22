@@ -29,28 +29,15 @@ export function PostulacionAcciones({ postulacionId, estadoActual }: Props) {
   return (
     <div className="flex flex-col gap-2 items-stretch w-full">
       {!isClosed && (
-        <>
-          {estadoActual === ESTADO_POSTULACION.ENVIADA && (
-            <Button
-              variant="tonal"
-              size="sm"
-              className="w-full"
-              loading={isPending}
-              onClick={() => advance('VISTO')}
-            >
-              Marcar como visto
-            </Button>
-          )}
-          <Button
-            variant="destructive"
-            size="sm"
-            className="w-full"
-            loading={isPending}
-            onClick={() => advance('PROCESO_FINALIZADO')}
-          >
-            Descartar
-          </Button>
-        </>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="w-full"
+          loading={isPending}
+          onClick={() => advance('PROCESO_FINALIZADO')}
+        >
+          Descartar
+        </Button>
       )}
 
       {error && <Alert tone="error" title={error} className="text-xs" />}

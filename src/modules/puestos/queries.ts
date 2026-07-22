@@ -579,6 +579,7 @@ export const getPostulacionesRecibidas = cache(async () => {
       historial_puesto_id, motivo_descarte,
       puesto(id, titulo_puesto),
       perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
+        carrera_otra, carrera:carrera_id(nombre),
         usuario(email))
     `)
     .in('puesto_id', puestoIds)
@@ -616,6 +617,26 @@ export const getPostulacionesRecibidas = cache(async () => {
     }
   }
 
+  // Step 3b: load technical skills per applicant
+  const habilidadesPorPostulante = new Map<string, string[]>()
+  if (postulanteIds.length > 0) {
+    const { data: perfilesTecnicos } = await admin
+      .from('perfil_tecnico')
+      .select('postulante_id, postulante_competencia(competencia(nombre))')
+      .in('postulante_id', postulanteIds)
+
+    for (const pt of (perfilesTecnicos ?? []) as unknown[]) {
+      const p = pt as {
+        postulante_id: string
+        postulante_competencia: { competencia: { nombre: string } | null }[]
+      }
+      habilidadesPorPostulante.set(
+        p.postulante_id,
+        p.postulante_competencia.map((pc) => pc.competencia?.nombre).filter((n): n is string => !!n),
+      )
+    }
+  }
+
   return (postulaciones ?? []).map((row: unknown) => {
     const r = row as {
       id: string; estado: string; is_favorito: boolean
@@ -627,6 +648,8 @@ export const getPostulacionesRecibidas = cache(async () => {
         id: string; nombre_completo: string
         perfil_en_busqueda: boolean; telefono: string | null
         ultima_conexion: string | null
+        carrera_otra: string | null
+        carrera: { nombre: string } | null
         usuario: { email: string } | null
       } | null
     }
@@ -648,6 +671,8 @@ export const getPostulacionesRecibidas = cache(async () => {
       postulante_id: r.postulante_id,
       nombre_completo: r.perfil_postulante?.nombre_completo,
       ultima_conexion: r.perfil_postulante?.ultima_conexion ?? null,
+      carrera: r.perfil_postulante?.carrera?.nombre ?? r.perfil_postulante?.carrera_otra ?? null,
+      habilidades: habilidadesPorPostulante.get(r.postulante_id) ?? [],
       contacto,
       tiene_nota: (notaCountMap.get(r.postulante_id) ?? 0) > 0,
       motivo_descarte: r.motivo_descarte,

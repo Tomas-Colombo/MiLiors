@@ -1,12 +1,13 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { Card, Badge, EmptyState, Tooltip } from '@/components/ui'
+import { Card, Badge, Chip, EmptyState, Tooltip } from '@/components/ui'
 import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon, WhatsAppIcon } from '@/components/icons'
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
 import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
+import { VerPerfilBtn } from './ver-perfil-btn'
 import { VerRespuestasBtn } from './ver-respuestas-btn'
 import { NotasModalBtn } from './notas-modal-btn'
 import { FavoritoToggle } from './favorito-toggle'
@@ -33,31 +34,20 @@ const estadoLabel: Record<string, string> = {
   [ESTADO_POSTULACION.CERRADA]: 'Cerrada',
 }
 
-function tiempoRelativo(fecha: string | null): string | null {
-  if (!fecha) return null
-  const diffMs = Date.now() - new Date(fecha).getTime()
-  const mins = Math.floor(diffMs / 60_000)
-  if (mins < 60) return mins <= 1 ? 'hace un momento' : `hace ${mins} min`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return hours === 1 ? 'hace 1 hora' : `hace ${hours} horas`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return days === 1 ? 'hace 1 día' : `hace ${days} días`
-  const weeks = Math.floor(days / 7)
-  if (weeks < 5) return weeks === 1 ? 'hace 1 semana' : `hace ${weeks} semanas`
-  const months = Math.floor(days / 30)
-  if (months < 12) return months === 1 ? 'hace 1 mes' : `hace ${months} meses`
-  const years = Math.floor(days / 365)
-  return years === 1 ? 'hace 1 año' : `hace ${years} años`
-}
-
-type SearchParams = Promise<{ puesto?: string; estado?: string; favoritos?: string; q?: string; page?: string; ciclos?: string }>
+type SearchParams = Promise<{
+  puesto?: string; estado?: string; favoritos?: string; q?: string; page?: string; ciclos?: string
+  carrera?: string; habilidad?: string
+}>
 
 export default async function PostulacionesRecibidasPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos, q: qRaw, page: pageParam, ciclos: filtroCiclos } = await searchParams
+  const {
+    puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos, q: qRaw, page: pageParam,
+    ciclos: filtroCiclos, carrera: filtroCarrera, habilidad: filtroHabilidad,
+  } = await searchParams
   const q = qRaw?.trim().toLowerCase() ?? ''
   const todas = await getPostulacionesRecibidas()
 
@@ -77,6 +67,16 @@ export default async function PostulacionesRecibidasPage({
   const puestosOpts: { id: string; titulo_puesto: string; sinPostulaciones?: boolean }[] =
     Array.from(puestosMap.entries()).map(([id, titulo_puesto]) => ({ id, titulo_puesto }))
 
+  // Build the list of unique careers and skills present among the applicants for the filter dropdowns
+  const carrerasSet = new Set<string>()
+  const habilidadesSet = new Set<string>()
+  for (const p of postulaciones) {
+    if (p.carrera) carrerasSet.add(p.carrera)
+    for (const h of p.habilidades) habilidadesSet.add(h)
+  }
+  const carrerasOpts = Array.from(carrerasSet).sort().map((nombre) => ({ value: nombre, label: nombre }))
+  const habilidadesOpts = Array.from(habilidadesSet).sort().map((nombre) => ({ value: nombre, label: nombre }))
+
   // If the recruiter arrives from "Mis puestos" filtering by a job post that has
   // no applications yet, that post is not in the dropdown (built from applications).
   // Fetch its title so the filter can display it (as a disabled option) and we can
@@ -95,6 +95,8 @@ export default async function PostulacionesRecibidasPage({
     if (filtroPuesto && p.puesto_id !== filtroPuesto) return false
     if (filtroEstado && p.estado !== filtroEstado) return false
     if (filtroFavoritos === '1' && !p.is_favorito) return false
+    if (filtroCarrera && p.carrera !== filtroCarrera) return false
+    if (filtroHabilidad && !p.habilidades.includes(filtroHabilidad)) return false
     if (q && !(p.nombre_completo?.toLowerCase().includes(q) ?? false)) return false
     return true
   })
@@ -118,6 +120,8 @@ export default async function PostulacionesRecibidasPage({
           <Suspense>
             <FiltrosPostulaciones
               puestos={puestosOpts}
+              carreras={carrerasOpts}
+              habilidades={habilidadesOpts}
               totalVisible={filtered.length}
               totalTotal={postulaciones.length}
               hayCiclosAnteriores={hayCiclosAnteriores}
@@ -182,10 +186,10 @@ export default async function PostulacionesRecibidasPage({
                       <span className="font-medium text-ink-soft">{p.titulo_puesto ?? '—'}</span>
                     </p>
 
-                    {tiempoRelativo(p.ultima_conexion) && (
+                    {p.carrera && (
                       <p className="text-[12px] text-neutral-400">
-                        Último acceso:{' '}
-                        <span className="text-neutral-500">{tiempoRelativo(p.ultima_conexion)}</span>
+                        Carrera:{' '}
+                        <span className="text-neutral-500">{p.carrera}</span>
                       </p>
                     )}
 
@@ -232,14 +236,23 @@ export default async function PostulacionesRecibidasPage({
                     </p>
                   </div>
 
+                  {p.habilidades.length > 0 && (
+                    <div className="hidden sm:flex sm:w-48 flex-none flex-wrap content-start justify-start gap-1.5 overflow-hidden max-h-36 sm:ml-2">
+                      {p.habilidades.slice(0, 5).map((h) => (
+                        <Chip key={h} className="!px-2.5 !py-1 !text-[11.5px] whitespace-nowrap">
+                          {h.length > 20 ? `${h.slice(0, 20)}…` : h}
+                        </Chip>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="w-full sm:w-44 flex-none flex flex-col items-stretch gap-2">
                     <div className="flex flex-col gap-2 w-full">
-                      <Link
-                        href={`/reclutador/postulantes/${p.postulante_id}?postulacion=${p.id}&from=postulaciones`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
-                      >
-                        Ver perfil
-                      </Link>
+                      <VerPerfilBtn
+                        postulacionId={p.id}
+                        postulanteId={p.postulante_id}
+                        estadoActual={p.estado}
+                      />
                       <Link
                         href={`/reclutador/asistente?postulante=${p.postulante_id}&puesto=${p.puesto_id ?? ''}&postulacion=${p.id}`}
                         className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
