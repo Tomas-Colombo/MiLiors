@@ -74,22 +74,20 @@ export function UbicacionSelector({
         />
       </Field>
 
-      <Field label="Localidad" required={required} error={localidadError}>
-        {/* key=provinciaId → se remonta y resetea al cambiar de provincia */}
-        <SearchableSelect
-          key={provinciaId || 'sin-provincia'}
-          name="localidad_id"
-          options={localidades}
-          defaultValue={localidadDefault}
-          placeholder={
-            !provinciaId
-              ? 'Elegí una provincia primero'
-              : pending
-                ? 'Cargando localidades…'
-                : 'Elegí una localidad…'
-          }
-        />
-      </Field>
+      {/* La localidad solo se puede elegir después de la provincia: hasta
+          entonces el campo no se muestra. */}
+      {provinciaId && (
+        <Field label="Localidad" required={required} error={localidadError}>
+          {/* key=provinciaId → se remonta y resetea al cambiar de provincia */}
+          <SearchableSelect
+            key={provinciaId}
+            name="localidad_id"
+            options={localidades}
+            defaultValue={localidadDefault}
+            placeholder={pending ? 'Cargando localidades…' : 'Elegí una localidad…'}
+          />
+        </Field>
+      )}
     </div>
   )
 }

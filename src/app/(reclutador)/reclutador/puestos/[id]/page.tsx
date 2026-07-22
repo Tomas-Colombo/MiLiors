@@ -146,8 +146,8 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
               </dd>
             </div>
             <div>
-              <dt className="text-muted">Idioma requerido</dt>
-              <dd className="font-medium text-ink">{puesto.idioma}</dd>
+              <dt className="text-muted">Idioma</dt>
+              <dd className="font-medium text-ink">{puesto.idioma || '—'}</dd>
             </div>
             <div>
               <dt className="text-muted">Nivel de experiencia</dt>

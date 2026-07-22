@@ -101,6 +101,50 @@ export async function reactivarCompetencia(id: string): Promise<ActionResult> {
   return { success: true, data: undefined }
 }
 
+// ─── Idiomas ─────────────────────────────────────────────────────────────────
+
+export async function crearIdioma(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const nombre = formData.get('nombre')?.toString().trim()
+  if (!nombre) return { success: false, error: 'Ingresá un nombre de idioma.' }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('idioma_catalogo') as any).insert({ nombre })
+  if (error?.code === '23505') return { success: false, error: 'Ya existe un idioma con ese nombre.' }
+  if (error) return { success: false, error: 'No se pudo crear el idioma.' }
+
+  revalidatePath('/admin/idiomas')
+  return { success: true, data: undefined }
+}
+
+export async function desactivarIdioma(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('idioma_catalogo') as any)
+    .update({ fecha_baja: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { success: false, error: 'No se pudo desactivar.' }
+  revalidatePath('/admin/idiomas')
+  return { success: true, data: undefined }
+}
+
+export async function reactivarIdioma(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('idioma_catalogo') as any)
+    .update({ fecha_baja: null })
+    .eq('id', id)
+  if (error) return { success: false, error: 'No se pudo reactivar.' }
+  revalidatePath('/admin/idiomas')
+  return { success: true, data: undefined }
+}
+
 // ─── Carreras ────────────────────────────────────────────────────────────────
 
 export async function crearCarrera(

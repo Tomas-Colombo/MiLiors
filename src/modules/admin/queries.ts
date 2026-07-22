@@ -166,6 +166,17 @@ export async function getCompetenciasAdmin() {
   return (data ?? []) as { id: string; nombre: string; fecha_baja: string | null; created_at: string }[]
 }
 
+// ─── Idiomas ─────────────────────────────────────────────────────────────────
+
+export async function getIdiomasAdmin() {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('idioma_catalogo')
+    .select('id, nombre, fecha_baja, created_at')
+    .order('nombre')
+  return (data ?? []) as { id: string; nombre: string; fecha_baja: string | null; created_at: string }[]
+}
+
 // ─── Postulantes ─────────────────────────────────────────────────────────────
 
 export async function getPostulantesAdmin() {

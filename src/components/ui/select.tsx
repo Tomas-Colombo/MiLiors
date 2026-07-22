@@ -170,23 +170,73 @@ export function SearchableSelect({
   )
 }
 
+export interface FancySelectProps {
+  name?: string
+  options: SelectOption[]
+  placeholder?: string
+  /** Modo controlado. */
+  value?: string
+  /** Modo no controlado (valor inicial). */
+  defaultValue?: string
+  onChange?: (value: string) => void
+  disabled?: boolean
+  className?: string
+  id?: string
+}
+
 /**
- * Variante con menú custom (display-only por defecto) que reproduce el patrón
- * "abierto" del design system: anillo violeta + opción activa resaltada.
+ * Select con menú custom que reproduce el panel de opciones del design system
+ * (recuadro redondeado, opción activa resaltada) — el mismo look que el
+ * combobox de búsqueda, pero para enumerados fijos (no se escribe, se elige).
+ * Escribe el valor en un <input hidden name> para enviarlo con el form.
  */
-export function FancySelect({ options, placeholder, value }: SelectProps) {
-  const id = useId();
+export function FancySelect({
+  name,
+  options,
+  placeholder,
+  value,
+  defaultValue,
+  onChange,
+  disabled,
+  className,
+  id,
+}: FancySelectProps) {
+  const autoId = useId();
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<string>((value as string) ?? "");
+  const [internal, setInternal] = useState<string>(defaultValue ?? "");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const isControlled = value !== undefined;
+  const selected = isControlled ? value : internal;
   const current = options.find((o) => o.value === selected);
 
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  function handleSelect(optValue: string) {
+    if (!isControlled) setInternal(optValue);
+    onChange?.(optValue);
+    setOpen(false);
+  }
+
   return (
-    <div className="relative" id={id}>
+    <div ref={containerRef} className={cn("relative", className)} id={id ?? autoId}>
+      {name && <input type="hidden" name={name} value={selected} />}
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md bg-surface px-3.5 text-sm",
+          "flex h-10 w-full items-center justify-between rounded-md bg-surface px-3.5 text-sm outline-none",
+          "disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400",
           open
             ? "border-[1.5px] border-primary-600 ring-[3px] ring-primary-50"
             : "border border-neutral-300",
@@ -201,19 +251,17 @@ export function FancySelect({ options, placeholder, value }: SelectProps) {
         />
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-full rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
+        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
           {options.map((o) => {
             const active = o.value === selected;
             return (
               <button
                 key={o.value}
                 type="button"
-                onClick={() => {
-                  setSelected(o.value);
-                  setOpen(false);
-                }}
+                disabled={o.disabled}
+                onClick={() => handleSelect(o.value)}
                 className={cn(
-                  "flex w-full items-center justify-between rounded-[7px] px-[11px] py-[9px] text-left text-[13.5px]",
+                  "flex w-full items-center justify-between rounded-[7px] px-[11px] py-[9px] text-left text-[13.5px] disabled:opacity-40",
                   active ? "bg-primary-ghost-hover font-semibold text-primary-600" : "text-ink-soft hover:bg-neutral-50",
                 )}
               >

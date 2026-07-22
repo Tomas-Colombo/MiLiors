@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useActionState, useState } from 'react'
-import { Field, Input, Textarea, Select, SearchableSelect, Button, Alert, Modal } from '@/components/ui'
+import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert, Modal } from '@/components/ui'
 import { AlertTriangleIcon } from '@/components/icons'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
+import { CarrerasMultiSelect } from '@/components/shared/carreras-multi-select'
 import { publicarPuesto } from '@/modules/puestos/actions'
-import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION } from '@/lib/constants/enums'
+import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import type { CarreraOption } from '@/modules/carreras/queries'
 import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
@@ -27,6 +28,24 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
   const router = useRouter()
   const [state, action, isPending] = useActionState(publicarPuesto, initialState)
   const [modalidad, setModalidad] = useState('')
+  // Campos controlados: al fallar la publicación, React 19 resetea los <input>
+  // no controlados del form. Mantenerlos en estado preserva lo ya cargado para
+  // que el reclutador solo corrija el campo con error. Los SearchableSelect
+  // (carrera, idioma, ubicación) conservan su valor por su propio estado interno.
+  const [values, setValues] = useState({
+    titulo_puesto: '',
+    descripcion_texto: '',
+    sector_id: '',
+    carga_horaria: '',
+    nivel_experiencia: '',
+    perfil_psicologico_deseado: '',
+  })
+  const setField =
+    (campo: keyof typeof values) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setValues((v) => ({ ...v, [campo]: e.target.value }))
+  const setValor = (campo: keyof typeof values) => (val: string) =>
+    setValues((v) => ({ ...v, [campo]: val }))
 
   // Tras publicar con éxito mostramos un modal de advertencia (no toast: requiere
   // acción del usuario). El botón —y cualquier cierre— navega al puesto creado.
@@ -46,6 +65,7 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
 
   const cargaOptions = Object.entries(CARGA_HORARIA_LABEL).map(([v, l]) => ({ value: v, label: l }))
   const ubicacionOptions = Object.entries(UBICACION_LABEL).map(([v, l]) => ({ value: v, label: l }))
+  const idiomaOptions = IDIOMAS_COMUNES.filter((i) => i !== 'Otro').map((i) => ({ value: i, label: i }))
 
   return (
     <>
@@ -63,6 +83,8 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
         <Input
           id="titulo_puesto"
           name="titulo_puesto"
+          value={values.titulo_puesto}
+          onChange={setField('titulo_puesto')}
           placeholder="Ej: Desarrollador Frontend Senior"
           status={fieldErrors.titulo_puesto ? 'error' : 'default'}
         />
@@ -77,6 +99,8 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
         <Textarea
           id="descripcion_texto"
           name="descripcion_texto"
+          value={values.descripcion_texto}
+          onChange={setField('descripcion_texto')}
           placeholder="Describí el puesto, responsabilidades y perfil buscado…"
           rows={5}
           status={fieldErrors.descripcion_texto ? 'error' : 'default'}
@@ -89,37 +113,34 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
           htmlFor="sector_id"
           error={fieldErrors.sector_id?.[0]}
         >
-          <Select
+          <FancySelect
             id="sector_id"
             name="sector_id"
             options={sectorOptions}
-            defaultValue=""
+            value={values.sector_id}
+            onChange={setValor('sector_id')}
           />
         </Field>
 
         <Field
-          label="Carrera (opcional)"
-          error={fieldErrors.carrera_id?.[0]}
-          hint="Ayuda a que los postulantes encuentren tu puesto al filtrar por carrera."
+          label="Carreras (opcional)"
+          hint="Elegí una o varias. Ayuda a que los postulantes encuentren tu puesto al filtrar por carrera."
         >
-          <SearchableSelect
-            name="carrera_id"
+          <CarrerasMultiSelect
+            name="carrera_ids"
             options={carreras}
-            placeholder="Elegí una carrera…"
+            placeholder="Agregá una o más carreras…"
           />
         </Field>
 
         <Field
-          label="Idioma requerido"
-          htmlFor="idioma"
-          required
+          label="Idioma (opcional)"
           error={fieldErrors.idioma?.[0]}
         >
-          <Input
-            id="idioma"
+          <SearchableSelect
             name="idioma"
-            placeholder="Ej: Español, Inglés"
-            status={fieldErrors.idioma ? 'error' : 'default'}
+            options={idiomaOptions}
+            placeholder="Elegí un idioma…"
           />
         </Field>
 
@@ -129,12 +150,13 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
           required
           error={fieldErrors.carga_horaria?.[0]}
         >
-          <Select
+          <FancySelect
             id="carga_horaria"
             name="carga_horaria"
             options={cargaOptions}
             placeholder="Seleccioná la carga horaria"
-            defaultValue=""
+            value={values.carga_horaria}
+            onChange={setValor('carga_horaria')}
           />
         </Field>
 
@@ -144,13 +166,13 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
           required
           error={fieldErrors.ubicacion?.[0]}
         >
-          <Select
+          <FancySelect
             id="ubicacion"
             name="ubicacion"
             options={ubicacionOptions}
             placeholder="Seleccioná la modalidad"
             value={modalidad}
-            onChange={(e) => setModalidad(e.target.value)}
+            onChange={setModalidad}
           />
         </Field>
 
@@ -162,6 +184,8 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
           <Input
             id="nivel_experiencia"
             name="nivel_experiencia"
+            value={values.nivel_experiencia}
+            onChange={setField('nivel_experiencia')}
             placeholder="Ej: 3+ años, Junior, Senior"
             status={fieldErrors.nivel_experiencia ? 'error' : 'default'}
           />
@@ -179,7 +203,7 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
       )}
 
       <Field
-        label="Perfil psicológico deseado"
+        label="Notas privadas sobre el puesto"
         htmlFor="perfil_psicologico_deseado"
         error={fieldErrors.perfil_psicologico_deseado?.[0]}
         hint="Solo visible para vos. Los postulantes nunca verán este campo."
@@ -187,7 +211,8 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
         <Textarea
           id="perfil_psicologico_deseado"
           name="perfil_psicologico_deseado"
-          placeholder="Describí el perfil actitudinal o psicológico que buscás…"
+          value={values.perfil_psicologico_deseado}
+          onChange={setField('perfil_psicologico_deseado')}
           rows={3}
           status={fieldErrors.perfil_psicologico_deseado ? 'error' : 'default'}
         />

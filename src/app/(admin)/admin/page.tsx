@@ -22,6 +22,7 @@ export default async function AdminDashboard() {
   const quickLinks = [
     { href: '/admin/sectores', label: 'Sectores', description: 'Gestionar sectores industriales' },
     { href: '/admin/competencias', label: 'Habilidades/Tecnologías', description: 'Gestionar habilidades y tecnologías' },
+    { href: '/admin/idiomas', label: 'Idiomas', description: 'Gestionar catálogo de idiomas' },
     { href: '/admin/ubicaciones', label: 'Ubicaciones', description: 'Gestionar provincias y localidades' },
     { href: '/admin/postulantes', label: 'Postulantes', description: 'Moderar perfiles de postulantes' },
     { href: '/admin/empresas', label: 'Empresas', description: 'Ver empresas y reclutadores' },

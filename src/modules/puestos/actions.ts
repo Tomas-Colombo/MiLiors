@@ -20,6 +20,25 @@ export type ContratacionInput =
   | { tipo: 'plataforma'; postulanteId: string }
   | { tipo: 'externo'; nombre: string }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const MAX_CARRERAS_POR_PUESTO = 10
+
+/**
+ * Lee el <input hidden name="carrera_ids"> (JSON de ids) que arma el multi-select
+ * de carreras. Descarta valores que no sean UUID, deduplica y limita la cantidad.
+ */
+function parseCarreraIds(raw: FormDataEntryValue | null): string[] {
+  if (typeof raw !== 'string' || raw === '') return []
+  try {
+    const arr = JSON.parse(raw)
+    if (!Array.isArray(arr)) return []
+    const validas = arr.filter((v): v is string => typeof v === 'string' && UUID_RE.test(v))
+    return Array.from(new Set(validas)).slice(0, MAX_CARRERAS_POR_PUESTO)
+  } catch {
+    return []
+  }
+}
+
 // Helper: get reclutador_id and empresa_id for the current user
 async function getReclutadorContext(): Promise<{ reclutadorId: string; empresaId: string } | null> {
   const session = await verifySession()
@@ -188,8 +207,7 @@ export async function publicarPuesto(
     titulo_puesto: formData.get('titulo_puesto'),
     descripcion_texto: formData.get('descripcion_texto') || undefined,
     sector_id: formData.get('sector_id') || undefined,
-    carrera_id: formData.get('carrera_id') || undefined,
-    idioma: formData.get('idioma'),
+    idioma: formData.get('idioma') || undefined,
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
     provincia_id: formData.get('provincia_id') || undefined,
@@ -215,6 +233,8 @@ export async function publicarPuesto(
     }
   }
 
+  const carreraIds = parseCarreraIds(formData.get('carrera_ids'))
+
   // Modalidad remota → sin ubicación geográfica.
   const esRemoto = parsed.data.ubicacion === 'REMOTO'
 
@@ -227,14 +247,21 @@ export async function publicarPuesto(
     reclutador_id: ctx.reclutadorId,
     empresa_id: ctx.empresaId,
     ...parsed.data,
+    idioma: parsed.data.idioma || '',
     sector_id: parsed.data.sector_id || null,
-    carrera_id: parsed.data.carrera_id || null,
     provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
     localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     activo: true,
   })
 
   if (error) return { success: false, error: 'No se pudo publicar el puesto.' }
+
+  if (carreraIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: carrerasError } = await (admin.from('puesto_carrera') as any)
+      .insert(carreraIds.map((carreraId) => ({ puesto_id: puestoId, carrera_id: carreraId })))
+    if (carrerasError) return { success: false, error: 'No se pudieron guardar las carreras del puesto.' }
+  }
 
   if (formulario.kind === 'valid') {
     const resultado = await persistirFormularioPreselector(admin, puestoId, formulario.data)
@@ -261,8 +288,7 @@ export async function editarPuesto(
     titulo_puesto: formData.get('titulo_puesto'),
     descripcion_texto: formData.get('descripcion_texto') || undefined,
     sector_id: formData.get('sector_id') || undefined,
-    carrera_id: formData.get('carrera_id') || undefined,
-    idioma: formData.get('idioma'),
+    idioma: formData.get('idioma') || undefined,
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
     provincia_id: formData.get('provincia_id') || undefined,
@@ -288,6 +314,7 @@ export async function editarPuesto(
     }
   }
 
+  const carreraIds = parseCarreraIds(formData.get('carrera_ids'))
   const esRemoto = parsed.data.ubicacion === 'REMOTO'
 
   const supabase = await createClient()
@@ -295,8 +322,8 @@ export async function editarPuesto(
   const { data: actualizados, error } = await (supabase.from('puesto') as any)
     .update({
       ...parsed.data,
+      idioma: parsed.data.idioma || '',
       sector_id: parsed.data.sector_id || null,
-      carrera_id: parsed.data.carrera_id || null,
       provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
       localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     })
@@ -310,6 +337,20 @@ export async function editarPuesto(
   // must be proven here before touching the formulario.
   if (!actualizados || actualizados.length === 0) {
     return { success: false, error: 'No autorizado.' }
+  }
+
+  // Sincronizar carreras del puesto (reemplazo completo). Se hace con el service
+  // role; la propiedad del puesto ya quedó probada arriba.
+  {
+    const admin = createAdminClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('puesto_carrera') as any).delete().eq('puesto_id', puestoId)
+    if (carreraIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: carrerasError } = await (admin.from('puesto_carrera') as any)
+        .insert(carreraIds.map((carreraId) => ({ puesto_id: puestoId, carrera_id: carreraId })))
+      if (carrerasError) return { success: false, error: 'No se pudieron guardar las carreras del puesto.' }
+    }
   }
 
   if (formulario.kind === 'valid') {

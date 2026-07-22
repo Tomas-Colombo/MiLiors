@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Field, Input, Textarea, Select, Switch, Checkbox, Button, Badge, Card, Alert, Tooltip } from '@/components/ui'
+import { Field, Input, Textarea, FancySelect, Switch, Checkbox, Button, Badge, Card, Alert, Tooltip } from '@/components/ui'
 import { PlusIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, InfoIcon } from '@/components/icons'
 import { TIPO_PREGUNTA_PRESELECTOR, TIPO_PREGUNTA_PRESELECTOR_LABEL } from '@/lib/constants/enums'
 import type { FormularioPreselector } from '@/modules/preselector/queries'
@@ -314,10 +314,10 @@ function PreguntaEditor({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Tipo de pregunta">
-          <Select
+          <FancySelect
             value={pregunta.tipo}
             options={tipoOptions}
-            onChange={(e) => onTipoChange(e.target.value as TipoPregunta)}
+            onChange={(v) => onTipoChange(v as TipoPregunta)}
             disabled={disabled}
           />
         </Field>

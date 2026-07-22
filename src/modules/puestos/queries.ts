@@ -20,16 +20,26 @@ export type PuestoItem = {
   fecha_ultima_actividad?: string
   empresa_id: string
   sector_id: string | null
-  carrera_id: string | null
   provincia_id: string | null
   localidad_id: string | null
   reclutador_id?: string | null
   // perfil_psicologico_deseado is intentionally excluded from the public type
   nombre_empresa?: string
   nombre_sector?: string
-  nombre_carrera: string | null
+  /** Carreras del catálogo asociadas al puesto (N–N vía puesto_carrera). */
+  carreras: { id: string; nombre: string }[]
   nombre_provincia?: string | null
   nombre_localidad?: string | null
+}
+
+/** Fila embebida de puesto_carrera con el nombre de la carrera resuelto. */
+type PuestoCarreraRow = { carrera_id: string; carrera: { nombre: string } | null }
+
+/** Normaliza el embed puesto_carrera(...) a la forma { id, nombre }[]. */
+function mapCarreras(rows: PuestoCarreraRow[] | null | undefined): { id: string; nombre: string }[] {
+  return (rows ?? [])
+    .map((pc) => ({ id: pc.carrera_id, nombre: pc.carrera?.nombre ?? '' }))
+    .filter((c) => c.nombre !== '')
 }
 
 export type PuestoConContacto = PuestoItem & {
@@ -55,8 +65,8 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, carrera_id, provincia_id, localidad_id, perfil_psicologico_deseado,
-      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
+      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
       provincia(nombre), localidad(nombre)
     `)
     .eq('reclutador_id', (reclutador as { id: string }).id)
@@ -70,12 +80,12 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
       fecha_ultima_actividad: string
-      empresa_id: string; sector_id: string | null; carrera_id: string | null
+      empresa_id: string; sector_id: string | null
       provincia_id: string | null; localidad_id: string | null
       perfil_psicologico_deseado: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
-      carrera: { nombre: string } | null
+      puesto_carrera: PuestoCarreraRow[] | null
       provincia: { nombre: string } | null
       localidad: { nombre: string } | null
     }
@@ -93,13 +103,12 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       fecha_ultima_actividad: r.fecha_ultima_actividad,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
-      carrera_id: r.carrera_id,
       provincia_id: r.provincia_id,
       localidad_id: r.localidad_id,
       perfil_psicologico_deseado: r.perfil_psicologico_deseado,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
-      nombre_carrera: r.carrera?.nombre ?? null,
+      carreras: mapCarreras(r.puesto_carrera),
       nombre_provincia: r.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
@@ -126,8 +135,8 @@ export const getPuestoById = cache(async (
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, carrera_id, provincia_id, localidad_id, perfil_psicologico_deseado,
-      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
+      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
       provincia(nombre), localidad(nombre)
     `)
     .eq('id', puestoId)
@@ -143,12 +152,12 @@ export const getPuestoById = cache(async (
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
     fecha_ultima_actividad: string
-    empresa_id: string; sector_id: string | null; carrera_id: string | null
+    empresa_id: string; sector_id: string | null
     provincia_id: string | null; localidad_id: string | null
     perfil_psicologico_deseado: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
-    carrera: { nombre: string } | null
+    puesto_carrera: PuestoCarreraRow[] | null
     provincia: { nombre: string } | null
     localidad: { nombre: string } | null
   }
@@ -167,13 +176,12 @@ export const getPuestoById = cache(async (
     fecha_ultima_actividad: r.fecha_ultima_actividad,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
-    carrera_id: r.carrera_id,
     provincia_id: r.provincia_id,
     localidad_id: r.localidad_id,
     perfil_psicologico_deseado: r.perfil_psicologico_deseado,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
-    nombre_carrera: r.carrera?.nombre ?? null,
+    carreras: mapCarreras(r.puesto_carrera),
     nombre_provincia: r.provincia?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }
@@ -261,14 +269,27 @@ export const getPuestosActivos = async (filtros?: {
   const from = page * PUESTOS_PER_PAGE
   const to = from + PUESTOS_PER_PAGE - 1
 
+  // Filtro por carrera: ahora es N–N. Resolvemos primero los puesto_id que tienen
+  // esa carrera y luego restringimos por id (más simple que un embed !inner, que
+  // además recortaría las carreras devueltas para la card).
+  let carreraPuestoIds: string[] | null = null
+  if (filtros?.carreraId) {
+    const { data: pc } = await supabase
+      .from('puesto_carrera')
+      .select('puesto_id')
+      .eq('carrera_id', filtros.carreraId)
+    carreraPuestoIds = ((pc ?? []) as { puesto_id: string }[]).map((r) => r.puesto_id)
+    if (carreraPuestoIds.length === 0) return { items: [], total: 0 }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase
     .from('puesto')
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, carrera_id, provincia_id, localidad_id,
-      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
+      empresa_id, sector_id, provincia_id, localidad_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
       provincia(nombre), localidad(nombre)
     `, { count: 'exact' })
     .eq('activo', true)
@@ -277,7 +298,7 @@ export const getPuestosActivos = async (filtros?: {
     .range(from, to)
 
   if (filtros?.sectorId) query = query.eq('sector_id', filtros.sectorId)
-  if (filtros?.carreraId) query = query.eq('carrera_id', filtros.carreraId)
+  if (carreraPuestoIds) query = query.in('id', carreraPuestoIds)
   if (filtros?.cargaHoraria) query = query.eq('carga_horaria', filtros.cargaHoraria)
   if (filtros?.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
   if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
@@ -305,11 +326,11 @@ export const getPuestosActivos = async (filtros?: {
       idioma: string; carga_horaria: string; ubicacion: string
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
-      empresa_id: string; sector_id: string | null; carrera_id: string | null
+      empresa_id: string; sector_id: string | null
       provincia_id: string | null; localidad_id: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
-      carrera: { nombre: string } | null
+      puesto_carrera: PuestoCarreraRow[] | null
       provincia: { nombre: string } | null
       localidad: { nombre: string } | null
     }
@@ -326,12 +347,11 @@ export const getPuestosActivos = async (filtros?: {
       fecha_baja_puesto: r.fecha_baja_puesto,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
-      carrera_id: r.carrera_id,
       provincia_id: r.provincia_id,
       localidad_id: r.localidad_id,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
-      nombre_carrera: r.carrera?.nombre ?? null,
+      carreras: mapCarreras(r.puesto_carrera),
       nombre_provincia: r.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
@@ -349,8 +369,8 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, carrera_id, reclutador_id, provincia_id, localidad_id,
-      empresa(nombre_empresa), sector_industrial(nombre_sector), carrera(nombre),
+      empresa_id, sector_id, reclutador_id, provincia_id, localidad_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
       provincia(nombre), localidad(nombre)
     `)
     .eq('id', puestoId)
@@ -363,11 +383,11 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     idioma: string; carga_horaria: string; ubicacion: string
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
-    empresa_id: string; sector_id: string | null; carrera_id: string | null; reclutador_id: string | null
+    empresa_id: string; sector_id: string | null; reclutador_id: string | null
     provincia_id: string | null; localidad_id: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
-    carrera: { nombre: string } | null
+    puesto_carrera: PuestoCarreraRow[] | null
     provincia: { nombre: string } | null
     localidad: { nombre: string } | null
   }
@@ -385,13 +405,12 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     fecha_baja_puesto: r.fecha_baja_puesto,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
-    carrera_id: r.carrera_id,
     reclutador_id: r.reclutador_id,
     provincia_id: r.provincia_id,
     localidad_id: r.localidad_id,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
-    nombre_carrera: r.carrera?.nombre ?? null,
+    carreras: mapCarreras(r.puesto_carrera),
     nombre_provincia: r.provincia?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }

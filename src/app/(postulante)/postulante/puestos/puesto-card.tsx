@@ -42,9 +42,9 @@ export function PuestoCard({ puesto, actions, tieneFormulario }: Props) {
         {puesto.nombre_sector && (
           <Badge tone="neutral">{puesto.nombre_sector}</Badge>
         )}
-        {puesto.nombre_carrera && (
-          <Badge tone="neutral">{puesto.nombre_carrera}</Badge>
-        )}
+        {puesto.carreras.map((c) => (
+          <Badge key={c.id} tone="neutral">{c.nombre}</Badge>
+        ))}
         {puesto.nivel_experiencia && (
           <Badge tone="neutral">{puesto.nivel_experiencia}</Badge>
         )}

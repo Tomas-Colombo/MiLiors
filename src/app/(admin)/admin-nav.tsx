@@ -12,12 +12,14 @@ import {
   HelpCircleIcon,
   ShieldIcon,
   MapPinIcon,
+  GlobeIcon,
 } from '@/components/icons'
 
 const NAV_LINKS = [
   { href: '/admin', label: 'Dashboard', icon: <HomeIcon size={18} /> },
   { href: '/admin/sectores', label: 'Sectores', icon: <GridIcon size={18} /> },
-  { href: '/admin/competencias', label: 'Habilidades / Tecnologías', icon: <BarChartIcon size={18} /> },
+  { href: '/admin/competencias', label: 'Hab./Tec.', icon: <BarChartIcon size={18} /> },
+  { href: '/admin/idiomas', label: 'Idiomas', icon: <GlobeIcon size={18} /> },
   { href: '/admin/ubicaciones', label: 'Ubicaciones', icon: <MapPinIcon size={18} /> },
   { href: '/admin/postulantes', label: 'Postulantes', icon: <UsersIcon size={18} /> },
   { href: '/admin/empresas', label: 'Empresas', icon: <BuildingIcon size={18} /> },

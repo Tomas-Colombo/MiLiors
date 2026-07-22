@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useActionState, useState } from 'react'
-import { Field, Input, Textarea, Select, SearchableSelect, Button, Alert } from '@/components/ui'
+import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
+import { CarrerasMultiSelect } from '@/components/shared/carreras-multi-select'
 import { editarPuesto } from '@/modules/puestos/actions'
-import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION } from '@/lib/constants/enums'
+import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
 import type { FormularioPreselector } from '@/modules/preselector/queries'
@@ -32,6 +33,23 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
   const boundAction = editarPuesto.bind(null, puestoId)
   const [state, action, isPending] = useActionState(boundAction, initialState)
   const [modalidad, setModalidad] = useState(puesto.ubicacion)
+  // Campos controlados: al fallar el guardado, React 19 resetea los <input> no
+  // controlados a su defaultValue y se perderían los cambios sin guardar. El
+  // estado los preserva para que solo se corrija el campo con error.
+  const [values, setValues] = useState({
+    titulo_puesto: puesto.titulo_puesto,
+    descripcion_texto: puesto.descripcion_texto ?? '',
+    sector_id: puesto.sector_id ?? '',
+    carga_horaria: puesto.carga_horaria,
+    nivel_experiencia: puesto.nivel_experiencia ?? '',
+    perfil_psicologico_deseado: puesto.perfil_psicologico_deseado ?? '',
+  })
+  const setField =
+    (campo: keyof typeof values) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setValues((v) => ({ ...v, [campo]: e.target.value }))
+  const setValor = (campo: keyof typeof values) => (val: string) =>
+    setValues((v) => ({ ...v, [campo]: val }))
 
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
   const ubicacionAplica = modalidad !== UBICACION.REMOTO
@@ -43,6 +61,14 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
 
   const cargaOptions = Object.entries(CARGA_HORARIA_LABEL).map(([v, l]) => ({ value: v, label: l }))
   const ubicacionOptions = Object.entries(UBICACION_LABEL).map(([v, l]) => ({ value: v, label: l }))
+  // Idioma guardado que no esté en el catálogo (puestos antiguos con texto libre)
+  // se agrega como opción para no perderlo al editar.
+  const idiomasBase = IDIOMAS_COMUNES.filter((i) => i !== 'Otro')
+  const idiomaValores =
+    puesto.idioma && !idiomasBase.includes(puesto.idioma as (typeof idiomasBase)[number])
+      ? [puesto.idioma, ...idiomasBase]
+      : idiomasBase
+  const idiomaOptions = idiomaValores.map((i) => ({ value: i, label: i }))
 
   return (
     <form action={action} className="space-y-5">
@@ -58,7 +84,8 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
         <Input
           id="titulo_puesto"
           name="titulo_puesto"
-          defaultValue={puesto.titulo_puesto}
+          value={values.titulo_puesto}
+          onChange={setField('titulo_puesto')}
           placeholder="Ej: Desarrollador Frontend Senior"
           status={fieldErrors.titulo_puesto ? 'error' : 'default'}
         />
@@ -73,7 +100,8 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
         <Textarea
           id="descripcion_texto"
           name="descripcion_texto"
-          defaultValue={puesto.descripcion_texto ?? ''}
+          value={values.descripcion_texto}
+          onChange={setField('descripcion_texto')}
           placeholder="Describí el puesto, responsabilidades y perfil buscado…"
           rows={5}
           status={fieldErrors.descripcion_texto ? 'error' : 'default'}
@@ -82,39 +110,36 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Field label="Sector" htmlFor="sector_id" error={fieldErrors.sector_id?.[0]}>
-          <Select
+          <FancySelect
             id="sector_id"
             name="sector_id"
             options={sectorOptions}
-            defaultValue={puesto.sector_id ?? ''}
+            value={values.sector_id}
+            onChange={setValor('sector_id')}
           />
         </Field>
 
         <Field
-          label="Carrera (opcional)"
-          error={fieldErrors.carrera_id?.[0]}
-          hint="Ayuda a que los postulantes encuentren tu puesto al filtrar por carrera."
+          label="Carreras (opcional)"
+          hint="Elegí una o varias. Ayuda a que los postulantes encuentren tu puesto al filtrar por carrera."
         >
-          <SearchableSelect
-            name="carrera_id"
+          <CarrerasMultiSelect
+            name="carrera_ids"
             options={carreras}
-            placeholder="Elegí una carrera…"
-            defaultValue={puesto.carrera_id ?? ''}
+            placeholder="Agregá una o más carreras…"
+            defaultValue={puesto.carreras.map((c) => c.id)}
           />
         </Field>
 
         <Field
-          label="Idioma requerido"
-          htmlFor="idioma"
-          required
+          label="Idioma (opcional)"
           error={fieldErrors.idioma?.[0]}
         >
-          <Input
-            id="idioma"
+          <SearchableSelect
             name="idioma"
-            defaultValue={puesto.idioma}
-            placeholder="Ej: Español, Inglés"
-            status={fieldErrors.idioma ? 'error' : 'default'}
+            options={idiomaOptions}
+            defaultValue={puesto.idioma || undefined}
+            placeholder="Elegí un idioma…"
           />
         </Field>
 
@@ -124,11 +149,12 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
           required
           error={fieldErrors.carga_horaria?.[0]}
         >
-          <Select
+          <FancySelect
             id="carga_horaria"
             name="carga_horaria"
             options={cargaOptions}
-            defaultValue={puesto.carga_horaria}
+            value={values.carga_horaria}
+            onChange={setValor('carga_horaria')}
           />
         </Field>
 
@@ -138,12 +164,12 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
           required
           error={fieldErrors.ubicacion?.[0]}
         >
-          <Select
+          <FancySelect
             id="ubicacion"
             name="ubicacion"
             options={ubicacionOptions}
             value={modalidad}
-            onChange={(e) => setModalidad(e.target.value)}
+            onChange={setModalidad}
           />
         </Field>
 
@@ -155,7 +181,8 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
           <Input
             id="nivel_experiencia"
             name="nivel_experiencia"
-            defaultValue={puesto.nivel_experiencia ?? ''}
+            value={values.nivel_experiencia}
+            onChange={setField('nivel_experiencia')}
             placeholder="Ej: 3+ años, Junior, Senior"
             status={fieldErrors.nivel_experiencia ? 'error' : 'default'}
           />
@@ -176,7 +203,7 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
       )}
 
       <Field
-        label="Perfil psicológico deseado"
+        label="Notas privadas sobre el puesto"
         htmlFor="perfil_psicologico_deseado"
         error={fieldErrors.perfil_psicologico_deseado?.[0]}
         hint="Solo visible para vos. Los postulantes nunca verán este campo."
@@ -184,8 +211,8 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
         <Textarea
           id="perfil_psicologico_deseado"
           name="perfil_psicologico_deseado"
-          defaultValue={puesto.perfil_psicologico_deseado ?? ''}
-          placeholder="Describí el perfil actitudinal o psicológico que buscás…"
+          value={values.perfil_psicologico_deseado}
+          onChange={setField('perfil_psicologico_deseado')}
           rows={3}
           status={fieldErrors.perfil_psicologico_deseado ? 'error' : 'default'}
         />
