@@ -46,7 +46,8 @@ export const buscarPostulantes = cache(async (filtros?: {
   competenciaId?: string
   busqueda?: string
   provinciaId?: string
-  localidadId?: string
+  /** Localidades del departamento elegido (el perfil guarda localidad_id). */
+  localidadIds?: string[]
   carrera?: string
   carreraOtra?: string
 }): Promise<PostulanteCard[]> => {
@@ -67,7 +68,8 @@ export const buscarPostulantes = cache(async (filtros?: {
     query = query.ilike('nombre_completo', `%${filtros.busqueda}%`)
   }
   if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
-  if (filtros?.localidadId) query = query.eq('localidad_id', filtros.localidadId)
+  // Departamento → filtra por las localidades que lo componen. Array vacío = sin resultados.
+  if (filtros?.localidadIds) query = query.in('localidad_id', filtros.localidadIds)
   if (filtros?.carrera && UUID_RE.test(filtros.carrera)) {
     query = query.eq('carrera_id', filtros.carrera)
   }

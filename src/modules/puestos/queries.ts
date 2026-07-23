@@ -256,7 +256,8 @@ export const getPuestosActivos = async (filtros?: {
   cargaHoraria?: string
   ubicacion?: string
   provinciaId?: string
-  localidadId?: string
+  /** Localidades del departamento elegido (el puesto guarda localidad_id). */
+  localidadIds?: string[]
   busqueda?: string
   diasDesde?: number
   page?: number
@@ -302,7 +303,8 @@ export const getPuestosActivos = async (filtros?: {
   if (filtros?.cargaHoraria) query = query.eq('carga_horaria', filtros.cargaHoraria)
   if (filtros?.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
   if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
-  if (filtros?.localidadId) query = query.eq('localidad_id', filtros.localidadId)
+  // Departamento → filtra por las localidades que lo componen. Array vacío = sin resultados.
+  if (filtros?.localidadIds) query = query.in('localidad_id', filtros.localidadIds)
   if (filtros?.busqueda) query = query.ilike('titulo_puesto', `%${filtros.busqueda}%`)
   if (filtros?.diasDesde) {
     const since = new Date()
