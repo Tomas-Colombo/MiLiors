@@ -579,7 +579,8 @@ export const getPostulacionesRecibidas = cache(async () => {
       historial_puesto_id, motivo_descarte,
       puesto(id, titulo_puesto),
       perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
-        carrera_otra, carrera:carrera_id(nombre),
+        carrera_otra, carrera:carrera_id(nombre), provincia_id, localidad_id,
+        provincia(nombre), localidad(nombre),
         usuario(email))
     `)
     .in('puesto_id', puestoIds)
@@ -650,6 +651,10 @@ export const getPostulacionesRecibidas = cache(async () => {
         ultima_conexion: string | null
         carrera_otra: string | null
         carrera: { nombre: string } | null
+        provincia_id: string | null
+        localidad_id: string | null
+        provincia: { nombre: string } | null
+        localidad: { nombre: string } | null
         usuario: { email: string } | null
       } | null
     }
@@ -672,6 +677,10 @@ export const getPostulacionesRecibidas = cache(async () => {
       nombre_completo: r.perfil_postulante?.nombre_completo,
       ultima_conexion: r.perfil_postulante?.ultima_conexion ?? null,
       carrera: r.perfil_postulante?.carrera?.nombre ?? r.perfil_postulante?.carrera_otra ?? null,
+      provincia_id: r.perfil_postulante?.provincia_id ?? null,
+      localidad_id: r.perfil_postulante?.localidad_id ?? null,
+      nombre_provincia: r.perfil_postulante?.provincia?.nombre ?? null,
+      nombre_localidad: r.perfil_postulante?.localidad?.nombre ?? null,
       habilidades: habilidadesPorPostulante.get(r.postulante_id) ?? [],
       contacto,
       tiene_nota: (notaCountMap.get(r.postulante_id) ?? 0) > 0,

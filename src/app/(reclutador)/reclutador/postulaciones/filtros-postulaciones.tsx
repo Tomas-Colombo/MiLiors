@@ -8,11 +8,14 @@ import { SearchInput } from '@/components/shared/list-controls'
 
 type Puesto = { id: string; titulo_puesto: string; sinPostulaciones?: boolean }
 type Opcion = { value: string; label: string }
+type Provincia = { id: string; nombre: string }
 
 type Props = {
   puestos: Puesto[]
   carreras: Opcion[]
   habilidades: Opcion[]
+  provincias: Provincia[]
+  localidades: Opcion[]
   totalVisible: number
   totalTotal: number
   /** Sólo ofrecemos el toggle si el reclutador tiene algún puesto reabierto. */
@@ -20,7 +23,7 @@ type Props = {
 }
 
 export function FiltrosPostulaciones({
-  puestos, carreras, habilidades, totalVisible, totalTotal, hayCiclosAnteriores,
+  puestos, carreras, habilidades, provincias, localidades, totalVisible, totalTotal, hayCiclosAnteriores,
 }: Props) {
   const router = useRouter()
   const pathname = usePathname()
@@ -42,6 +45,19 @@ export function FiltrosPostulaciones({
     [router, pathname, searchParams],
   )
 
+  // Al cambiar de provincia se limpia la localidad (depende de la provincia).
+  const setProvincia = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (value) params.set('provincia', value)
+      else params.delete('provincia')
+      params.delete('localidad')
+      params.delete('page')
+      router.replace(`${pathname}?${params.toString()}`)
+    },
+    [router, pathname, searchParams],
+  )
+
   // Un puesto sin postulaciones (llegamos desde "Mis puestos") se incluye para
   // que su título se muestre como valor actual del filtro.
   const puestoOpts = puestos.map((p) => ({ value: p.id, label: p.titulo_puesto }))
@@ -49,6 +65,9 @@ export function FiltrosPostulaciones({
   const puestoActual = searchParams.get('puesto') ?? ''
   const carreraActual = searchParams.get('carrera') ?? ''
   const habilidadActual = searchParams.get('habilidad') ?? ''
+  const provinciaActual = searchParams.get('provincia') ?? ''
+  const localidadActual = searchParams.get('localidad') ?? ''
+  const provinciaOpts = provincias.map((p) => ({ value: p.id, label: p.nombre }))
 
   const estadoOpts = [
     { value: '', label: 'Todos los estados' },
@@ -65,7 +84,9 @@ export function FiltrosPostulaciones({
     searchParams.get('favoritos') ||
     searchParams.get('ciclos') ||
     searchParams.get('carrera') ||
-    searchParams.get('habilidad')
+    searchParams.get('habilidad') ||
+    searchParams.get('provincia') ||
+    searchParams.get('localidad')
   )
 
   return (
@@ -140,6 +161,33 @@ export function FiltrosPostulaciones({
               onChange={(value) => setParam('estado', value)}
             />
           </div>
+          <div className="w-full sm:w-56">
+            <SearchableSelect
+              key={provinciaActual}
+              name="provincia"
+              options={provinciaOpts}
+              defaultValue={provinciaActual}
+              placeholder="Todas las provincias"
+              onValueChange={(value) => {
+                if (value) setProvincia(value)
+              }}
+            />
+          </div>
+          {/* La localidad solo se muestra una vez elegida la provincia. */}
+          {provinciaActual && (
+            <div className="w-full sm:w-56">
+              <SearchableSelect
+                key={`${provinciaActual}-${localidadActual}`}
+                name="localidad"
+                options={localidades}
+                defaultValue={localidadActual}
+                placeholder="Todas las localidades"
+                onValueChange={(value) => {
+                  if (value) setParam('localidad', value)
+                }}
+              />
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setParam('favoritos', searchParams.get('favoritos') === '1' ? '' : '1')}

@@ -5,6 +5,7 @@ import { Card, Badge, Chip, EmptyState, Tooltip } from '@/components/ui'
 import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon, WhatsAppIcon } from '@/components/icons'
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
 import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
+import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
 import { VerPerfilBtn } from './ver-perfil-btn'
@@ -37,7 +38,7 @@ const estadoLabel: Record<string, string> = {
 
 type SearchParams = Promise<{
   puesto?: string; estado?: string; favoritos?: string; q?: string; page?: string; ciclos?: string
-  carrera?: string; habilidad?: string
+  carrera?: string; habilidad?: string; provincia?: string; localidad?: string
 }>
 
 export default async function PostulacionesRecibidasPage({
@@ -48,9 +49,14 @@ export default async function PostulacionesRecibidasPage({
   const {
     puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos, q: qRaw, page: pageParam,
     ciclos: filtroCiclos, carrera: filtroCarrera, habilidad: filtroHabilidad,
+    provincia: filtroProvincia, localidad: filtroLocalidad,
   } = await searchParams
   const q = qRaw?.trim().toLowerCase() ?? ''
-  const todas = await getPostulacionesRecibidas()
+  const [todas, provincias, localidades] = await Promise.all([
+    getPostulacionesRecibidas(),
+    getProvincias(),
+    filtroProvincia ? getLocalidadesPorProvincia(filtroProvincia) : Promise.resolve([]),
+  ])
 
   // Un puesto reabierto arranca con el tablero limpio: las postulaciones de ciclos
   // anteriores son historial y solo se muestran a pedido.
@@ -98,6 +104,8 @@ export default async function PostulacionesRecibidasPage({
     if (filtroFavoritos === '1' && !p.is_favorito) return false
     if (filtroCarrera && p.carrera !== filtroCarrera) return false
     if (filtroHabilidad && !p.habilidades.includes(filtroHabilidad)) return false
+    if (filtroProvincia && p.provincia_id !== filtroProvincia) return false
+    if (filtroLocalidad && p.localidad_id !== filtroLocalidad) return false
     if (q && !(p.nombre_completo?.toLowerCase().includes(q) ?? false)) return false
     return true
   })
@@ -131,6 +139,8 @@ export default async function PostulacionesRecibidasPage({
               puestos={puestosOpts}
               carreras={carrerasOpts}
               habilidades={habilidadesOpts}
+              provincias={provincias}
+              localidades={localidades}
               totalVisible={filtered.length}
               totalTotal={postulaciones.length}
               hayCiclosAnteriores={hayCiclosAnteriores}
