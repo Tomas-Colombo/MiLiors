@@ -29,6 +29,7 @@ export type PostulanteDetalle = PostulanteCard & {
   ultima_conexion: string | null
   // Perfil técnico
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
+  cursos: { nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null; url_credencial: string | null }[]
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
   humanDesign: {
@@ -46,7 +47,8 @@ export const buscarPostulantes = cache(async (filtros?: {
   competenciaId?: string
   busqueda?: string
   provinciaId?: string
-  localidadId?: string
+  /** Localidades del departamento elegido (el perfil guarda localidad_id). */
+  localidadIds?: string[]
   carrera?: string
   carreraOtra?: string
 }): Promise<PostulanteCard[]> => {
@@ -67,7 +69,8 @@ export const buscarPostulantes = cache(async (filtros?: {
     query = query.ilike('nombre_completo', `%${filtros.busqueda}%`)
   }
   if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
-  if (filtros?.localidadId) query = query.eq('localidad_id', filtros.localidadId)
+  // Departamento → filtra por las localidades que lo componen. Array vacío = sin resultados.
+  if (filtros?.localidadIds) query = query.in('localidad_id', filtros.localidadIds)
   if (filtros?.carrera && UUID_RE.test(filtros.carrera)) {
     query = query.eq('carrera_id', filtros.carrera)
   }
@@ -219,17 +222,23 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     .eq('postulante_id', postulanteId)
     .maybeSingle()
 
-  let formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[] = []
-  let experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[] = []
-  let idiomas: { nombre: string; nivel_idioma: string }[] = []
+  let formaciones: PostulanteDetalle['formaciones'] = []
+  let cursos: PostulanteDetalle['cursos'] = []
+  let experiencias: PostulanteDetalle['experiencias'] = []
+  let idiomas: PostulanteDetalle['idiomas'] = []
 
   if (pt) {
     const ptId = (pt as { id: string }).id
-    const [f, e, i] = await Promise.all([
+    const [f, cu, e, i] = await Promise.all([
       admin
         .from('formacion_academica')
         .select('titulo, institucion, fecha_graduacion')
         .eq('perfil_tecnico_id', ptId),
+      admin
+        .from('curso')
+        .select('nombre, institucion, fecha_fin, duracion_horas, url_credencial')
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_fin', { ascending: false }),
       admin
         .from('experiencia_laboral')
         .select('puesto, empresa, fecha_inicio, fecha_fin')
@@ -240,6 +249,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
         .eq('perfil_tecnico_id', ptId),
     ])
     formaciones = (f.data ?? []) as typeof formaciones
+    cursos = (cu.data ?? []) as typeof cursos
     experiencias = (e.data ?? []) as typeof experiencias
     idiomas = (i.data ?? []) as typeof idiomas
   }
@@ -294,6 +304,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     portfolio: contactoLiberado ? p.portfolio : null,
     ultima_conexion: p.ultima_conexion ?? null,
     formaciones,
+    cursos,
     experiencias,
     idiomas,
     humanDesign: hd

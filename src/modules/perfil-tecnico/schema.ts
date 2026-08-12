@@ -24,6 +24,20 @@ export const experienciaSchema = z.object({
   { message: 'La fecha de fin debe ser posterior al inicio.', path: ['fecha_fin'] }
 )
 
+export const cursoSchema = z.object({
+  nombre: z.string().min(2, { message: 'Ingresá el nombre del curso.' }).max(200).trim(),
+  institucion: z.string().min(2, { message: 'Ingresá quién lo dictó.' }).max(200).trim(),
+  fecha_fin: mesAnioOptional,
+  // Llega como string del FormData; vacío se normaliza a undefined en la action.
+  duracion_horas: z.coerce
+    .number({ message: 'Ingresá un número de horas.' })
+    .int({ message: 'Ingresá horas enteras.' })
+    .positive({ message: 'Las horas deben ser mayores a cero.' })
+    .max(10000, { message: 'Máximo 10.000 horas.' })
+    .optional(),
+  url_credencial: z.string().trim().url({ message: 'Ingresá una URL válida (https://…).' }).max(500).optional(),
+})
+
 export const idiomaSchema = z.object({
   nombre: z.string().min(2, { message: 'Ingresá el idioma.' }).max(80).trim(),
   nivel_idioma: z.enum(['BASICO', 'INTERMEDIO', 'AVANZADO', 'NATIVO'], {
@@ -38,3 +52,4 @@ export const competenciasSchema = z.object({
 export type FormacionInput = z.infer<typeof formacionSchema>
 export type ExperienciaInput = z.infer<typeof experienciaSchema>
 export type IdiomaInput = z.infer<typeof idiomaSchema>
+export type CursoInput = z.infer<typeof cursoSchema>

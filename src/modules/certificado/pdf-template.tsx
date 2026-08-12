@@ -181,6 +181,7 @@ export type CertificadoPDFProps = {
     estrategia_hd: string
   } | null
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
+  cursos: { nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[]
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
   /** Competencias a listar: cuando hay perfil integrado, son solo las NO integradas. */
@@ -218,6 +219,7 @@ export function CertificadoPDF({
   eneatipoNombre,
   humanDesign,
   formaciones,
+  cursos,
   experiencias,
   idiomas,
   competencias,
@@ -319,6 +321,27 @@ export function CertificadoPDF({
                   <Text style={styles.itemTitle}>{f.titulo}</Text>
                   <Text style={styles.itemSub}>
                     {f.institucion}{f.fecha_graduacion ? ` · ${formatFecha(f.fecha_graduacion)}` : ''}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Sección: Cursos */}
+          {cursos.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Cursos y Capacitaciones</Text>
+              {cursos.map((c, i) => (
+                <View key={i} style={styles.itemRow}>
+                  <Text style={styles.itemTitle}>{c.nombre}</Text>
+                  <Text style={styles.itemSub}>
+                    {[
+                      c.institucion,
+                      c.fecha_fin ? formatFecha(c.fecha_fin) : null,
+                      c.duracion_horas ? `${c.duracion_horas} h` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </Text>
                 </View>
               ))}

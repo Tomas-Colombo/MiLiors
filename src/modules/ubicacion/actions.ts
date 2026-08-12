@@ -1,6 +1,11 @@
 'use server'
 
-import { getLocalidadesPorProvincia, type LocalidadOption } from './queries'
+import {
+  getLocalidadesPorProvincia,
+  getDepartamentosPorProvincia,
+  type LocalidadOption,
+  type DepartamentoOption,
+} from './queries'
 
 /**
  * Server action para que el selector de ubicación (cliente) cargue las
@@ -9,4 +14,13 @@ import { getLocalidadesPorProvincia, type LocalidadOption } from './queries'
 export async function cargarLocalidades(provinciaId: string): Promise<LocalidadOption[]> {
   if (!provinciaId) return []
   return getLocalidadesPorProvincia(provinciaId)
+}
+
+/**
+ * Server action para cargar los departamentos de una provincia bajo demanda
+ * (usado por los filtros de puestos y postulantes).
+ */
+export async function cargarDepartamentos(provinciaId: string): Promise<DepartamentoOption[]> {
+  if (!provinciaId) return []
+  return getDepartamentosPorProvincia(provinciaId)
 }

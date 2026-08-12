@@ -16,7 +16,7 @@ const TIEMPO_OPTIONS = [
 
 type Sector = { id: string; nombre_sector: string }
 type Provincia = { id: string; nombre: string }
-type Localidad = { value: string; label: string }
+type Departamento = { value: string; label: string }
 
 function pill(active: boolean) {
   return [
@@ -30,12 +30,12 @@ function pill(active: boolean) {
 export function PuestosFilters({
   sectores,
   provincias,
-  localidades,
+  departamentos,
   carreras,
 }: {
   sectores: Sector[]
   provincias: Provincia[]
-  localidades: Localidad[]
+  departamentos: Departamento[]
   carreras: CarreraOption[]
 }) {
   const sp = useSearchParams()
@@ -51,12 +51,12 @@ export function PuestosFilters({
     router.replace(`/postulante/puestos?${params.toString()}`)
   }
 
-  // Al cambiar de provincia se limpia la localidad (depende de la provincia).
+  // Al cambiar de provincia se limpia el departamento (depende de la provincia).
   function updateProvincia(value: string) {
     const params = new URLSearchParams(sp.toString())
     if (value) params.set('provincia', value)
     else params.delete('provincia')
-    params.delete('localidad')
+    params.delete('departamento')
     params.delete('page')
     router.replace(`/postulante/puestos?${params.toString()}`)
   }
@@ -77,11 +77,11 @@ export function PuestosFilters({
   const carga = sp.get('carga_horaria') ?? ''
   const ubicacion = sp.get('ubicacion') ?? ''
   const provincia = sp.get('provincia') ?? ''
-  const localidad = sp.get('localidad') ?? ''
+  const departamento = sp.get('departamento') ?? ''
   const carrera = sp.get('carrera') ?? ''
   // "postulacion" defaults to "todos" server-side, so we treat a missing param as that value.
   const postulacion = sp.get('postulacion') ?? 'todos'
-  const hasFilters = !!(q || dias || sector || carga || ubicacion || provincia || localidad || carrera || sp.get('postulacion'))
+  const hasFilters = !!(q || dias || sector || carga || ubicacion || provincia || departamento || carrera || sp.get('postulacion'))
 
   return (
     <div className="space-y-5">
@@ -273,22 +273,22 @@ export function PuestosFilters({
               </div>
             </div>
 
-            {/* Localidad: solo se muestra cuando hay una provincia seleccionada. */}
+            {/* Departamento: solo se muestra cuando hay una provincia seleccionada. */}
             {provincia && (
               <div className="space-y-2">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                  Localidad
+                  Departamento
                 </p>
                 <div className="relative">
                   <select
-                    value={localidad}
-                    onChange={(e) => update('localidad', e.target.value)}
+                    value={departamento}
+                    onChange={(e) => update('departamento', e.target.value)}
                     className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
                   >
-                    <option value="">Todas las localidades</option>
-                    {localidades.map((l) => (
-                      <option key={l.value} value={l.value}>
-                        {l.label}
+                    <option value="">Todos los departamentos</option>
+                    {departamentos.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
                       </option>
                     ))}
                   </select>

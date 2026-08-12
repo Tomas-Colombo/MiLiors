@@ -9,7 +9,7 @@ import { generarSintesisCertificado, competenciasNoIntegradas } from './sintesis
 import type { ActionResult } from '@/lib/types/domain'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
 import { clavesDescartadas, estaDescartada, type CertificadoSintesisJSON } from '@/lib/types/certificado'
-import type { FormacionItem, ExperienciaItem, IdiomaItem, CompetenciaItem } from '@/modules/perfil-tecnico/queries'
+import type { FormacionItem, CursoItem, ExperienciaItem, IdiomaItem, CompetenciaItem } from '@/modules/perfil-tecnico/queries'
 
 export async function crearCertificado(): Promise<ActionResult<{ certificadoId: string }>> {
   const session = await verifySession()
@@ -107,6 +107,7 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     ptSintesis.sintesis_certificado.objetivo ?? postulanteTyped.carrera?.nombre ?? postulanteTyped.carrera_otra ?? undefined
 
   let formaciones: FormacionItem[] = []
+  let cursos: CursoItem[] = []
   let experiencias: ExperienciaItem[] = []
   let idiomas: IdiomaItem[] = []
   let competencias: CompetenciaItem[] = []
@@ -116,12 +117,17 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
     // Mismo orden que la previsualización (`getCertificadoContenido`): sin ORDER BY
     // el PDF puede listar formación y experiencia en otro orden que lo que el
     // postulante vio en pantalla.
-    const [f, e, i, c] = await Promise.all([
+    const [f, cu, e, i, c] = await Promise.all([
       supabase
         .from('formacion_academica')
         .select('id, institucion, titulo, fecha_graduacion')
         .eq('perfil_tecnico_id', ptId)
         .order('fecha_graduacion', { ascending: false }),
+      supabase
+        .from('curso')
+        .select('id, nombre, institucion, fecha_fin, duracion_horas, url_credencial')
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_fin', { ascending: false }),
       supabase
         .from('experiencia_laboral')
         .select('id, empresa, puesto, fecha_inicio, fecha_fin, descripcion')
@@ -138,6 +144,7 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
         .eq('perfil_tecnico_id', ptId),
     ])
     formaciones = (f.data ?? []) as FormacionItem[]
+    cursos = (cu.data ?? []) as CursoItem[]
     experiencias = (e.data ?? []) as ExperienciaItem[]
     idiomas = (i.data ?? []) as IdiomaItem[]
     competencias = (c.data ?? [])
@@ -167,10 +174,12 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
   // búsqueda declarada, igual que la previsualización (`getCertificadoContenido`).
   const sintesis = ptSintesis.sintesis_certificado
   const formacionesDescartadas = clavesDescartadas(sintesis.descartados, 'formacion')
+  const cursosDescartados = clavesDescartadas(sintesis.descartados, 'curso')
   const experienciasDescartadas = clavesDescartadas(sintesis.descartados, 'experiencia')
   const competenciasDescartadas = clavesDescartadas(sintesis.descartados, 'competencia')
 
   const formacionesRelevantes = formaciones.filter(f => !estaDescartada(formacionesDescartadas, f.id))
+  const cursosRelevantes = cursos.filter(c => !estaDescartada(cursosDescartados, c.id))
   const experienciasRelevantes = experiencias.filter(e => !estaDescartada(experienciasDescartadas, e.id))
   const noIntegradas = competenciasNoIntegradas(
     competencias.map(c => c.nombre).filter(nombre => !estaDescartada(competenciasDescartadas, nombre)),
@@ -189,6 +198,7 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
         ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })
         : null,
       formaciones: formacionesRelevantes,
+      cursos: cursosRelevantes,
       experiencias: experienciasRelevantes,
       idiomas,
       competencias: noIntegradas,
@@ -320,7 +330,7 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   const teniaSintesisValida = ptTyped.sintesis_estado === 'LISTO' && ptTyped.sintesis_certificado != null
 
   // Material técnico a integrar — el perfil técnico completo, no solo un extracto.
-  const [{ data: exp }, { data: comp }, { data: form }, { data: idi }] = await Promise.all([
+  const [{ data: exp }, { data: comp }, { data: form }, { data: cur }, { data: idi }] = await Promise.all([
     supabase
       .from('experiencia_laboral')
       .select('id, puesto, empresa, fecha_inicio, fecha_fin, descripcion')
@@ -335,6 +345,11 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
       .select('id, titulo, institucion, fecha_graduacion')
       .eq('perfil_tecnico_id', ptTyped.id)
       .order('fecha_graduacion', { ascending: false }),
+    supabase
+      .from('curso')
+      .select('id, nombre, institucion, fecha_fin, duracion_horas')
+      .eq('perfil_tecnico_id', ptTyped.id)
+      .order('fecha_fin', { ascending: false }),
     supabase
       .from('idioma')
       .select('nombre, nivel_idioma')
@@ -366,6 +381,16 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   const formaciones = (
     (form ?? []) as { id: string; titulo: string; institucion: string; fecha_graduacion: string | null }[]
   ).map(f => ({ id: f.id, titulo: f.titulo, institucion: f.institucion, fechaGraduacion: f.fecha_graduacion }))
+
+  const cursos = (
+    (cur ?? []) as { id: string; nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[]
+  ).map(c => ({
+    id: c.id,
+    nombre: c.nombre,
+    institucion: c.institucion,
+    fechaFin: c.fecha_fin,
+    duracionHoras: c.duracion_horas,
+  }))
 
   const idiomas = ((idi ?? []) as { nombre: string; nivel_idioma: string }[]).map(i => ({
     nombre: i.nombre,
@@ -418,6 +443,7 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     comoTrabaja: (informeJson.comoTrabajas ?? []).map(i => ({ titulo: i.titulo, texto: i.texto })),
     competenciasTecnicas,
     formaciones,
+    cursos,
     experiencias,
     idiomas,
   })

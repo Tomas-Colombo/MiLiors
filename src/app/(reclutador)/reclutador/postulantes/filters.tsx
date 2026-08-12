@@ -7,7 +7,7 @@ import { SearchIcon, TrashIcon } from '@/components/icons'
 
 type CompetenciaOpt = { value: string; label: string }
 type Provincia = { id: string; nombre: string }
-type Localidad = { value: string; label: string }
+type Departamento = { value: string; label: string }
 type CarreraOpt = { value: string; label: string }
 
 const OPCION_OTRAS_CARRERA = { value: 'OTRAS', label: 'Otras (cargadas por postulantes)' }
@@ -15,13 +15,13 @@ const OPCION_OTRAS_CARRERA = { value: 'OTRAS', label: 'Otras (cargadas por postu
 export function PostulantesFilters({
   competencias,
   provincias,
-  localidades,
+  departamentos,
   carreras,
   carrerasOtras,
 }: {
   competencias: CompetenciaOpt[]
   provincias: Provincia[]
-  localidades: Localidad[]
+  departamentos: Departamento[]
   carreras: CarreraOpt[]
   carrerasOtras?: CarreraOpt[]
 }) {
@@ -41,13 +41,13 @@ export function PostulantesFilters({
     [router, pathname, sp],
   )
 
-  // Al cambiar de provincia se limpia la localidad (depende de la provincia).
+  // Al cambiar de provincia se limpia el departamento (depende de la provincia).
   const setProvincia = useCallback(
     (value: string) => {
       const params = new URLSearchParams(sp.toString())
       if (value) params.set('provincia', value)
       else params.delete('provincia')
-      params.delete('localidad')
+      params.delete('departamento')
       params.delete('page')
       router.replace(`${pathname}?${params.toString()}`)
     },
@@ -79,10 +79,10 @@ export function PostulantesFilters({
   const busqueda = sp.get('busqueda') ?? ''
   const competencia = sp.get('competencia') ?? ''
   const provincia = sp.get('provincia') ?? ''
-  const localidad = sp.get('localidad') ?? ''
+  const departamento = sp.get('departamento') ?? ''
   const carrera = sp.get('carrera') ?? ''
   const carreraOtra = sp.get('carreraOtra') ?? ''
-  const hasFilters = !!(busqueda || competencia || provincia || localidad || carrera || carreraOtra)
+  const hasFilters = !!(busqueda || competencia || provincia || departamento || carrera || carreraOtra)
 
   const provinciaOpts = provincias.map((p) => ({ value: p.id, label: p.nombre }))
   const carreraOpts = [...carreras, OPCION_OTRAS_CARRERA]
@@ -128,17 +128,17 @@ export function PostulantesFilters({
           }}
         />
       </div>
-      {/* La localidad solo se muestra una vez elegida la provincia. */}
+      {/* El departamento solo se muestra una vez elegida la provincia. */}
       {provincia && (
         <div className="w-full sm:w-56">
           <SearchableSelect
-            key={`${provincia}-${localidad}`}
-            name="localidad"
-            options={localidades}
-            defaultValue={localidad}
-            placeholder="Todas las localidades"
+            key={`${provincia}-${departamento}`}
+            name="departamento"
+            options={departamentos}
+            defaultValue={departamento}
+            placeholder="Todos los departamentos"
             onValueChange={(value) => {
-              if (value) setParam('localidad', value)
+              if (value) setParam('departamento', value)
             }}
           />
         </div>

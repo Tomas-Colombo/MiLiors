@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
-import { formacionSchema, experienciaSchema, idiomaSchema } from './schema'
+import { formacionSchema, experienciaSchema, idiomaSchema, cursoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 
 // Converts YYYY-MM → YYYY-MM-01 for Postgres DATE columns
@@ -127,6 +127,88 @@ export async function eliminarFormacion(id: string): Promise<ActionResult> {
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from('formacion_academica') as any).delete().eq('id', id)
+  if (error) return { success: false, error: 'No se pudo eliminar.' }
+  revalidatePath('/postulante/perfil')
+  return { success: true, data: undefined }
+}
+
+// ─── CURSOS ───────────────────────────────────────────────────────────────────
+
+// Los opcionales llegan como '' cuando el campo quedó vacío: se normalizan a
+// undefined para que el schema no intente validarlos (z.coerce.number('') = 0).
+function parseCurso(formData: FormData) {
+  return cursoSchema.safeParse({
+    nombre: formData.get('nombre'),
+    institucion: formData.get('institucion'),
+    fecha_fin: formData.get('fecha_fin') || undefined,
+    duracion_horas: formData.get('duracion_horas') || undefined,
+    url_credencial: formData.get('url_credencial') || undefined,
+  })
+}
+
+export async function agregarCurso(
+  _prevState: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  const parsed = parseCurso(formData)
+  if (!parsed.success) {
+    return { success: false, error: 'Revisá los campos.', fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const postulanteId = await getPostulanteId()
+  if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
+
+  const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
+  const admin = createAdminClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('curso') as any).insert({
+    perfil_tecnico_id: perfilTecnicoId,
+    nombre: parsed.data.nombre,
+    institucion: parsed.data.institucion,
+    fecha_fin: toDate(parsed.data.fecha_fin),
+    duracion_horas: parsed.data.duracion_horas ?? null,
+    url_credencial: parsed.data.url_credencial || null,
+  })
+
+  if (error) return { success: false, error: 'No se pudo guardar el curso.' }
+  revalidatePath('/postulante/perfil')
+  return { success: true, data: undefined }
+}
+
+export async function editarCurso(
+  id: string,
+  _prevState: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  const parsed = parseCurso(formData)
+  if (!parsed.success) {
+    return { success: false, error: 'Revisá los campos.', fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  await verifySession()
+  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('curso') as any)
+    .update({
+      nombre: parsed.data.nombre,
+      institucion: parsed.data.institucion,
+      fecha_fin: toDate(parsed.data.fecha_fin),
+      duracion_horas: parsed.data.duracion_horas ?? null,
+      url_credencial: parsed.data.url_credencial || null,
+    })
+    .eq('id', id)
+
+  if (error) return { success: false, error: 'No se pudo actualizar el curso.' }
+  revalidatePath('/postulante/perfil')
+  return { success: true, data: undefined }
+}
+
+export async function eliminarCurso(id: string): Promise<ActionResult> {
+  await verifySession()
+  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('curso') as any).delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
   revalidatePath('/postulante/perfil')
   return { success: true, data: undefined }

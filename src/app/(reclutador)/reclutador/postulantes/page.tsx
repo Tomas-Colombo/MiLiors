@@ -4,7 +4,7 @@ import { Card, Badge, Chip, EmptyState } from '@/components/ui'
 import { UsersIcon, SparklesIcon } from '@/components/icons'
 import { buscarPostulantes } from '@/modules/postulantes/queries'
 import { getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
-import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getProvincias, getDepartamentosPorProvincia, getLocalidadIdsPorDepartamento } from '@/modules/ubicacion/queries'
 import { getCarreras, getCarrerasOtras } from '@/modules/carreras/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
@@ -17,7 +17,7 @@ type SearchParams = Promise<{
   busqueda?: string
   competencia?: string
   provincia?: string
-  localidad?: string
+  departamento?: string
   carrera?: string
   carreraOtra?: string
   page?: string
@@ -29,18 +29,23 @@ export default async function BuscarPostulantesPage({
   searchParams: SearchParams
 }) {
   const sp = await searchParams
-  const [postulantes, competencias, provincias, localidades, carreras, carrerasOtras] = await Promise.all([
+  // El perfil guarda localidad_id: el filtro por departamento se resuelve a sus localidades.
+  const localidadIds = sp.provincia && sp.departamento
+    ? await getLocalidadIdsPorDepartamento(sp.provincia, sp.departamento)
+    : undefined
+
+  const [postulantes, competencias, provincias, departamentos, carreras, carrerasOtras] = await Promise.all([
     buscarPostulantes({
       busqueda: sp.busqueda,
       competenciaId: sp.competencia,
       provinciaId: sp.provincia,
-      localidadId: sp.localidad,
+      localidadIds,
       carrera: sp.carrera,
       carreraOtra: sp.carreraOtra,
     }),
     getCompetenciasCatalogo(),
     getProvincias(),
-    sp.provincia ? getLocalidadesPorProvincia(sp.provincia) : Promise.resolve([]),
+    sp.provincia ? getDepartamentosPorProvincia(sp.provincia) : Promise.resolve([]),
     getCarreras(),
     sp.carrera === 'OTRAS' ? getCarrerasOtras() : Promise.resolve([]),
   ])
@@ -64,7 +69,7 @@ export default async function BuscarPostulantesPage({
         <PostulantesFilters
           competencias={competenciaOpts}
           provincias={provincias}
-          localidades={localidades}
+          departamentos={departamentos}
           carreras={carreras}
           carrerasOtras={carrerasOtras}
         />

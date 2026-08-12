@@ -5,6 +5,7 @@ import {
   buildSintesisPrompts,
   type SintesisPromptContext,
   type SintesisFormacion,
+  type SintesisCurso,
   type SintesisExperiencia,
 } from './sintesis-prompt'
 import {
@@ -64,9 +65,14 @@ async function triageMaterialTecnico(ctx: {
   objetivo: string
   competenciasTecnicas: string[]
   formaciones: SintesisFormacion[]
+  cursos: SintesisCurso[]
   experiencias: SintesisExperiencia[]
 }): Promise<SintesisDescarte[]> {
-  const hayMaterial = ctx.competenciasTecnicas.length > 0 || ctx.formaciones.length > 0 || ctx.experiencias.length > 0
+  const hayMaterial =
+    ctx.competenciasTecnicas.length > 0 ||
+    ctx.formaciones.length > 0 ||
+    ctx.cursos.length > 0 ||
+    ctx.experiencias.length > 0
   if (!hayMaterial) return []
 
   const { systemPrompt, userPrompt } = buildTriagePrompts(ctx)
@@ -98,6 +104,7 @@ async function triageMaterialTecnico(ctx: {
   if (!Array.isArray(descartar)) return []
 
   const formMap = new Map(ctx.formaciones.map(f => [f.id, `${f.titulo} — ${f.institucion}`]))
+  const cursoMap = new Map(ctx.cursos.map(c => [c.id, `${c.nombre} — ${c.institucion}`]))
   const expMap = new Map(ctx.experiencias.map(e => [e.id, `${e.puesto} en ${e.empresa}`]))
   const compMap = new Map(ctx.competenciasTecnicas.map(c => [norm(c), c]))
 
@@ -109,6 +116,8 @@ async function triageMaterialTecnico(ctx: {
 
     if (formMap.has(clave)) {
       descartados.push({ clave, tipo: 'formacion', label: formMap.get(clave)!, motivo })
+    } else if (cursoMap.has(clave)) {
+      descartados.push({ clave, tipo: 'curso', label: cursoMap.get(clave)!, motivo })
     } else if (expMap.has(clave)) {
       descartados.push({ clave, tipo: 'experiencia', label: expMap.get(clave)!, motivo })
     } else if (compMap.has(norm(clave))) {
@@ -121,7 +130,8 @@ async function triageMaterialTecnico(ctx: {
   // Válvula de seguridad: si el triage vació una categoría con material Y dejaría
   // el perfil técnico entero sin nada, es más probable que el modelo se haya
   // excedido que que TODO el perfil sea irrelevante. Se ignora el triage entero.
-  const totalOriginal = ctx.competenciasTecnicas.length + ctx.formaciones.length + ctx.experiencias.length
+  const totalOriginal =
+    ctx.competenciasTecnicas.length + ctx.formaciones.length + ctx.cursos.length + ctx.experiencias.length
   const totalDescartado = descartados.length
   if (totalOriginal > 0 && totalDescartado >= totalOriginal) {
     console.warn('[certificado/sintesis] Triage habría vaciado todo el perfil técnico; se ignora y se conserva todo.')
@@ -145,17 +155,19 @@ export async function generarSintesisCertificado(ctx: SintesisContext): Promise<
     objetivo: ctx.objetivo,
     competenciasTecnicas: ctx.competenciasTecnicas,
     formaciones: ctx.formaciones,
+    cursos: ctx.cursos,
     experiencias: ctx.experiencias,
   })
 
   const formaciones = ctx.formaciones.filter(f => !descartados.some(d => d.tipo === 'formacion' && d.clave === f.id))
+  const cursos = ctx.cursos.filter(c => !descartados.some(d => d.tipo === 'curso' && d.clave === c.id))
   const experiencias = ctx.experiencias.filter(e => !descartados.some(d => d.tipo === 'experiencia' && d.clave === e.id))
   const competenciasDescartadasSet = new Set(
     descartados.filter(d => d.tipo === 'competencia').map(d => norm(d.clave)),
   )
   const competenciasTecnicas = ctx.competenciasTecnicas.filter(c => !competenciasDescartadasSet.has(norm(c)))
 
-  const ctxFiltrado: SintesisContext = { ...ctx, formaciones, experiencias, competenciasTecnicas }
+  const ctxFiltrado: SintesisContext = { ...ctx, formaciones, cursos, experiencias, competenciasTecnicas }
 
   const { systemPrompt, userPrompt } = buildSintesisPrompts(ctxFiltrado)
 

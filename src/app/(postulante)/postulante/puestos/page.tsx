@@ -9,7 +9,7 @@ import {
   getMisPostulacionesPuestoIds,
   PUESTOS_PER_PAGE,
 } from '@/modules/puestos/queries'
-import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getProvincias, getDepartamentosPorProvincia, getLocalidadIdsPorDepartamento } from '@/modules/ubicacion/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getPuestosConFormulario } from '@/modules/preselector/queries'
 import { getCarreras, getMiCarreraId } from '@/modules/carreras/queries'
@@ -44,17 +44,23 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
     : undefined
 
   const provinciaFiltro = sp.provincia || undefined
+  const departamentoFiltro = sp.departamento || undefined
   const carreraFiltro = sp.carrera || undefined
 
-  const [sectores, yaPostuladosSet, certificado, provincias, localidadesFiltro, carreras, miCarreraId] = await Promise.all([
+  const [sectores, yaPostuladosSet, certificado, provincias, departamentosFiltro, carreras, miCarreraId] = await Promise.all([
     getSectores(),
     getMisPostulacionesPuestoIds(),
     getUltimoCertificado(),
     getProvincias(),
-    provinciaFiltro ? getLocalidadesPorProvincia(provinciaFiltro) : Promise.resolve([]),
+    provinciaFiltro ? getDepartamentosPorProvincia(provinciaFiltro) : Promise.resolve([]),
     getCarreras(),
     getMiCarreraId(),
   ])
+
+  // El puesto guarda localidad_id: el filtro por departamento se resuelve a sus localidades.
+  const localidadIdsFiltro = provinciaFiltro && departamentoFiltro
+    ? await getLocalidadIdsPorDepartamento(provinciaFiltro, departamentoFiltro)
+    : undefined
 
   // La carrera cargada en el perfil del postulante va primero en el selector.
   const carrerasOrdenadas = miCarreraId
@@ -72,7 +78,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
     cargaHoraria: sp.carga_horaria || undefined,
     ubicacion: sp.ubicacion || undefined,
     provinciaId: provinciaFiltro,
-    localidadId: sp.localidad || undefined,
+    localidadIds: localidadIdsFiltro,
     busqueda: sp.q || undefined,
     diasDesde,
     page,
@@ -105,7 +111,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
             <PuestosFilters
               sectores={sectores}
               provincias={provincias}
-              localidades={localidadesFiltro}
+              departamentos={departamentosFiltro}
               carreras={carrerasOrdenadas}
             />
           </Suspense>

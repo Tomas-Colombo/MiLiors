@@ -9,6 +9,9 @@ import {
   agregarFormacion,
   editarFormacion,
   eliminarFormacion,
+  agregarCurso,
+  editarCurso,
+  eliminarCurso,
   agregarExperiencia,
   editarExperiencia,
   eliminarExperiencia,
@@ -16,7 +19,7 @@ import {
   eliminarIdioma,
   guardarCompetenciasConCustom,
 } from '@/modules/perfil-tecnico/actions'
-import type { PerfilTecnicoCompleto, CompetenciaItem, FormacionItem, ExperienciaItem, IdiomaItem } from '@/modules/perfil-tecnico/queries'
+import type { PerfilTecnicoCompleto, CompetenciaItem, FormacionItem, CursoItem, ExperienciaItem, IdiomaItem } from '@/modules/perfil-tecnico/queries'
 import type { ActionResult } from '@/lib/types/domain'
 
 // ─── MONTH/YEAR INPUT ────────────────────────────────────────────────────────
@@ -307,6 +310,193 @@ function SeccionFormacion({ formaciones }: { formaciones: FormacionItem[] }) {
         ) : (
           <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
             + Agregar formación
+          </Button>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ─── CURSOS ───────────────────────────────────────────────────────────────────
+
+/** Campos compartidos por el alta y la edición — el form sólo cambia por los defaults. */
+function CursoFields({ item, state }: { item?: CursoItem; state: ActionResult }) {
+  const err = (campo: string) =>
+    state.success === false ? state.fieldErrors?.[campo]?.[0] : undefined
+
+  return (
+    <>
+      <Field label="Nombre del curso" required error={err('nombre')}>
+        <Input
+          name="nombre"
+          defaultValue={item?.nombre}
+          placeholder="Ej: React avanzado"
+          status={err('nombre') ? 'error' : 'default'}
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Institución o plataforma" required error={err('institucion')}>
+          <Input
+            name="institucion"
+            defaultValue={item?.institucion}
+            placeholder="Ej: Coursera"
+            status={err('institucion') ? 'error' : 'default'}
+          />
+        </Field>
+        <Field label="Fecha de finalización" hint="Opcional">
+          <MonthYearInput name="fecha_fin" defaultValue={item?.fecha_fin ?? ''} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Duración (horas)" hint="Opcional" error={err('duracion_horas')}>
+          <Input
+            name="duracion_horas"
+            type="number"
+            min={1}
+            max={10000}
+            defaultValue={item?.duracion_horas ?? ''}
+            placeholder="Ej: 40"
+            status={err('duracion_horas') ? 'error' : 'default'}
+          />
+        </Field>
+        <Field label="Link de la credencial" hint="Opcional" error={err('url_credencial')}>
+          <Input
+            name="url_credencial"
+            type="url"
+            defaultValue={item?.url_credencial ?? ''}
+            placeholder="https://…"
+            status={err('url_credencial') ? 'error' : 'default'}
+          />
+        </Field>
+      </div>
+    </>
+  )
+}
+
+function CursoForm({ onSuccess }: { onSuccess: () => void }) {
+  const [state, action, pending] = useActionState(
+    async (prev: ActionResult, formData: FormData) => {
+      const result = await agregarCurso(prev, formData)
+      if (result.success) onSuccess()
+      return result
+    },
+    INITIAL_STATE
+  )
+
+  return (
+    <form action={action} className="mt-4 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+      <p className="text-[13px] font-semibold text-ink">Agregar curso</p>
+      <CursoFields state={state} />
+      {state.success === false && state.error && !state.fieldErrors && (
+        <Alert tone="error">{state.error}</Alert>
+      )}
+      <Button type="submit" size="sm" disabled={pending}>{pending ? 'Guardando…' : 'Agregar'}</Button>
+    </form>
+  )
+}
+
+function CursoEditForm({
+  item,
+  onSuccess,
+  onCancel,
+}: {
+  item: CursoItem
+  onSuccess: () => void
+  onCancel: () => void
+}) {
+  const boundAction = editarCurso.bind(null, item.id)
+  const [state, action, pending] = useActionState(
+    async (prev: ActionResult, formData: FormData) => {
+      const result = await boundAction(prev, formData)
+      if (result.success) onSuccess()
+      return result
+    },
+    INITIAL_STATE
+  )
+
+  return (
+    <form action={action} className="space-y-3 rounded-xl border border-primary-200 bg-primary-tint/30 p-4">
+      <CursoFields item={item} state={state} />
+      {state.success === false && state.error && !state.fieldErrors && (
+        <Alert tone="error">{state.error}</Alert>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={pending}>{pending ? 'Guardando…' : 'Guardar'}</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancelar</Button>
+      </div>
+    </form>
+  )
+}
+
+function SeccionCursos({ cursos }: { cursos: CursoItem[] }) {
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [editando, setEditando] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  function handleEliminar() {
+    if (!confirmId) return
+    startTransition(async () => {
+      await eliminarCurso(confirmId)
+      setConfirmId(null)
+    })
+  }
+
+  return (
+    <>
+      <ConfirmDeleteModal
+        open={confirmId !== null}
+        message="¿Querés eliminar este curso? Esta acción no se puede deshacer."
+        onConfirm={handleEliminar}
+        onClose={() => setConfirmId(null)}
+        isPending={isPending}
+      />
+      <div className="space-y-3">
+        {cursos.length === 0 && (
+          <p className="text-sm text-muted">Todavía no cargaste cursos.</p>
+        )}
+        {cursos.map((c) =>
+          editando === c.id ? (
+            <CursoEditForm
+              key={c.id}
+              item={c}
+              onSuccess={() => setEditando(null)}
+              onCancel={() => setEditando(null)}
+            />
+          ) : (
+            <div key={c.id} className="flex items-start justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
+              <div>
+                <p className="text-[14px] font-semibold text-ink">{c.nombre}</p>
+                <p className="text-[13px] text-muted">{c.institucion}</p>
+                <p className="text-[12px] text-neutral-400">
+                  {[
+                    formatMesAnio(c.fecha_fin),
+                    c.duracion_horas ? `${c.duracion_horas} h` : null,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+                {c.url_credencial && (
+                  <a
+                    href={c.url_credencial}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-[12px] font-medium text-primary-600 hover:underline"
+                  >
+                    Ver credencial
+                  </a>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditando(c.id)}>Editar</Button>
+                <Button type="button" size="sm" variant="ghost" className="text-error hover:bg-[#fceeed]" onClick={() => setConfirmId(c.id)}>Eliminar</Button>
+              </div>
+            </div>
+          )
+        )}
+        {mostrarForm ? (
+          <CursoForm onSuccess={() => setMostrarForm(false)} />
+        ) : (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setMostrarForm(true)}>
+            + Agregar curso
           </Button>
         )}
       </div>
@@ -834,6 +1024,7 @@ function SeccionCompetencias({
 
 const TAB_ITEMS = [
   { id: 'formacion', label: 'Formación' },
+  { id: 'cursos', label: 'Cursos' },
   { id: 'experiencia', label: 'Experiencia' },
   { id: 'idiomas', label: 'Idiomas' },
   { id: 'competencias', label: 'Habilidades y tecnologías' },
@@ -849,6 +1040,7 @@ export function PerfilTecnicoUI({
   const [tab, setTab] = useState('formacion')
 
   const formaciones = perfil?.formaciones ?? []
+  const cursos = perfil?.cursos ?? []
   const experiencias = perfil?.experiencias ?? []
   const idiomas = perfil?.idiomas ?? []
   const competenciasActuales = perfil?.competencias ?? []
@@ -858,6 +1050,7 @@ export function PerfilTecnicoUI({
       <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} className="mb-6" />
 
       {tab === 'formacion' && <SeccionFormacion formaciones={formaciones} />}
+      {tab === 'cursos' && <SeccionCursos cursos={cursos} />}
       {tab === 'experiencia' && <SeccionExperiencia experiencias={experiencias} />}
       {tab === 'idiomas' && <SeccionIdiomas idiomas={idiomas} />}
       {tab === 'competencias' && (

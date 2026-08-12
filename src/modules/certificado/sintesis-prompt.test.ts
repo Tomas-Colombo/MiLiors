@@ -27,6 +27,7 @@ function ctx(overrides: Partial<SintesisPromptContext> = {}): SintesisPromptCont
     comoTrabaja: [],
     competenciasTecnicas: ['SQL'],
     formaciones: [],
+    cursos: [],
     experiencias: [],
     idiomas: [],
     ...overrides,
@@ -133,6 +134,7 @@ function triageCtx(overrides: Partial<TriageContext> = {}): TriageContext {
     objetivo: 'Desarrollador de software',
     competenciasTecnicas: [],
     formaciones: [],
+    cursos: [],
     experiencias: [],
     ...overrides,
   }

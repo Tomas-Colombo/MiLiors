@@ -2,7 +2,7 @@
  * Tipos de la síntesis integrada del certificado.
  *
  * El certificado combina el Informe de Personalidad (condensado) con el perfil
- * técnico (formación, experiencia, competencias e idiomas) en una prosa en 3ª
+ * técnico (formación, cursos, experiencia, competencias e idiomas) en una prosa en 3ª
  * persona. El LLM SOLO devuelve prosa y la lista de competencias que logró
  * integrar; el código calcula las NO integradas (garantía anti-pérdida)
  * restando las integradas del total de competencias técnicas vigentes.
@@ -28,9 +28,9 @@ export type SintesisFortaleza = {
  * el postulante tiene que poder ver por qué su ítem no está, sin adivinar.
  */
 export type SintesisDescarte = {
-  /** id de la formación/experiencia, o el nombre exacto de la competencia. */
+  /** id de la formación/curso/experiencia, o el nombre exacto de la competencia. */
   clave: string
-  tipo: 'formacion' | 'experiencia' | 'competencia'
+  tipo: 'formacion' | 'curso' | 'experiencia' | 'competencia'
   /** Etiqueta legible para mostrarle al postulante qué ítem es. */
   label: string
   /** Por qué no aporta a la búsqueda declarada. */
@@ -42,7 +42,7 @@ export type SintesisDescarte = {
  * esquema anterior quedan marcadas como desactualizadas y el postulante ve el
  * botón para regenerarlas (mismo mecanismo que cuando el informe queda más nuevo).
  */
-export const SINTESIS_VERSION = 3
+export const SINTESIS_VERSION = 4
 
 /** Salida del LLM + metadata, persistida en `perfil_tecnico.sintesis_certificado`. */
 export type CertificadoSintesisJSON = {
