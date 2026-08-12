@@ -1,7 +1,7 @@
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { getInformeActual } from '@/modules/informe/queries'
+import { getInformeActual, getFeedbackInforme } from '@/modules/informe/queries'
 import { InformeVisor } from './informe-visor'
 
 export const maxDuration = 300
@@ -12,6 +12,12 @@ export default async function InformePage() {
   await verifySession()
   await requireEneagramaCompleto()
   const informe = await getInformeActual()
+
+  // Sólo hay algo que valorar si el informe está LISTO y con contenido.
+  const feedback =
+    informe?.estado_informe === 'LISTO' && informe.contenido_json
+      ? await getFeedbackInforme(informe.id, informe.fecha_generacion)
+      : null
 
   return (
     <TyCGate>
@@ -24,7 +30,7 @@ export default async function InformePage() {
             Generado a partir de tu Eneagrama y Human Design.
           </p>
         </div>
-        <InformeVisor informe={informe} />
+        <InformeVisor informe={informe} feedback={feedback} />
       </div>
     </TyCGate>
   )

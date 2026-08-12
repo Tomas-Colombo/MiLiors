@@ -2,7 +2,7 @@ import type { CertificadoContenido } from './queries'
 
 /**
  * Render presentacional del contenido del certificado — mismas secciones que el
- * PDF (candidato, perfil profesional, fortalezas, contexto, formación,
+ * PDF (candidato, perfil profesional, fortalezas, contexto, formación, cursos,
  * experiencia, competencias, idiomas). Sin estado ni hooks; homogéneo con
  * `InformeDisplay`.
  *
@@ -86,6 +86,29 @@ export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
                 <p className="text-[13px] text-muted">
                   {f.institucion}
                   {f.fecha_graduacion ? ` · ${formatFecha(f.fecha_graduacion)}` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Cursos */}
+      {data.cursos.length > 0 && (
+        <section>
+          <SectionTitle>Cursos y capacitaciones</SectionTitle>
+          <div className="space-y-2">
+            {data.cursos.map((c, i) => (
+              <div key={i}>
+                <p className="text-[13.5px] font-semibold text-ink">{c.nombre}</p>
+                <p className="text-[13px] text-muted">
+                  {[
+                    c.institucion,
+                    c.fecha_fin ? formatFecha(c.fecha_fin) : null,
+                    c.duracion_horas ? `${c.duracion_horas} h` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </p>
               </div>
             ))}

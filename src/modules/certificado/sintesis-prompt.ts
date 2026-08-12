@@ -24,6 +24,14 @@ export type SintesisFormacion = {
   fechaGraduacion: string | null
 }
 
+export type SintesisCurso = {
+  id: string
+  nombre: string
+  institucion: string
+  fechaFin: string | null
+  duracionHoras: number | null
+}
+
 export type SintesisExperiencia = {
   id: string
   puesto: string
@@ -54,6 +62,8 @@ export type SintesisPromptContext = {
   competenciasTecnicas: string[]
   /** Formación académica cargada. */
   formaciones: SintesisFormacion[]
+  /** Cursos y capacitaciones complementarias. */
+  cursos: SintesisCurso[]
   /** Experiencia laboral (material técnico a hilar). */
   experiencias: SintesisExperiencia[]
   /** Idiomas cargados. */
@@ -63,7 +73,7 @@ export type SintesisPromptContext = {
 /** Lo único que el triage necesita: la búsqueda y el material técnico a medir. */
 export type TriageContext = Pick<
   SintesisPromptContext,
-  'objetivo' | 'competenciasTecnicas' | 'formaciones' | 'experiencias'
+  'objetivo' | 'competenciasTecnicas' | 'formaciones' | 'cursos' | 'experiencias'
 >
 
 const MESES = ['', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
@@ -192,6 +202,10 @@ Si todo el material aporta, devolvé {"descartar": []}.`
         .join('\n')
     : '  (sin formación cargada)'
 
+  const cursosStr = ctx.cursos.length
+    ? ctx.cursos.map(c => `  - [${c.id}] ${c.nombre} — ${c.institucion}`).join('\n')
+    : '  (sin cursos cargados)'
+
   const expStr = ctx.experiencias.length
     ? ctx.experiencias
         .map(e => {
@@ -211,6 +225,9 @@ BÚSQUEDA DECLARADA: ${ctx.objetivo}
 
 ═══ FORMACIÓN ═══
 ${formStr}
+
+═══ CURSOS Y CAPACITACIONES ═══
+${cursosStr}
 
 ═══ EXPERIENCIA LABORAL ═══
 ${expStr}
@@ -236,7 +253,7 @@ LA BÚSQUEDA DECLARADA ES EL EJE:
 El candidato declaró qué estudió y qué busca. Todo lo que escribas tiene que servirle a un reclutador que lo evalúa PARA ESA BÚSQUEDA. El material técnico que recibís YA fue filtrado: lo que no aportaba se sacó antes de llegar a vos. Escribí sobre lo que está, no menciones ausencias ("no registra experiencia en...") ni te disculpes por lo que falta.
 
 LA REGLA CENTRAL — INTEGRAR, NO YUXTAPONER:
-El candidato ya tiene un informe de personalidad completo aparte. NO lo repitas ni lo resumas. Acá la personalidad es el "cómo" que explica el "qué" de la trayectoria: cada rasgo que menciones tiene que estar ANCLADO en evidencia concreta del perfil técnico (un puesto, una empresa, una tecnología, un título, un idioma, una duración). Un rasgo sin evidencia técnica que lo sostenga NO va.
+El candidato ya tiene un informe de personalidad completo aparte. NO lo repitas ni lo resumas. Acá la personalidad es el "cómo" que explica el "qué" de la trayectoria: cada rasgo que menciones tiene que estar ANCLADO en evidencia concreta del perfil técnico (un puesto, una empresa, una tecnología, un título, un curso, un idioma, una duración). Un rasgo sin evidencia técnica que lo sostenga NO va.
 - MAL (yuxtapone): "Es analítico y detallista. Trabajó en Acme con SQL."
 - BIEN (integra): "Su lectura analítica encontró terreno fértil en los tres años en Acme, donde el trabajo con SQL exigía sostener la precisión bajo pedidos que cambiaban de semana a semana."
 
@@ -292,6 +309,20 @@ EXTENSIÓN TOTAL: apuntá a 700-800 palabras. Denso y concreto, sin relleno.`
         .join('\n')
     : '  (sin formación cargada)'
 
+  const cursosStr = ctx.cursos.length
+    ? ctx.cursos
+        .map(c => {
+          const detalle = [
+            c.fechaFin ? formatMes(c.fechaFin) : 'en curso o sin fecha',
+            c.duracionHoras ? `${c.duracionHoras} h` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')
+          return `  - ${c.nombre} — ${c.institucion} · ${detalle}`
+        })
+        .join('\n')
+    : '  (sin cursos cargados)'
+
   const idiomasStr = ctx.idiomas.length
     ? ctx.idiomas.map(i => `  - ${i.nombre}: ${i.nivel}`).join('\n')
     : '  (sin idiomas cargados)'
@@ -339,6 +370,9 @@ Ya está filtrado por relevancia para la búsqueda declarada: esto es TODO lo qu
 
 Formación académica:
 ${formStr}
+
+Cursos y capacitaciones (complementan la formación; las horas ya vienen calculadas):
+${cursosStr}
 
 Experiencia laboral (duraciones YA CALCULADAS — citalas tal cual):
 ${expStr}

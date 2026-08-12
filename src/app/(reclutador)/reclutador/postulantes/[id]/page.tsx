@@ -297,6 +297,44 @@ export default async function PostulanteDetallePage({
               </Card>
             )}
 
+            {/* Cursos */}
+            {postulante.cursos.length > 0 && (
+              <Card>
+                <h2 className="text-[14px] font-bold text-ink mb-3">Cursos</h2>
+                <ul className="space-y-3">
+                  {postulante.cursos.map((c, i) => (
+                    <li key={i} className="text-[13px]">
+                      <p className="font-semibold text-ink">{c.nombre}</p>
+                      <p className="text-muted">{c.institucion}</p>
+                      <p className="text-neutral-400 text-xs">
+                        {[
+                          c.fecha_fin
+                            ? new Date(c.fecha_fin).toLocaleDateString('es-AR', {
+                                month: 'long',
+                                year: 'numeric',
+                              })
+                            : null,
+                          c.duracion_horas ? `${c.duracion_horas} h` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                      {c.url_credencial && (
+                        <a
+                          href={c.url_credencial}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-medium text-primary-600 hover:underline"
+                        >
+                          Ver credencial
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
             {/* Experiencia laboral */}
             {postulante.experiencias.length > 0 && (
               <Card>

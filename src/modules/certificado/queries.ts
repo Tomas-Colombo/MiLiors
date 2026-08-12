@@ -66,6 +66,7 @@ export type CertificadoContenido = {
     estrategia_hd: string
   } | null
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
+  cursos: { nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[]
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
   /** Competencias a mostrar como lista: todas si no hay síntesis, o solo las NO integradas si la hay. */
@@ -144,6 +145,7 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   } | null
 
   let formaciones: CertificadoContenido['formaciones'] = []
+  let cursos: CertificadoContenido['cursos'] = []
   let experiencias: CertificadoContenido['experiencias'] = []
   let idiomas: CertificadoContenido['idiomas'] = []
   let competencias: CertificadoContenido['competencias'] = []
@@ -152,12 +154,13 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   // la búsqueda declarada — se calcula antes para poder filtrarlos acá mismo.
   const sintesis = ptTyped?.sintesis_estado === 'LISTO' ? ptTyped.sintesis_certificado : null
   const formacionesDescartadas = clavesDescartadas(sintesis?.descartados, 'formacion')
+  const cursosDescartados = clavesDescartadas(sintesis?.descartados, 'curso')
   const experienciasDescartadas = clavesDescartadas(sintesis?.descartados, 'experiencia')
   const competenciasDescartadas = clavesDescartadas(sintesis?.descartados, 'competencia')
 
   if (ptTyped) {
     const ptId = ptTyped.id
-    const [f, e, i, c] = await Promise.all([
+    const [f, cu, e, i, c] = await Promise.all([
       // El mismo orden que usa el PDF (`crearCertificado`): sin ORDER BY, Postgres
       // devuelve las filas en orden arbitrario y la previsualización puede no
       // coincidir con el archivo descargado.
@@ -166,6 +169,11 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
         .select('id, titulo, institucion, fecha_graduacion')
         .eq('perfil_tecnico_id', ptId)
         .order('fecha_graduacion', { ascending: false }),
+      supabase
+        .from('curso')
+        .select('id, nombre, institucion, fecha_fin, duracion_horas')
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_fin', { ascending: false }),
       supabase
         .from('experiencia_laboral')
         .select('id, puesto, empresa, fecha_inicio, fecha_fin')
@@ -177,7 +185,10 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     formaciones = ((f.data ?? []) as { id: string; titulo: string; institucion: string; fecha_graduacion: string | null }[])
       .filter(item => !estaDescartada(formacionesDescartadas, item.id))
       .map(({ titulo, institucion, fecha_graduacion }) => ({ titulo, institucion, fecha_graduacion }))
-    experiencias = ((e.data ?? []) as { id: string; puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[])
+    cursos = ((cu.data ?? []) as { id: string; nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[])
+      .filter(item => !estaDescartada(cursosDescartados, item.id))
+      .map(({ nombre, institucion, fecha_fin, duracion_horas }) => ({ nombre, institucion, fecha_fin, duracion_horas }))
+    experiencias =((e.data ?? []) as { id: string; puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[])
       .filter(item => !estaDescartada(experienciasDescartadas, item.id))
       .map(({ puesto, empresa, fecha_inicio, fecha_fin }) => ({ puesto, empresa, fecha_inicio, fecha_fin }))
     idiomas = (i.data ?? []) as CertificadoContenido['idiomas']
@@ -212,6 +223,7 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
       ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })
       : null,
     formaciones,
+    cursos,
     experiencias,
     idiomas,
     competencias: competenciasVisibles,

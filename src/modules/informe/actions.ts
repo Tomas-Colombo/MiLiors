@@ -4,8 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { z } from 'zod'
 import { generarInformePersonalidad, type InformeContext } from './service'
+import { competenciaKeyPorNombre } from './competencias'
 import type { ActionResult } from '@/lib/types/domain'
+import type { InformePersonalidadJSON } from '@/lib/types/informe'
 
 async function recopilarContexto(postulanteId: string): Promise<InformeContext | null> {
   const session = await verifySession()
@@ -76,6 +79,141 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
  * REGLA: si ya existe un informe LISTO y NO está desactualizado, no se regenera
  * (evita gastar créditos de IA sin necesidad).
  */
+// ─── FEEDBACK DEL POSTULANTE ──────────────────────────────────────────────────
+// Telemetría para calibrar el motor. NO toca el informe: lo consume la síntesis
+// del certificado firmado, y un informe autocorregible dejaría de ser evidencia.
+
+/** Informe vigente del usuario autenticado, o null. */
+async function getInformeVigente(): Promise<{
+  id: string
+  postulanteId: string
+  fechaGeneracion: string
+  contenido: InformePersonalidadJSON
+} | null> {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const { data: postulante } = await supabase
+    .from('perfil_postulante')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!postulante) return null
+  const postulanteId = (postulante as { id: string }).id
+
+  const { data } = await supabase
+    .from('informe_personalidad')
+    .select('id, fecha_generacion, contenido_json, estado_informe')
+    .eq('postulante_id', postulanteId)
+    .single()
+
+  const informe = data as {
+    id: string
+    fecha_generacion: string
+    contenido_json: InformePersonalidadJSON | null
+    estado_informe: string
+  } | null
+
+  if (!informe || informe.estado_informe !== 'LISTO' || !informe.contenido_json) return null
+
+  return {
+    id: informe.id,
+    postulanteId,
+    fechaGeneracion: informe.fecha_generacion,
+    contenido: informe.contenido_json,
+  }
+}
+
+const valoracionSchema = z.enum(['SUBESTIMA', 'JUSTO', 'SOBRESTIMA'])
+
+/**
+ * Registra cómo le cae al postulante el nivel calculado para UNA competencia.
+ *
+ * El cliente manda sólo el nombre y la valoración: el nivel mostrado se deriva
+ * acá del informe persistido. Que el navegador declare qué nivel vio abriría la
+ * puerta a ensuciar el agregado que después usamos para mover los pesos.
+ */
+export async function valorarCompetencia(
+  nombre: string,
+  valoracion: string,
+): Promise<ActionResult> {
+  const parsed = valoracionSchema.safeParse(valoracion)
+  if (!parsed.success) return { success: false, error: 'Valoración inválida.' }
+
+  const informe = await getInformeVigente()
+  if (!informe) return { success: false, error: 'No tenés un informe generado.' }
+
+  const competencia = informe.contenido.competencias.find(c => c.nombre === nombre)
+  const key = competenciaKeyPorNombre(nombre)
+  if (!competencia || !key) return { success: false, error: 'Competencia no encontrada en tu informe.' }
+
+  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('feedback_informe_competencia') as any).upsert(
+    {
+      informe_id: informe.id,
+      postulante_id: informe.postulanteId,
+      competencia_key: key,
+      nivel_mostrado: competencia.nivel,
+      valoracion: parsed.data,
+      informe_generado_at: informe.fechaGeneracion,
+    },
+    { onConflict: 'informe_id,competencia_key' },
+  )
+
+  if (error) return { success: false, error: 'No se pudo guardar tu respuesta.' }
+  revalidatePath('/postulante/informe')
+  return { success: true, data: undefined }
+}
+
+const feedbackGlobalSchema = z.object({
+  representatividad: z.coerce
+    .number()
+    .int()
+    .min(1, { message: 'Elegí un puntaje.' })
+    .max(5, { message: 'Elegí un puntaje.' }),
+  comentario: z.string().trim().max(2000, { message: 'Máximo 2000 caracteres.' }).optional(),
+})
+
+/** Pregunta global de cierre: qué tan representado se siente + texto libre. */
+export async function guardarFeedbackInforme(
+  _prevState: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = feedbackGlobalSchema.safeParse({
+    representatividad: formData.get('representatividad'),
+    comentario: formData.get('comentario') || undefined,
+  })
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Revisá los campos.',
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    }
+  }
+
+  const informe = await getInformeVigente()
+  if (!informe) return { success: false, error: 'No tenés un informe generado.' }
+
+  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('feedback_informe') as any).upsert(
+    {
+      informe_id: informe.id,
+      postulante_id: informe.postulanteId,
+      representatividad: parsed.data.representatividad,
+      comentario: parsed.data.comentario || null,
+      informe_generado_at: informe.fechaGeneracion,
+    },
+    { onConflict: 'informe_id' },
+  )
+
+  if (error) return { success: false, error: 'No se pudo guardar tu respuesta.' }
+  revalidatePath('/postulante/informe')
+  return { success: true, data: undefined }
+}
+
 export async function generarInforme(): Promise<ActionResult> {
   const session = await verifySession()
   const supabase = await createClient()

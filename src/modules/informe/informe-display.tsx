@@ -1,4 +1,5 @@
-import type { BloqueCompetencia, InformePersonalidadJSON, NivelCompetencia } from '@/lib/types/informe'
+import type { ReactNode } from 'react'
+import type { BloqueCompetencia, CompetenciaItem, InformePersonalidadJSON, NivelCompetencia } from '@/lib/types/informe'
 import { BLOQUES_ORDEN, TALENTOS_ACLARACION } from './competencias'
 
 /**
@@ -28,9 +29,15 @@ type Props = {
   data: InformePersonalidadJSON
   /** Compacto = para la vista del reclutador (menos aire, sin mapa por defecto). */
   variant?: 'full' | 'compact'
+  /**
+   * Slot bajo cada competencia. Lo usa sólo el visor del postulante para colgar
+   * el control de feedback; sin él este componente sigue siendo presentacional
+   * puro (vista del reclutador y PDF lo omiten).
+   */
+  renderCompetenciaExtra?: (competencia: CompetenciaItem) => ReactNode
 }
 
-export function InformeDisplay({ data, variant = 'full' }: Props) {
+export function InformeDisplay({ data, variant = 'full', renderCompetenciaExtra }: Props) {
   const porBloque = BLOQUES_ORDEN.map((bloque: BloqueCompetencia) => ({
     bloque,
     items: data.competencias.filter(c => c.bloque === bloque),
@@ -88,6 +95,7 @@ export function InformeDisplay({ data, variant = 'full' }: Props) {
                       </span>
                     </div>
                     {c.descripcion && <p className="mt-0.5 text-[13px] leading-relaxed text-soft">{c.descripcion}</p>}
+                    {renderCompetenciaExtra?.(c)}
                   </div>
                 ))}
               </div>

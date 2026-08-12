@@ -89,6 +89,17 @@ export const COMPETENCIAS: CompetenciaDef[] = [
   { key: 'orientacion_resultados', nombre: 'Orientación a resultados', bloque: 'Cómo ejecuta y se sostiene', pesos: pesos(3, 8, 1) },
 ]
 
+/**
+ * `nombre` visible → `key` estable. El informe persistido en jsonb guarda las
+ * competencias por nombre; el feedback las referencia por key para que renombrar
+ * una competencia no invalide el histórico. Devuelve null si el nombre no existe
+ * (informe de una versión anterior con otro set de competencias).
+ */
+export function competenciaKeyPorNombre(nombre: string): CompetenciaKey | null {
+  const def = COMPETENCIAS.find(c => c.nombre === nombre)
+  return def ? def.key : null
+}
+
 /** Orden de los bloques para el render. */
 export const BLOQUES_ORDEN: BloqueCompetencia[] = [
   'Cómo decide y lidera',

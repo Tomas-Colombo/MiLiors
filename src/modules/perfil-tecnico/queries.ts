@@ -10,6 +10,7 @@ export type PerfilTecnicoCompleto = {
   resumen_profesional_llm: string | null
   fecha_actualizacion: string
   formaciones: FormacionItem[]
+  cursos: CursoItem[]
   experiencias: ExperienciaItem[]
   idiomas: IdiomaItem[]
   competencias: CompetenciaItem[]
@@ -20,6 +21,15 @@ export type FormacionItem = {
   institucion: string
   titulo: string
   fecha_graduacion: string | null
+}
+
+export type CursoItem = {
+  id: string
+  nombre: string
+  institucion: string
+  fecha_fin: string | null
+  duracion_horas: number | null
+  url_credencial: string | null
 }
 
 export type ExperienciaItem = {
@@ -69,6 +79,7 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
       resumen_profesional_llm: null,
       fecha_actualizacion: '',
       formaciones: [],
+      cursos: [],
       experiencias: [],
       idiomas: [],
       competencias: [],
@@ -77,12 +88,17 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
 
   const ptTyped = pt as { id: string; postulante_id: string; resumen_profesional_llm: string | null; fecha_actualizacion: string }
 
-  const [formaciones, experiencias, idiomas, competenciasJoin] = await Promise.all([
+  const [formaciones, cursos, experiencias, idiomas, competenciasJoin] = await Promise.all([
     supabase
       .from('formacion_academica')
       .select('id, institucion, titulo, fecha_graduacion')
       .eq('perfil_tecnico_id', ptTyped.id)
       .order('fecha_graduacion', { ascending: false }),
+    supabase
+      .from('curso')
+      .select('id, nombre, institucion, fecha_fin, duracion_horas, url_credencial')
+      .eq('perfil_tecnico_id', ptTyped.id)
+      .order('fecha_fin', { ascending: false }),
     supabase
       .from('experiencia_laboral')
       .select('id, empresa, puesto, fecha_inicio, fecha_fin, descripcion')
@@ -104,6 +120,7 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
     resumen_profesional_llm: ptTyped.resumen_profesional_llm,
     fecha_actualizacion: ptTyped.fecha_actualizacion,
     formaciones: ((formaciones.data ?? []) as FormacionItem[]),
+    cursos: ((cursos.data ?? []) as CursoItem[]),
     experiencias: ((experiencias.data ?? []) as ExperienciaItem[]),
     idiomas: ((idiomas.data ?? []) as IdiomaItem[]),
     competencias: (competenciasJoin.data ?? []).map((row: unknown) => {
