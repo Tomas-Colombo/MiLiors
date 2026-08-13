@@ -3,7 +3,8 @@ import { TyCGate } from '@/components/shared/tyc-gate'
 import { VolverLink } from '@/components/shared/volver-link'
 import { ChevronLeftIcon, SparklesIcon } from '@/components/icons'
 import { getPuestoById, getPostulacionesRecibidas } from '@/modules/puestos/queries'
-import { AsistenteFavoritos, type FavoritoItem } from './asistente-favoritos'
+import { AsistenteCandidatos, type CandidatoItem } from './asistente-candidatos'
+import { MARCA_POSTULACION } from '@/lib/constants/enums'
 
 export const metadata = { title: 'Asistente IA del puesto — TalentID' }
 
@@ -18,17 +19,19 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
   const puesto = await getPuestoById(id)
   if (!puesto) notFound()
 
-  // Favorites are derived from the recruiter's received applications, keeping the
-  // "favorito" source of truth identical to the Postulaciones view.
+  // La lista sale de las postulaciones recibidas, con la misma marca que muestra
+  // la vista de Postulaciones. "En duda" avanza igual que "Avanza": entra a la
+  // consulta, sólo que señalada.
   const postulaciones = await getPostulacionesRecibidas()
-  const favoritos: FavoritoItem[] = postulaciones
-    .filter((p) => p.puesto_id === id && p.is_favorito)
+  const candidatos: CandidatoItem[] = postulaciones
+    .filter((p) => p.puesto_id === id && p.marca !== null)
     .map((p) => ({
       postulacionId: p.id,
       postulanteId: p.postulante_id,
       nombre: p.nombre_completo ?? 'Candidato',
       email: p.contacto.email,
       fechaPostulacion: p.fecha_postulacion,
+      enDuda: p.marca === MARCA_POSTULACION.DUDA,
     }))
 
   return (
@@ -51,13 +54,13 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
           <div>
             <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
             <p className="text-[13px] text-muted">
-              Favoritos que se postularon a{' '}
+              Candidatos marcados para avanzar en{' '}
               <span className="font-medium text-ink-soft">{puesto.titulo_puesto}</span>.
             </p>
           </div>
         </div>
 
-        <AsistenteFavoritos puestoId={id} favoritos={favoritos} />
+        <AsistenteCandidatos puestoId={id} candidatos={candidatos} />
       </div>
     </TyCGate>
   )

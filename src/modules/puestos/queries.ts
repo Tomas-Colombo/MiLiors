@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import type { MarcaPostulacion } from '@/lib/constants/enums'
 
 export type PuestoItem = {
   id: string
@@ -185,6 +186,21 @@ export const getPuestoById = cache(async (
     nombre_provincia: r.provincia?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }
+})
+
+/** Total de postulaciones recibidas por un puesto propio (todos los ciclos). */
+export const getTotalPostulacionesDePuesto = cache(async (puestoId: string): Promise<number> => {
+  // getPuestoById ya valida propiedad y está cacheado por request.
+  const puesto = await getPuestoById(puestoId)
+  if (!puesto) return 0
+
+  const admin = createAdminClient()
+  const { count } = await admin
+    .from('postulacion')
+    .select('id', { count: 'exact', head: true })
+    .eq('puesto_id', puestoId)
+
+  return count ?? 0
 })
 
 export type ContratacionHistorial = {
@@ -577,7 +593,7 @@ export const getPostulacionesRecibidas = cache(async () => {
   const { data: postulaciones } = await admin
     .from('postulacion')
     .select(`
-      id, estado, is_favorito, fecha_postulacion, updated_at, postulante_id, puesto_id,
+      id, estado, marca, fecha_postulacion, updated_at, postulante_id, puesto_id,
       historial_puesto_id, motivo_descarte,
       puesto(id, titulo_puesto),
       perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
@@ -642,7 +658,7 @@ export const getPostulacionesRecibidas = cache(async () => {
 
   return (postulaciones ?? []).map((row: unknown) => {
     const r = row as {
-      id: string; estado: string; is_favorito: boolean
+      id: string; estado: string; marca: MarcaPostulacion | null
       fecha_postulacion: string; updated_at: string
       postulante_id: string; puesto_id: string; historial_puesto_id: string
       motivo_descarte: string | null
@@ -670,7 +686,7 @@ export const getPostulacionesRecibidas = cache(async () => {
     return {
       id: r.id,
       estado: r.estado,
-      is_favorito: r.is_favorito ?? false,
+      marca: r.marca ?? null,
       fecha_postulacion: r.fecha_postulacion,
       updated_at: r.updated_at,
       puesto_id: r.puesto_id,

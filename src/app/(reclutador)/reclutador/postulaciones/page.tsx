@@ -5,13 +5,14 @@ import { Card, Badge, Chip, EmptyState, Tooltip } from '@/components/ui'
 import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon, WhatsAppIcon } from '@/components/icons'
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
 import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
+import { getMotivosNoAvanzar } from '@/modules/postulantes/queries'
 import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
-import { ESTADO_POSTULACION } from '@/lib/constants/enums'
+import { ESTADO_POSTULACION, MARCA_POSTULACION } from '@/lib/constants/enums'
 import { PostulacionAcciones } from './postulacion-acciones'
 import { VerPerfilBtn } from './ver-perfil-btn'
 import { VerRespuestasBtn } from './ver-respuestas-btn'
 import { NotasModalBtn } from './notas-modal-btn'
-import { FavoritoToggle } from './favorito-toggle'
+import { MarcaPostulacionBtns } from './marca-postulacion'
 import { RevertirDescarteBtn } from './revertir-descarte-btn'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
 import { paginar } from '@/lib/pagination'
@@ -32,12 +33,12 @@ const estadoTone: Record<string, Tone> = {
 const estadoLabel: Record<string, string> = {
   [ESTADO_POSTULACION.ENVIADA]: 'Enviada',
   [ESTADO_POSTULACION.VISTO]: 'Vista',
-  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'Descartada',
+  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'No avanza',
   [ESTADO_POSTULACION.CERRADA]: 'Cerrada',
 }
 
 type SearchParams = Promise<{
-  puesto?: string; estado?: string; favoritos?: string; q?: string; page?: string; ciclos?: string
+  puesto?: string; estado?: string; marca?: string; q?: string; page?: string; ciclos?: string
   carrera?: string; habilidad?: string; provincia?: string; localidad?: string
 }>
 
@@ -47,7 +48,7 @@ export default async function PostulacionesRecibidasPage({
   searchParams: SearchParams
 }) {
   const {
-    puesto: filtroPuesto, estado: filtroEstado, favoritos: filtroFavoritos, q: qRaw, page: pageParam,
+    puesto: filtroPuesto, estado: filtroEstado, marca: filtroMarca, q: qRaw, page: pageParam,
     ciclos: filtroCiclos, carrera: filtroCarrera, habilidad: filtroHabilidad,
     provincia: filtroProvincia, localidad: filtroLocalidad,
   } = await searchParams
@@ -100,8 +101,11 @@ export default async function PostulacionesRecibidasPage({
   // Apply filters server-side (data already loaded; filter in memory)
   const filtered = postulaciones.filter((p) => {
     if (filtroPuesto && p.puesto_id !== filtroPuesto) return false
-    if (filtroEstado && p.estado !== filtroEstado) return false
-    if (filtroFavoritos === '1' && !p.is_favorito) return false
+    // "No avanza aut." = descarte del preselector, que es lo único que deja motivo.
+    if (filtroEstado === 'PROCESO_FINALIZADO_AUTO') {
+      if (p.estado !== ESTADO_POSTULACION.PROCESO_FINALIZADO || !p.motivo_descarte) return false
+    } else if (filtroEstado && p.estado !== filtroEstado) return false
+    if (filtroMarca && p.marca !== filtroMarca) return false
     if (filtroCarrera && p.carrera !== filtroCarrera) return false
     if (filtroHabilidad && !p.habilidades.includes(filtroHabilidad)) return false
     if (filtroProvincia && p.provincia_id !== filtroProvincia) return false
@@ -121,6 +125,13 @@ export default async function PostulacionesRecibidasPage({
 
   // Only the visible page needs the "has preselector answers" flag for the button.
   const conRespuestas = await getPostulacionesConRespuestas(slice.map((p) => p.id))
+
+  // Motivo del descarte manual (nota privada) para mostrarlo al pasar por "No avanza".
+  const motivosNoAvanzar = await getMotivosNoAvanzar(
+    slice
+      .filter((p) => p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO)
+      .map((p) => p.postulante_id),
+  )
 
   return (
     <TyCGate>
@@ -168,7 +179,18 @@ export default async function PostulacionesRecibidasPage({
           />
         ) : (
           <div className="space-y-4">
-            {slice.map((p) => (
+            {slice.map((p) => {
+              // Motivo a mostrar sobre el badge "No avanza": la nota del descarte manual
+              // o, si lo descartó el preselector, el motivo automático.
+              const motivoManual =
+                motivosNoAvanzar.get(`${p.postulante_id}:${p.puesto_id ?? ''}`) ??
+                motivosNoAvanzar.get(`${p.postulante_id}:`)
+              const detalleNoAvanza =
+                p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO
+                  ? (motivoManual ?? p.motivo_descarte)
+                  : null
+
+              return (
               <Card key={p.id} padding="md">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0 space-y-1">
@@ -176,15 +198,29 @@ export default async function PostulacionesRecibidasPage({
                       <p className="text-[14px] font-semibold text-ink">
                         {p.nombre_completo ?? 'Candidato'}
                       </p>
-                      <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
-                        {estadoLabel[p.estado] ?? p.estado}
-                      </Badge>
+                      {detalleNoAvanza ? (
+                        <Tooltip
+                          content={
+                            <span className="block w-56 whitespace-normal leading-snug">
+                              {detalleNoAvanza}
+                            </span>
+                          }
+                        >
+                          <Badge tone="error" dot className="cursor-help">
+                            {estadoLabel[p.estado] ?? p.estado}
+                          </Badge>
+                        </Tooltip>
+                      ) : (
+                        <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
+                          {estadoLabel[p.estado] ?? p.estado}
+                        </Badge>
+                      )}
                       {/* Auto-discard indicator — motivo_descarte is only set by the
-                          preselector's automatic evaluation, never by a manual "Descartar" */}
+                          preselector's automatic evaluation, never by a manual "No avanzar" */}
                       {p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO && p.motivo_descarte && (
                         <Tooltip content={p.motivo_descarte}>
                           <Badge tone="error" className="cursor-help">
-                            Descartada automáticamente
+                            No avanza automáticamente
                           </Badge>
                         </Tooltip>
                       )}
@@ -200,7 +236,14 @@ export default async function PostulacionesRecibidasPage({
                           </span>
                         </Tooltip>
                       )}
-                      <FavoritoToggle postulacionId={p.id} isFavorito={p.is_favorito} />
+                      {/* Marca del reclutador: "Duda" avanza igual que "Avanza",
+                          pero se distingue visualmente */}
+                      {p.marca === MARCA_POSTULACION.AVANZA && (
+                        <Badge tone="success" dot>Avanza</Badge>
+                      )}
+                      {p.marca === MARCA_POSTULACION.DUDA && (
+                        <Badge tone="warning" dot>En duda</Badge>
+                      )}
                     </div>
 
                     <p className="text-[13px] text-muted truncate">
@@ -268,34 +311,54 @@ export default async function PostulacionesRecibidasPage({
                     </div>
                   )}
 
-                  <div className="w-full sm:w-44 flex-none flex flex-col items-stretch gap-2">
-                    <div className="flex flex-col gap-2 w-full">
-                      <VerPerfilBtn
-                        postulacionId={p.id}
-                        postulanteId={p.postulante_id}
-                        estadoActual={p.estado}
-                      />
-                      <Link
-                        href={`/reclutador/asistente?postulante=${p.postulante_id}&puesto=${p.puesto_id ?? ''}&postulacion=${p.id}`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
-                      >
-                        <SparklesIcon size={14} />
-                        Asistente IA
-                      </Link>
-                      {conRespuestas.has(p.id) && (
-                        <VerRespuestasBtn postulacionId={p.id} nombrePostulante={p.nombre_completo} />
+                  <div className="w-full sm:w-60 flex-none flex flex-col items-stretch gap-2">
+                    <VerPerfilBtn
+                      postulacionId={p.id}
+                      postulanteId={p.postulante_id}
+                      estadoActual={p.estado}
+                    />
+                    {p.estado !== ESTADO_POSTULACION.PROCESO_FINALIZADO &&
+                      p.estado !== ESTADO_POSTULACION.CERRADA && (
+                        <MarcaPostulacionBtns postulacionId={p.id} marca={p.marca} />
                       )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Tooltip
+                        className="w-full"
+                        content={
+                          <span className="block w-44 whitespace-normal leading-snug">
+                            Consultá a la IA sobre este candidato para este puesto.
+                          </span>
+                        }
+                      >
+                        <Link
+                          href={`/reclutador/asistente?postulante=${p.postulante_id}&puesto=${p.puesto_id ?? ''}&postulacion=${p.id}`}
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-2 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+                        >
+                          <SparklesIcon size={14} />
+                          Asistente IA
+                        </Link>
+                      </Tooltip>
                       <NotasModalBtn
                         postulanteId={p.postulante_id}
                         puestoId={p.puesto_id}
                         nombrePostulante={p.nombre_completo}
                       />
                     </div>
-                    <PostulacionAcciones postulacionId={p.id} estadoActual={p.estado} />
+                    {conRespuestas.has(p.id) && (
+                      <VerRespuestasBtn postulacionId={p.id} nombrePostulante={p.nombre_completo} />
+                    )}
+                    <PostulacionAcciones
+                      postulacionId={p.id}
+                      postulanteId={p.postulante_id}
+                      puestoId={p.puesto_id}
+                      tituloPuesto={p.titulo_puesto}
+                      estadoActual={p.estado}
+                    />
                   </div>
                 </div>
               </Card>
-            ))}
+              )
+            })}
           </div>
         )}
 

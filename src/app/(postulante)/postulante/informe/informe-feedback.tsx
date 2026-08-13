@@ -78,11 +78,48 @@ export function ValoracionCompetenciaControl({
 
 const INITIAL_STATE: ActionResult = { success: false, error: '' }
 
-const PUNTAJES = [1, 2, 3, 4, 5]
+/** 10 niveles expresados en porcentaje: es lo que se guarda tal cual. */
+const PORCENTAJES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
-export function FeedbackGlobalForm({ inicial }: { inicial: FeedbackInforme['global'] }) {
+function formatFecha(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+  } catch {
+    return iso
+  }
+}
+
+/** Cuadro cerrado: la opinión ya está dada y todavía no se reabre. */
+function FeedbackCerrado({ reabreAt }: { reabreAt: string | null }) {
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+      <p className="text-[13px] font-semibold text-ink">Gracias, ya registramos tu opinión.</p>
+      <p className="mt-0.5 text-[12px] text-muted">
+        {reabreAt
+          ? `Vas a poder opinar de nuevo a partir del ${formatFecha(reabreAt)}.`
+          : 'Vas a poder opinar de nuevo más adelante.'}
+      </p>
+    </div>
+  )
+}
+
+export function FeedbackGlobalForm({
+  inicial,
+  puedeOpinar,
+  reabreAt,
+}: {
+  inicial: FeedbackInforme['global']
+  puedeOpinar: boolean
+  reabreAt: string | null
+}) {
   const [puntaje, setPuntaje] = useState<number | null>(inicial?.representatividad ?? null)
   const [state, action, pending] = useActionState(guardarFeedbackInforme, INITIAL_STATE)
+
+  // Cerrado si el período de reactivación sigue corriendo, o apenas se envía:
+  // dejar el formulario abierto invitaría a responder de nuevo algo ya guardado.
+  if (!puedeOpinar || state.success) {
+    return <FeedbackCerrado reabreAt={state.success ? null : reabreAt} />
+  }
 
   return (
     <form action={action} className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
@@ -94,23 +131,25 @@ export function FeedbackGlobalForm({ inicial }: { inicial: FeedbackInforme['glob
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
-        {PUNTAJES.map(n => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => setPuntaje(n)}
-            aria-pressed={puntaje === n}
-            className={`h-9 w-9 rounded-full border text-[13px] font-semibold transition-colors ${
-              puntaje === n
-                ? 'border-primary-600 bg-primary-600 text-white'
-                : 'border-neutral-200 bg-surface text-muted hover:border-neutral-300 hover:text-ink'
-            }`}
-          >
-            {n}
-          </button>
-        ))}
-        <span className="ml-1 text-[11px] text-neutral-400">1 = nada · 5 = mucho</span>
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {PORCENTAJES.map(n => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setPuntaje(n)}
+              aria-pressed={puntaje === n}
+              className={`h-9 min-w-[3rem] rounded-full border px-2 text-[12.5px] font-semibold tabular-nums transition-colors ${
+                puntaje === n
+                  ? 'border-primary-600 bg-primary-600 text-white'
+                  : 'border-neutral-200 bg-surface text-muted hover:border-neutral-300 hover:text-ink'
+              }`}
+            >
+              {n}%
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px] text-neutral-400">10% = nada · 100% = totalmente</span>
       </div>
       {state.success === false && state.fieldErrors?.representatividad?.[0] && (
         <p className="text-[12px] text-error">{state.fieldErrors.representatividad[0]}</p>
@@ -126,7 +165,6 @@ export function FeedbackGlobalForm({ inicial }: { inicial: FeedbackInforme['glob
       {state.success === false && state.error && !state.fieldErrors && (
         <Alert tone="error">{state.error}</Alert>
       )}
-      {state.success && <Alert tone="success">Gracias, registramos tu respuesta.</Alert>}
 
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Enviando…' : inicial ? 'Actualizar respuesta' : 'Enviar'}

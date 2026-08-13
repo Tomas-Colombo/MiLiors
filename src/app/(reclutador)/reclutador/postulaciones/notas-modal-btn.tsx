@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Modal, Button, Textarea, Field, Alert, Skeleton } from '@/components/ui'
+import { Modal, Button, Textarea, Field, Alert, Skeleton, Tooltip } from '@/components/ui'
 import { EditIcon, TrashIcon, PlusIcon, FileTextIcon } from '@/components/icons'
 import {
   getNotasDePostulante,
@@ -10,6 +10,7 @@ import {
   eliminarNota,
   type NotaData,
 } from '@/modules/postulantes/actions'
+import { NotaTexto } from '@/components/shared/nota-texto'
 
 type Props = {
   postulanteId: string
@@ -103,14 +104,23 @@ export function NotasModalBtn({ postulanteId, puestoId, nombrePostulante }: Prop
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+      <Tooltip
+        className="w-full"
+        content={
+          <span className="block w-44 whitespace-normal leading-snug">
+            Notas privadas sobre el candidato. Sólo las ves vos.
+          </span>
+        }
       >
-        <FileTextIcon size={14} />
-        Notas
-      </button>
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-2 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+        >
+          <FileTextIcon size={14} />
+          Notas
+        </button>
+      </Tooltip>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Notas privadas" width={560}>
         <div className="space-y-4">
@@ -178,7 +188,7 @@ export function NotasModalBtn({ postulanteId, puestoId, nombrePostulante }: Prop
                     </div>
                   ) : (
                     <>
-                      <p className="text-[13px] text-ink whitespace-pre-wrap">{nota.contenido}</p>
+                      <NotaTexto contenido={nota.contenido} />
                       <div className="mt-2 flex items-center justify-between">
                         <div className="text-[11.5px] text-neutral-400">
                           {nota.titulo_puesto && (

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
-import { Select } from '@/components/ui'
+import { FancySelect } from '@/components/ui'
 import { TrashIcon } from '@/components/icons'
 import { SearchInput } from '@/components/shared/list-controls'
 
@@ -46,18 +46,18 @@ export function FiltrosPuestos({ totalVisible, totalTotal }: Props) {
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
       <SearchInput placeholder="Buscar por título…" className="w-full sm:w-56" />
       <div className="w-full sm:w-44">
-        <Select
+        <FancySelect
           options={ordenOpts}
           value={searchParams.get('orden') ?? ''}
-          onChange={(e) => setParam('orden', e.target.value)}
+          onChange={(value) => setParam('orden', value)}
           aria-label="Ordenar por fecha"
         />
       </div>
       <div className="w-full sm:w-44">
-        <Select
+        <FancySelect
           options={estadoOpts}
           value={searchParams.get('estado') ?? ''}
-          onChange={(e) => setParam('estado', e.target.value)}
+          onChange={(value) => setParam('estado', value)}
           aria-label="Filtrar por estado"
         />
       </div>

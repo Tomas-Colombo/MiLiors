@@ -388,6 +388,50 @@ export const getTodasLasNotasReclutador = cache(async (filters?: {
   })
 })
 
+/** Prefijo con el que postulacion-acciones.tsx guarda el motivo de un descarte manual. */
+const PREFIJO_NO_AVANZAR = 'Motivo de no avanzar'
+
+/**
+ * Motivos de descarte manual (la nota privada opcional que deja el reclutador al
+ * usar "No avanzar"), indexados por `postulanteId:puestoId`. La clave con puesto
+ * vacío cubre las notas cargadas sin puesto asociado.
+ */
+export const getMotivosNoAvanzar = cache(async (postulanteIds: string[]) => {
+  const mapa = new Map<string, string>()
+  if (postulanteIds.length === 0) return mapa
+
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const { data: reclutador } = await supabase
+    .from('perfil_reclutador')
+    .select('id')
+    .eq('usuario_id', session.id)
+    .single()
+
+  if (!reclutador) return mapa
+
+  const { data } = await supabase
+    .from('nota_privada')
+    .select('contenido, postulante_id, puesto_id, fecha_creacion')
+    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .in('postulante_id', postulanteIds)
+    .like('contenido', `${PREFIJO_NO_AVANZAR}%`)
+    .order('fecha_creacion', { ascending: false })
+
+  for (const row of (data ?? []) as {
+    contenido: string; postulante_id: string; puesto_id: string | null
+  }[]) {
+    const clave = `${row.postulante_id}:${row.puesto_id ?? ''}`
+    // Viene ordenado por fecha desc: la primera de cada clave es la última cargada.
+    if (mapa.has(clave)) continue
+    // Guardamos sólo el texto que escribió el reclutador, sin el prefijo.
+    mapa.set(clave, row.contenido.replace(/^Motivo de no avanzar(?: en "[^"]*")?:\s*/, ''))
+  }
+
+  return mapa
+})
+
 /** Notas privadas del reclutador para un postulante */
 export const getNotasPrivadas = cache(async (postulanteId: string) => {
   const session = await verifySession()

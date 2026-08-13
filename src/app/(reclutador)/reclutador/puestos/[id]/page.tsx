@@ -3,8 +3,12 @@ import { notFound } from 'next/navigation'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge, Alert } from '@/components/ui'
-import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon } from '@/components/icons'
-import { getPuestoById, getContratacionesDePuesto } from '@/modules/puestos/queries'
+import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon, UsersIcon } from '@/components/icons'
+import {
+  getPuestoById,
+  getContratacionesDePuesto,
+  getTotalPostulacionesDePuesto,
+} from '@/modules/puestos/queries'
 import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
@@ -20,9 +24,10 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
   const puesto = await getPuestoById(id)
   if (!puesto) notFound()
 
-  const [contrataciones, { diasInactividadCierre }] = await Promise.all([
+  const [contrataciones, { diasInactividadCierre }, totalPostulaciones] = await Promise.all([
     getContratacionesDePuesto(id),
     getConfiguracionSistema(),
+    getTotalPostulacionesDePuesto(id),
   ])
 
   // Alerta de cierre automático por inactividad (solo puestos activos).
@@ -111,6 +116,30 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
           </div>
         </Card>
 
+        {/* Postulaciones recibidas — total histórico del puesto (todos los ciclos) */}
+        <Card padding="md">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+              <UsersIcon size={20} />
+            </span>
+            <div>
+              <p className="text-xl font-extrabold leading-tight text-ink">{totalPostulaciones}</p>
+              <p className="text-[12.5px] text-muted">
+                Postulación{totalPostulaciones !== 1 ? 'es' : ''} recibida
+                {totalPostulaciones !== 1 ? 's' : ''} en total
+              </p>
+            </div>
+            {totalPostulaciones > 0 && (
+              <Link
+                href={`/reclutador/postulaciones?puesto=${id}`}
+                className="ml-auto inline-flex h-8 items-center rounded-md bg-primary-tint px-3 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors"
+              >
+                Ver postulaciones
+              </Link>
+            )}
+          </div>
+        </Card>
+
         {/* Description */}
         {puesto.descripcion_texto && (
           <Card>
@@ -156,10 +185,10 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
           </dl>
         </Card>
 
-        {/* Private psychological profile — only visible to the recruiter */}
+        {/* Notas privadas del puesto — only visible to the recruiter */}
         {puesto.perfil_psicologico_deseado && (
           <Card>
-            <h2 className="text-[14px] font-bold text-ink mb-1">Perfil psicológico deseado</h2>
+            <h2 className="text-[14px] font-bold text-ink mb-1">Notas privadas sobre el puesto</h2>
             <p className="text-[12px] text-neutral-400 mb-3">
               Solo visible para vos. Los postulantes nunca verán este campo.
             </p>

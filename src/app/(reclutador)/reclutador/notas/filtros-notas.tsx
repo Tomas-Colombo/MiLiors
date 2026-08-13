@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
-import { Select, SearchableSelect } from '@/components/ui'
+import { FancySelect, SearchableSelect } from '@/components/ui'
 import { TrashIcon } from '@/components/icons'
 import { SearchInput } from '@/components/shared/list-controls'
 
@@ -65,10 +65,10 @@ export function FiltrosNotas({ candidatos, totalVisible, totalTotal }: Props) {
         />
       </div>
       <div className="w-full sm:w-44">
-        <Select
+        <FancySelect
           options={fechaOpts}
           value={searchParams.get('dias') ?? ''}
-          onChange={(e) => setParam('dias', e.target.value)}
+          onChange={(value) => setParam('dias', value)}
           aria-label="Filtrar por antigüedad"
         />
       </div>

@@ -13,7 +13,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
-import { Input, Select, Pagination } from '@/components/ui'
+import { Input, FancySelect, Pagination } from '@/components/ui'
 import type { SelectOption } from '@/components/ui'
 import { SearchIcon, TrashIcon } from '@/components/icons'
 
@@ -100,10 +100,10 @@ export function FilterSelect({
   const { searchParams, setParams } = useSetParam()
   return (
     <div className={className ?? 'w-full sm:w-48'}>
-      <Select
+      <FancySelect
         options={options}
         value={searchParams.get(paramKey) ?? ''}
-        onChange={(e) => setParams({ [paramKey]: e.target.value || null })}
+        onChange={(value) => setParams({ [paramKey]: value || null })}
         aria-label={ariaLabel}
       />
     </div>

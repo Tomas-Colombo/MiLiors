@@ -1,6 +1,6 @@
 /**
  * Prompts para el informe de selección grupal: compara los candidatos
- * favoritos de un puesto y produce un ranking justificado en JSON.
+ * candidatos marcados de un puesto y produce un ranking justificado en JSON.
  */
 
 export type CandidatoContexto = {

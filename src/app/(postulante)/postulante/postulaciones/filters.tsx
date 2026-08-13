@@ -1,16 +1,17 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useCallback, useRef } from 'react'
-import { Select } from '@/components/ui'
-import { SearchIcon, TrashIcon } from '@/components/icons'
+import { useCallback } from 'react'
+import { FancySelect } from '@/components/ui'
+import { TrashIcon } from '@/components/icons'
+import { SearchInput } from '@/components/shared/list-controls'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 
 const ESTADO_OPTS = [
   { value: '', label: 'Todos los estados' },
   { value: ESTADO_POSTULACION.ENVIADA, label: 'Enviada' },
   { value: ESTADO_POSTULACION.VISTO, label: 'Vista' },
-  { value: ESTADO_POSTULACION.PROCESO_FINALIZADO, label: 'Descartada' },
+  { value: ESTADO_POSTULACION.PROCESO_FINALIZADO, label: 'No avanza' },
   { value: ESTADO_POSTULACION.CERRADA, label: 'Cerrada' },
 ]
 
@@ -23,7 +24,6 @@ export function PostulacionesFilters() {
   const sp = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -36,15 +36,6 @@ export function PostulacionesFilters() {
     [router, pathname, sp],
   )
 
-  const handleSearch = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => setParam('q', val), 380)
-    },
-    [setParam],
-  )
-
   const q = sp.get('q') ?? ''
   const estado = sp.get('estado') ?? ''
   const orden = sp.get('orden') === 'asc' ? 'asc' : 'desc'
@@ -52,33 +43,20 @@ export function PostulacionesFilters() {
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-      <div className="relative w-full sm:w-56">
-        <SearchIcon
-          size={16}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
-        />
-        <input
-          type="search"
-          key={q}
-          defaultValue={q}
-          onChange={handleSearch}
-          placeholder="Buscar por título…"
-          className="h-10 w-full rounded-md border border-neutral-300 bg-surface pl-9 pr-3.5 font-sans text-sm text-ink outline-none placeholder:text-neutral-400 transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50"
-        />
-      </div>
+      <SearchInput placeholder="Buscar por título…" className="w-full sm:w-56" />
       <div className="w-full sm:w-44">
-        <Select
+        <FancySelect
           options={ESTADO_OPTS}
           value={estado}
-          onChange={(e) => setParam('estado', e.target.value)}
+          onChange={(value) => setParam('estado', value)}
           aria-label="Filtrar por estado"
         />
       </div>
       <div className="w-full sm:w-48">
-        <Select
+        <FancySelect
           options={ORDEN_OPTS}
           value={orden}
-          onChange={(e) => setParam('orden', e.target.value === 'asc' ? 'asc' : '')}
+          onChange={(value) => setParam('orden', value === 'asc' ? 'asc' : '')}
           aria-label="Ordenar por fecha"
         />
       </div>

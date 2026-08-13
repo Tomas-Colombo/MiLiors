@@ -19,12 +19,18 @@ export function RevertirDescarteBtn({ postulacionId }: Props) {
   }
 
   return (
-    <Tooltip content="Revertir descarte">
+    <Tooltip
+      content={
+        <span className="block w-44 whitespace-normal leading-snug">
+          Deshace el &quot;No avanzar&quot;: la postulación vuelve al estado Vista.
+        </span>
+      }
+    >
       <button
         type="button"
         onClick={revertir}
         disabled={isPending}
-        aria-label="Revertir descarte"
+        aria-label="Revertir: volver a poner en proceso"
         className="inline-flex items-center justify-center w-6 h-6 rounded-md text-neutral-300 hover:text-primary-600 hover:bg-primary-tint transition-colors disabled:opacity-50"
       >
         <Undo2Icon size={13} />

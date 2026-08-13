@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 
 export type ConfiguracionSistema = {
   diasInactividadCierre: number
+  /** Días hasta que el cuadro de opinión del informe vuelve a ofrecerse. */
+  diasReactivarFeedback: number
 }
 
 /**
@@ -16,10 +18,17 @@ export const getConfiguracionSistema = cache(async (): Promise<ConfiguracionSist
   const admin = createAdminClient()
   const { data } = await admin
     .from('configuracion_sistema')
-    .select('dias_inactividad_cierre')
+    .select('dias_inactividad_cierre, dias_reactivar_feedback')
     .eq('id', true)
     .maybeSingle()
 
-  const dias = (data as { dias_inactividad_cierre: number } | null)?.dias_inactividad_cierre
-  return { diasInactividadCierre: dias ?? 90 }
+  const fila = data as {
+    dias_inactividad_cierre: number
+    dias_reactivar_feedback: number
+  } | null
+
+  return {
+    diasInactividadCierre: fila?.dias_inactividad_cierre ?? 90,
+    diasReactivarFeedback: fila?.dias_reactivar_feedback ?? 90,
+  }
 })

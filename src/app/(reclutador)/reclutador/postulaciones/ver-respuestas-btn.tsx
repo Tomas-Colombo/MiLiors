@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Modal, Badge, Alert, Skeleton } from '@/components/ui'
+import { Modal, Badge, Alert, Skeleton, Tooltip } from '@/components/ui'
 import { FileTextIcon } from '@/components/icons'
 import { getRespuestasParaReclutador, type RespuestaParaReclutador } from '@/modules/preselector/actions'
 import { cn } from '@/lib/utils'
@@ -34,14 +34,23 @@ export function VerRespuestasBtn({ postulacionId, nombrePostulante }: Props) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+      <Tooltip
+        className="w-full"
+        content={
+          <span className="block w-44 whitespace-normal leading-snug">
+            Muestra lo que respondió en el formulario de preselección.
+          </span>
+        }
       >
-        <FileTextIcon size={14} />
-        Ver respuestas
-      </button>
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+        >
+          <FileTextIcon size={14} />
+          Ver respuestas
+        </button>
+      </Tooltip>
 
       <Modal
         open={open}

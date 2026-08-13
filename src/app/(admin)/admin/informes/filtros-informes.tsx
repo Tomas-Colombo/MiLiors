@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useRef, useState } from 'react'
-import { Select, Input } from '@/components/ui'
-import { SearchIcon, TrashIcon } from '@/components/icons'
+import { useCallback } from 'react'
+import { FancySelect } from '@/components/ui'
+import { TrashIcon } from '@/components/icons'
+import { SearchInput } from '@/components/shared/list-controls'
 
 type Props = {
   totalVisible: number
@@ -14,8 +15,6 @@ export function FiltrosInformes({ totalVisible, totalTotal }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [busqueda, setBusqueda] = useState(searchParams.get('q') ?? '')
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -33,26 +32,7 @@ export function FiltrosInformes({ totalVisible, totalTotal }: Props) {
     [router, pathname, searchParams],
   )
 
-  // Búsqueda de texto con debounce para no navegar en cada tecla
-  const navegarBusqueda = useCallback(
-    (value: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => setParam('q', value.trim()), 300)
-    },
-    [setParam],
-  )
-
-  const handleBusqueda = useCallback(
-    (value: string) => {
-      setBusqueda(value)
-      navegarBusqueda(value)
-    },
-    [navegarBusqueda],
-  )
-
   const limpiarFiltros = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    setBusqueda('')
     router.replace(pathname)
   }, [router, pathname])
 
@@ -76,28 +56,20 @@ export function FiltrosInformes({ totalVisible, totalTotal }: Props) {
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-      <div className="w-full sm:w-64">
-        <Input
-          leftIcon={<SearchIcon size={15} />}
-          placeholder="Buscar por participante…"
-          value={busqueda}
-          onChange={(e) => handleBusqueda(e.target.value)}
-          aria-label="Buscar por participante"
-        />
-      </div>
+      <SearchInput placeholder="Buscar por participante…" className="w-full sm:w-64" />
       <div className="w-full sm:w-56">
-        <Select
+        <FancySelect
           options={ordenOpts}
           value={searchParams.get('orden') ?? ''}
-          onChange={(e) => setParam('orden', e.target.value)}
+          onChange={(value) => setParam('orden', value)}
           aria-label="Ordenar informes"
         />
       </div>
       <div className="w-full sm:w-44">
-        <Select
+        <FancySelect
           options={estadoOpts}
           value={searchParams.get('estado') ?? ''}
-          onChange={(e) => setParam('estado', e.target.value)}
+          onChange={(value) => setParam('estado', value)}
           aria-label="Filtrar por estado"
         />
       </div>

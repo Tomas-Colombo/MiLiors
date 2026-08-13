@@ -24,14 +24,29 @@ export function VerPerfilBtn({ postulacionId, postulanteId, estadoActual }: Prop
 
   return (
     <div className="flex items-center gap-1.5">
-      <Link
-        href={`/reclutador/postulantes/${postulanteId}?postulacion=${postulacionId}&from=postulaciones`}
-        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+      <Tooltip
+        className="flex-1"
+        content={
+          <span className="block w-44 whitespace-normal leading-snug">
+            Abre el perfil completo del candidato y sus respuestas.
+          </span>
+        }
       >
-        Ver perfil
-      </Link>
+        <Link
+          href={`/reclutador/postulantes/${postulanteId}?postulacion=${postulacionId}&from=postulaciones`}
+          className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+        >
+          Ver perfil
+        </Link>
+      </Tooltip>
       {estadoActual === ESTADO_POSTULACION.ENVIADA && (
-        <Tooltip content="Marcar como visto">
+        <Tooltip
+          content={
+            <span className="block w-44 whitespace-normal leading-snug">
+              Marca la postulación como vista sin abrir el perfil.
+            </span>
+          }
+        >
           <button
             type="button"
             onClick={marcarVisto}

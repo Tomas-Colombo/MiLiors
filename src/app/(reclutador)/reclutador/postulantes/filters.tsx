@@ -1,9 +1,10 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import { SearchableSelect } from '@/components/ui'
-import { SearchIcon, TrashIcon } from '@/components/icons'
+import { TrashIcon } from '@/components/icons'
+import { SearchInput } from '@/components/shared/list-controls'
 
 type CompetenciaOpt = { value: string; label: string }
 type Provincia = { id: string; nombre: string }
@@ -28,7 +29,6 @@ export function PostulantesFilters({
   const sp = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -65,15 +65,6 @@ export function PostulantesFilters({
       router.replace(`${pathname}?${params.toString()}`)
     },
     [router, pathname, sp],
-  )
-
-  const handleSearch = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => setParam('busqueda', val), 380)
-    },
-    [setParam],
   )
 
   const busqueda = sp.get('busqueda') ?? ''
@@ -155,20 +146,7 @@ export function PostulantesFilters({
           }}
         />
       </div>
-      <div className="relative w-full sm:w-56">
-        <SearchIcon
-          size={16}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"
-        />
-        <input
-          type="search"
-          key={busqueda}
-          defaultValue={busqueda}
-          onChange={handleSearch}
-          placeholder="Buscar por nombre…"
-          className="h-10 w-full rounded-md border border-neutral-300 bg-surface pl-9 pr-3.5 font-sans text-sm text-ink outline-none placeholder:text-neutral-400 transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50"
-        />
-      </div>
+      <SearchInput paramKey="busqueda" placeholder="Buscar por nombre…" className="w-full sm:w-56" />
       {hasFilters && (
         <button
           type="button"

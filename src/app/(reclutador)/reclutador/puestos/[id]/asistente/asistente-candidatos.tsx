@@ -2,27 +2,29 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Card, Button, EmptyState, Alert } from '@/components/ui'
-import { SparklesIcon, StarIcon, CloseIcon, MailIcon, UsersIcon, Spinner } from '@/components/icons'
+import { Card, Button, Badge, EmptyState, Alert } from '@/components/ui'
+import { SparklesIcon, CheckCircleIcon, HelpCircleIcon, CloseIcon, MailIcon, UsersIcon, Spinner } from '@/components/icons'
 
-export type FavoritoItem = {
+export type CandidatoItem = {
   postulacionId: string
   postulanteId: string
   nombre: string
   email: string | null
   fechaPostulacion: string
+  /** Marcado como "Duda": avanza igual, pero se distingue en la lista. */
+  enDuda: boolean
 }
 
 type Props = {
   puestoId: string
-  favoritos: FavoritoItem[]
+  candidatos: CandidatoItem[]
 }
 
-export function AsistenteFavoritos({ puestoId, favoritos }: Props) {
-  // Working copy of the favorites list. Removals are intentionally local and
+export function AsistenteCandidatos({ puestoId, candidatos }: Props) {
+  // Working copy of the candidate list. Removals are intentionally local and
   // ephemeral: reloading the page rebuilds this list from the server, so the
   // recruiter can prune candidates for a single consultation without persisting.
-  const [lista, setLista] = useState<FavoritoItem[]>(favoritos)
+  const [lista, setLista] = useState<CandidatoItem[]>(candidatos)
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -77,7 +79,7 @@ export function AsistenteFavoritos({ puestoId, favoritos }: Props) {
       <Card>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[14px] font-semibold text-ink">Favoritos a evaluar</p>
+            <p className="text-[14px] font-semibold text-ink">Candidatos a evaluar</p>
             <p className="text-[12.5px] text-muted">
               {lista.length} candidato{lista.length !== 1 ? 's' : ''} en la consulta. Podés sacar a
               quien no quieras incluir; la lista se restablece al recargar.
@@ -101,14 +103,14 @@ export function AsistenteFavoritos({ puestoId, favoritos }: Props) {
         {error && <Alert tone="error" title={error} className="mt-3" />}
       </Card>
 
-      {/* Favorites list */}
+      {/* Candidate list */}
       {lista.length === 0 ? (
         <EmptyState
           icon={<UsersIcon size={24} />}
-          title="No hay favoritos en la lista"
+          title="No hay candidatos en la lista"
           description={
-            favoritos.length === 0
-              ? 'Marcá postulantes de este puesto como favoritos para verlos acá.'
+            candidatos.length === 0
+              ? 'Marcá postulantes de este puesto con "Avanzar" o "Duda" para verlos acá.'
               : 'Sacaste a todos de la lista. Recargá la página para restablecerla.'
           }
         />
@@ -123,8 +125,13 @@ export function AsistenteFavoritos({ puestoId, favoritos }: Props) {
                   </span>
                   <div className="min-w-0">
                     <p className="flex items-center gap-1.5 text-[13.5px] font-semibold text-ink">
-                      <StarIcon size={13} className="shrink-0 fill-yellow-400 stroke-yellow-400" />
+                      {f.enDuda ? (
+                        <HelpCircleIcon size={13} className="shrink-0 text-warning-solid" />
+                      ) : (
+                        <CheckCircleIcon size={13} className="shrink-0 text-success-solid" />
+                      )}
                       <span className="truncate">{f.nombre}</span>
+                      {f.enDuda && <Badge tone="warning">En duda</Badge>}
                     </p>
                     {f.email && (
                       <span className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] text-muted">

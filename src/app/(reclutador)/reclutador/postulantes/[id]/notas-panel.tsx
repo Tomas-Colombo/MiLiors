@@ -6,6 +6,7 @@ import { Button } from '@/components/ui'
 import { Textarea, Field } from '@/components/ui'
 import { EditIcon, TrashIcon, PlusIcon } from '@/components/icons'
 import { crearNota, editarNota, eliminarNota } from '@/modules/postulantes/actions'
+import { NotaTexto } from '@/components/shared/nota-texto'
 
 type Nota = {
   id: string
@@ -154,7 +155,7 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
                 </div>
               ) : (
                 <>
-                  <p className="text-[13px] text-ink whitespace-pre-wrap">{nota.contenido}</p>
+                  <NotaTexto contenido={nota.contenido} />
                   <div className="mt-2 flex items-center justify-between">
                     <div className="text-[11.5px] text-neutral-400">
                       {nota.titulo_puesto && (

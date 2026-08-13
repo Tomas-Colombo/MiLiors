@@ -1,9 +1,10 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useCallback, useRef, useState } from 'react'
-import { SearchIcon, FilterIcon } from '@/components/icons'
-import { SearchableSelect } from '@/components/ui'
+import { useState } from 'react'
+import { FilterIcon } from '@/components/icons'
+import { FancySelect, SearchableSelect } from '@/components/ui'
+import { SearchInput } from '@/components/shared/list-controls'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 import type { CarreraOption } from '@/modules/carreras/queries'
 
@@ -40,7 +41,6 @@ export function PuestosFilters({
 }) {
   const sp = useSearchParams()
   const router = useRouter()
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   function update(key: string, value: string) {
@@ -61,16 +61,6 @@ export function PuestosFilters({
     router.replace(`/postulante/puestos?${params.toString()}`)
   }
 
-  const handleSearch = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => update('q', val), 380)
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sp]
-  )
-
   const q = sp.get('q') ?? ''
   const dias = sp.get('dias') ?? ''
   const sector = sp.get('sector') ?? ''
@@ -82,6 +72,9 @@ export function PuestosFilters({
   // "postulacion" defaults to "todos" server-side, so we treat a missing param as that value.
   const postulacion = sp.get('postulacion') ?? 'todos'
   const hasFilters = !!(q || dias || sector || carga || ubicacion || provincia || departamento || carrera || sp.get('postulacion'))
+  // Con filtros aplicados el panel queda abierto y no se ofrece ocultarlo: los filtros
+  // se recuerdan entre pestañas y esconderlos hace pensar que no hay puestos.
+  const abierto = filtersOpen || hasFilters
 
   return (
     <div className="space-y-5">
@@ -89,37 +82,26 @@ export function PuestosFilters({
           la carrera) quedan ocultos hasta que el usuario abre "Mostrar filtros",
           para que el apartado quede simétrico. */}
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <SearchIcon
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-          />
-          <input
-            type="search"
-            key={q}
-            defaultValue={q}
-            onChange={handleSearch}
-            placeholder="Buscar por título…"
-            className="h-10 w-full rounded-xl border border-neutral-200 bg-surface pl-9 pr-4 text-sm text-ink placeholder:text-neutral-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 transition-shadow"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((o) => !o)}
-          className={[
-            'flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors',
-            filtersOpen
-              ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
-              : 'border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
-          ].join(' ')}
-        >
-          <FilterIcon size={15} />
-          {filtersOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
-        </button>
+        <SearchInput placeholder="Buscar por título…" className="flex-1" />
+        {!hasFilters && (
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className={[
+              'flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors',
+              filtersOpen
+                ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
+                : 'border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
+            ].join(' ')}
+          >
+            <FilterIcon size={15} />
+            {filtersOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+          </button>
+        )}
       </div>
 
       {/* Filtros colapsables */}
-      {filtersOpen && (
+      {abierto && (
         <>
           {/* Carrera: filtro principal, a todo el ancho. */}
           <div className="space-y-2">
@@ -178,23 +160,15 @@ export function PuestosFilters({
               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                 Sector
               </p>
-              <div className="relative">
-                <select
-                  value={sector}
-                  onChange={(e) => update('sector', e.target.value)}
-                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
-                >
-                  <option value="">Todos los sectores</option>
-                  {sectores.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nombre_sector}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
-                  ▾
-                </span>
-              </div>
+              <FancySelect
+                options={[
+                  { value: '', label: 'Todos los sectores' },
+                  ...sectores.map((s) => ({ value: s.id, label: s.nombre_sector })),
+                ]}
+                value={sector}
+                onChange={(value) => update('sector', value)}
+                aria-label="Filtrar por sector"
+              />
             </div>
 
             {/* Modalidad */}
@@ -254,23 +228,15 @@ export function PuestosFilters({
               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                 Provincia
               </p>
-              <div className="relative">
-                <select
-                  value={provincia}
-                  onChange={(e) => updateProvincia(e.target.value)}
-                  className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
-                >
-                  <option value="">Todas las provincias</option>
-                  {provincias.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
-                  ▾
-                </span>
-              </div>
+              <FancySelect
+                options={[
+                  { value: '', label: 'Todas las provincias' },
+                  ...provincias.map((p) => ({ value: p.id, label: p.nombre })),
+                ]}
+                value={provincia}
+                onChange={(value) => updateProvincia(value)}
+                aria-label="Filtrar por provincia"
+              />
             </div>
 
             {/* Departamento: solo se muestra cuando hay una provincia seleccionada. */}
@@ -279,23 +245,12 @@ export function PuestosFilters({
                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                   Departamento
                 </p>
-                <div className="relative">
-                  <select
-                    value={departamento}
-                    onChange={(e) => update('departamento', e.target.value)}
-                    className="h-9 w-full appearance-none rounded-lg border border-neutral-200 bg-surface pl-3 pr-8 text-sm text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 cursor-pointer"
-                  >
-                    <option value="">Todos los departamentos</option>
-                    {departamentos.map((d) => (
-                      <option key={d.value} value={d.value}>
-                        {d.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px]">
-                    ▾
-                  </span>
-                </div>
+                <FancySelect
+                  options={[{ value: '', label: 'Todos los departamentos' }, ...departamentos]}
+                  value={departamento}
+                  onChange={(value) => update('departamento', value)}
+                  aria-label="Filtrar por departamento"
+                />
               </div>
             )}
 

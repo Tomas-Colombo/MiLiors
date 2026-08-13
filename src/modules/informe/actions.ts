@@ -7,6 +7,7 @@ import { verifySession } from '@/lib/dal'
 import { z } from 'zod'
 import { generarInformePersonalidad, type InformeContext } from './service'
 import { competenciaKeyPorNombre } from './competencias'
+import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import type { ActionResult } from '@/lib/types/domain'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
 
@@ -168,11 +169,13 @@ export async function valorarCompetencia(
 }
 
 const feedbackGlobalSchema = z.object({
+  // Porcentaje en 10 niveles: 10, 20, … 100.
   representatividad: z.coerce
     .number()
     .int()
-    .min(1, { message: 'Elegí un puntaje.' })
-    .max(5, { message: 'Elegí un puntaje.' }),
+    .min(10, { message: 'Elegí un porcentaje.' })
+    .max(100, { message: 'Elegí un porcentaje.' })
+    .refine(n => n % 10 === 0, { message: 'Elegí un porcentaje.' }),
   comentario: z.string().trim().max(2000, { message: 'Máximo 2000 caracteres.' }).optional(),
 })
 
@@ -197,6 +200,27 @@ export async function guardarFeedbackInforme(
   if (!informe) return { success: false, error: 'No tenés un informe generado.' }
 
   const supabase = await createClient()
+
+  // El cuadro cerrado es UI; el período de reactivación se hace valer también
+  // acá, porque el formulario se puede reenviar sin pasar por la pantalla.
+  const { data: previa } = await supabase
+    .from('feedback_informe')
+    .select('informe_generado_at, updated_at')
+    .eq('informe_id', informe.id)
+    .maybeSingle()
+
+  const previaTyped = previa as { informe_generado_at: string; updated_at: string } | null
+
+  // Una respuesta anterior a la última regeneración no cuenta: el informe cambió.
+  if (previaTyped && previaTyped.informe_generado_at >= informe.fechaGeneracion) {
+    const { diasReactivarFeedback } = await getConfiguracionSistema()
+    const reabre =
+      new Date(previaTyped.updated_at).getTime() + diasReactivarFeedback * 24 * 60 * 60 * 1000
+    if (reabre > Date.now()) {
+      return { success: false, error: 'Ya dejaste tu opinión sobre este informe.' }
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from('feedback_informe') as any).upsert(
     {

@@ -52,7 +52,7 @@ export default async function ReclutadorDashboard() {
       href: '/reclutador/puestos/nuevo',
       icon: <PlusIcon size={20} className="text-primary-600" />,
       title: 'Publicar puesto',
-      desc: 'Nueva vacante con perfil psicológico deseado',
+      desc: 'Nueva vacante con notas privadas sobre el puesto',
     },
     {
       href: '/reclutador/postulaciones',

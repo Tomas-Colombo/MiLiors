@@ -6,7 +6,7 @@ export const maxDuration = 300
 
 /**
  * Genera y descarga el informe de selección grupal de un puesto como PDF.
- * Recibe la lista de candidatos (favoritos depurados en el cliente), consulta
+ * Recibe la lista de candidatos (marcados, depurados en el cliente), consulta
  * la IA y devuelve el PDF. Nada se persiste: el informe es efímero.
  */
 export async function POST(req: NextRequest) {

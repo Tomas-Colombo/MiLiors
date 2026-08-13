@@ -13,6 +13,7 @@ import {
   MapPinIcon,
   NotebookIcon,
   GlobeIcon,
+  FileTextIcon,
 } from '@/components/icons'
 import { AppSidebar } from '@/components/shared/app-sidebar'
 import { FilterMemory } from '@/components/shared/filter-memory'
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { href: '/admin/postulantes', label: 'Postulantes', icon: <UsersIcon size={18} /> },
   { href: '/admin/empresas', label: 'Empresas', icon: <BuildingIcon size={18} /> },
   { href: '/admin/informes', label: 'Informes', icon: <FileIcon size={18} /> },
+  { href: '/admin/feedback', label: 'Feedback del informe', icon: <FileTextIcon size={18} /> },
   { href: '/admin/preguntas', label: 'Preguntas eneagrama', icon: <HelpCircleIcon size={18} /> },
   { href: '/admin/tyc', label: 'Términos y Condiciones', icon: <ShieldIcon size={18} /> },
 ]

@@ -20,8 +20,21 @@ export const ESTADO_POSTULACION = {
 export const ESTADO_POSTULACION_LABEL: Record<string, string> = {
   ENVIADA: 'Tu aplicación ha sido recibida',
   VISTO: 'Tu perfil ha sido visualizado',
-  PROCESO_FINALIZADO: 'Tu aplicación ha sido descartada',
+  PROCESO_FINALIZADO: 'Tu aplicación no avanza en el proceso',
   CERRADA: 'La vacante ha sido concluida',
+}
+
+/** Marca del reclutador sobre una postulación. DUDA avanza igual que AVANZA. */
+export const MARCA_POSTULACION = {
+  AVANZA: 'AVANZA',
+  DUDA: 'DUDA',
+} as const
+
+export type MarcaPostulacion = (typeof MARCA_POSTULACION)[keyof typeof MARCA_POSTULACION]
+
+export const MARCA_POSTULACION_LABEL: Record<string, string> = {
+  AVANZA: 'Avanza',
+  DUDA: 'En duda',
 }
 
 export const CARGA_HORARIA = {

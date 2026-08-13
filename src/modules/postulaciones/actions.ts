@@ -5,7 +5,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { ActionResult } from '@/lib/types/domain'
-import { ESTADO_POSTULACION_LABEL, TIPO_PREGUNTA_PRESELECTOR } from '@/lib/constants/enums'
+import {
+  ESTADO_POSTULACION_LABEL,
+  TIPO_PREGUNTA_PRESELECTOR,
+  type MarcaPostulacion,
+} from '@/lib/constants/enums'
 import { getFormularioDePuesto } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/preselector/evaluador'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
@@ -352,9 +356,9 @@ export async function revertirDescarte(postulacionId: string): Promise<ActionRes
   return { success: true, data: undefined }
 }
 
-export async function toggleFavoritoPostulacion(
+export async function marcarPostulacion(
   postulacionId: string,
-  isFavorito: boolean,
+  marca: MarcaPostulacion | null,
 ): Promise<ActionResult> {
   const session = await verifySession()
   const supabase = await createClient()
@@ -372,10 +376,10 @@ export async function toggleFavoritoPostulacion(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (admin.from('postulacion') as any)
-    .update({ is_favorito: isFavorito })
+    .update({ marca })
     .eq('id', postulacionId)
 
-  if (error) return { success: false, error: 'No se pudo actualizar favorito.' }
+  if (error) return { success: false, error: 'No se pudo actualizar la marca.' }
 
   revalidatePath('/reclutador/postulaciones')
   return { success: true, data: undefined }

@@ -8,7 +8,7 @@ import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosNotas } from './filtros-notas'
-import { NotaContenido } from './nota-contenido'
+import { NotaTexto } from '@/components/shared/nota-texto'
 import { EliminarNotaBtn } from './eliminar-nota-btn'
 
 export const metadata = { title: 'Mis notas — TalentID' }
@@ -208,7 +208,11 @@ function NotaCard({
         </div>
 
         {/* Note content */}
-        <NotaContenido contenido={nota.contenido} />
+        <NotaTexto
+          contenido={nota.contenido}
+          titulo={`Nota sobre ${candidatoNombre}`}
+          className="text-sm leading-relaxed text-ink"
+        />
 
         {/* Postulación vinculada (a qué puesto se postuló el candidato) */}
         {postulacionesVisibles.length > 0 && (

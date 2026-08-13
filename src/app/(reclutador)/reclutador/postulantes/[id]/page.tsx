@@ -165,7 +165,7 @@ export default async function PostulanteDetallePage({
 
         {/* Descarte automático por formulario preselector */}
         {motivoDescarte && (
-          <Alert tone="error" title="Descartada automáticamente">
+          <Alert tone="error" title="No avanza automáticamente">
             {motivoDescarte}
           </Alert>
         )}

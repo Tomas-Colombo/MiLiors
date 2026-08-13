@@ -499,6 +499,33 @@ export async function actualizarDiasInactividad(
   return { success: true, data: undefined }
 }
 
+/**
+ * Actualiza cada cuánto vuelve a ofrecerse el cuadro de opinión del informe.
+ * Lo consumen `getFeedbackInforme` (para decidir si mostrarlo) y la propia
+ * action que guarda la opinión (para no aceptar reenvíos antes de tiempo).
+ */
+export async function actualizarDiasReactivarFeedback(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const dias = Number(formData.get('dias'))
+  if (!Number.isInteger(dias) || dias < 1 || dias > 3650) {
+    return { success: false, error: 'Ingresá un número entero de días entre 1 y 3650.' }
+  }
+
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('configuracion_sistema') as any)
+    .update({ dias_reactivar_feedback: dias, updated_at: new Date().toISOString() })
+    .eq('id', true)
+  if (error) return { success: false, error: 'No se pudo actualizar la configuración.' }
+
+  revalidatePath('/admin/feedback')
+  revalidatePath('/postulante/informe')
+  return { success: true, data: undefined }
+}
+
 // ─── Moderación postulantes ──────────────────────────────────────────────────
 
 export async function desactivarPostulante(postulanteId: string): Promise<ActionResult> {

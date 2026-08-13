@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/server-admin'
+import { COMPETENCIAS } from '@/modules/informe/competencias'
 
 // ─── Métricas del dashboard ──────────────────────────────────────────────────
 
@@ -315,4 +316,261 @@ export async function getInformesAdmin() {
       email: r.perfil_postulante?.usuario?.email ?? null,
     }
   })
+}
+
+// ─── Feedback del informe (calibración del motor) ─────────────────────────────
+//
+// Insumo para ajustar la matriz eneatipo→competencia y FACTOR_CONTRASTE con
+// datos reales en vez de a ojo. Deliberadamente SEUDÓNIMO: se expone
+// `postulante_id` para poder agrupar, nunca nombre ni email. Es telemetría del
+// modelo, no una ficha de la persona.
+
+export type ValoracionCompetencia = 'SUBESTIMA' | 'JUSTO' | 'SOBRESTIMA'
+
+export type FeedbackCompetenciaRow = {
+  id: string
+  postulanteId: string
+  eneatipo: number | null
+  competenciaKey: string
+  competenciaNombre: string
+  nivelMostrado: string
+  valoracion: ValoracionCompetencia
+  respondidoAt: string
+  informeGeneradoAt: string
+}
+
+export type FeedbackGlobalRow = {
+  id: string
+  postulanteId: string
+  eneatipo: number | null
+  representatividad: number
+  comentario: string | null
+  respondidoAt: string
+}
+
+export type FeedbackFiltros = {
+  eneatipo?: string
+  competencia?: string
+  nivel?: string
+  valoracion?: string
+  /** Atajo: ventana en días sobre la fecha de respuesta. Vacío = todo el histórico. */
+  dias?: string
+  /** Rango explícito 'YYYY-MM-DD'. Si viene alguno de los dos, pisa a `dias`. */
+  desde?: string
+  hasta?: string
+}
+
+const NOMBRE_POR_KEY: Record<string, string> = Object.fromEntries(
+  COMPETENCIAS.map(c => [c.key, c.nombre]),
+)
+
+/**
+ * Una consulta fallida y una tabla vacía llegan iguales a la pantalla (`data ??
+ * []`), así que el estado vacío por sí solo no distingue "todavía nadie opinó"
+ * de "las migraciones no están aplicadas". Al menos que quede en el log.
+ */
+function logFeedbackError(contexto: string, error: unknown): void {
+  console.error(`[admin/feedback] Error al leer ${contexto}:`, error)
+}
+
+/** Eneatipo dominante por postulante. Se resuelve aparte para no anidar 4 embeds. */
+async function eneatipoPorPostulante(postulanteIds: string[]): Promise<Record<string, number | null>> {
+  if (postulanteIds.length === 0) return {}
+  const admin = createAdminClient()
+
+  const { data } = await admin
+    .from('perfil_postulante')
+    .select('id, test_eneagrama(test_eneagrama_dominante(eneatipo(numero_eneatipo)))')
+    .in('id', postulanteIds)
+
+  const mapa: Record<string, number | null> = {}
+  for (const row of (data ?? []) as unknown[]) {
+    const r = row as {
+      id: string
+      test_eneagrama: { test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number } }[] } | null
+    }
+    mapa[r.id] = r.test_eneagrama?.test_eneagrama_dominante?.[0]?.eneatipo?.numero_eneatipo ?? null
+  }
+  return mapa
+}
+
+const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Corte temporal sobre la fecha de respuesta, en ISO.
+ *
+ * El rango explícito tiene prioridad sobre el atajo de días: si el admin se tomó
+ * el trabajo de tipear fechas, un preset olvidado en la URL no debería recortarlas.
+ * `hasta` se extiende al final del día para que el rango sea inclusivo — elegir
+ * "hasta el 12" y no ver lo cargado ese mismo día sería un bug silencioso.
+ */
+function rangoISO(filtros: FeedbackFiltros): { desde: string | null; hasta: string | null } {
+  const desdeOk = FECHA_RE.test(filtros.desde ?? '')
+  const hastaOk = FECHA_RE.test(filtros.hasta ?? '')
+
+  if (desdeOk || hastaOk) {
+    return {
+      desde: desdeOk ? new Date(`${filtros.desde}T00:00:00.000Z`).toISOString() : null,
+      hasta: hastaOk ? new Date(`${filtros.hasta}T23:59:59.999Z`).toISOString() : null,
+    }
+  }
+
+  const n = parseInt(filtros.dias ?? '', 10)
+  if (Number.isFinite(n) && n > 0) {
+    return { desde: new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString(), hasta: null }
+  }
+  return { desde: null, hasta: null }
+}
+
+/**
+ * Valoraciones por competencia, ya filtradas. Alimenta tanto la tabla agregada
+ * de la pantalla como el CSV: una sola fuente para que lo que se exporta sea
+ * exactamente lo que se ve.
+ */
+export async function getFeedbackCompetenciasAdmin(
+  filtros: FeedbackFiltros = {},
+): Promise<FeedbackCompetenciaRow[]> {
+  const admin = createAdminClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = admin
+    .from('feedback_informe_competencia')
+    .select('id, postulante_id, competencia_key, nivel_mostrado, valoracion, informe_generado_at, updated_at')
+
+  if (filtros.competencia) query = query.eq('competencia_key', filtros.competencia)
+  if (filtros.nivel) query = query.eq('nivel_mostrado', filtros.nivel)
+  if (filtros.valoracion) query = query.eq('valoracion', filtros.valoracion)
+  const rango = rangoISO(filtros)
+  if (rango.desde) query = query.gte('updated_at', rango.desde)
+  if (rango.hasta) query = query.lte('updated_at', rango.hasta)
+
+  const { data, error } = await query.order('updated_at', { ascending: false })
+  if (error) logFeedbackError('valoraciones por competencia', error)
+
+  const filas = (data ?? []) as {
+    id: string
+    postulante_id: string
+    competencia_key: string
+    nivel_mostrado: string
+    valoracion: ValoracionCompetencia
+    informe_generado_at: string
+    updated_at: string
+  }[]
+
+  const eneatipos = await eneatipoPorPostulante([...new Set(filas.map(f => f.postulante_id))])
+
+  const rows = filas.map(f => ({
+    id: f.id,
+    postulanteId: f.postulante_id,
+    eneatipo: eneatipos[f.postulante_id] ?? null,
+    competenciaKey: f.competencia_key,
+    competenciaNombre: NOMBRE_POR_KEY[f.competencia_key] ?? f.competencia_key,
+    nivelMostrado: f.nivel_mostrado,
+    valoracion: f.valoracion,
+    respondidoAt: f.updated_at,
+    informeGeneradoAt: f.informe_generado_at,
+  }))
+
+  // El eneatipo no vive en esta tabla, así que se filtra después de resolverlo.
+  const eneatipoFiltro = parseInt(filtros.eneatipo ?? '', 10)
+  return Number.isFinite(eneatipoFiltro)
+    ? rows.filter(r => r.eneatipo === eneatipoFiltro)
+    : rows
+}
+
+/**
+ * Total histórico de valoraciones, para el contador "X de Y" de los filtros.
+ * Es un count y no un `getFeedbackCompetenciasAdmin()` sin filtros: ese traería
+ * todas las filas y resolvería el eneatipo de cada postulante sólo para contarlas.
+ */
+export async function contarFeedbackCompetencias(): Promise<number> {
+  const admin = createAdminClient()
+  const { count, error } = await admin
+    .from('feedback_informe_competencia')
+    .select('*', { count: 'exact', head: true })
+  if (error) logFeedbackError('el total de valoraciones', error)
+  return count ?? 0
+}
+
+/** Respuestas a la pregunta global de cierre, con los mismos filtros aplicables. */
+export async function getFeedbackGlobalAdmin(
+  filtros: FeedbackFiltros = {},
+): Promise<FeedbackGlobalRow[]> {
+  const admin = createAdminClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = admin
+    .from('feedback_informe')
+    .select('id, postulante_id, representatividad, comentario, updated_at')
+
+  const rango = rangoISO(filtros)
+  if (rango.desde) query = query.gte('updated_at', rango.desde)
+  if (rango.hasta) query = query.lte('updated_at', rango.hasta)
+
+  const { data, error } = await query.order('updated_at', { ascending: false })
+  if (error) logFeedbackError('las respuestas globales', error)
+
+  const filas = (data ?? []) as {
+    id: string
+    postulante_id: string
+    representatividad: number
+    comentario: string | null
+    updated_at: string
+  }[]
+
+  const eneatipos = await eneatipoPorPostulante([...new Set(filas.map(f => f.postulante_id))])
+
+  const rows = filas.map(f => ({
+    id: f.id,
+    postulanteId: f.postulante_id,
+    eneatipo: eneatipos[f.postulante_id] ?? null,
+    representatividad: f.representatividad,
+    comentario: f.comentario,
+    respondidoAt: f.updated_at,
+  }))
+
+  const eneatipoFiltro = parseInt(filtros.eneatipo ?? '', 10)
+  return Number.isFinite(eneatipoFiltro)
+    ? rows.filter(r => r.eneatipo === eneatipoFiltro)
+    : rows
+}
+
+export type AgregadoCompetencia = {
+  key: string
+  nombre: string
+  total: number
+  subestima: number
+  justo: number
+  sobrestima: number
+  /**
+   * (%subestima − %sobrestima). Positivo = el motor le queda CORTO a la gente y
+   * habría que subir el peso; negativo = se pasa. Cerca de 0 = calibrada.
+   */
+  sesgo: number
+}
+
+/** Agrega por competencia y ordena por |sesgo|: primero lo peor calibrado. */
+export function agregarPorCompetencia(rows: FeedbackCompetenciaRow[]): AgregadoCompetencia[] {
+  const porKey = new Map<string, AgregadoCompetencia>()
+
+  for (const r of rows) {
+    const actual = porKey.get(r.competenciaKey) ?? {
+      key: r.competenciaKey,
+      nombre: r.competenciaNombre,
+      total: 0,
+      subestima: 0,
+      justo: 0,
+      sobrestima: 0,
+      sesgo: 0,
+    }
+    actual.total += 1
+    if (r.valoracion === 'SUBESTIMA') actual.subestima += 1
+    else if (r.valoracion === 'JUSTO') actual.justo += 1
+    else actual.sobrestima += 1
+    porKey.set(r.competenciaKey, actual)
+  }
+
+  return [...porKey.values()]
+    .map(a => ({ ...a, sesgo: Math.round(((a.subestima - a.sobrestima) / a.total) * 100) }))
+    .sort((a, b) => Math.abs(b.sesgo) - Math.abs(a.sesgo))
 }

@@ -147,23 +147,31 @@ export function SearchableSelect({
           open && "rotate-180 text-primary-600",
         )}
       />
-      {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
-          {filtered.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); handleSelect(opt) }}
-              className={cn(
-                "flex w-full items-center rounded-[7px] px-[11px] py-[9px] text-left text-[13.5px]",
-                opt.value === selected
-                  ? "bg-primary-ghost-hover font-semibold text-primary-600"
-                  : "text-ink-soft hover:bg-neutral-50",
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
+      {open && (
+        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
+          {filtered.length === 0 ? (
+            <p className="px-[11px] py-[9px] text-[13.5px] text-neutral-400">Sin resultados</p>
+          ) : (
+            filtered.map((opt) => {
+              const active = opt.value === selected
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); handleSelect(opt) }}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-[7px] px-[11px] py-[9px] text-left text-[13.5px]",
+                    active
+                      ? "bg-primary-ghost-hover font-semibold text-primary-600"
+                      : "text-ink-soft hover:bg-neutral-50",
+                  )}
+                >
+                  {opt.label}
+                  {active && <ChevronDownIcon size={15} className="-rotate-90 text-primary-600" strokeWidth={2.5} />}
+                </button>
+              )
+            })
+          )}
         </div>
       )}
     </div>
@@ -182,6 +190,7 @@ export interface FancySelectProps {
   disabled?: boolean
   className?: string
   id?: string
+  "aria-label"?: string
 }
 
 /**
@@ -200,6 +209,7 @@ export function FancySelect({
   disabled,
   className,
   id,
+  "aria-label": ariaLabel,
 }: FancySelectProps) {
   const autoId = useId();
   const [open, setOpen] = useState(false);
@@ -233,6 +243,9 @@ export function FancySelect({
       <button
         type="button"
         disabled={disabled}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-md bg-surface px-3.5 text-sm outline-none",

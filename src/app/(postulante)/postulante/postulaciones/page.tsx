@@ -22,7 +22,7 @@ const estadoTone: Record<string, Tone> = {
 const estadoLabel: Record<string, string> = {
   [ESTADO_POSTULACION.ENVIADA]: 'Enviada',
   [ESTADO_POSTULACION.VISTO]: 'Vista',
-  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'Descartada',
+  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'No avanza',
   [ESTADO_POSTULACION.CERRADA]: 'Cerrada',
 }
 

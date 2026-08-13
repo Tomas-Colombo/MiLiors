@@ -95,7 +95,13 @@ export function InformeVisor({ informe, feedback }: Props) {
         </Card>
 
         {/* Cierre: una sola pregunta para el informe entero */}
-        {feedback && <FeedbackGlobalForm inicial={feedback.global} />}
+        {feedback && (
+          <FeedbackGlobalForm
+            inicial={feedback.global}
+            puedeOpinar={feedback.puedeOpinar}
+            reabreAt={feedback.reabreAt}
+          />
+        )}
 
         <p className="text-right text-xs text-muted">
           Se marca como desactualizado al rehacer el Eneagrama o modificar el Human Design.

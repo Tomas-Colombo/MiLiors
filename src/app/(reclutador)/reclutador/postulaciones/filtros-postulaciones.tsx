@@ -3,8 +3,9 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { FancySelect, SearchableSelect, Tooltip } from '@/components/ui'
-import { StarIcon, TrashIcon, CalendarIcon, FilterIcon } from '@/components/icons'
+import { CheckCircleIcon, HelpCircleIcon, TrashIcon, CalendarIcon, FilterIcon } from '@/components/icons'
 import { SearchInput } from '@/components/shared/list-controls'
+import { MARCA_POSTULACION } from '@/lib/constants/enums'
 
 type Puesto = { id: string; titulo_puesto: string; sinPostulaciones?: boolean }
 type Opcion = { value: string; label: string }
@@ -67,13 +68,16 @@ export function FiltrosPostulaciones({
   const habilidadActual = searchParams.get('habilidad') ?? ''
   const provinciaActual = searchParams.get('provincia') ?? ''
   const localidadActual = searchParams.get('localidad') ?? ''
+  const marcaActual = searchParams.get('marca') ?? ''
   const provinciaOpts = provincias.map((p) => ({ value: p.id, label: p.nombre }))
 
   const estadoOpts = [
     { value: '', label: 'Todos los estados' },
     { value: 'ENVIADA', label: 'No vistas' },
     { value: 'VISTO', label: 'Vistas' },
-    { value: 'PROCESO_FINALIZADO', label: 'Descartadas' },
+    { value: 'PROCESO_FINALIZADO', label: 'No avanzan' },
+    // Descartadas por el preselector (las únicas con motivo_descarte).
+    { value: 'PROCESO_FINALIZADO_AUTO', label: 'No avanza aut.' },
     { value: 'CERRADA', label: 'Cerradas' },
   ]
 
@@ -81,7 +85,7 @@ export function FiltrosPostulaciones({
     searchParams.get('q') ||
     searchParams.get('puesto') ||
     searchParams.get('estado') ||
-    searchParams.get('favoritos') ||
+    searchParams.get('marca') ||
     searchParams.get('ciclos') ||
     searchParams.get('carrera') ||
     searchParams.get('habilidad') ||
@@ -89,23 +93,29 @@ export function FiltrosPostulaciones({
     searchParams.get('localidad')
   )
 
+  // Con filtros aplicados el panel queda abierto y no se ofrece ocultarlo: los filtros
+  // se recuerdan entre pestañas y esconderlos hace pensar que no hay resultados.
+  const abierto = filtrosAbiertos || hayFiltrosActivos
+
   return (
     <div className="space-y-3">
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <SearchInput placeholder="Buscar candidato…" className="w-full sm:w-52" />
-        <button
-          type="button"
-          onClick={() => setFiltrosAbiertos((v) => !v)}
-          aria-pressed={filtrosAbiertos}
-          className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
-            filtrosAbiertos || hayFiltrosActivos
-              ? 'bg-primary-tint text-primary-600'
-              : 'bg-neutral-100 text-muted hover:text-ink'
-          }`}
-        >
-          <FilterIcon size={14} />
-          {filtrosAbiertos ? 'Ocultar filtros' : 'Más filtros'}
-        </button>
+        {!hayFiltrosActivos && (
+          <button
+            type="button"
+            onClick={() => setFiltrosAbiertos((v) => !v)}
+            aria-pressed={filtrosAbiertos}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+              filtrosAbiertos
+                ? 'bg-primary-tint text-primary-600'
+                : 'bg-neutral-100 text-muted hover:text-ink'
+            }`}
+          >
+            <FilterIcon size={14} />
+            {filtrosAbiertos ? 'Ocultar filtros' : 'Más filtros'}
+          </button>
+        )}
         {totalVisible !== totalTotal && (
           <span className="text-xs text-muted sm:ml-auto">
             {totalVisible} de {totalTotal}
@@ -113,7 +123,7 @@ export function FiltrosPostulaciones({
         )}
       </div>
 
-      {filtrosAbiertos && (
+      {abierto && (
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center">
           <div className="w-full sm:w-56">
             <SearchableSelect
@@ -188,25 +198,32 @@ export function FiltrosPostulaciones({
               />
             </div>
           )}
+          {/* Marca del reclutador: excluyentes entre sí (una postulación tiene una sola marca) */}
           <button
             type="button"
-            onClick={() => setParam('favoritos', searchParams.get('favoritos') === '1' ? '' : '1')}
-            aria-pressed={searchParams.get('favoritos') === '1'}
+            onClick={() => setParam('marca', marcaActual === MARCA_POSTULACION.AVANZA ? '' : MARCA_POSTULACION.AVANZA)}
+            aria-pressed={marcaActual === MARCA_POSTULACION.AVANZA}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
-              searchParams.get('favoritos') === '1'
-                ? 'bg-warning-bg text-warning-solid'
+              marcaActual === MARCA_POSTULACION.AVANZA
+                ? 'bg-success-bg text-success'
                 : 'bg-neutral-100 text-muted hover:text-ink'
             }`}
           >
-            <StarIcon
-              size={14}
-              className={
-                searchParams.get('favoritos') === '1'
-                  ? 'fill-yellow-400 stroke-yellow-400'
-                  : 'stroke-current'
-              }
-            />
-            Favoritos
+            <CheckCircleIcon size={14} />
+            Avanzan
+          </button>
+          <button
+            type="button"
+            onClick={() => setParam('marca', marcaActual === MARCA_POSTULACION.DUDA ? '' : MARCA_POSTULACION.DUDA)}
+            aria-pressed={marcaActual === MARCA_POSTULACION.DUDA}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+              marcaActual === MARCA_POSTULACION.DUDA
+                ? 'bg-warning-bg text-warning'
+                : 'bg-neutral-100 text-muted hover:text-ink'
+            }`}
+          >
+            <HelpCircleIcon size={14} />
+            En duda
           </button>
           {hayCiclosAnteriores && (
             <Tooltip

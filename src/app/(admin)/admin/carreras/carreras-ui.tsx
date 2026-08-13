@@ -2,7 +2,7 @@
 
 import { useActionState, useTransition, useEffect, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Button, Input, Field, Alert } from '@/components/ui'
+import { Button, Input, Field, Alert, DateInput } from '@/components/ui'
 import { PlusIcon } from '@/components/icons'
 import {
   crearCarrera,
@@ -121,20 +121,20 @@ export function FiltroFechaCarrerasOtras({ desde, hasta }: { desde: string; hast
 
   return (
     <div className="flex items-end gap-3">
-      <Field label="Desde" htmlFor="desde" className="w-40">
-        <Input
-          id="desde"
-          type="date"
+      <Field label="Desde" className="w-40">
+        <DateInput
           value={desde}
-          onChange={(e) => setParam('desde', e.target.value)}
+          max={hasta || undefined}
+          onChange={(value) => setParam('desde', value)}
+          aria-label="Desde"
         />
       </Field>
-      <Field label="Hasta" htmlFor="hasta" className="w-40">
-        <Input
-          id="hasta"
-          type="date"
+      <Field label="Hasta" className="w-40">
+        <DateInput
           value={hasta}
-          onChange={(e) => setParam('hasta', e.target.value)}
+          min={desde || undefined}
+          onChange={(value) => setParam('hasta', value)}
+          aria-label="Hasta"
         />
       </Field>
     </div>
