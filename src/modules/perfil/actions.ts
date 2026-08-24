@@ -24,7 +24,6 @@ export async function actualizarPerfilPostulante(
 
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
-    provincia_id: formData.get('provincia_id') || '',
     localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
     carrera_id: formData.get('carrera_id') || undefined,
@@ -54,11 +53,9 @@ export async function actualizarPerfilPostulante(
     return { success: false, error: 'No se encontró el perfil del postulante.' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('perfil_postulante') as any)
+  const { error } = await supabase.from('perfil_postulante')
     .update({
       nombre_completo: parsed.data.nombre_completo,
-      provincia_id: parsed.data.provincia_id,
       localidad_id: parsed.data.localidad_id,
       telefono: parsed.data.telefono || null,
       carrera_id: parsed.data.carrera_id || null,
@@ -78,23 +75,14 @@ export async function actualizarPerfilPostulante(
 
 // ─── Reclutador ──────────────────────────────────────────────────────────────
 
+// Los datos de las empresas se administran en /reclutador/empresas: un
+// reclutador puede tener varias, así que acá solo van sus propios datos.
 const perfilReclutadorSchema = z.object({
   nombre_reclutador: z
     .string()
     .min(2, { message: 'Ingresá tu nombre completo.' })
     .max(200)
     .trim(),
-  nombre_empresa: z
-    .string()
-    .min(2, { message: 'Ingresá el nombre de la empresa.' })
-    .max(200)
-    .trim(),
-  descripcion: z.string().max(1000).optional(),
-  link_url: z
-    .string()
-    .url({ message: 'Ingresá una URL válida.' })
-    .optional()
-    .or(z.literal('')),
 })
 
 export async function actualizarPerfilReclutador(
@@ -105,9 +93,6 @@ export async function actualizarPerfilReclutador(
 
   const raw = {
     nombre_reclutador: formData.get('nombre_reclutador'),
-    nombre_empresa: formData.get('nombre_empresa'),
-    descripcion: formData.get('descripcion') || undefined,
-    link_url: formData.get('link_url') || undefined,
   }
 
   const parsed = perfilReclutadorSchema.safeParse(raw)
@@ -121,41 +106,12 @@ export async function actualizarPerfilReclutador(
 
   const supabase = await createClient()
 
-  // Look up perfil_reclutador to get empresa_id
-  const { data: perfilRec } = await supabase
-    .from('perfil_reclutador')
-    .select('id, empresa_id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!perfilRec) {
-    return { success: false, error: 'No se encontró el perfil del reclutador.' }
-  }
-
-  const { id: perfilId, empresa_id: empresaId } = perfilRec as { id: string; empresa_id: string }
-
-  // Update perfil_reclutador
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: perfilError } = await (supabase.from('perfil_reclutador') as any)
+  const { error: perfilError } = await supabase.from('perfil_reclutador')
     .update({ nombre_reclutador: parsed.data.nombre_reclutador })
-    .eq('id', perfilId)
+    .eq('usuario_id', session.id)
 
   if (perfilError) {
     return { success: false, error: 'No se pudo actualizar el perfil. Intentá de nuevo.' }
-  }
-
-  // Update empresa
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: empresaError } = await (supabase.from('empresa') as any)
-    .update({
-      nombre_empresa: parsed.data.nombre_empresa,
-      descripcion: parsed.data.descripcion ?? null,
-      link_url: parsed.data.link_url || null,
-    })
-    .eq('id', empresaId)
-
-  if (empresaError) {
-    return { success: false, error: 'No se pudo actualizar la empresa. Intentá de nuevo.' }
   }
 
   revalidatePath('/reclutador/mi-perfil')
@@ -205,5 +161,23 @@ export async function cambiarPassword(
     return { success: false, error: 'No se pudo cambiar la contraseña. Intentá de nuevo.' }
   }
 
+  return { success: true, data: undefined }
+}
+
+/**
+ * Enciende o apaga la visibilidad del informe de personalidad en la página
+ * pública de verificación del certificado (/verificar/[id]).
+ */
+export async function actualizarVisibilidadPersonalidad(visible: boolean): Promise<ActionResult> {
+  const session = await verifySession()
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('perfil_postulante')
+    .update({ mostrar_personalidad_publico: visible })
+    .eq('usuario_id', session.id)
+
+  if (error) return { success: false, error: 'No se pudo guardar la preferencia.' }
+
+  revalidatePath('/postulante/mi-perfil')
   return { success: true, data: undefined }
 }

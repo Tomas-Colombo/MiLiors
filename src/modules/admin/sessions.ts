@@ -29,8 +29,7 @@ export async function revocarSesion(userId: string): Promise<ActionResult> {
   if (!userId) return { success: false, error: 'Usuario inválido.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('sesion_actividad') as any).upsert({
+  const { error } = await admin.from('sesion_actividad').upsert({
     usuario_id: userId,
     revocada: true,
     actualizado_en: new Date().toISOString(),

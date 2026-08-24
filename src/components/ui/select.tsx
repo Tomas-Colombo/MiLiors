@@ -3,6 +3,7 @@
 import { useId, useState, useRef, useEffect, type SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon } from "@/components/icons";
+import { Skeleton } from "./skeleton";
 
 export interface SelectOption {
   value: string;
@@ -55,12 +56,15 @@ export function Select({ options, placeholder, className, value, defaultValue, .
 }
 
 export interface SearchableSelectProps {
-  name: string
+  /** Sin `name` no se envía nada: sirve para combos que sólo pilotean a otro. */
+  name?: string
   options: SelectOption[]
   placeholder?: string
   defaultValue?: string
   className?: string
   onValueChange?: (value: string) => void
+  /** Las opciones se están trayendo: el panel muestra filas de esqueleto. */
+  loading?: boolean
 }
 
 /**
@@ -75,6 +79,7 @@ export function SearchableSelect({
   defaultValue,
   className,
   onValueChange,
+  loading,
 }: SearchableSelectProps) {
   const initialLabel = options.find((o) => o.value === defaultValue)?.label ?? ""
   const [query, setQuery] = useState(initialLabel)
@@ -148,8 +153,16 @@ export function SearchableSelect({
         )}
       />
       {open && (
-        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
-          {filtered.length === 0 ? (
+        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-300 bg-neutral-0 p-1.5 shadow-md">
+          {loading ? (
+            // Con las opciones en vuelo, "Sin resultados" mentiría: se pintan
+            // filas de esqueleto con la misma altura que las opciones reales.
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-[11px] py-[9px]">
+                <Skeleton className="h-[15px] w-full" />
+              </div>
+            ))
+          ) : filtered.length === 0 ? (
             <p className="px-[11px] py-[9px] text-[13.5px] text-neutral-400">Sin resultados</p>
           ) : (
             filtered.map((opt) => {
@@ -264,7 +277,7 @@ export function FancySelect({
         />
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
+        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-300 bg-neutral-0 p-1.5 shadow-md">
           {options.map((o) => {
             const active = o.value === selected;
             return (

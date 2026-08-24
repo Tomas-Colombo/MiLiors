@@ -22,7 +22,7 @@ export function RevertirDescarteBtn({ postulacionId }: Props) {
     <Tooltip
       content={
         <span className="block w-44 whitespace-normal leading-snug">
-          Deshace el &quot;No avanzar&quot;: la postulación vuelve al estado Vista.
+          Deshace el &quot;No avanzar&quot;: la postulación vuelve al estado Evaluada.
         </span>
       }
     >

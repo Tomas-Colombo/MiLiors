@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
-import { competenciasNoIntegradas } from './sintesis-service'
+import { destacadasDelInforme, nivelTecnicoACert, primerParrafo, type CompetenciaDestacada, type NivelCert } from './niveles'
 import {
   clavesDescartadas,
   estaDescartada,
@@ -12,6 +12,8 @@ import {
   type SintesisEstado,
   type SintesisFortaleza,
 } from '@/lib/types/certificado'
+import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import type { NivelCompetencia } from '@/lib/constants/enums'
 
 export type CertificadoData = {
   id: string
@@ -55,22 +57,23 @@ export const getUltimoCertificado = cache(async (): Promise<CertificadoData | nu
 export type CertificadoContenido = {
   nombre: string
   email: string
+  telefono: string | null
+  /** "Localidad, Provincia" — lo que haya cargado; null si no cargó ninguna. */
+  ubicacion: string | null
+  linkedin: string | null
   /** "¿Qué estudiaste / qué buscás?" vigente en el perfil — nunca vacío para poder previsualizar. */
   objetivo: string | null
   eneatipoNumero: number
   eneatipoNombre: string
-  humanDesign: {
-    tipo_energetico: string
-    autoridad_hd: string
-    perfil_hd: string
-    estrategia_hd: string
-  } | null
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
   cursos: { nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[]
-  experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
+  /** Últimos 3 puestos, del más reciente al más viejo. */
+  experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null; descripcion: string | null }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
-  /** Competencias a mostrar como lista: todas si no hay síntesis, o solo las NO integradas si la hay. */
-  competencias: { nombre: string }[]
+  /** Habilidades técnicas y herramientas del perfil, con el nivel que declaró el postulante. */
+  competencias: { nombre: string; nivel: NivelCert }[]
+  /** Competencias destacadas derivadas del informe (Eneagrama), agrupadas por nivel. */
+  destacadas: CompetenciaDestacada[]
   /** Párrafo del informe (fallback cuando aún no hay síntesis integrada). */
   personalidad?: string
   /** Perfil profesional integrado (síntesis). Cuando existe, reemplaza a `personalidad`. */
@@ -91,7 +94,9 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
 
   const { data: postulante } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, carrera_otra, carrera:carrera_id(nombre)')
+    .select(
+      'id, nombre_completo, telefono, enlace_linkedin, carrera_otra, carrera:carrera_id(nombre), localidad(nombre, departamento(nombre, provincia(nombre)))'
+    )
     .eq('usuario_id', session.id)
     .single()
 
@@ -99,8 +104,11 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   const postulanteTyped = postulante as {
     id: string
     nombre_completo: string
+    telefono: string | null
+    enlace_linkedin: string | null
     carrera_otra: string | null
     carrera: { nombre: string } | null
+    localidad: { nombre: string; departamento: { nombre: string; provincia: { nombre: string } | null } | null } | null
   }
   const objetivo = postulanteTyped.carrera?.nombre ?? postulanteTyped.carrera_otra ?? null
 
@@ -117,13 +125,8 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   const dominante = testTyped?.test_eneagrama_dominante?.[0]?.eneatipo
   if (!dominante) return null
 
-  // Human Design (opcional), informe (para la síntesis) y perfil técnico
-  const [{ data: hd }, { data: informe }, { data: pt }] = await Promise.all([
-    supabase
-      .from('human_design')
-      .select('tipo_energetico, autoridad_hd, perfil_hd, estrategia_hd')
-      .eq('postulante_id', postulanteTyped.id)
-      .single(),
+  // Informe (para la síntesis) y perfil técnico
+  const [{ data: informe }, { data: pt }] = await Promise.all([
     supabase
       .from('informe_personalidad')
       .select('contenido_json')
@@ -176,11 +179,11 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
         .order('fecha_fin', { ascending: false }),
       supabase
         .from('experiencia_laboral')
-        .select('id, puesto, empresa, fecha_inicio, fecha_fin')
+        .select('id, puesto, empresa, fecha_inicio, fecha_fin, descripcion')
         .eq('perfil_tecnico_id', ptId)
         .order('fecha_inicio', { ascending: false }),
       supabase.from('idioma').select('nombre, nivel_idioma').eq('perfil_tecnico_id', ptId).order('nombre'),
-      supabase.from('postulante_competencia').select('competencia(nombre)').eq('perfil_tecnico_id', ptId),
+      supabase.from('postulante_competencia').select('nivel, competencia(nombre)').eq('perfil_tecnico_id', ptId),
     ])
     formaciones = ((f.data ?? []) as { id: string; titulo: string; institucion: string; fecha_graduacion: string | null }[])
       .filter(item => !estaDescartada(formacionesDescartadas, item.id))
@@ -188,46 +191,44 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     cursos = ((cu.data ?? []) as { id: string; nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[])
       .filter(item => !estaDescartada(cursosDescartados, item.id))
       .map(({ nombre, institucion, fecha_fin, duracion_horas }) => ({ nombre, institucion, fecha_fin, duracion_horas }))
-    experiencias =((e.data ?? []) as { id: string; puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[])
+    experiencias = ((e.data ?? []) as { id: string; puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null; descripcion: string | null }[])
       .filter(item => !estaDescartada(experienciasDescartadas, item.id))
-      .map(({ puesto, empresa, fecha_inicio, fecha_fin }) => ({ puesto, empresa, fecha_inicio, fecha_fin }))
+      .map(({ puesto, empresa, fecha_inicio, fecha_fin, descripcion }) => ({ puesto, empresa, fecha_inicio, fecha_fin, descripcion }))
+      // El certificado muestra los últimos 3 puestos; el historial completo vive en el perfil.
+      .slice(0, 3)
     idiomas = (i.data ?? []) as CertificadoContenido['idiomas']
-    competencias = ((c.data ?? []) as { competencia: { nombre: string } | null }[])
-      .map(row => row.competencia)
-      .filter((x): x is { nombre: string } => x !== null)
+    competencias = ((c.data ?? []) as { nivel: NivelCompetencia | null; competencia: { nombre: string } | null }[])
+      .filter(row => row.competencia !== null && !estaDescartada(competenciasDescartadas, row.competencia.nombre))
+      .map(row => ({ nombre: row.competencia!.nombre, nivel: nivelTecnicoACert(row.nivel ?? undefined) }))
       // Ordenar acá y no en la query: PostgREST no ordena el padre por una columna
       // del embed. Sin esto, previsualización y PDF pueden listarlas distinto.
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
   }
 
-  const informeJson = (informe as { contenido_json: { descripcionPersonalidad?: string } | null } | null)?.contenido_json
+  const informeJson = (informe as { contenido_json: InformePersonalidadJSON | null } | null)?.contenido_json
 
-  // Perfil integrado: dejamos en la lista solo las competencias que ni se
-  // integraron a la prosa ni descartó el triage. Sin síntesis, fallback a la
-  // descripción del informe y todas las competencias.
-  const perfilIntegrado = sintesis?.perfilIntegrado
-  const competenciasVisibles = sintesis
-    ? competenciasNoIntegradas(
-        competencias.map(c => c.nombre).filter(nombre => !estaDescartada(competenciasDescartadas, nombre)),
-        sintesis.competenciasIntegradas,
-      ).map(nombre => ({ nombre }))
-    : competencias
+  // La síntesis del certificado es un resumen: un solo párrafo. El perfil
+  // completo (fortalezas, contexto, informe) vive detrás del QR — que es
+  // justamente el motivo por el que alguien lo escanea.
+  const perfilIntegrado = primerParrafo(sintesis?.perfilIntegrado)
 
   return {
     nombre: postulanteTyped.nombre_completo,
     email: session.email,
+    telefono: postulanteTyped.telefono,
+    ubicacion:
+      [postulanteTyped.localidad?.nombre, postulanteTyped.localidad?.departamento?.provincia?.nombre].filter(Boolean).join(', ') || null,
+    linkedin: postulanteTyped.enlace_linkedin,
     objetivo,
     eneatipoNumero: dominante.numero_eneatipo,
     eneatipoNombre: dominante.nombre,
-    humanDesign: hd
-      ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })
-      : null,
     formaciones,
     cursos,
     experiencias,
     idiomas,
-    competencias: competenciasVisibles,
-    personalidad: informeJson?.descripcionPersonalidad,
+    competencias,
+    destacadas: destacadasDelInforme(informeJson?.competencias),
+    personalidad: primerParrafo(informeJson?.descripcionPersonalidad),
     perfilIntegrado,
     fortalezas: sintesis?.fortalezas,
     contextoIdeal: sintesis?.contextoIdeal,
@@ -236,11 +237,23 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   }
 })
 
-/** Datos mínimos para verificación pública — NO requiere auth */
+/**
+ * Datos para la verificación pública — NO requiere auth.
+ *
+ * Además de confirmar el certificado, la página muestra el informe de
+ * personalidad del titular: es lo que convierte una comprobación en una puerta
+ * de entrada a MiLiors. Nunca incluye datos de contacto, para que la página no
+ * sea una fuente de emails y teléfonos.
+ */
 export type CertificadoVerificacion = {
   id: string
   timestamp_firma: string
   nombre_completo: string
+  /** Informe vigente del titular, o null si no lo tiene o eligió no mostrarlo. */
+  informe: InformePersonalidadJSON | null
+  fechaInforme: string | null
+  /** true cuando el titular tiene informe pero apagó su visibilidad pública. */
+  personalidadOculta: boolean
 }
 
 export async function getCertificadoParaVerificar(id: string): Promise<CertificadoVerificacion | null> {
@@ -256,18 +269,47 @@ export async function getCertificadoParaVerificar(id: string): Promise<Certifica
   if (!cert) return null
   const certTyped = cert as { id: string; postulante_id: string; timestamp_firma: string }
 
-  const { data: postulante } = await admin
-    .from('perfil_postulante')
-    .select('nombre_completo')
-    .eq('id', certTyped.postulante_id)
-    .single()
+  // La preferencia de privacidad va en su propia consulta, no junto al nombre:
+  // verificar un certificado no puede depender de ella. Si esa lectura falla
+  // —por ejemplo, con la migración de `mostrar_personalidad_publico` todavía sin
+  // aplicar— el certificado se verifica igual y el informe simplemente no se
+  // muestra, que es el lado seguro para un dato personal.
+  const [{ data: postulante }, { data: preferencia }, { data: informe }] = await Promise.all([
+    admin.from('perfil_postulante').select('nombre_completo').eq('id', certTyped.postulante_id).single(),
+    admin
+      .from('perfil_postulante')
+      .select('mostrar_personalidad_publico')
+      .eq('id', certTyped.postulante_id)
+      .single(),
+    admin
+      .from('informe_personalidad')
+      .select('contenido_json, estado_informe, fecha_generacion')
+      .eq('postulante_id', certTyped.postulante_id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single(),
+  ])
 
   if (!postulante) return null
   const postulanteTyped = postulante as { nombre_completo: string }
+  const mostrarPersonalidad = (preferencia as { mostrar_personalidad_publico: boolean } | null)
+    ?.mostrar_personalidad_publico === true
+
+  const informeTyped = informe as {
+    contenido_json: InformePersonalidadJSON | null
+    estado_informe: string
+    fecha_generacion: string | null
+  } | null
+
+  const hayInforme = informeTyped?.estado_informe === 'LISTO' && !!informeTyped.contenido_json
+  const visible = hayInforme && mostrarPersonalidad
 
   return {
     id: certTyped.id,
     timestamp_firma: certTyped.timestamp_firma,
     nombre_completo: postulanteTyped.nombre_completo,
+    informe: visible ? informeTyped!.contenido_json : null,
+    fechaInforme: visible ? informeTyped!.fecha_generacion : null,
+    personalidadOculta: hayInforme && !mostrarPersonalidad,
   }
 }

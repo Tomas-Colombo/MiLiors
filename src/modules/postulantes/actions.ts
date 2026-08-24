@@ -46,8 +46,7 @@ export async function crearNota(
   const puestoIdFinal = puestoId ?? null
   let tituloPuesto: string | null = null
   if (puestoIdFinal) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: puesto } = await (admin.from('puesto') as any)
+    const { data: puesto } = await admin.from('puesto')
       .select('titulo_puesto')
       .eq('id', puestoIdFinal)
       .eq('reclutador_id', reclutadorId)
@@ -55,8 +54,7 @@ export async function crearNota(
     tituloPuesto = (puesto as { titulo_puesto: string } | null)?.titulo_puesto ?? null
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('nota_privada') as any).insert({
+  const { error } = await admin.from('nota_privada').insert({
     reclutador_id: reclutadorId,
     postulante_id: postulanteId,
     puesto_id: puestoIdFinal,
@@ -89,8 +87,7 @@ export async function editarNota(notaId: string, contenido: string): Promise<Act
   if (!contenido.trim()) return { success: false, error: 'La nota no puede estar vacía.' }
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('nota_privada') as any)
+  const { error } = await supabase.from('nota_privada')
     .update({ contenido: contenido.trim() })
     .eq('id', notaId)
     .eq('reclutador_id', reclutadorId)
@@ -105,8 +102,7 @@ export async function eliminarNota(notaId: string, postulanteId: string): Promis
   if (!reclutadorId) return { success: false, error: 'No autorizado.' }
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('nota_privada') as any)
+  const { error } = await supabase.from('nota_privada')
     .delete()
     .eq('id', notaId)
     .eq('reclutador_id', reclutadorId)

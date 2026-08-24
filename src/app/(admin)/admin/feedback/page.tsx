@@ -2,20 +2,22 @@ import {
   getFeedbackCompetenciasAdmin,
   getFeedbackGlobalAdmin,
   contarFeedbackCompetencias,
+  contarFeedbackGlobal,
   agregarPorCompetencia,
   type FeedbackFiltros,
   type AgregadoCompetencia,
+  type FeedbackGlobalRow,
 } from '@/modules/admin/queries'
-import { KpiCard, Card, Table, EmptyState } from '@/components/ui'
+import { KpiCard, Table, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon, CheckCircleIcon, StarIcon, MessageIcon, DownloadIcon } from '@/components/icons'
 import { FiltrosFeedback } from './filtros-feedback'
 import { ConfigReactivacion } from './config-reactivacion'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
-import { Paginador } from '@/components/shared/list-controls'
+import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Feedback del informe — Admin TalentID' }
+export const metadata = { title: 'Feedback del informe — Admin MiLiors' }
 
 type SearchParams = Promise<{
   eneatipo?: string
@@ -26,7 +28,28 @@ type SearchParams = Promise<{
   desde?: string
   hasta?: string
   page?: string
+  // Listado de comentarios (segundo listado de la pantalla).
+  qC?: string
+  ordenC?: string
+  pageC?: string
 }>
+
+const ORDEN_COMENTARIOS_OPTS = [
+  { value: '', label: 'Respuesta: más reciente' },
+  { value: 'fecha_asc', label: 'Respuesta: más antigua' },
+  { value: 'repr_desc', label: 'Representatividad: mayor' },
+  { value: 'repr_asc', label: 'Representatividad: menor' },
+]
+
+/** Las respuestas ya vienen por fecha desc; el resto de los órdenes va acá. */
+function ordenarComentarios(rows: FeedbackGlobalRow[], orden: string): FeedbackGlobalRow[] {
+  if (!orden) return rows
+  return [...rows].sort((a, b) => {
+    if (orden === 'fecha_asc') return a.respondidoAt.localeCompare(b.respondidoAt)
+    if (orden === 'repr_desc') return b.representatividad - a.representatividad
+    return a.representatividad - b.representatividad
+  })
+}
 
 /** Query string de los filtros vigentes, para que el CSV baje lo mismo que se ve. */
 function filtrosQS(filtros: FeedbackFiltros, tipo: 'competencias' | 'global'): string {
@@ -70,17 +93,75 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
     hasta: sp.hasta,
   }
 
-  const [valoraciones, globales, totalHistorico, config] = await Promise.all([
+  const [valoraciones, globales, totalHistorico, totalGlobalHistorico, config] = await Promise.all([
     getFeedbackCompetenciasAdmin(filtros),
     getFeedbackGlobalAdmin(filtros),
     contarFeedbackCompetencias(),
+    contarFeedbackGlobal(),
     getConfiguracionSistema(),
   ])
 
   const agregados = agregarPorCompetencia(valoraciones)
   const totalJusto = valoraciones.filter(v => v.valoracion === 'JUSTO').length
+
+  // Nadie respondió nada todavía. Se distingue de "valoraron competencias pero
+  // los filtros no dejan nada" y de "sólo contestaron la pregunta de cierre":
+  // con un comentario cargado, decir "todavía no hay feedback" es falso.
+  const sinFeedbackAlguno = totalHistorico === 0 && totalGlobalHistorico === 0
+
   const comentarios = globales.filter(g => g.comentario)
-  const { page, pageCount, slice: comentariosPagina } = paginar(comentarios, sp.page)
+  const qC = sp.qC?.trim().toLowerCase() ?? ''
+  const comentariosFiltrados = qC
+    ? comentarios.filter(c => c.comentario!.toLowerCase().includes(qC))
+    : comentarios
+  const comentariosVisibles = ordenarComentarios(comentariosFiltrados, sp.ordenC ?? '')
+  const { page: pageC, pageCount: pageCountC, slice: comentariosPagina } = paginar(
+    comentariosVisibles,
+    sp.pageC,
+  )
+
+  const comentarioColumns: Column<FeedbackGlobalRow>[] = [
+    {
+      key: 'comentario',
+      header: 'Comentario',
+      width: '3fr',
+      cell: row => <p className="text-[13px] leading-relaxed text-ink">{row.comentario}</p>,
+    },
+    {
+      key: 'representatividad',
+      header: 'Representatividad',
+      align: 'right',
+      cell: row => (
+        <span className="text-[13px] font-semibold tabular-nums text-ink-soft">
+          {row.representatividad}%
+        </span>
+      ),
+    },
+    {
+      key: 'eneatipo',
+      header: 'Eneatipo',
+      align: 'center',
+      cell: row =>
+        row.eneatipo ? (
+          <span className="text-[12.5px] text-ink-soft">{row.eneatipo}</span>
+        ) : (
+          <span className="text-[12px] text-neutral-400">—</span>
+        ),
+    },
+    {
+      key: 'respondidoAt',
+      header: 'Respondido',
+      cell: row => (
+        <span className="text-[12px] text-muted">
+          {new Date(row.respondidoAt).toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          })}
+        </span>
+      ),
+    },
+  ]
   // `representatividad` ya viene en porcentaje (10..100), así que el promedio
   // se muestra tal cual, sin reescalar.
   const promedioRepresentatividad =
@@ -203,10 +284,18 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
         {agregados.length === 0 ? (
           <EmptyState
             icon={<BarChartIcon size={22} />}
-            title={totalHistorico === 0 ? 'Todavía no hay feedback' : 'Sin resultados'}
+            title={
+              sinFeedbackAlguno
+                ? 'Todavía no hay feedback'
+                : totalHistorico === 0
+                ? 'Sin valoraciones por competencia'
+                : 'Sin resultados'
+            }
             description={
-              totalHistorico === 0
-                ? 'Ningún postulante valoró sus competencias todavía. Las respuestas aparecen acá a medida que se cargan.'
+              sinFeedbackAlguno
+                ? 'Ningún postulante valoró su informe todavía. Las respuestas aparecen acá a medida que se cargan.'
+                : totalHistorico === 0
+                ? 'Hay respuestas a la pregunta de cierre, pero nadie valoró competencia por competencia todavía. Los comentarios se listan más abajo.'
                 : 'Ninguna respuesta coincide con los filtros aplicados.'
             }
           />
@@ -224,21 +313,39 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       {comentarios.length > 0 && (
         <div className="mt-10">
           <h2 className="text-[15px] font-bold text-ink">Comentarios</h2>
-          <p className="mt-0.5 text-[12px] text-muted">{comentarios.length} en total.</p>
-          <div className="mt-3 space-y-2">
-            {comentariosPagina.map(c => (
-              <Card key={c.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[13px] leading-relaxed text-ink">{c.comentario}</p>
-                  <span className="shrink-0 text-[11px] text-muted">
-                    {c.representatividad}%
-                    {c.eneatipo ? ` · Eneatipo ${c.eneatipo}` : ''}
-                  </span>
-                </div>
-              </Card>
-            ))}
+          <p className="mt-0.5 text-[12px] text-muted">
+            Texto libre de la pregunta de cierre. Los filtros de arriba también los alcanzan.
+          </p>
+
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <SearchInput paramKey="qC" placeholder="Buscar en los comentarios…" />
+            <FilterSelect
+              paramKey="ordenC"
+              options={ORDEN_COMENTARIOS_OPTS}
+              ariaLabel="Ordenar comentarios"
+              className="w-full sm:w-56"
+            />
+            <ClearFilters keys={['qC', 'ordenC']} />
+            {comentariosVisibles.length !== comentarios.length && (
+              <span className="whitespace-nowrap text-xs text-muted sm:ml-auto">
+                {comentariosVisibles.length} de {comentarios.length}
+              </span>
+            )}
           </div>
-          <Paginador page={page} pageCount={pageCount} />
+
+          <div className="mt-4">
+            {comentariosPagina.length === 0 ? (
+              <EmptyState
+                icon={<MessageIcon size={22} />}
+                title="Sin resultados"
+                description="Ningún comentario coincide con la búsqueda."
+              />
+            ) : (
+              <Table columns={comentarioColumns} rows={comentariosPagina} rowKey={row => row.id} />
+            )}
+          </div>
+
+          <Paginador page={pageC} pageCount={pageCountC} paramKey="pageC" />
         </div>
       )}
     </div>

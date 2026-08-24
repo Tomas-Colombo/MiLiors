@@ -51,8 +51,7 @@ export async function consultarAsistente(
   // --- Load all candidate data via admin client (bypasses RLS; candidate may not be actively searching) ---
 
   // Load all candidate data via admin client (bypasses RLS — candidate may not be actively searching)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: postulanteRaw } = await (admin as any)
+  const { data: postulanteRaw } = await admin
     .from('perfil_postulante')
     .select(`
       nombre_completo,
@@ -70,15 +69,13 @@ export async function consultarAsistente(
     } | null
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: ptRaw } = await (admin as any)
+  const { data: ptRaw } = await admin
     .from('perfil_tecnico')
     .select('id')
     .eq('postulante_id', postulanteId)
     .maybeSingle()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: informeRaw } = await (admin as any)
+  const { data: informeRaw } = await admin
     .from('informe_personalidad')
     .select('contenido_json')
     .eq('postulante_id', postulanteId)
@@ -100,11 +97,10 @@ export async function consultarAsistente(
 
   if (ptRaw) {
     const ptId = (ptRaw as { id: string }).id
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [compsRes, formRes, expRes] = await Promise.all([
-      (admin as any).from('postulante_competencia').select('competencia(nombre)').eq('perfil_tecnico_id', ptId),
-      (admin as any).from('formacion_academica').select('titulo, institucion, fecha_graduacion').eq('perfil_tecnico_id', ptId),
-      (admin as any).from('experiencia_laboral').select('puesto, empresa, fecha_inicio, fecha_fin').eq('perfil_tecnico_id', ptId).order('fecha_inicio', { ascending: false }),
+      admin.from('postulante_competencia').select('competencia(nombre)').eq('perfil_tecnico_id', ptId),
+      admin.from('formacion_academica').select('titulo, institucion, fecha_graduacion').eq('perfil_tecnico_id', ptId),
+      admin.from('experiencia_laboral').select('puesto, empresa, fecha_inicio, fecha_fin').eq('perfil_tecnico_id', ptId).order('fecha_inicio', { ascending: false }),
     ])
 
     competencias = (compsRes.data ?? [])
@@ -168,8 +164,7 @@ export async function consultarAsistente(
   }
 
   // Log query for metrics — full conversation is intentionally not stored to control costs
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('consulta_asistente_ia') as any).insert({
+  await admin.from('consulta_asistente_ia').insert({
     reclutador_id: reclutadorId,
     postulante_id: postulanteId,
     puesto_id: puestoId,

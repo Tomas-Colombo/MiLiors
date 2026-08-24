@@ -13,7 +13,7 @@ import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 
-export const metadata = { title: 'Detalle del puesto — TalentID' }
+export const metadata = { title: 'Detalle del puesto — MiLiors' }
 
 // params in Next.js App Router dynamic routes is a Promise
 type Params = Promise<{ id: string }>
@@ -30,7 +30,7 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
     getTotalPostulacionesDePuesto(id),
   ])
 
-  // Alerta de cierre automático por inactividad (solo puestos activos).
+  // Alerta de pausa automática por inactividad (solo puestos activos).
   const alerta =
     puesto.activo && puesto.fecha_ultima_actividad
       ? calcularAlertaInactividad(puesto.fecha_ultima_actividad, diasInactividadCierre)
@@ -48,7 +48,7 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
           Volver a mis puestos
         </VolverLink>
 
-        {/* Advertencia de cierre automático por inactividad */}
+        {/* Advertencia de pausa automática por inactividad */}
         {alerta && (
           <Alert
             tone={alerta.tone}
@@ -60,7 +60,7 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
           >
             Si no registramos actividad tuya durante {diasInactividadCierre} días —revisar
             postulaciones, cambiar el estado de una postulación o editar el puesto—, lo
-            cerraremos automáticamente para no mantener búsquedas sin atención activa. Realizá
+            pausaremos automáticamente para no mantener búsquedas sin atención activa. Realizá
             alguna de esas acciones para mantenerlo activo.
           </Alert>
         )}
@@ -92,7 +92,7 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
                   />
                 ) : (
                   <Badge tone={puesto.activo ? 'success' : 'neutral'} dot>
-                    {puesto.activo ? 'Activo' : 'Cerrado'}
+                    {puesto.activo ? 'Activo' : 'Pausado'}
                   </Badge>
                 )}
                 <span className="text-[12px] text-neutral-400">

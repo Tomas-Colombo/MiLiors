@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Field, Select, Alert, Button } from '@/components/ui'
+import { Field, Select, Alert, Button, ConfirmDialog } from '@/components/ui'
 import {
   TIPO_ENERGETICO_HD,
   ENERGY_TYPE_CLASSIFICATION_HD,
@@ -87,42 +87,31 @@ export function HumanDesignForm({ hd }: { hd: HumanDesignData | null }) {
 
   return (
     <>
-      {/* Modal de confirmación para actualización */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
-            <h3 className="text-base font-bold text-ink">¿Confirmar actualización?</h3>
-            <div className="mt-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-3">
-              <p className="text-sm font-semibold text-warning">Esta es tu única actualización disponible</p>
-              <p className="mt-1 text-sm text-warning">
-                El Human Design es un dato permanente que no cambia a lo largo de tu vida.
-                Solo podés modificarlo esta vez para corregir un error.
-                Una vez confirmado, los datos quedarán fijos definitivamente.
-              </p>
-            </div>
-            <div className="mt-4 flex gap-3">
-              <Button variant="ghost" size="sm" className="flex-1" onClick={() => setShowConfirm(false)}>
-                Cancelar
-              </Button>
-              <Button variant="primary" size="sm" className="flex-1" onClick={handleConfirm}>
-                Sí, actualizar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleConfirm}
+        title="¿Confirmar la actualización?"
+        confirmLabel="Sí, actualizar"
+      >
+        <Alert tone="warning" title="Esta es tu única actualización disponible">
+          El Human Design es un dato permanente que no cambia a lo largo de tu vida. Sólo podés
+          modificarlo esta vez, para corregir un error. Una vez confirmado, los datos quedan fijos
+          definitivamente.
+        </Alert>
+      </ConfirmDialog>
 
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-card divide-y divide-neutral-100">
         {/* Aviso adaptado al estado: primera vez vs. actualización */}
-        <div className="px-5 py-4 bg-warning-bg">
-          <p className="text-sm font-semibold text-warning">
-            {isUpdate ? '⚠ Última actualización disponible' : 'Completá esta sección con seriedad'}
-          </p>
-          <p className="mt-0.5 text-sm text-warning">
+        <div className="px-5 py-4">
+          <Alert
+            tone="warning"
+            title={isUpdate ? 'Última actualización disponible' : 'Completá esta sección con seriedad'}
+          >
             {isUpdate
-              ? 'Solo podés modificar el Human Design una vez para corregir errores. Después de esta actualización, los datos quedarán fijos de forma permanente.'
-              : 'Los datos de tu carta de Human Design forman parte de tu perfil de personalidad. Son datos permanentes — solo podrás modificarlos una vez después de guardarlos.'}
-          </p>
+              ? 'Sólo podés modificar el Human Design una vez, para corregir errores. Después de esta actualización los datos quedan fijos de forma permanente.'
+              : 'Los datos de tu carta de Human Design forman parte de tu perfil de personalidad. Son datos permanentes: sólo vas a poder modificarlos una vez después de guardarlos.'}
+          </Alert>
         </div>
 
         <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-4 px-5 py-4">

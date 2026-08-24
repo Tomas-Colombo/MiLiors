@@ -1,10 +1,11 @@
 import { Suspense } from 'react'
-import { verifySession } from '@/lib/dal'
+import { requireRol } from '@/lib/guards'
 import { AppSidebar } from '@/components/shared/app-sidebar'
 import { FilterMemory } from '@/components/shared/filter-memory'
 import {
   HomeIcon,
   BuildingIcon,
+  GridIcon,
   FileIcon,
   SearchIcon,
   NotebookIcon,
@@ -12,14 +13,15 @@ import {
 
 const NAV_RECLUTADOR = [
   { href: '/reclutador', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true },
-  { href: '/reclutador/puestos', label: 'Mis puestos', icon: <BuildingIcon size={18} /> },
+  { href: '/reclutador/empresas', label: 'Mis empresas', icon: <BuildingIcon size={18} /> },
+  { href: '/reclutador/puestos', label: 'Mis puestos', icon: <GridIcon size={18} /> },
   { href: '/reclutador/postulaciones', label: 'Postulaciones', icon: <FileIcon size={18} /> },
   { href: '/reclutador/postulantes', label: 'Buscar candidatos', icon: <SearchIcon size={18} /> },
   { href: '/reclutador/notas', label: 'Mis notas', icon: <NotebookIcon size={18} /> },
 ]
 
 export default async function ReclutadorLayout({ children }: { children: React.ReactNode }) {
-  const session = await verifySession()
+  const session = await requireRol('RECLUTADOR')
 
   return (
     <div className="flex min-h-screen bg-surface-page">

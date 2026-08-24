@@ -1,5 +1,5 @@
 # PLANIFICACION_PROYECTO.txt
-## TalentID — Plataforma de Reclutamiento con Perfilado de Personalidad por IA
+## MiLiors — Plataforma de Reclutamiento con Perfilado de Personalidad por IA
 
 **Versión del documento:** 1.0
 **Fecha:** 2026-06-20
@@ -10,12 +10,12 @@
 
 ## 1. RESUMEN EJECUTIVO
 
-TalentID es una plataforma web responsive de reclutamiento que diferencia a los candidatos no solo por su
+MiLiors es una plataforma web responsive de reclutamiento que diferencia a los candidatos no solo por su
 perfil técnico (experiencia, formación, competencias, idiomas) sino por un **perfil de personalidad**
 construido a partir de dos marcos: el **Eneagrama** (test obligatorio de 135 preguntas) y el **Human Design**
 (opcional, carga manual). A partir de esos datos, un **modelo LLM (Claude)** genera un **Informe de
 Personalidad** y la plataforma emite un **Certificado PDF firmado y verificable mediante QR** contra un
-endpoint propio de TalentID.
+endpoint propio de MiLiors.
 
 El sistema conecta tres actores: **Postulantes** (candidatos), **Reclutadores** (empresas que publican puestos
 y buscan talento) y **Administrador** (gestiona catálogos y modera). Incluye además un **Asistente IA** para
@@ -144,7 +144,7 @@ clase `Usuario`:
 ### M6 — Certificación (PDF + QR)
 - Generar PDF a partir de Perfil Técnico + Informe de Personalidad.
 - Subir a storage y guardar URL; incluir timestamp de firma y QR.
-- QR apunta a **endpoint propio de TalentID** de verificación (no servicio externo).
+- QR apunta a **endpoint propio de MiLiors** de verificación (no servicio externo).
 - Página pública de verificación (sin login).
 - Descarga vía URL firmada de Supabase Storage.
 
@@ -442,7 +442,7 @@ Login → dashboard métricas → gestionar sectores/competencias → moderar po
 | **Supabase Postgres** | Base de datos + RLS | Defensa en profundidad |
 | **Supabase Storage** | PDFs certificados | URLs firmadas para descarga |
 | **Anthropic Claude API** | Informe de personalidad + Asistente IA + resumen profesional | JSON estructurado, caching, modelos económicos; budget USD 20–30/mes |
-| **Generación PDF + QR** | Certificado firmado | QR → endpoint propio TalentID de verificación |
+| **Generación PDF + QR** | Certificado firmado | QR → endpoint propio MiLiors de verificación |
 | **Email transaccional** (p. ej. Resend) | Notificación de cambio de estado de postulación | |
 | **Vercel** | Hosting Next.js | |
 

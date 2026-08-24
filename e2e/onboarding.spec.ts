@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { loginAs, USERS } from './fixtures/auth'
+import { loginAs } from './fixtures/auth'
 
 // TC-ONB-* — M02 Onboarding Reclutador / M03 Onboarding Postulante
 //
@@ -42,7 +42,7 @@ test.describe('M02 — Onboarding Reclutador: validaciones', () => {
     }
     await page.locator('[name="nombre_empresa"]').fill('Empresa Test')
     // Bypass native URL validation to reach Zod server-side error
-    await page.locator('[name="url_empresa"]').evaluate(
+    await page.locator('[name="link_url"]').evaluate(
       (el, val) => { (el as HTMLInputElement).value = val },
       'no-es-una-url'
     )

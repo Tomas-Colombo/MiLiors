@@ -2,7 +2,8 @@ import 'server-only'
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import type { RolUsuario, SessionUser } from '@/lib/types/domain'
+import type { SessionUser } from '@/lib/types/domain'
+import { rolDeUsuario } from './rol'
 
 /**
  * Verifica la sesión actual. Si no hay sesión, redirige a /login.
@@ -16,7 +17,7 @@ export const verifySession = cache(async (): Promise<SessionUser> => {
     redirect('/login')
   }
 
-  const rol = user.user_metadata?.rol as RolUsuario | undefined
+  const rol = rolDeUsuario(user)
   if (!rol) {
     redirect('/login')
   }
@@ -37,7 +38,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
   if (!user) return null
 
-  const rol = user.user_metadata?.rol as RolUsuario | undefined
+  const rol = rolDeUsuario(user)
   if (!rol) return null
 
   return {

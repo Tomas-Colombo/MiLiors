@@ -1,8 +1,8 @@
 'use client'
 
-import { useActionState, useTransition, useEffect, useRef } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Button, Input, Field, Alert, DateInput } from '@/components/ui'
+import { useActionState, useTransition, useEffect, useRef, useState } from 'react'
+import { Button, Input, Field, Alert, ConfirmDialog } from '@/components/ui'
+import { CatalogoAcciones } from '@/components/admin/catalogo-acciones'
 import { PlusIcon } from '@/components/icons'
 import {
   crearCarrera,
@@ -48,34 +48,22 @@ export function CrearCarreraForm() {
 }
 
 export function CarreraAcciones({ id, nombre, activo }: { id: string; nombre: string; activo: boolean }) {
-  const [isPending, startTransition] = useTransition()
-
-  function handleEditar() {
-    const nuevo = window.prompt('Nuevo nombre de la carrera:', nombre)
-    if (nuevo == null || nuevo.trim() === '' || nuevo.trim() === nombre) return
-    startTransition(async () => {
-      const res = await renombrarCarrera(id, nuevo)
-      if (!res.success) window.alert(res.error)
-    })
-  }
-
-  function handleToggle() {
-    if (activo && !window.confirm('¿Desactivar esta carrera? Seguirá existiendo como baja lógica.')) return
-    startTransition(async () => {
-      if (activo) await desactivarCarrera(id)
-      else await reactivarCarrera(id)
-    })
-  }
-
   return (
-    <div className="flex justify-end gap-2">
-      <Button variant="ghost" size="sm" onClick={handleEditar} loading={isPending}>
-        Editar
-      </Button>
-      <Button variant={activo ? 'secondary' : 'tonal'} size="sm" onClick={handleToggle} loading={isPending}>
-        {activo ? 'Desactivar' : 'Reactivar'}
-      </Button>
-    </div>
+    <CatalogoAcciones
+      nombre={nombre}
+      activo={activo}
+      esta="esta carrera"
+      etiquetaNombre="Nombre de la carrera"
+      onRenombrar={(valor) => renombrarCarrera(id, valor)}
+      onDesactivar={() => desactivarCarrera(id)}
+      onReactivar={() => reactivarCarrera(id)}
+      consecuencia={
+        <>
+          Es una baja lógica: no se borra nada y podés reactivarla cuando quieras. Deja de
+          ofrecerse en el perfil de los postulantes; quienes ya la tienen cargada la conservan.
+        </>
+      }
+    />
   )
 }
 
@@ -83,60 +71,47 @@ export function CarreraAcciones({ id, nombre, activo }: { id: string; nombre: st
 
 export function PromoverCarreraOtraBoton({ nombre }: { nombre: string }) {
   const [isPending, startTransition] = useTransition()
+  const [confirmando, setConfirmando] = useState(false)
+  const [error, setError] = useState('')
 
-  function handlePromover() {
-    if (
-      !window.confirm(
-        `¿Promover "${nombre}" a carrera oficial? Se re-vincularán los postulantes que la cargaron.`,
-      )
-    )
-      return
+  function handleConfirmar() {
+    setError('')
     startTransition(async () => {
       const res = await promoverCarreraOtra(nombre)
-      if (!res.success) window.alert(res.error)
+      if (res.success) setConfirmando(false)
+      else setError(res.error || 'No se pudo promover la carrera.')
     })
   }
 
   return (
-    <Button variant="tonal" size="sm" onClick={handlePromover} loading={isPending}>
-      Promover a oficial
-    </Button>
+    <>
+      <Button
+        variant="tonal"
+        size="sm"
+        onClick={() => {
+          setError('')
+          setConfirmando(true)
+        }}
+        loading={isPending}
+      >
+        Promover a oficial
+      </Button>
+
+      <ConfirmDialog
+        open={confirmando}
+        onClose={() => setConfirmando(false)}
+        onConfirm={handleConfirmar}
+        title={`¿Promover “${nombre}” a carrera oficial?`}
+        confirmLabel="Promover"
+        loading={isPending}
+        error={error}
+      >
+        Pasa al catálogo oficial y queda disponible para todos. Los postulantes que la habían
+        escrito a mano quedan re-vinculados a la carrera del catálogo.
+      </ConfirmDialog>
+    </>
   )
 }
 
 // ─── Filtro de fecha (sección B) ────────────────────────────────────────────
 
-export function FiltroFechaCarrerasOtras({ desde, hasta }: { desde: string; hasta: string }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
-  function setParam(key: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) params.set(key, value)
-    else params.delete(key)
-    const qs = params.toString()
-    router.replace(qs ? `${pathname}?${qs}` : pathname)
-  }
-
-  return (
-    <div className="flex items-end gap-3">
-      <Field label="Desde" className="w-40">
-        <DateInput
-          value={desde}
-          max={hasta || undefined}
-          onChange={(value) => setParam('desde', value)}
-          aria-label="Desde"
-        />
-      </Field>
-      <Field label="Hasta" className="w-40">
-        <DateInput
-          value={hasta}
-          min={desde || undefined}
-          onChange={(value) => setParam('hasta', value)}
-          aria-label="Hasta"
-        />
-      </Field>
-    </div>
-  )
-}

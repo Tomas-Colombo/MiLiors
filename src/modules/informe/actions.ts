@@ -150,8 +150,7 @@ export async function valorarCompetencia(
   if (!competencia || !key) return { success: false, error: 'Competencia no encontrada en tu informe.' }
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('feedback_informe_competencia') as any).upsert(
+  const { error } = await supabase.from('feedback_informe_competencia').upsert(
     {
       informe_id: informe.id,
       postulante_id: informe.postulanteId,
@@ -221,8 +220,7 @@ export async function guardarFeedbackInforme(
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('feedback_informe') as any).upsert(
+  const { error } = await supabase.from('feedback_informe').upsert(
     {
       informe_id: informe.id,
       postulante_id: informe.postulanteId,
@@ -279,13 +277,11 @@ export async function generarInforme(): Promise<ActionResult> {
     informeId = prev.id
     // Marcamos PENDIENTE sin borrar el contenido: si la generación falla,
     // el informe anterior sigue intacto (ver fallarGeneracion).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('informe_personalidad') as any)
+    await admin.from('informe_personalidad')
       .update({ estado_informe: 'PENDIENTE' })
       .eq('id', informeId)
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: nuevo } = await (admin.from('informe_personalidad') as any)
+    const { data: nuevo } = await admin.from('informe_personalidad')
       .insert({ postulante_id: postulanteId, estado_informe: 'PENDIENTE' })
       .select('id')
       .single()
@@ -294,8 +290,7 @@ export async function generarInforme(): Promise<ActionResult> {
   }
 
   async function fallarGeneracion(mensaje: string): Promise<ActionResult> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('informe_personalidad') as any)
+    await admin.from('informe_personalidad')
       .update({ estado_informe: teniaInformeValido ? 'LISTO' : 'ERROR' })
       .eq('id', informeId)
     revalidatePath('/postulante/informe')
@@ -318,8 +313,7 @@ export async function generarInforme(): Promise<ActionResult> {
     return fallarGeneracion(`No se pudo generar el informe: ${resultado.motivo}`)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: saveError } = await (admin.from('informe_personalidad') as any)
+  const { error: saveError } = await admin.from('informe_personalidad')
     .update({
       estado_informe: 'LISTO',
       contenido_json: resultado.contenido_json,

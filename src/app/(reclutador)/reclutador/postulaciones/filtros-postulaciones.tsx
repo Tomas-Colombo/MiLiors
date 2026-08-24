@@ -1,22 +1,36 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { FancySelect, SearchableSelect, Tooltip } from '@/components/ui'
-import { CheckCircleIcon, HelpCircleIcon, TrashIcon, CalendarIcon, FilterIcon } from '@/components/icons'
-import { SearchInput } from '@/components/shared/list-controls'
+import { CheckCircleIcon, HelpCircleIcon, CalendarIcon, FilterIcon } from '@/components/icons'
+import { ClearFilters, SearchInput, useSetParam } from '@/components/shared/list-controls'
 import { MARCA_POSTULACION } from '@/lib/constants/enums'
 
-type Puesto = { id: string; titulo_puesto: string; sinPostulaciones?: boolean }
+type Puesto = { id: string; titulo_puesto: string; cerrado?: boolean; sinPostulaciones?: boolean }
 type Opcion = { value: string; label: string }
 type Provincia = { id: string; nombre: string }
 
+/** Claves que cuentan como filtro activo, para el panel y para "Limpiar". */
+const CLAVES_FILTRO = [
+  'q',
+  'puesto',
+  'empresa',
+  'estado',
+  'marca',
+  'ciclos',
+  'carrera',
+  'habilidad',
+  'provincia',
+  'departamento',
+]
+
 type Props = {
   puestos: Puesto[]
+  empresas: Opcion[]
   carreras: Opcion[]
   habilidades: Opcion[]
   provincias: Provincia[]
-  localidades: Opcion[]
+  departamentos: Opcion[]
   totalVisible: number
   totalTotal: number
   /** Sólo ofrecemos el toggle si el reclutador tiene algún puesto reabierto. */
@@ -24,74 +38,50 @@ type Props = {
 }
 
 export function FiltrosPostulaciones({
-  puestos, carreras, habilidades, provincias, localidades, totalVisible, totalTotal, hayCiclosAnteriores,
+  puestos, empresas, carreras, habilidades, provincias, departamentos, totalVisible, totalTotal,
+  hayCiclosAnteriores,
 }: Props) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const { searchParams, setParams } = useSetParam()
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
 
   const setParam = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
-      }
-      params.delete('page')
-      const qs = params.toString()
-      router.replace(qs ? `${pathname}?${qs}` : pathname)
-    },
-    [router, pathname, searchParams],
+    (key: string, value: string) => setParams({ [key]: value || null }),
+    [setParams],
   )
 
-  // Al cambiar de provincia se limpia la localidad (depende de la provincia).
+  // Al cambiar de provincia se limpia el departamento (depende de la provincia).
   const setProvincia = useCallback(
-    (value: string) => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (value) params.set('provincia', value)
-      else params.delete('provincia')
-      params.delete('localidad')
-      params.delete('page')
-      router.replace(`${pathname}?${params.toString()}`)
-    },
-    [router, pathname, searchParams],
+    (value: string) => setParams({ provincia: value || null, departamento: null }),
+    [setParams],
   )
 
   // Un puesto sin postulaciones (llegamos desde "Mis puestos") se incluye para
   // que su título se muestre como valor actual del filtro.
-  const puestoOpts = puestos.map((p) => ({ value: p.id, label: p.titulo_puesto }))
+  const puestoOpts = puestos.map((p) => ({
+    value: p.id,
+    label: p.cerrado ? `${p.titulo_puesto} · pausado` : p.titulo_puesto,
+  }))
 
   const puestoActual = searchParams.get('puesto') ?? ''
+  const empresaActual = searchParams.get('empresa') ?? ''
   const carreraActual = searchParams.get('carrera') ?? ''
   const habilidadActual = searchParams.get('habilidad') ?? ''
   const provinciaActual = searchParams.get('provincia') ?? ''
-  const localidadActual = searchParams.get('localidad') ?? ''
+  const departamentoActual = searchParams.get('departamento') ?? ''
   const marcaActual = searchParams.get('marca') ?? ''
   const provinciaOpts = provincias.map((p) => ({ value: p.id, label: p.nombre }))
 
   const estadoOpts = [
     { value: '', label: 'Todos los estados' },
-    { value: 'ENVIADA', label: 'No vistas' },
-    { value: 'VISTO', label: 'Vistas' },
+    { value: 'ENVIADA', label: 'Sin evaluar' },
+    { value: 'VISTO', label: 'Evaluadas' },
     { value: 'PROCESO_FINALIZADO', label: 'No avanzan' },
     // Descartadas por el preselector (las únicas con motivo_descarte).
     { value: 'PROCESO_FINALIZADO_AUTO', label: 'No avanza aut.' },
     { value: 'CERRADA', label: 'Cerradas' },
   ]
 
-  const hayFiltrosActivos = !!(
-    searchParams.get('q') ||
-    searchParams.get('puesto') ||
-    searchParams.get('estado') ||
-    searchParams.get('marca') ||
-    searchParams.get('ciclos') ||
-    searchParams.get('carrera') ||
-    searchParams.get('habilidad') ||
-    searchParams.get('provincia') ||
-    searchParams.get('localidad')
-  )
+  const hayFiltrosActivos = CLAVES_FILTRO.some((k) => !!searchParams.get(k))
 
   // Con filtros aplicados el panel queda abierto y no se ofrece ocultarlo: los filtros
   // se recuerdan entre pestañas y esconderlos hace pensar que no hay resultados.
@@ -125,6 +115,21 @@ export function FiltrosPostulaciones({
 
       {abierto && (
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center">
+          {/* Con una sola empresa el filtro no aporta: se muestra recién a partir de dos. */}
+          {empresas.length > 1 && (
+            <div className="w-full sm:w-56">
+              <SearchableSelect
+                key={empresaActual}
+                name="empresa"
+                options={empresas}
+                defaultValue={empresaActual}
+                placeholder="Todas las empresas"
+                onValueChange={(value) => {
+                  if (value) setParam('empresa', value)
+                }}
+              />
+            </div>
+          )}
           <div className="w-full sm:w-56">
             <SearchableSelect
               key={puestoActual}
@@ -183,17 +188,17 @@ export function FiltrosPostulaciones({
               }}
             />
           </div>
-          {/* La localidad solo se muestra una vez elegida la provincia. */}
+          {/* El departamento solo se muestra una vez elegida la provincia. */}
           {provinciaActual && (
             <div className="w-full sm:w-56">
               <SearchableSelect
-                key={`${provinciaActual}-${localidadActual}`}
-                name="localidad"
-                options={localidades}
-                defaultValue={localidadActual}
-                placeholder="Todas las localidades"
+                key={`${provinciaActual}-${departamentoActual}`}
+                name="departamento"
+                options={departamentos}
+                defaultValue={departamentoActual}
+                placeholder="Todos los departamentos"
                 onValueChange={(value) => {
-                  if (value) setParam('localidad', value)
+                  if (value) setParam('departamento', value)
                 }}
               />
             </div>
@@ -248,19 +253,7 @@ export function FiltrosPostulaciones({
               </button>
             </Tooltip>
           )}
-          {hayFiltrosActivos && (
-            <button
-              type="button"
-              onClick={() => {
-                const params = new URLSearchParams()
-                router.replace(`${pathname}?${params.toString()}`)
-              }}
-              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 h-9 text-[12.5px] font-medium text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300 transition-colors whitespace-nowrap"
-            >
-              <TrashIcon size={14} />
-              Limpiar filtros
-            </button>
-          )}
+          <ClearFilters keys={CLAVES_FILTRO} />
         </div>
       )}
     </div>

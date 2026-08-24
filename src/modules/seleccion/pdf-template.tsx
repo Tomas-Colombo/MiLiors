@@ -2,8 +2,8 @@ import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import type { InformeSeleccionJSON } from './prompts'
 
 const colors = {
-  primary: '#7c5cfc',
-  primaryTint: '#f1edff',
+  primary: '#2f6fed',
+  primaryTint: '#e7effd',
   ink: '#1a1d29',
   soft: '#3c414f',
   muted: '#6b7085',
@@ -13,7 +13,7 @@ const colors = {
 }
 
 const styles = StyleSheet.create({
-  page: { backgroundColor: '#faf3f7', paddingTop: 24, paddingBottom: 24, fontFamily: 'Helvetica' },
+  page: { backgroundColor: '#f7f8fb', paddingTop: 24, paddingBottom: 24, fontFamily: 'Helvetica' },
   header: { backgroundColor: colors.primary, paddingVertical: 30, paddingHorizontal: 40, marginTop: -24 },
   headerBrand: { fontSize: 20, color: colors.white, fontFamily: 'Helvetica-Bold', letterSpacing: 0.5 },
   headerTitle: {
@@ -81,10 +81,10 @@ export function InformeSeleccionPDF({
     : null
 
   return (
-    <Document title={`Informe de Selección — ${tituloPuesto}`} author="TalentID">
+    <Document title={`Informe de Selección — ${tituloPuesto}`} author="MiLiors">
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.headerBrand}>TalentID</Text>
+          <Text style={styles.headerBrand}>MiLiors</Text>
           <Text style={styles.headerTitle}>Informe de Selección</Text>
         </View>
 
@@ -149,7 +149,7 @@ export function InformeSeleccionPDF({
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Generado por TalentID{fecha ? ` · ${fecha}` : ''} — informe orientativo elaborado con
+              Generado por MiLiors{fecha ? ` · ${fecha}` : ''} — informe orientativo elaborado con
               IA a partir de los perfiles de la plataforma. La decisión final es del reclutador.
             </Text>
           </View>

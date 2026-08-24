@@ -1,4 +1,4 @@
-# QA Plan — TalentID
+# QA Plan — MiLiors
 
 > Leyenda: ⬜ Pendiente · ✅ Aprobado · ❌ Falló
 

@@ -4,13 +4,13 @@ import { Card, Badge, Chip, EmptyState } from '@/components/ui'
 import { UsersIcon, SparklesIcon } from '@/components/icons'
 import { buscarPostulantes } from '@/modules/postulantes/queries'
 import { getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
-import { getProvincias, getDepartamentosPorProvincia, getLocalidadIdsPorDepartamento } from '@/modules/ubicacion/queries'
+import { getProvincias, getDepartamentosPorProvincia } from '@/modules/ubicacion/queries'
 import { getCarreras, getCarrerasOtras } from '@/modules/carreras/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
-import { PostulantesFilters } from './filters'
+import { FiltrosPostulantes } from './filtros-postulantes'
 
-export const metadata = { title: 'Buscar postulantes — TalentID' }
+export const metadata = { title: 'Buscar postulantes — MiLiors' }
 
 // searchParams in Next.js App Router is a Promise — must be awaited
 type SearchParams = Promise<{
@@ -29,17 +29,12 @@ export default async function BuscarPostulantesPage({
   searchParams: SearchParams
 }) {
   const sp = await searchParams
-  // El perfil guarda localidad_id: el filtro por departamento se resuelve a sus localidades.
-  const localidadIds = sp.provincia && sp.departamento
-    ? await getLocalidadIdsPorDepartamento(sp.provincia, sp.departamento)
-    : undefined
-
   const [postulantes, competencias, provincias, departamentos, carreras, carrerasOtras] = await Promise.all([
     buscarPostulantes({
       busqueda: sp.busqueda,
       competenciaId: sp.competencia,
       provinciaId: sp.provincia,
-      localidadIds,
+      departamentoId: sp.departamento,
       carrera: sp.carrera,
       carreraOtra: sp.carreraOtra,
     }),
@@ -66,7 +61,7 @@ export default async function BuscarPostulantesPage({
         </div>
 
         {/* Filtros live (sin botón de buscar) — imitan la sección de postulaciones */}
-        <PostulantesFilters
+        <FiltrosPostulantes
           competencias={competenciaOpts}
           provincias={provincias}
           departamentos={departamentos}

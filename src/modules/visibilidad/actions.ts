@@ -9,8 +9,7 @@ export async function togglePerfilEnBusqueda(activo: boolean): Promise<ActionRes
   const session = await verifySession()
   const supabase = await createClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('perfil_postulante') as any)
+  const { error } = await supabase.from('perfil_postulante')
     .update({ perfil_en_busqueda: activo })
     .eq('usuario_id', session.id)
 

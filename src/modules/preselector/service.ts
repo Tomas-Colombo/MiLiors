@@ -48,8 +48,7 @@ export async function persistirFormularioPreselector(
     return { ok: false, error: 'No se pudo actualizar el formulario preselector.' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: formulario, error: insertFormError } = await (supabase.from('formulario_preselector') as any)
+  const { data: formulario, error: insertFormError } = await supabase.from('formulario_preselector')
     .insert({ puesto_id: puestoId })
     .select('id')
     .single()
@@ -63,8 +62,7 @@ export async function persistirFormularioPreselector(
   for (let i = 0; i < input.preguntas.length; i++) {
     const pregunta = input.preguntas[i]
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: preguntaRow, error: preguntaError } = await (supabase.from('pregunta_preselector') as any)
+    const { data: preguntaRow, error: preguntaError } = await supabase.from('pregunta_preselector')
       .insert({
         formulario_id: formularioId,
         texto: pregunta.texto,
@@ -82,8 +80,7 @@ export async function persistirFormularioPreselector(
     if (pregunta.opciones && pregunta.opciones.length > 0) {
       const preguntaId = (preguntaRow as { id: string }).id
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: opcionesError } = await (supabase.from('opcion_pregunta_preselector') as any).insert(
+      const { error: opcionesError } = await supabase.from('opcion_pregunta_preselector').insert(
         pregunta.opciones.map((opcion, idx) => ({
           pregunta_id: preguntaId,
           texto: opcion.texto,

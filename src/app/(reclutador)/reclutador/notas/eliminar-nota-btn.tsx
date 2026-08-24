@@ -2,12 +2,16 @@
 
 import { useState, useTransition } from 'react'
 import { TrashIcon } from '@/components/icons'
+import { ConfirmDialog } from '@/components/ui'
 import { eliminarNota } from '@/modules/postulantes/actions'
 
 /**
  * Botón para eliminar una nota desde la lista global. Confirma antes de borrar
  * (acción irreversible) y delega en la server action `eliminarNota`, que
  * revalida `/reclutador/notas` para refrescar la lista.
+ *
+ * Si la acción falla, el error se muestra dentro del propio diálogo en vez de
+ * quedar escondido en el `title` del botón.
  */
 export function EliminarNotaBtn({
   notaId,
@@ -17,27 +21,43 @@ export function EliminarNotaBtn({
   postulanteId: string
 }) {
   const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
+  const [error, setError] = useState('')
 
-  function handleEliminar() {
-    if (!confirm('¿Eliminar esta nota? Esta acción no se puede deshacer.')) return
-    setError(false)
+  function handleConfirmar() {
+    setError('')
     startTransition(async () => {
       const result = await eliminarNota(notaId, postulanteId)
-      if (!result.success) setError(true)
+      if (result.success) setConfirmando(false)
+      else setError(result.error || 'No se pudo eliminar la nota. Volvé a intentarlo.')
     })
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleEliminar}
-      disabled={isPending}
-      className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error-bg transition-colors disabled:opacity-50"
-      aria-label="Eliminar nota"
-      title={error ? 'No se pudo eliminar. Reintentá.' : 'Eliminar nota'}
-    >
-      <TrashIcon size={14} />
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirmando(true)}
+        disabled={isPending}
+        className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error-bg transition-colors disabled:opacity-50"
+        aria-label="Eliminar nota"
+        title="Eliminar nota"
+      >
+        <TrashIcon size={14} />
+      </button>
+
+      <ConfirmDialog
+        open={confirmando}
+        onClose={() => setConfirmando(false)}
+        onConfirm={handleConfirmar}
+        tone="destructive"
+        title="¿Eliminar esta nota?"
+        confirmLabel="Eliminar"
+        loading={isPending}
+        error={error}
+      >
+        La nota se borra definitivamente. Esta acción no se puede deshacer.
+      </ConfirmDialog>
+    </>
   )
 }

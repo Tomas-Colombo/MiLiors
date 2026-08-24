@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { verifySession } from '@/lib/dal'
+import { requireRol } from '@/lib/guards'
 import { createClient } from '@/lib/supabase/server'
 import { AppSidebar } from '@/components/shared/app-sidebar'
 import { FilterMemory } from '@/components/shared/filter-memory'
@@ -47,7 +47,7 @@ async function getDesactualizadoFlags(userId: string) {
 }
 
 export default async function PostulanteLayout({ children }: { children: React.ReactNode }) {
-  const session = await verifySession()
+  const session = await requireRol('POSTULANTE')
   const { informeDesactualizado, certDesactualizado } = await getDesactualizadoFlags(session.id)
 
   const NAV_POSTULANTE = [

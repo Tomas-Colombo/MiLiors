@@ -4,7 +4,8 @@ import { requireEneagramaCompleto } from '@/lib/guards'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge } from '@/components/ui'
-import { ChevronLeftIcon, CalendarIcon, BuildingIcon, ArrowRightIcon, AlertTriangleIcon } from '@/components/icons'
+import { ChevronLeftIcon, CalendarIcon, BuildingIcon, ArrowRightIcon } from '@/components/icons'
+import { AvisoCertificado } from '@/components/shared/aviso-certificado'
 import { getPuestoPublicoById, getMisPostulacionesPuestoIds } from '@/modules/puestos/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getFormularioDePuesto } from '@/modules/preselector/queries'
@@ -57,24 +58,7 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
           {volverLabel}
         </VolverLink>
 
-        {/* Banner certificado */}
-        {bloqueado && (
-          <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
-            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning-solid" />
-            <div className="text-sm">
-              <span className="font-semibold text-warning">
-                {!certificado ? 'Necesitás un certificado para postularte.' : 'Tu certificado está desactualizado.'}
-              </span>
-              {' '}
-              <Link
-                href="/postulante/certificado"
-                className="text-warning underline underline-offset-2 hover:text-warning-strong transition-colors"
-              >
-                {!certificado ? 'Generá tu certificado aquí.' : 'Generá uno nuevo aquí.'}
-              </Link>
-            </div>
-          </div>
-        )}
+        {bloqueado && <AvisoCertificado sinCertificado={!certificado} />}
 
         {/* Card principal */}
         <Card padding="lg" className="space-y-5">

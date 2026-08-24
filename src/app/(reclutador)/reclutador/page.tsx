@@ -2,20 +2,13 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { Card } from '@/components/ui'
 import { redirect } from 'next/navigation'
-import {
-  BuildingIcon,
-  FileIcon,
-  SearchIcon,
-  PlusIcon,
-  ArrowRightIcon,
-} from '@/components/icons'
-import Link from 'next/link'
+import { getMisEmpresasBase } from '@/modules/empresas/queries'
+import { QuickLinksReclutador } from './quick-links'
 import { MetricasSection } from './metricas-section'
 import { MetricasSkeleton } from './metricas-skeleton'
 
-export const metadata = { title: 'Inicio — TalentID Reclutador' }
+export const metadata = { title: 'Inicio — MiLiors Reclutador' }
 
 export default async function ReclutadorDashboard() {
   const session = await verifySession()
@@ -23,50 +16,22 @@ export default async function ReclutadorDashboard() {
 
   const { data: reclutador } = await supabase
     .from('perfil_reclutador')
-    .select('id, nombre_reclutador, empresa_id, empresa(nombre_empresa)')
+    .select('id, nombre_reclutador')
     .eq('usuario_id', session.id)
-    .single()
+    .maybeSingle()
 
-  // Redirect to onboarding if no company linked
-  if (!reclutador || !(reclutador as { empresa_id: string | null }).empresa_id) {
+  // Sin ninguna empresa cargada no hay nada que gestionar: va al onboarding.
+  const empresas = await getMisEmpresasBase()
+  if (!reclutador || empresas.length === 0) {
     redirect('/reclutador/onboarding')
   }
 
-  type ReclutadorRow = {
-    id: string
-    nombre_reclutador: string
-    empresa_id: string
-    empresa: { nombre_empresa: string } | null
-  }
-
-  const rec = reclutador as ReclutadorRow
-
-  const QUICK_LINKS = [
-    {
-      href: '/reclutador/puestos',
-      icon: <BuildingIcon size={20} className="text-primary-600" />,
-      title: 'Mis puestos',
-      desc: 'Gestioná tus vacantes activas y cerradas',
-    },
-    {
-      href: '/reclutador/puestos/nuevo',
-      icon: <PlusIcon size={20} className="text-primary-600" />,
-      title: 'Publicar puesto',
-      desc: 'Nueva vacante con notas privadas sobre el puesto',
-    },
-    {
-      href: '/reclutador/postulaciones',
-      icon: <FileIcon size={20} className="text-primary-600" />,
-      title: 'Postulaciones',
-      desc: 'Candidatos que aplicaron a tus puestos',
-    },
-    {
-      href: '/reclutador/postulantes',
-      icon: <SearchIcon size={20} className="text-primary-600" />,
-      title: 'Buscar candidatos',
-      desc: 'Explorá el banco de talentos disponibles',
-    },
-  ]
+  const rec = reclutador as { id: string; nombre_reclutador: string }
+  const empresasActivas = empresas.filter((e) => e.activa)
+  const subtitulo =
+    empresasActivas.length === 1
+      ? empresasActivas[0].nombre_empresa
+      : `${empresasActivas.length} empresas activas`
 
   return (
     <TyCGate>
@@ -76,33 +41,13 @@ export default async function ReclutadorDashboard() {
           <h1 className="text-2xl font-extrabold text-ink">
             ¡Hola, {rec.nombre_reclutador.split(' ')[0]}!
           </h1>
-          <p className="mt-1 text-sm text-muted">{rec.empresa?.nombre_empresa ?? 'Tu empresa'}</p>
+          <p className="mt-1 text-sm text-muted">{subtitulo}</p>
         </div>
 
         {/* Accesos rápidos */}
         <div>
           <h2 className="text-[13.5px] font-bold text-ink mb-3">Accesos rápidos</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {QUICK_LINKS.map((item) => (
-              <Link key={item.href} href={item.href} className="block group">
-                <Card padding="md" className="h-full transition-shadow hover:shadow-card-raised">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-center gap-2">
-                        {item.icon}
-                        <span className="text-[13.5px] font-semibold text-ink">{item.title}</span>
-                      </div>
-                      <p className="text-xs text-muted leading-relaxed">{item.desc}</p>
-                    </div>
-                    <ArrowRightIcon
-                      size={14}
-                      className="mt-1 flex-none text-neutral-300 transition-colors group-hover:text-primary-600"
-                    />
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
+          <QuickLinksReclutador />
         </div>
 
         {/* Métricas */}

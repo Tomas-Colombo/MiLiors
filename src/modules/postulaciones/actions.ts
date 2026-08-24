@@ -39,15 +39,15 @@ async function enviarEmailCambioEstado(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'TalentID <notificaciones@talentid.com.ar>',
+        from: 'MiLiors <notificaciones@miliors.com>',
         to: emailDestino,
         subject: `Actualización en tu postulación — ${tituloPuesto}`,
         html: `
           <p>Hola ${nombrePostulante},</p>
           <p>Tu postulación al puesto <strong>${tituloPuesto}</strong> en <strong>${empresaNombre}</strong> fue actualizada.</p>
           <p><strong>Estado actual:</strong> ${estadoLabel}</p>
-          <p>Ingresá a <a href="${process.env.NEXT_PUBLIC_APP_URL}/postulante/postulaciones">TalentID</a> para ver el detalle.</p>
-          <p>— El equipo de TalentID</p>
+          <p>Ingresa a <a href="${process.env.NEXT_PUBLIC_APP_URL}/postulante/postulaciones">MiLiors</a> para ver el detalle.</p>
+          <p>— El equipo de MiLiors</p>
         `,
       }),
     })
@@ -145,8 +145,7 @@ export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
 
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('postulacion') as any).insert({
+  const { error } = await admin.from('postulacion').insert({
     postulante_id: guard.postulanteId,
     puesto_id: puestoId,
     historial_puesto_id: cicloId,
@@ -215,8 +214,7 @@ export async function postularAPuestoConFormulario(
 
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: postulacion, error } = await (admin.from('postulacion') as any)
+  const { data: postulacion, error } = await admin.from('postulacion')
     .insert({
       postulante_id: guard.postulanteId,
       puesto_id: puestoId,
@@ -233,8 +231,7 @@ export async function postularAPuestoConFormulario(
 
   const postulacionId = (postulacion as { id: string }).id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: respuestasError } = await (admin.from('respuesta_preselector') as any).insert(
+  const { error: respuestasError } = await admin.from('respuesta_preselector').insert(
     respuestas.map((r) => ({
       postulacion_id: postulacionId,
       pregunta_id: r.preguntaId,
@@ -245,8 +242,7 @@ export async function postularAPuestoConFormulario(
 
   if (respuestasError) {
     // No transactions in supabase-js: best-effort cleanup of the orphan postulacion
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('postulacion') as any).delete().eq('id', postulacionId)
+    await admin.from('postulacion').delete().eq('id', postulacionId)
     return { success: false, error: 'No se pudieron guardar tus respuestas. Intentá de nuevo.' }
   }
 
@@ -263,8 +259,7 @@ export async function postularAPuestoConFormulario(
   let descartada = false
   if (!evaluacion.aprobado) {
     descartada = true
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('postulacion') as any)
+    await admin.from('postulacion')
       .update({
         estado: 'PROCESO_FINALIZADO',
         motivo_descarte: construirMotivoDescarte(evaluacion.preguntasFalladas),
@@ -295,8 +290,7 @@ export async function avanzarEstadoPostulacion(
 
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('postulacion') as any)
+  const { error } = await admin.from('postulacion')
     .update({ estado: nuevoEstado })
     .eq('id', postulacionId)
 
@@ -335,10 +329,9 @@ export async function revertirDescarte(postulacionId: string): Promise<ActionRes
 
   const admin = createAdminClient()
 
-  // Vuelve a "Vista" y limpia el motivo (si no, un descarte manual posterior
+  // Vuelve a "Evaluada" (VISTO) y limpia el motivo (si no, un descarte manual posterior
   // heredaría el motivo del descarte automático anterior).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('postulacion') as any)
+  const { error } = await admin.from('postulacion')
     .update({ estado: 'VISTO', motivo_descarte: null })
     .eq('id', postulacionId)
 
@@ -374,8 +367,7 @@ export async function marcarPostulacion(
 
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('postulacion') as any)
+  const { error } = await admin.from('postulacion')
     .update({ marca })
     .eq('id', postulacionId)
 

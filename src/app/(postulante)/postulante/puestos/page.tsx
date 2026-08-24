@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { TyCGate } from '@/components/shared/tyc-gate'
-import { Card, Badge, EmptyState } from '@/components/ui'
+import { Alert, Card, EmptyState } from '@/components/ui'
 import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 import {
   getPuestosActivos,
@@ -9,17 +9,17 @@ import {
   getMisPostulacionesPuestoIds,
   PUESTOS_PER_PAGE,
 } from '@/modules/puestos/queries'
-import { getProvincias, getDepartamentosPorProvincia, getLocalidadIdsPorDepartamento } from '@/modules/ubicacion/queries'
+import { getProvincias, getDepartamentosPorProvincia } from '@/modules/ubicacion/queries'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getPuestosConFormulario } from '@/modules/preselector/queries'
 import { getCarreras, getMiCarreraId } from '@/modules/carreras/queries'
 import { PostularButton } from './postular-button'
-import { PuestosFilters } from './filters'
+import { FiltrosPuestos } from './filtros-puestos'
 import { PuestoCard } from './puesto-card'
 import Link from 'next/link'
-import { AlertTriangleIcon } from '@/components/icons'
+import { AvisoCertificado } from '@/components/shared/aviso-certificado'
 
-export const metadata = { title: 'Buscar puestos — TalentID' }
+export const metadata = { title: 'Buscar puestos — MiLiors' }
 
 type SearchParams = Promise<Record<string, string>>
 
@@ -57,11 +57,6 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
     getMiCarreraId(),
   ])
 
-  // El puesto guarda localidad_id: el filtro por departamento se resuelve a sus localidades.
-  const localidadIdsFiltro = provinciaFiltro && departamentoFiltro
-    ? await getLocalidadIdsPorDepartamento(provinciaFiltro, departamentoFiltro)
-    : undefined
-
   // La carrera cargada en el perfil del postulante va primero en el selector.
   const carrerasOrdenadas = miCarreraId
     ? [
@@ -78,7 +73,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
     cargaHoraria: sp.carga_horaria || undefined,
     ubicacion: sp.ubicacion || undefined,
     provinciaId: provinciaFiltro,
-    localidadIds: localidadIdsFiltro,
+    departamentoId: departamentoFiltro,
     busqueda: sp.q || undefined,
     diasDesde,
     page,
@@ -108,7 +103,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
         {/* Filtros */}
         <Card padding="lg">
           <Suspense fallback={<div className="h-36 animate-pulse rounded-lg bg-neutral-100" />}>
-            <PuestosFilters
+            <FiltrosPuestos
               sectores={sectores}
               provincias={provincias}
               departamentos={departamentosFiltro}
@@ -117,35 +112,17 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
           </Suspense>
         </Card>
 
-        {/* Banner certificado */}
-        {bloqueado && (
-          <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
-            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning-solid" />
-            <div className="text-sm">
-              <span className="font-semibold text-warning">
-                {sinCertificado ? 'Necesitás un certificado para postularte.' : 'Tu certificado está desactualizado.'}
-              </span>
-              {' '}
-              <Link
-                href="/postulante/certificado"
-                className="text-warning underline underline-offset-2 hover:text-warning-strong transition-colors"
-              >
-                {sinCertificado ? 'Generá tu certificado aquí.' : 'Generá uno nuevo aquí.'}
-              </Link>
-            </div>
-          </div>
-        )}
+        {bloqueado && <AvisoCertificado sinCertificado={sinCertificado} />}
 
         {/* Resultados */}
         {puestos.length === 0 && carreraFiltro ? (
-          <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
-            <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning-solid" />
-            <p className="text-sm font-medium text-warning">
-              No encontramos puestos para {carreras.find((c) => c.value === carreraFiltro)?.label ?? 'esta carrera'}.
-              Esto no significa que no existan: puede haber puestos que apliquen a tu perfil sin una
-              carrera asignada. Probá buscando sin este filtro o ajustando los demás.
-            </p>
-          </div>
+          <Alert
+            tone="warning"
+            title={`No encontramos puestos para ${carreras.find((c) => c.value === carreraFiltro)?.label ?? 'esta carrera'}.`}
+          >
+            Esto no significa que no existan: puede haber puestos que apliquen a tu perfil sin una
+            carrera asignada. Probá buscando sin este filtro, o ajustando los demás.
+          </Alert>
         ) : puestos.length === 0 ? (
           <EmptyState
             icon={<BuildingIcon size={24} />}

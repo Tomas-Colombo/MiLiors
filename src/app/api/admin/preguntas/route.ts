@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rolDeUsuario } from '@/lib/rol'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
-  if (user.user_metadata?.rol !== 'ADMIN')
+  if (rolDeUsuario(user) !== 'ADMIN')
     return NextResponse.json({ error: 'Acceso denegado.' }, { status: 403 })
 
   // Parsear body
@@ -30,8 +31,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
 
   // Calcular siguiente número de pregunta
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: maxRow } = await (admin.from('pregunta_eneagrama') as any)
+  const { data: maxRow } = await admin.from('pregunta_eneagrama')
     .select('numero_pregunta')
     .order('numero_pregunta', { ascending: false })
     .limit(1)
@@ -40,8 +40,7 @@ export async function POST(req: NextRequest) {
   const numero_pregunta =
     ((maxRow as { numero_pregunta: number } | null)?.numero_pregunta ?? 0) + 1
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (admin.from('pregunta_eneagrama') as any).insert({
+  const { data, error } = await admin.from('pregunta_eneagrama').insert({
     enunciado,
     eneatipo_asociado,
     numero_pregunta,

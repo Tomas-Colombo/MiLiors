@@ -6,9 +6,9 @@ import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon, WhatsAppIcon } from '@
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
 import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
 import { getMotivosNoAvanzar } from '@/modules/postulantes/queries'
-import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getMisEmpresasBase } from '@/modules/empresas/queries'
+import { getProvincias, getDepartamentosPorProvincia } from '@/modules/ubicacion/queries'
 import { ESTADO_POSTULACION, MARCA_POSTULACION } from '@/lib/constants/enums'
-import { PostulacionAcciones } from './postulacion-acciones'
 import { VerPerfilBtn } from './ver-perfil-btn'
 import { VerRespuestasBtn } from './ver-respuestas-btn'
 import { NotasModalBtn } from './notas-modal-btn'
@@ -19,7 +19,7 @@ import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import type { BadgeProps } from '@/components/ui/badge'
 
-export const metadata = { title: 'Postulaciones recibidas — TalentID' }
+export const metadata = { title: 'Postulaciones recibidas — MiLiors' }
 
 type Tone = NonNullable<BadgeProps['tone']>
 
@@ -31,15 +31,15 @@ const estadoTone: Record<string, Tone> = {
 }
 
 const estadoLabel: Record<string, string> = {
-  [ESTADO_POSTULACION.ENVIADA]: 'Enviada',
-  [ESTADO_POSTULACION.VISTO]: 'Vista',
+  [ESTADO_POSTULACION.ENVIADA]: 'Sin evaluar',
+  [ESTADO_POSTULACION.VISTO]: 'Evaluada',
   [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'No avanza',
   [ESTADO_POSTULACION.CERRADA]: 'Cerrada',
 }
 
 type SearchParams = Promise<{
-  puesto?: string; estado?: string; marca?: string; q?: string; page?: string; ciclos?: string
-  carrera?: string; habilidad?: string; provincia?: string; localidad?: string
+  puesto?: string; empresa?: string; estado?: string; marca?: string; q?: string; page?: string; ciclos?: string
+  carrera?: string; habilidad?: string; provincia?: string; departamento?: string
 }>
 
 export default async function PostulacionesRecibidasPage({
@@ -48,15 +48,17 @@ export default async function PostulacionesRecibidasPage({
   searchParams: SearchParams
 }) {
   const {
-    puesto: filtroPuesto, estado: filtroEstado, marca: filtroMarca, q: qRaw, page: pageParam,
+    puesto: filtroPuesto, empresa: filtroEmpresa, estado: filtroEstado, marca: filtroMarca,
+    q: qRaw, page: pageParam,
     ciclos: filtroCiclos, carrera: filtroCarrera, habilidad: filtroHabilidad,
-    provincia: filtroProvincia, localidad: filtroLocalidad,
+    provincia: filtroProvincia, departamento: filtroDepartamento,
   } = await searchParams
   const q = qRaw?.trim().toLowerCase() ?? ''
-  const [todas, provincias, localidades] = await Promise.all([
+  const [todas, empresas, provincias, departamentos] = await Promise.all([
     getPostulacionesRecibidas(),
+    getMisEmpresasBase(),
     getProvincias(),
-    filtroProvincia ? getLocalidadesPorProvincia(filtroProvincia) : Promise.resolve([]),
+    filtroProvincia ? getDepartamentosPorProvincia(filtroProvincia) : Promise.resolve([]),
   ])
 
   // Un puesto reabierto arranca con el tablero limpio: las postulaciones de ciclos
@@ -66,14 +68,26 @@ export default async function PostulacionesRecibidasPage({
   const postulaciones = verCiclosAnteriores ? todas : todas.filter((p) => p.es_ciclo_actual)
 
   // Build the list of unique job posts for the filter dropdown
-  const puestosMap = new Map<string, string>()
+  const puestosMap = new Map<string, { titulo_puesto: string; cerrado: boolean }>()
   for (const p of postulaciones) {
     if (p.puesto_id && p.titulo_puesto) {
-      puestosMap.set(p.puesto_id, p.titulo_puesto)
+      puestosMap.set(p.puesto_id, { titulo_puesto: p.titulo_puesto, cerrado: p.puesto_cerrado })
     }
   }
-  const puestosOpts: { id: string; titulo_puesto: string; sinPostulaciones?: boolean }[] =
-    Array.from(puestosMap.entries()).map(([id, titulo_puesto]) => ({ id, titulo_puesto }))
+  const puestosOpts: { id: string; titulo_puesto: string; cerrado?: boolean; sinPostulaciones?: boolean }[] =
+    Array.from(puestosMap.entries()).map(([id, datos]) => ({ id, ...datos }))
+
+  // Todas las empresas del reclutador (no solo las que ya tienen postulaciones):
+  // así el link "Ver postulaciones" desde Mis empresas siempre encuentra su opción.
+  const empresasOpts = empresas.map((e) => ({
+    value: e.id,
+    label: e.activa ? e.nombre_empresa : `${e.nombre_empresa} · de baja`,
+  }))
+  // Empresa elegida que todavía no recibió ninguna postulación: el vacío es de la
+  // empresa, no de los demás filtros, y el mensaje lo dice.
+  const empresaFiltrada = empresas.find((e) => e.id === filtroEmpresa)
+  const empresaSinPostulaciones =
+    !!empresaFiltrada && !postulaciones.some((p) => p.empresa_id === filtroEmpresa)
 
   // Build the list of unique careers and skills present among the applicants for the filter dropdowns
   const carrerasSet = new Set<string>()
@@ -93,7 +107,12 @@ export default async function PostulacionesRecibidasPage({
   if (filtroPuesto && !puestosMap.has(filtroPuesto)) {
     const orphan = await getPuestoById(filtroPuesto)
     if (orphan) {
-      puestosOpts.push({ id: orphan.id, titulo_puesto: orphan.titulo_puesto, sinPostulaciones: true })
+      puestosOpts.push({
+        id: orphan.id,
+        titulo_puesto: orphan.titulo_puesto,
+        cerrado: orphan.activo === false,
+        sinPostulaciones: true,
+      })
       puestoSinPostulaciones = true
     }
   }
@@ -101,6 +120,7 @@ export default async function PostulacionesRecibidasPage({
   // Apply filters server-side (data already loaded; filter in memory)
   const filtered = postulaciones.filter((p) => {
     if (filtroPuesto && p.puesto_id !== filtroPuesto) return false
+    if (filtroEmpresa && p.empresa_id !== filtroEmpresa) return false
     // "No avanza aut." = descarte del preselector, que es lo único que deja motivo.
     if (filtroEstado === 'PROCESO_FINALIZADO_AUTO') {
       if (p.estado !== ESTADO_POSTULACION.PROCESO_FINALIZADO || !p.motivo_descarte) return false
@@ -109,7 +129,7 @@ export default async function PostulacionesRecibidasPage({
     if (filtroCarrera && p.carrera !== filtroCarrera) return false
     if (filtroHabilidad && !p.habilidades.includes(filtroHabilidad)) return false
     if (filtroProvincia && p.provincia_id !== filtroProvincia) return false
-    if (filtroLocalidad && p.localidad_id !== filtroLocalidad) return false
+    if (filtroDepartamento && p.departamento_id !== filtroDepartamento) return false
     if (q && !(p.nombre_completo?.toLowerCase().includes(q) ?? false)) return false
     return true
   })
@@ -119,7 +139,8 @@ export default async function PostulacionesRecibidasPage({
   const totalPuesto = filtroPuesto
     ? postulaciones.filter((p) => p.puesto_id === filtroPuesto).length
     : postulaciones.length
-  const tituloPuestoFiltrado = puestosOpts.find((p) => p.id === filtroPuesto)?.titulo_puesto
+  const puestoFiltrado = puestosOpts.find((p) => p.id === filtroPuesto)
+  const tituloPuestoFiltrado = puestoFiltrado?.titulo_puesto
 
   const { page, pageCount, slice } = paginar(filtered, pageParam)
 
@@ -142,16 +163,22 @@ export default async function PostulacionesRecibidasPage({
             {totalPuesto} postulación{totalPuesto !== 1 ? 'es' : ''}{' '}
             {tituloPuestoFiltrado ? `para ${tituloPuestoFiltrado}` : 'en total'}
           </p>
+          {puestoFiltrado?.cerrado && (
+            <div className="mt-2">
+              <Badge tone="warning" dot>Este puesto está pausado</Badge>
+            </div>
+          )}
         </div>
 
-        {(postulaciones.length > 0 || puestoSinPostulaciones) && (
+        {(postulaciones.length > 0 || puestoSinPostulaciones || !!filtroEmpresa) && (
           <Suspense>
             <FiltrosPostulaciones
               puestos={puestosOpts}
+              empresas={empresasOpts}
               carreras={carrerasOpts}
               habilidades={habilidadesOpts}
               provincias={provincias}
-              localidades={localidades}
+              departamentos={departamentos}
               totalVisible={filtered.length}
               totalTotal={postulaciones.length}
               hayCiclosAnteriores={hayCiclosAnteriores}
@@ -165,13 +192,17 @@ export default async function PostulacionesRecibidasPage({
             title={
               puestoSinPostulaciones
                 ? 'Este puesto todavía no tiene postulaciones'
-                : postulaciones.length === 0
+                : empresaSinPostulaciones
+                  ? `${empresaFiltrada!.nombre_empresa} todavía no tiene postulaciones`
+                  : postulaciones.length === 0
                   ? 'Todavía no recibiste postulaciones'
                   : 'Ninguna postulación coincide con los filtros'
             }
             description={
               puestoSinPostulaciones
                 ? 'Cuando un candidato se postule a este puesto, vas a verlo acá.'
+                : empresaSinPostulaciones
+                  ? 'Cuando alguien se postule a un puesto de esta empresa, vas a verlo acá.'
                 : postulaciones.length === 0
                   ? 'Publicá puestos para que los candidatos puedan postularse.'
                   : 'Probá cambiando o limpiando los filtros.'
@@ -249,6 +280,12 @@ export default async function PostulacionesRecibidasPage({
                     <p className="text-[13px] text-muted truncate">
                       Puesto:{' '}
                       <span className="font-medium text-ink-soft">{p.titulo_puesto ?? '—'}</span>
+                      {p.nombre_empresa && (
+                        <span className="text-neutral-400"> · {p.nombre_empresa}</span>
+                      )}
+                      {p.puesto_cerrado && (
+                        <Badge tone="warning" className="ml-2 align-middle">Puesto pausado</Badge>
+                      )}
                     </p>
 
                     {p.carrera && (
@@ -317,10 +354,18 @@ export default async function PostulacionesRecibidasPage({
                       postulanteId={p.postulante_id}
                       estadoActual={p.estado}
                     />
-                    {p.estado !== ESTADO_POSTULACION.PROCESO_FINALIZADO &&
-                      p.estado !== ESTADO_POSTULACION.CERRADA && (
-                        <MarcaPostulacionBtns postulacionId={p.id} marca={p.marca} />
-                      )}
+                    {/* Avanzar / Duda / No avanzar: elegir Avanzar o Duda cancela un
+                        "No avanzar" previo (las notas del descarte quedan igual). */}
+                    {p.estado !== ESTADO_POSTULACION.CERRADA && (
+                      <MarcaPostulacionBtns
+                        postulacionId={p.id}
+                        postulanteId={p.postulante_id}
+                        puestoId={p.puesto_id}
+                        tituloPuesto={p.titulo_puesto}
+                        marca={p.marca}
+                        estadoActual={p.estado}
+                      />
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       <Tooltip
                         className="w-full"
@@ -347,13 +392,6 @@ export default async function PostulacionesRecibidasPage({
                     {conRespuestas.has(p.id) && (
                       <VerRespuestasBtn postulacionId={p.id} nombrePostulante={p.nombre_completo} />
                     )}
-                    <PostulacionAcciones
-                      postulacionId={p.id}
-                      postulanteId={p.postulante_id}
-                      puestoId={p.puesto_id}
-                      tituloPuesto={p.titulo_puesto}
-                      estadoActual={p.estado}
-                    />
                   </div>
                 </div>
               </Card>

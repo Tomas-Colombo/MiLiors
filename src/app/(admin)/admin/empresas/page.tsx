@@ -3,11 +3,11 @@ import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon } from '@/components/icons'
-import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
+import { SearchInput, FilterSelect, FiltroFechas, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 import { ConfigInactividad } from './config-inactividad'
 
-export const metadata = { title: 'Empresas — Admin TalentID' }
+export const metadata = { title: 'Empresas — Admin MiLiors' }
 
 type Empresa = {
   id: string
@@ -24,10 +24,33 @@ const ESTADO_OPTS = [
   { value: 'baja', label: 'De baja' },
 ]
 
+const ORDEN_OPTS = [
+  { value: '', label: 'Alta: más reciente' },
+  { value: 'antiguas', label: 'Alta: más antigua' },
+  { value: 'nombre', label: 'Nombre (A–Z)' },
+  { value: 'nombre_desc', label: 'Nombre (Z–A)' },
+]
+
+const RECLUTADORES_OPTS = [
+  { value: '', label: 'Reclutadores: todas' },
+  { value: 'con', label: 'Con reclutadores' },
+  { value: 'sin', label: 'Sin reclutadores' },
+]
+
+const FILTRO_KEYS = ['q', 'estado', 'reclutadores', 'desde', 'hasta', 'orden']
+
 export default async function EmpresasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; page?: string }>
+  searchParams: Promise<{
+    q?: string
+    estado?: string
+    reclutadores?: string
+    desde?: string
+    hasta?: string
+    orden?: string
+    page?: string
+  }>
 }) {
   const sp = await searchParams
   const [todas, { diasInactividadCierre }] = await Promise.all([
@@ -37,10 +60,18 @@ export default async function EmpresasPage({
 
   const q = sp.q?.trim().toLowerCase() ?? ''
   const estado = sp.estado ?? ''
+  const reclutadores = sp.reclutadores ?? ''
+  const desde = sp.desde ?? ''
+  // El rango es inclusive: `hasta` corta al final del día elegido.
+  const hasta = sp.hasta ? `${sp.hasta}T23:59:59.999Z` : ''
 
   const filtradas = todas.filter(e => {
     if (estado === 'activa' && !e.activa) return false
     if (estado === 'baja' && e.activa) return false
+    if (reclutadores === 'con' && e.reclutadores.length === 0) return false
+    if (reclutadores === 'sin' && e.reclutadores.length > 0) return false
+    if (desde && e.created_at < desde) return false
+    if (hasta && e.created_at > hasta) return false
     if (q) {
       const enNombre = e.nombre_empresa.toLowerCase().includes(q)
       const enReclutador = e.reclutadores.some(
@@ -51,7 +82,18 @@ export default async function EmpresasPage({
     return true
   })
 
-  const { page, pageCount, slice } = paginar(filtradas, sp.page)
+  // La query ya viene por created_at desc; el resto de los órdenes se aplica acá.
+  const orden = sp.orden ?? ''
+  const visibles =
+    orden === ''
+      ? filtradas
+      : [...filtradas].sort((a, b) => {
+          if (orden === 'antiguas') return a.created_at.localeCompare(b.created_at)
+          const cmp = a.nombre_empresa.localeCompare(b.nombre_empresa, 'es')
+          return orden === 'nombre_desc' ? -cmp : cmp
+        })
+
+  const { page, pageCount, slice } = paginar(visibles, sp.page)
 
   const columns: Column<Empresa>[] = [
     {
@@ -119,15 +161,23 @@ export default async function EmpresasPage({
         <ConfigInactividad diasActual={diasInactividadCierre} />
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput placeholder="Buscar empresa o reclutador…" />
         <FilterSelect paramKey="estado" options={ESTADO_OPTS} ariaLabel="Filtrar por estado" className="w-full sm:w-44" />
-        <ClearFilters keys={['q', 'estado']} />
-        {filtradas.length !== todas.length && (
-          <span className="whitespace-nowrap text-xs text-muted sm:ml-auto">
-            {filtradas.length} de {todas.length}
-          </span>
-        )}
+        <FilterSelect paramKey="reclutadores" options={RECLUTADORES_OPTS} ariaLabel="Filtrar por reclutadores" className="w-full sm:w-52" />
+        <FilterSelect paramKey="orden" options={ORDEN_OPTS} ariaLabel="Ordenar empresas" className="w-full sm:w-48" />
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <FiltroFechas label="fecha de alta" />
+        <div className="flex items-center gap-3 sm:pb-1">
+          <ClearFilters keys={FILTRO_KEYS} />
+          {visibles.length !== todas.length && (
+            <span className="whitespace-nowrap text-xs text-muted">
+              {visibles.length} de {todas.length}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">

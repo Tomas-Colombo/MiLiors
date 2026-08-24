@@ -3,10 +3,10 @@ import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { GridIcon } from '@/components/icons'
 import { CrearSectorForm, SectorAcciones } from './sectores-ui'
-import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
+import { SearchInput, FilterSelect, FiltroFechas, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Sectores — Admin TalentID' }
+export const metadata = { title: 'Sectores — Admin MiLiors' }
 
 type Sector = {
   id: string
@@ -21,25 +21,50 @@ const ESTADO_OPTS = [
   { value: 'inactivo', label: 'Inactivos' },
 ]
 
+const ORDEN_OPTS = [
+  { value: '', label: 'Nombre (A–Z)' },
+  { value: 'nombre_desc', label: 'Nombre (Z–A)' },
+  { value: 'alta_desc', label: 'Alta: más reciente' },
+  { value: 'alta_asc', label: 'Alta: más antigua' },
+]
+
+const FILTRO_KEYS = ['q', 'estado', 'desde', 'hasta', 'orden']
+
 export default async function SectoresPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; page?: string }>
+  searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string; orden?: string; page?: string }>
 }) {
   const sp = await searchParams
   const todos = await getSectoresAdmin()
 
   const q = sp.q?.trim().toLowerCase() ?? ''
   const estado = sp.estado ?? ''
+  const desde = sp.desde ?? ''
+  // El rango es inclusive: `hasta` corta al final del día elegido.
+  const hasta = sp.hasta ? `${sp.hasta}T23:59:59.999Z` : ''
 
   const filtrados = todos.filter(s => {
     if (estado === 'activo' && s.fecha_baja_s) return false
     if (estado === 'inactivo' && !s.fecha_baja_s) return false
+    if (desde && s.created_at < desde) return false
+    if (hasta && s.created_at > hasta) return false
     if (q && !s.nombre_sector.toLowerCase().includes(q)) return false
     return true
   })
 
-  const { page, pageCount, slice } = paginar(filtrados, sp.page)
+  // La query ya viene alfabética; el resto de los órdenes se aplica acá.
+  const orden = sp.orden ?? ''
+  const visibles =
+    orden === ''
+      ? filtrados
+      : [...filtrados].sort((a, b) => {
+          if (orden === 'alta_desc') return b.created_at.localeCompare(a.created_at)
+          if (orden === 'alta_asc') return a.created_at.localeCompare(b.created_at)
+          return -a.nombre_sector.localeCompare(b.nombre_sector, 'es')
+        })
+
+  const { page, pageCount, slice } = paginar(visibles, sp.page)
 
   const columns: Column<Sector>[] = [
     {
@@ -86,15 +111,22 @@ export default async function SectoresPage({
         <CrearSectorForm />
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput placeholder="Buscar sector…" />
         <FilterSelect paramKey="estado" options={ESTADO_OPTS} ariaLabel="Filtrar por estado" className="w-full sm:w-44" />
-        <ClearFilters keys={['q', 'estado']} />
-        {filtrados.length !== todos.length && (
-          <span className="whitespace-nowrap text-xs text-muted sm:ml-auto">
-            {filtrados.length} de {todos.length}
-          </span>
-        )}
+        <FilterSelect paramKey="orden" options={ORDEN_OPTS} ariaLabel="Ordenar sectores" className="w-full sm:w-48" />
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <FiltroFechas label="fecha de alta" />
+        <div className="flex items-center gap-3 sm:pb-1">
+          <ClearFilters keys={FILTRO_KEYS} />
+          {visibles.length !== todos.length && (
+            <span className="whitespace-nowrap text-xs text-muted">
+              {visibles.length} de {todos.length}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">

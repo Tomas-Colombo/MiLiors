@@ -3,7 +3,13 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
-import type { MarcaPostulacion } from '@/lib/constants/enums'
+import {
+  CARGA_HORARIA,
+  ESTADO_POSTULACION,
+  UBICACION,
+  valorEnum,
+  type MarcaPostulacion,
+} from '@/lib/constants/enums'
 
 export type PuestoItem = {
   id: string
@@ -21,7 +27,6 @@ export type PuestoItem = {
   fecha_ultima_actividad?: string
   empresa_id: string
   sector_id: string | null
-  provincia_id: string | null
   localidad_id: string | null
   reclutador_id?: string | null
   // perfil_psicologico_deseado is intentionally excluded from the public type
@@ -31,6 +36,15 @@ export type PuestoItem = {
   carreras: { id: string; nombre: string }[]
   nombre_provincia?: string | null
   nombre_localidad?: string | null
+}
+
+/**
+ * Embed de ubicación. El puesto sólo guarda `localidad_id`: el departamento y
+ * la provincia se alcanzan subiendo por las FKs del catálogo.
+ */
+type LocalidadEmbed = {
+  nombre: string
+  departamento: { nombre: string; provincia: { nombre: string } | null } | null
 }
 
 /** Fila embebida de puesto_carrera con el nombre de la carrera resuelto. */
@@ -46,6 +60,74 @@ function mapCarreras(rows: PuestoCarreraRow[] | null | undefined): { id: string;
 export type PuestoConContacto = PuestoItem & {
   reclutador_nombre: string
   reclutador_email: string
+}
+
+/**
+ * Postulaciones recibidas por puesto, contando SÓLO el ciclo vigente: si el
+ * puesto fue reabierto, las de ciclos anteriores son historial y no suman.
+ *
+ * El ciclo vigente es el `historial_puesto` más reciente, esté abierto o cerrado
+ * (mismo criterio que `es_ciclo_actual` en getPostulacionesRecibidas).
+ */
+export async function getConteoPostulacionesCicloActual(
+  puestoIds: string[],
+): Promise<Map<string, number>> {
+  const conteo = new Map<string, number>()
+  if (puestoIds.length === 0) return conteo
+
+  const admin = createAdminClient()
+
+  const { data: ciclos } = await admin
+    .from('historial_puesto')
+    .select('id, puesto_id, fecha_inicio')
+    .in('puesto_id', puestoIds)
+    .order('fecha_inicio', { ascending: false })
+
+  const cicloActualPorPuesto = new Map<string, string>()
+  for (const c of (ciclos ?? []) as { id: string; puesto_id: string }[]) {
+    if (!cicloActualPorPuesto.has(c.puesto_id)) cicloActualPorPuesto.set(c.puesto_id, c.id)
+  }
+
+  const { data: postulaciones } = await admin
+    .from('postulacion')
+    .select('puesto_id, historial_puesto_id')
+    .in('puesto_id', puestoIds)
+
+  for (const p of (postulaciones ?? []) as { puesto_id: string; historial_puesto_id: string }[]) {
+    if (cicloActualPorPuesto.get(p.puesto_id) !== p.historial_puesto_id) continue
+    conteo.set(p.puesto_id, (conteo.get(p.puesto_id) ?? 0) + 1)
+  }
+
+  return conteo
+}
+
+/** Ciclo vigente de un puesto: el más reciente, esté abierto (`fin: null`) o cerrado. */
+export type CicloVigente = { inicio: string; fin: string | null }
+
+/**
+ * Último ciclo de cada puesto, en una sola consulta.
+ *
+ * `fin` en null significa que el ciclo sigue abierto: el puesto está recibiendo
+ * postulaciones y no hay fecha de pausa que mostrar. Al reactivar se abre un ciclo
+ * nuevo, así que la pausa anterior deja de ser la vigente sin borrar el historial.
+ */
+export async function getCiclosVigentes(puestoIds: string[]): Promise<Map<string, CicloVigente>> {
+  const vigentes = new Map<string, CicloVigente>()
+  if (puestoIds.length === 0) return vigentes
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('historial_puesto')
+    .select('puesto_id, fecha_inicio, fecha_fin')
+    .in('puesto_id', puestoIds)
+    .order('fecha_inicio', { ascending: false })
+
+  for (const c of (data ?? []) as { puesto_id: string; fecha_inicio: string; fecha_fin: string | null }[]) {
+    if (vigentes.has(c.puesto_id)) continue
+    vigentes.set(c.puesto_id, { inicio: c.fecha_inicio, fin: c.fecha_fin })
+  }
+
+  return vigentes
 }
 
 /** Puestos publicados por el reclutador actual (incluye activos e inactivos) */
@@ -66,9 +148,9 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa_id, sector_id, localidad_id, perfil_psicologico_deseado,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      provincia(nombre), localidad(nombre)
+      localidad(nombre, departamento(nombre, provincia(nombre)))
     `)
     .eq('reclutador_id', (reclutador as { id: string }).id)
     .is('fecha_baja_puesto', null)
@@ -82,13 +164,12 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       fecha_publicacion: string; fecha_baja_puesto: string | null
       fecha_ultima_actividad: string
       empresa_id: string; sector_id: string | null
-      provincia_id: string | null; localidad_id: string | null
+      localidad_id: string | null
       perfil_psicologico_deseado: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
       puesto_carrera: PuestoCarreraRow[] | null
-      provincia: { nombre: string } | null
-      localidad: { nombre: string } | null
+      localidad: LocalidadEmbed | null
     }
     return {
       id: r.id,
@@ -104,13 +185,12 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       fecha_ultima_actividad: r.fecha_ultima_actividad,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
-      provincia_id: r.provincia_id,
       localidad_id: r.localidad_id,
       perfil_psicologico_deseado: r.perfil_psicologico_deseado,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
       carreras: mapCarreras(r.puesto_carrera),
-      nombre_provincia: r.provincia?.nombre ?? null,
+      nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
@@ -136,9 +216,9 @@ export const getPuestoById = cache(async (
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, provincia_id, localidad_id, perfil_psicologico_deseado,
+      empresa_id, sector_id, localidad_id, perfil_psicologico_deseado,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      provincia(nombre), localidad(nombre)
+      localidad(nombre, departamento(nombre, provincia(nombre)))
     `)
     .eq('id', puestoId)
     .eq('reclutador_id', (reclutador as { id: string }).id)
@@ -154,13 +234,12 @@ export const getPuestoById = cache(async (
     fecha_publicacion: string; fecha_baja_puesto: string | null
     fecha_ultima_actividad: string
     empresa_id: string; sector_id: string | null
-    provincia_id: string | null; localidad_id: string | null
+    localidad_id: string | null
     perfil_psicologico_deseado: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
     puesto_carrera: PuestoCarreraRow[] | null
-    provincia: { nombre: string } | null
-    localidad: { nombre: string } | null
+    localidad: LocalidadEmbed | null
   }
 
   return {
@@ -177,13 +256,12 @@ export const getPuestoById = cache(async (
     fecha_ultima_actividad: r.fecha_ultima_actividad,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
-    provincia_id: r.provincia_id,
     localidad_id: r.localidad_id,
     perfil_psicologico_deseado: r.perfil_psicologico_deseado,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
     carreras: mapCarreras(r.puesto_carrera),
-    nombre_provincia: r.provincia?.nombre ?? null,
+    nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }
 })
@@ -272,8 +350,7 @@ export const getPuestosActivos = async (filtros?: {
   cargaHoraria?: string
   ubicacion?: string
   provinciaId?: string
-  /** Localidades del departamento elegido (el puesto guarda localidad_id). */
-  localidadIds?: string[]
+  departamentoId?: string
   busqueda?: string
   diasDesde?: number
   page?: number
@@ -299,15 +376,22 @@ export const getPuestosActivos = async (filtros?: {
     if (carreraPuestoIds.length === 0) return { items: [], total: 0 }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase
+  // Filtrar por provincia o departamento exige que el embed sea un JOIN interno.
+  // Sin filtro geográfico se deja LEFT: los puestos remotos no tienen localidad
+  // y un !inner los borraría del listado.
+  const filtraUbicacion = !!(filtros?.provinciaId || filtros?.departamentoId)
+  const embedUbicacion = filtraUbicacion
+    ? 'localidad!inner(nombre, departamento!inner(nombre, provincia!inner(nombre)))'
+    : 'localidad(nombre, departamento(nombre, provincia(nombre)))'
+
+  let query = supabase
     .from('puesto')
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, provincia_id, localidad_id,
+      empresa_id, sector_id, localidad_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      provincia(nombre), localidad(nombre)
+      ${embedUbicacion}
     `, { count: 'exact' })
     .eq('activo', true)
     .is('fecha_baja_puesto', null)
@@ -316,11 +400,14 @@ export const getPuestosActivos = async (filtros?: {
 
   if (filtros?.sectorId) query = query.eq('sector_id', filtros.sectorId)
   if (carreraPuestoIds) query = query.in('id', carreraPuestoIds)
-  if (filtros?.cargaHoraria) query = query.eq('carga_horaria', filtros.cargaHoraria)
-  if (filtros?.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
-  if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
-  // Departamento → filtra por las localidades que lo componen. Array vacío = sin resultados.
-  if (filtros?.localidadIds) query = query.in('localidad_id', filtros.localidadIds)
+  const cargaHoraria = valorEnum(CARGA_HORARIA, filtros?.cargaHoraria)
+  if (cargaHoraria) query = query.eq('carga_horaria', cargaHoraria)
+  const ubicacion = valorEnum(UBICACION, filtros?.ubicacion)
+  if (ubicacion) query = query.eq('ubicacion', ubicacion)
+  // Provincia y departamento se filtran sobre el embed: el puesto sólo guarda
+  // la localidad y el resto de la jerarquía cuelga de ella.
+  if (filtros?.provinciaId) query = query.eq('localidad.departamento.provincia_id', filtros.provinciaId)
+  if (filtros?.departamentoId) query = query.eq('localidad.departamento_id', filtros.departamentoId)
   if (filtros?.busqueda) query = query.ilike('titulo_puesto', `%${filtros.busqueda}%`)
   if (filtros?.diasDesde) {
     const since = new Date()
@@ -345,12 +432,11 @@ export const getPuestosActivos = async (filtros?: {
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
       empresa_id: string; sector_id: string | null
-      provincia_id: string | null; localidad_id: string | null
+      localidad_id: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
       puesto_carrera: PuestoCarreraRow[] | null
-      provincia: { nombre: string } | null
-      localidad: { nombre: string } | null
+      localidad: LocalidadEmbed | null
     }
     return {
       id: r.id,
@@ -365,12 +451,11 @@ export const getPuestosActivos = async (filtros?: {
       fecha_baja_puesto: r.fecha_baja_puesto,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
-      provincia_id: r.provincia_id,
       localidad_id: r.localidad_id,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
       carreras: mapCarreras(r.puesto_carrera),
-      nombre_provincia: r.provincia?.nombre ?? null,
+      nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
@@ -387,9 +472,9 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, reclutador_id, provincia_id, localidad_id,
+      empresa_id, sector_id, reclutador_id, localidad_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      provincia(nombre), localidad(nombre)
+      localidad(nombre, departamento(nombre, provincia(nombre)))
     `)
     .eq('id', puestoId)
     .maybeSingle()
@@ -402,12 +487,11 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
     empresa_id: string; sector_id: string | null; reclutador_id: string | null
-    provincia_id: string | null; localidad_id: string | null
+    localidad_id: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
     puesto_carrera: PuestoCarreraRow[] | null
-    provincia: { nombre: string } | null
-    localidad: { nombre: string } | null
+    localidad: LocalidadEmbed | null
   }
 
   return {
@@ -424,12 +508,11 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
     reclutador_id: r.reclutador_id,
-    provincia_id: r.provincia_id,
     localidad_id: r.localidad_id,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
     carreras: mapCarreras(r.puesto_carrera),
-    nombre_provincia: r.provincia?.nombre ?? null,
+    nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }
 })
@@ -473,8 +556,7 @@ export const getMisPostulaciones = async (filtros?: {
   // postulaciones cuyo puesto no coincide (sin INNER, PostgREST las mantiene con puesto null).
   const puestoJoin = filtros?.busqueda ? 'puesto!inner' : 'puesto'
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase
+  let query = supabase
     .from('postulacion')
     .select(`
       id, estado, fecha_postulacion, updated_at,
@@ -484,7 +566,8 @@ export const getMisPostulaciones = async (filtros?: {
     .order('fecha_postulacion', { ascending: filtros?.orden === 'asc' })
     .range(from, to)
 
-  if (filtros?.estado) query = query.eq('estado', filtros.estado)
+  const estado = valorEnum(ESTADO_POSTULACION, filtros?.estado)
+  if (estado) query = query.eq('estado', estado)
   if (filtros?.busqueda) {
     query = query.ilike('puesto.titulo_puesto', `%${filtros.busqueda}%`)
   }
@@ -595,10 +678,10 @@ export const getPostulacionesRecibidas = cache(async () => {
     .select(`
       id, estado, marca, fecha_postulacion, updated_at, postulante_id, puesto_id,
       historial_puesto_id, motivo_descarte,
-      puesto(id, titulo_puesto),
+      puesto(id, titulo_puesto, activo, empresa_id, empresa(nombre_empresa)),
       perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
-        carrera_otra, carrera:carrera_id(nombre), provincia_id, localidad_id,
-        provincia(nombre), localidad(nombre),
+        carrera_otra, carrera:carrera_id(nombre), localidad_id,
+        localidad(nombre, departamento_id, departamento(nombre, provincia_id, provincia(nombre))),
         usuario(email))
     `)
     .in('puesto_id', puestoIds)
@@ -662,17 +745,28 @@ export const getPostulacionesRecibidas = cache(async () => {
       fecha_postulacion: string; updated_at: string
       postulante_id: string; puesto_id: string; historial_puesto_id: string
       motivo_descarte: string | null
-      puesto: { id: string; titulo_puesto: string } | null
+      puesto: {
+        id: string; titulo_puesto: string; activo: boolean
+        empresa_id: string; empresa: { nombre_empresa: string } | null
+      } | null
       perfil_postulante: {
         id: string; nombre_completo: string
         perfil_en_busqueda: boolean; telefono: string | null
         ultima_conexion: string | null
         carrera_otra: string | null
         carrera: { nombre: string } | null
-        provincia_id: string | null
         localidad_id: string | null
-        provincia: { nombre: string } | null
-        localidad: { nombre: string } | null
+        // Con los ids de la cadena: el tablero filtra por provincia y
+        // departamento en memoria, sin volver a la base.
+        localidad: {
+          nombre: string
+          departamento_id: string
+          departamento: {
+            nombre: string
+            provincia_id: string
+            provincia: { nombre: string } | null
+          } | null
+        } | null
         usuario: { email: string } | null
       } | null
     }
@@ -691,13 +785,18 @@ export const getPostulacionesRecibidas = cache(async () => {
       updated_at: r.updated_at,
       puesto_id: r.puesto_id,
       titulo_puesto: r.puesto?.titulo_puesto,
+      empresa_id: r.puesto?.empresa_id ?? null,
+      nombre_empresa: r.puesto?.empresa?.nombre_empresa ?? null,
+      // Cerrado = activo en false (las bajas lógicas ya quedaron filtradas antes).
+      puesto_cerrado: r.puesto?.activo === false,
       postulante_id: r.postulante_id,
       nombre_completo: r.perfil_postulante?.nombre_completo,
       ultima_conexion: r.perfil_postulante?.ultima_conexion ?? null,
       carrera: r.perfil_postulante?.carrera?.nombre ?? r.perfil_postulante?.carrera_otra ?? null,
-      provincia_id: r.perfil_postulante?.provincia_id ?? null,
       localidad_id: r.perfil_postulante?.localidad_id ?? null,
-      nombre_provincia: r.perfil_postulante?.provincia?.nombre ?? null,
+      departamento_id: r.perfil_postulante?.localidad?.departamento_id ?? null,
+      provincia_id: r.perfil_postulante?.localidad?.departamento?.provincia_id ?? null,
+      nombre_provincia: r.perfil_postulante?.localidad?.departamento?.provincia?.nombre ?? null,
       nombre_localidad: r.perfil_postulante?.localidad?.nombre ?? null,
       habilidades: habilidadesPorPostulante.get(r.postulante_id) ?? [],
       contacto,
@@ -719,16 +818,21 @@ export type ReclutadorPublicoPuesto = {
   descripcion_texto: string | null
   nivel_experiencia: string | null
   nombre_sector: string | null
+  nombre_empresa: string | null
+}
+
+export type ReclutadorPublicoEmpresa = {
+  id: string
+  nombre_empresa: string
+  descripcion: string | null
+  link_url: string | null
 }
 
 export type ReclutadorPublico = {
   id: string
   nombre_reclutador: string
-  empresa: {
-    nombre_empresa: string
-    descripcion: string | null
-    link_url: string | null
-  } | null
+  /** Un reclutador puede trabajar para varias empresas; se listan las activas. */
+  empresas: ReclutadorPublicoEmpresa[]
   puestos_activos: ReclutadorPublicoPuesto[]
 }
 
@@ -737,24 +841,30 @@ export const getReclutadorPublico = cache(async (reclutadorId: string): Promise<
 
   const { data } = await admin
     .from('perfil_reclutador')
-    .select(`
-      id, nombre_reclutador,
-      empresa(nombre_empresa, descripcion, link_url)
-    `)
+    .select('id, nombre_reclutador')
     .eq('id', reclutadorId)
     .maybeSingle()
 
   if (!data) return null
 
-  const r = data as {
-    id: string
-    nombre_reclutador: string
-    empresa: { nombre_empresa: string; descripcion: string | null; link_url: string | null } | null
-  }
+  const r = data as { id: string; nombre_reclutador: string }
+
+  const { data: vinculos } = await admin
+    .from('reclutador_empresa')
+    .select('empresa(id, nombre_empresa, descripcion, link_url, fecha_baja)')
+    .eq('reclutador_id', reclutadorId)
+
+  const empresas: ReclutadorPublicoEmpresa[] = ((vinculos ?? []) as unknown[])
+    .map((v) => (v as {
+      empresa: (ReclutadorPublicoEmpresa & { fecha_baja: string | null }) | null
+    }).empresa)
+    .filter((e): e is ReclutadorPublicoEmpresa & { fecha_baja: string | null } => !!e && !e.fecha_baja)
+    .map(({ id, nombre_empresa, descripcion, link_url }) => ({ id, nombre_empresa, descripcion, link_url }))
+    .sort((a, b) => a.nombre_empresa.localeCompare(b.nombre_empresa, 'es'))
 
   const { data: puestosData } = await admin
     .from('puesto')
-    .select('id, titulo_puesto, ubicacion, carga_horaria, fecha_publicacion, descripcion_texto, nivel_experiencia, sector_industrial(nombre_sector)')
+    .select('id, titulo_puesto, ubicacion, carga_horaria, fecha_publicacion, descripcion_texto, nivel_experiencia, sector_industrial(nombre_sector), empresa(nombre_empresa)')
     .eq('reclutador_id', reclutadorId)
     .eq('activo', true)
     .order('fecha_publicacion', { ascending: false })
@@ -764,6 +874,7 @@ export const getReclutadorPublico = cache(async (reclutadorId: string): Promise<
       id: string; titulo_puesto: string; ubicacion: string; carga_horaria: string
       fecha_publicacion: string; descripcion_texto: string | null; nivel_experiencia: string | null
       sector_industrial: { nombre_sector: string } | null
+      empresa: { nombre_empresa: string } | null
     }
     return {
       id: p.id,
@@ -774,13 +885,14 @@ export const getReclutadorPublico = cache(async (reclutadorId: string): Promise<
       descripcion_texto: p.descripcion_texto,
       nivel_experiencia: p.nivel_experiencia,
       nombre_sector: p.sector_industrial?.nombre_sector ?? null,
+      nombre_empresa: p.empresa?.nombre_empresa ?? null,
     }
   })
 
   return {
     id: r.id,
     nombre_reclutador: r.nombre_reclutador,
-    empresa: r.empresa ?? null,
+    empresas,
     puestos_activos: puestos,
   }
 })

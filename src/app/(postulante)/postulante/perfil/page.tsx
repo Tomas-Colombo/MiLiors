@@ -4,7 +4,7 @@ import { TyCGate } from '@/components/shared/tyc-gate'
 import { getPerfilTecnicoCompleto, getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
 import { PerfilTecnicoUI } from './perfil-tecnico-ui'
 
-export const metadata = { title: 'Mi perfil técnico — TalentID' }
+export const metadata = { title: 'Mi perfil técnico — MiLiors' }
 
 export default async function PerfilPage() {
   await verifySession()

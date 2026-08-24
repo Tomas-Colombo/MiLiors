@@ -3,11 +3,11 @@ import type { CarreraAdmin, CarreraOtraAdmin } from '@/modules/admin/queries'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { NotebookIcon } from '@/components/icons'
-import { CrearCarreraForm, CarreraAcciones, PromoverCarreraOtraBoton, FiltroFechaCarrerasOtras } from './carreras-ui'
-import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
+import { CrearCarreraForm, CarreraAcciones, PromoverCarreraOtraBoton } from './carreras-ui'
+import { SearchInput, FilterSelect, ClearFilters, Paginador, FiltroFechas } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Carreras — Admin TalentID' }
+export const metadata = { title: 'Carreras — Admin MiLiors' }
 
 const ESTADO_OPTS = [
   { value: '', label: 'Todos los estados' },
@@ -153,7 +153,7 @@ export default async function CarrerasPage({
         )}
       </div>
 
-      <Paginador page={pageA} pageCount={pageCountA} />
+      <Paginador page={pageA} pageCount={pageCountA} paramKey="pageA" />
 
       {/* ─── Cargadas por postulantes (otras) ──────────────────────── */}
       <h2 className="mt-10 text-[15px] font-bold text-ink">Cargadas por postulantes (Otras)</h2>
@@ -163,7 +163,7 @@ export default async function CarrerasPage({
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
         <SearchInput paramKey="qB" placeholder="Buscar título…" />
-        <FiltroFechaCarrerasOtras desde={desde} hasta={hasta} />
+        <FiltroFechas label="fecha de alta" />
         <ClearFilters keys={['qB', 'desde', 'hasta']} />
       </div>
 

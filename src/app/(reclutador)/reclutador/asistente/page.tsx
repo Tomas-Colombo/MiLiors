@@ -8,7 +8,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { AsistenteChat } from './asistente-chat'
 
-export const metadata = { title: 'Asistente IA — TalentID' }
+export const metadata = { title: 'Asistente IA — MiLiors' }
 
 // searchParams is a Promise in Next.js App Router
 type SearchParams = Promise<{ postulante?: string; puesto?: string; postulacion?: string }>

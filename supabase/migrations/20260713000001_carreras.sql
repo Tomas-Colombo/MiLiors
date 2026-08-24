@@ -1,7 +1,7 @@
 -- Catálogo de carreras para postulantes.
 --
 -- Sigue el mismo patrón de catálogo administrado que provincia/localidad
--- (supabase/migrations/20260709000001_ubicacion_geografica.sql):
+-- (supabase/migrations/20260709000002_ubicacion_geografica.sql):
 -- lectura pública, escritura solo ADMIN, baja lógica vía fecha_baja.
 --
 -- Reemplaza el campo libre `perfil_postulante.especificidad_puesto` por un

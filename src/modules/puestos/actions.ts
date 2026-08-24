@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { puestoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
+import type { TablesInsert } from '@/lib/types/database.types'
 import { parseFormularioPreselectorField } from '@/modules/preselector/schema'
 import { persistirFormularioPreselector, eliminarFormularioPreselector } from '@/modules/preselector/service'
 import { marcarActividadPuesto } from './actividad'
@@ -39,29 +40,51 @@ function parseCarreraIds(raw: FormDataEntryValue | null): string[] {
   }
 }
 
-// Helper: get reclutador_id and empresa_id for the current user
-async function getReclutadorContext(): Promise<{ reclutadorId: string; empresaId: string } | null> {
+// Helper: get reclutador_id for the current user
+async function getReclutadorContext(): Promise<{ reclutadorId: string } | null> {
   const session = await verifySession()
   const supabase = await createClient()
 
   const { data } = await supabase
     .from('perfil_reclutador')
-    .select('id, empresa_id')
+    .select('id')
     .eq('usuario_id', session.id)
     .single()
 
   if (!data) return null
-  const d = data as { id: string; empresa_id: string | null }
-  if (!d.empresa_id) return null
-  return { reclutadorId: d.id, empresaId: d.empresa_id }
+  return { reclutadorId: (data as { id: string }).id }
+}
+
+/**
+ * La empresa del puesto la elige el reclutador en el formulario: hay que probar
+ * que sea una de las suyas antes de guardarla (el insert va con service role).
+ * Al publicar solo valen las empresas activas; al editar se acepta también una
+ * dada de baja para no bloquear la edición de puestos históricos.
+ */
+async function empresaHabilitada(
+  reclutadorId: string,
+  empresaId: string,
+  opciones: { permitirBaja: boolean },
+): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('reclutador_empresa')
+    .select('empresa(id, fecha_baja)')
+    .eq('reclutador_id', reclutadorId)
+    .eq('empresa_id', empresaId)
+    .maybeSingle()
+
+  if (!data) return false
+  const empresa = (data as { empresa: { fecha_baja: string | null } | null }).empresa
+  if (!empresa) return false
+  return opciones.permitirBaja || !empresa.fecha_baja
 }
 
 // Register opening in historial_puesto and check analytics alert
 async function registrarApertura(puestoId: string, empresaId: string, tituloPuesto: string) {
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('historial_puesto') as any).insert({
+  await admin.from('historial_puesto').insert({
     puesto_id: puestoId,
     fecha_inicio: new Date().toISOString(),
   })
@@ -109,8 +132,7 @@ async function registrarContratacion(
 
   // Edge: puesto sin ningún ciclo → crear uno para no perder la contratación.
   if (!historialId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: nuevo, error } = await (admin.from('historial_puesto') as any)
+    const { data: nuevo, error } = await admin.from('historial_puesto')
       .insert({ puesto_id: puestoId })
       .select('id')
       .single()
@@ -137,15 +159,17 @@ async function registrarContratacion(
     }
   }
 
-  const row =
+  // Anotado a mano: el ternario produce una unión de dos formas distintas y el
+  // insert de supabase-js la resuelve contra la primera rama en vez de aceptar
+  // las dos. La fila es una sola: o postulante de la plataforma, o nombre suelto.
+  const row: TablesInsert<'contratacion'> =
     contratacion.tipo === 'plataforma'
       ? { historial_puesto_id: historialId, postulante_id: contratacion.postulanteId, nombre_externo: null }
       : { historial_puesto_id: historialId, postulante_id: null, nombre_externo: contratacion.nombre.trim() || null }
 
   // Upsert: contratacion es UNIQUE por ciclo y el reclutador puede registrarla dos
   // veces sobre el mismo (cerrar y después eliminar). La última respuesta gana.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('contratacion') as any)
+  const { error } = await admin.from('contratacion')
     .upsert(row, { onConflict: 'historial_puesto_id' })
   if (error) return { ok: false, error: 'No se pudo registrar la contratación.' }
   return { ok: true }
@@ -204,13 +228,13 @@ export async function publicarPuesto(
   if (!ctx) return { success: false, error: 'Completá el onboarding de empresa antes de publicar puestos.' }
 
   const parsed = puestoSchema.safeParse({
+    empresa_id: formData.get('empresa_id'),
     titulo_puesto: formData.get('titulo_puesto'),
     descripcion_texto: formData.get('descripcion_texto') || undefined,
     sector_id: formData.get('sector_id') || undefined,
     idioma: formData.get('idioma') || undefined,
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
-    provincia_id: formData.get('provincia_id') || undefined,
     localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
@@ -221,6 +245,14 @@ export async function publicarPuesto(
       success: false,
       error: 'Revisá los campos del formulario.',
       fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    }
+  }
+
+  if (!(await empresaHabilitada(ctx.reclutadorId, parsed.data.empresa_id, { permitirBaja: false }))) {
+    return {
+      success: false,
+      error: 'Revisá los campos del formulario.',
+      fieldErrors: { empresa_id: ['Elegí una de tus empresas activas.'] },
     }
   }
 
@@ -241,15 +273,12 @@ export async function publicarPuesto(
   const admin = createAdminClient()
   const puestoId = crypto.randomUUID()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('puesto') as any).insert({
+  const { error } = await admin.from('puesto').insert({
     id: puestoId,
     reclutador_id: ctx.reclutadorId,
-    empresa_id: ctx.empresaId,
     ...parsed.data,
     idioma: parsed.data.idioma || '',
     sector_id: parsed.data.sector_id || null,
-    provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
     localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     activo: true,
   })
@@ -257,8 +286,7 @@ export async function publicarPuesto(
   if (error) return { success: false, error: 'No se pudo publicar el puesto.' }
 
   if (carreraIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: carrerasError } = await (admin.from('puesto_carrera') as any)
+    const { error: carrerasError } = await admin.from('puesto_carrera')
       .insert(carreraIds.map((carreraId) => ({ puesto_id: puestoId, carrera_id: carreraId })))
     if (carrerasError) return { success: false, error: 'No se pudieron guardar las carreras del puesto.' }
   }
@@ -268,7 +296,7 @@ export async function publicarPuesto(
     if (!resultado.ok) return { success: false, error: resultado.error }
   }
 
-  await registrarApertura(puestoId, ctx.empresaId, parsed.data.titulo_puesto)
+  await registrarApertura(puestoId, parsed.data.empresa_id, parsed.data.titulo_puesto)
 
   revalidatePath('/reclutador/puestos')
   // No redirigimos: el cliente muestra el modal de advertencia (cierre por
@@ -285,13 +313,13 @@ export async function editarPuesto(
   if (!ctx) return { success: false, error: 'No autorizado.' }
 
   const parsed = puestoSchema.safeParse({
+    empresa_id: formData.get('empresa_id'),
     titulo_puesto: formData.get('titulo_puesto'),
     descripcion_texto: formData.get('descripcion_texto') || undefined,
     sector_id: formData.get('sector_id') || undefined,
     idioma: formData.get('idioma') || undefined,
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
-    provincia_id: formData.get('provincia_id') || undefined,
     localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
@@ -302,6 +330,15 @@ export async function editarPuesto(
       success: false,
       error: 'Revisá los campos.',
       fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    }
+  }
+
+  // Al editar se acepta una empresa dada de baja: puede ser la del propio puesto.
+  if (!(await empresaHabilitada(ctx.reclutadorId, parsed.data.empresa_id, { permitirBaja: true }))) {
+    return {
+      success: false,
+      error: 'Revisá los campos.',
+      fieldErrors: { empresa_id: ['Elegí una de tus empresas.'] },
     }
   }
 
@@ -318,14 +355,12 @@ export async function editarPuesto(
   const esRemoto = parsed.data.ubicacion === 'REMOTO'
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: actualizados, error } = await (supabase.from('puesto') as any)
+  const { data: actualizados, error } = await supabase.from('puesto')
     .update({
       ...parsed.data,
       idioma: parsed.data.idioma || '',
       sector_id: parsed.data.sector_id || null,
-      provincia_id: esRemoto ? null : parsed.data.provincia_id || null,
-      localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
+        localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
@@ -343,11 +378,9 @@ export async function editarPuesto(
   // role; la propiedad del puesto ya quedó probada arriba.
   {
     const admin = createAdminClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('puesto_carrera') as any).delete().eq('puesto_id', puestoId)
+    await admin.from('puesto_carrera').delete().eq('puesto_id', puestoId)
     if (carreraIds.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: carrerasError } = await (admin.from('puesto_carrera') as any)
+      const { error: carrerasError } = await admin.from('puesto_carrera')
         .insert(carreraIds.map((carreraId) => ({ puesto_id: puestoId, carrera_id: carreraId })))
       if (carrerasError) return { success: false, error: 'No se pudieron guardar las carreras del puesto.' }
     }
@@ -388,8 +421,7 @@ export async function cerrarPuesto(
 
   // Cierre reversible: el puesto se desactiva pero sigue visible para el
   // reclutador y puede reactivarse. No se da de baja (fecha_baja_puesto).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: puestoError } = await (admin.from('puesto') as any)
+  const { error: puestoError } = await admin.from('puesto')
     .update({ activo: false })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
@@ -397,15 +429,13 @@ export async function cerrarPuesto(
   if (puestoError) return { success: false, error: 'No se pudo cerrar el puesto.' }
 
   // Close active historial_puesto entry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('historial_puesto') as any)
+  await admin.from('historial_puesto')
     .update({ fecha_fin: new Date().toISOString() })
     .eq('puesto_id', puestoId)
     .is('fecha_fin', null)
 
   // Cascade: ENVIADA/VISTO applications → CERRADA
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('postulacion') as any)
+  await admin.from('postulacion')
     .update({ estado: 'CERRADA' })
     .eq('puesto_id', puestoId)
     .in('estado', ['ENVIADA', 'VISTO'])
@@ -433,8 +463,7 @@ export async function eliminarPuesto(
   // Baja lógica: se registra fecha_baja_puesto. El puesto y sus postulaciones
   // desaparecen de las vistas del reclutador, pero se conservan en la base
   // para las métricas del admin. No es reversible desde el perfil.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: puestoError } = await (admin.from('puesto') as any)
+  const { error: puestoError } = await admin.from('puesto')
     .update({ activo: false, fecha_baja_puesto: new Date().toISOString() })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
@@ -442,15 +471,13 @@ export async function eliminarPuesto(
   if (puestoError) return { success: false, error: 'No se pudo eliminar el puesto.' }
 
   // Close active historial_puesto entry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('historial_puesto') as any)
+  await admin.from('historial_puesto')
     .update({ fecha_fin: new Date().toISOString() })
     .eq('puesto_id', puestoId)
     .is('fecha_fin', null)
 
   // Cascade: ENVIADA/VISTO applications → CERRADA
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('postulacion') as any)
+  await admin.from('postulacion')
     .update({ estado: 'CERRADA' })
     .eq('puesto_id', puestoId)
     .in('estado', ['ENVIADA', 'VISTO'])
@@ -503,12 +530,29 @@ export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
 
   const admin = createAdminClient()
 
+  // Un puesto de una empresa dada de baja no se puede reabrir: la baja de la
+  // empresa es justamente lo que cerró sus puestos.
+  const { data: puestoActual } = await admin
+    .from('puesto')
+    .select('empresa_id, empresa(fecha_baja)')
+    .eq('id', puestoId)
+    .eq('reclutador_id', ctx.reclutadorId)
+    .maybeSingle()
+
+  if (!puestoActual) return { success: false, error: 'No autorizado.' }
+  const { empresa_id: empresaId, empresa } = puestoActual as {
+    empresa_id: string
+    empresa: { fecha_baja: string | null } | null
+  }
+  if (empresa?.fecha_baja) {
+    return { success: false, error: 'La empresa de este puesto está dada de baja.' }
+  }
+
   // El .eq('activo', false) hace la reactivación idempotente: si el puesto ya está
   // activo (doble click), no matchea ninguna fila y no abrimos un segundo ciclo.
   // Dos ciclos abiertos partirían las postulaciones en dos tableros y contarían
   // como reapertura en la analítica.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: actualizados, error } = await (admin.from('puesto') as any)
+  const { data: actualizados, error } = await admin.from('puesto')
     .update({ activo: true, fecha_baja_puesto: null })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
@@ -519,7 +563,7 @@ export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
 
   if (actualizados && actualizados.length > 0) {
     const { titulo_puesto } = actualizados[0] as { titulo_puesto: string }
-    await registrarApertura(puestoId, ctx.empresaId, titulo_puesto)
+    await registrarApertura(puestoId, empresaId, titulo_puesto)
   }
 
   revalidatePath('/reclutador/puestos')

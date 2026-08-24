@@ -234,19 +234,11 @@ export function CertificadoUI({
 
         {/* Previsualización del contenido */}
         {contenido && (
-          <>
-            <Card padding="lg">
-              <h2 className="text-xl font-extrabold text-ink">{contenido.nombre}</h2>
-              <p className="mt-1 text-sm text-muted">{contenido.email}</p>
-              <span className="mt-3 inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                ✓ Perfil verificado por TalentID
-              </span>
-            </Card>
-
-            <Card padding="lg">
-              <CertificadoDisplay data={contenido} />
-            </Card>
-          </>
+          <CertificadoDisplay
+            data={contenido}
+            certificadoId={certificado.id}
+            emitidoEl={formatFecha(certificado.timestamp_firma)}
+          />
         )}
 
         <p className="text-right text-xs text-muted">
@@ -272,9 +264,9 @@ export function CertificadoUI({
           <span className="text-[13px] font-semibold text-ink">Generar mi certificado</span>
         </div>
         <p className="mb-4 text-xs text-muted">
-          El certificado cruza tu informe de personalidad con tu perfil técnico: un perfil profesional en
-          prosa, tus fortalezas en acción y el contexto donde rendís mejor, más tu formación, experiencia,
-          habilidades y tecnologías e idiomas. Incluye un código QR verificable por cualquier reclutador.
+          El certificado resume tu perfil en una página: síntesis de personalidad, competencias destacadas,
+          habilidades técnicas con su nivel, tus últimos 3 puestos y tu formación. Incluye un código QR que lleva
+          a tu perfil completo verificado.
         </p>
 
         {/* Requirements checklist */}
@@ -310,13 +302,7 @@ export function CertificadoUI({
       {contenido && (
         <>
           <p className="text-[11px] font-bold uppercase tracking-widest text-muted">Previsualización</p>
-          <Card padding="lg">
-            <h2 className="text-xl font-extrabold text-ink">{contenido.nombre}</h2>
-            <p className="mt-1 text-sm text-muted">{contenido.email}</p>
-          </Card>
-          <Card padding="lg">
-            <CertificadoDisplay data={contenido} />
-          </Card>
+          <CertificadoDisplay data={contenido} />
         </>
       )}
     </div>

@@ -13,13 +13,18 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
-import { Input, FancySelect, Pagination } from '@/components/ui'
+import { Input, FancySelect, SearchableSelect, Pagination, DateInput, Field } from '@/components/ui'
 import type { SelectOption } from '@/components/ui'
 import { SearchIcon, TrashIcon } from '@/components/icons'
 
 // ─── Hook base para escribir en la URL ────────────────────────────────────────
 
-function useSetParam() {
+/**
+ * Escribe filtros en la query string. Es el único lugar donde se arma la URL:
+ * las siete pantallas de listado tenían esta misma función copiada a mano, cada
+ * una con su variante (unas dejaban un `?` colgando al vaciar, otras no).
+ */
+export function useSetParam() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -110,9 +115,105 @@ export function FilterSelect({
   )
 }
 
+// ─── Select de filtro con búsqueda ─────────────────────────────────────────────
+
+/**
+ * Igual que `FilterSelect` pero con combobox: para catálogos largos (carreras,
+ * provincias, departamentos) donde una lista plana no se puede recorrer.
+ *
+ * Como el combobox emite '' mientras se tipea, sólo escribe la URL cuando hay
+ * una opción elegida; para vaciarlo está "Limpiar filtros" (mismo criterio que
+ * los filtros del reclutador).
+ *
+ * `alsoClear` borra los filtros que dependen de éste — al cambiar de provincia,
+ * el departamento elegido ya no pertenece a la nueva.
+ */
+export function FilterSearchableSelect({
+  paramKey,
+  options,
+  placeholder,
+  className,
+  alsoClear,
+}: {
+  paramKey: string
+  options: SelectOption[]
+  placeholder: string
+  className?: string
+  alsoClear?: string[]
+}) {
+  const { searchParams, setParams } = useSetParam()
+  const value = searchParams.get(paramKey) ?? ''
+
+  return (
+    <div className={className ?? 'w-full sm:w-56'}>
+      <SearchableSelect
+        key={`${paramKey}-${value}`}
+        options={options}
+        defaultValue={value}
+        placeholder={placeholder}
+        onValueChange={(next) => {
+          if (!next) return
+          setParams({ [paramKey]: next, ...Object.fromEntries((alsoClear ?? []).map((k) => [k, null])) })
+        }}
+      />
+    </div>
+  )
+}
+
+// ─── Rango de fechas ───────────────────────────────────────────────────────────
+
+/**
+ * Par de fechas (inclusive) sobre una misma columna. Cada extremo acota al otro
+ * para que no se pueda armar un rango invertido. Las claves son configurables
+ * porque una pantalla puede tener más de un rango.
+ */
+export function FiltroFechas({
+  desdeKey = 'desde',
+  hastaKey = 'hasta',
+  label = 'fecha',
+}: {
+  desdeKey?: string
+  hastaKey?: string
+  /** Se usa en los aria-label: "Desde <label>". */
+  label?: string
+}) {
+  const { searchParams, setParams } = useSetParam()
+  const desde = searchParams.get(desdeKey) ?? ''
+  const hasta = searchParams.get(hastaKey) ?? ''
+
+  return (
+    <div className="flex items-end gap-3">
+      <Field label="Desde" className="w-40">
+        <DateInput
+          value={desde}
+          max={hasta || undefined}
+          onChange={(value) => setParams({ [desdeKey]: value || null })}
+          aria-label={`Desde ${label}`}
+        />
+      </Field>
+      <Field label="Hasta" className="w-40">
+        <DateInput
+          value={hasta}
+          min={desde || undefined}
+          onChange={(value) => setParams({ [hastaKey]: value || null })}
+          aria-label={`Hasta ${label}`}
+        />
+      </Field>
+    </div>
+  )
+}
+
 // ─── Botón limpiar filtros ─────────────────────────────────────────────────────
 
-export function ClearFilters({ keys }: { keys: string[] }) {
+export function ClearFilters({
+  keys,
+  alsoClear,
+}: {
+  keys: string[]
+  /** Claves que se borran junto con los filtros pero no cuentan como filtro
+   *  activo: el paginador de un segundo listado en la misma pantalla. */
+  alsoClear?: string[]
+}) {
   const { searchParams, setParams } = useSetParam()
   const hayFiltros = keys.some((k) => !!searchParams.get(k))
   if (!hayFiltros) return null
@@ -120,7 +221,9 @@ export function ClearFilters({ keys }: { keys: string[] }) {
   return (
     <button
       type="button"
-      onClick={() => setParams(Object.fromEntries(keys.map((k) => [k, null])))}
+      onClick={() =>
+        setParams(Object.fromEntries([...keys, ...(alsoClear ?? [])].map((k) => [k, null])))
+      }
       className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-ink"
     >
       <TrashIcon size={14} />
@@ -131,7 +234,16 @@ export function ClearFilters({ keys }: { keys: string[] }) {
 
 // ─── Paginador ligado a la URL ──────────────────────────────────────────────────
 
-export function Paginador({ page, pageCount }: { page: number; pageCount: number }) {
+/** `paramKey` sólo hace falta cuando la pantalla tiene más de un listado. */
+export function Paginador({
+  page,
+  pageCount,
+  paramKey = 'page',
+}: {
+  page: number
+  pageCount: number
+  paramKey?: string
+}) {
   const { setParams } = useSetParam()
   if (pageCount <= 1) return null
 
@@ -140,8 +252,60 @@ export function Paginador({ page, pageCount }: { page: number; pageCount: number
       <Pagination
         page={page}
         pageCount={pageCount}
-        onPageChange={(p) => setParams({ page: p <= 1 ? null : String(p) }, false)}
+        onPageChange={(p) => setParams({ [paramKey]: p <= 1 ? null : String(p) }, false)}
       />
     </div>
+  )
+}
+
+
+/* ============================ Contenedores ============================== */
+
+/**
+ * Fila de filtros: buscador, selects y "Limpiar" en línea, apilados en mobile.
+ * Es el layout que comparten los listados de puestos, postulaciones y notas.
+ */
+export function FiltrosBar({
+  children,
+  wrap = false,
+  className,
+}: {
+  children: React.ReactNode
+  /** Permite que los controles bajen de línea cuando son muchos. */
+  wrap?: boolean
+  className?: string
+}) {
+  return (
+    <div
+      className={[
+        'flex flex-col items-start gap-3 sm:flex-row sm:items-center',
+        wrap ? 'flex-wrap' : '',
+        className ?? '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Control de filtro con su etiqueta en versalitas, para los paneles en grilla. */
+export function CampoFiltro({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
+      {children}
+    </div>
+  )
+}
+
+/** Contador "N de M" al final de la barra. Se oculta si no hay filtro aplicado. */
+export function TotalFiltrado({ visible, total }: { visible: number; total: number }) {
+  if (visible === total) return null
+  return (
+    <span className="ml-auto whitespace-nowrap text-xs text-muted">
+      {visible} de {total}
+    </span>
   )
 }

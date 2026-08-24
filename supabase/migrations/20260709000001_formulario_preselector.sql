@@ -1,5 +1,5 @@
 -- =============================================================================
--- TalentID — Migración: Formulario preselector
+-- MiLiors — Migración: Formulario preselector
 -- =============================================================================
 -- Un puesto puede tener a lo sumo UN formulario preselector, con hasta 10
 -- preguntas. Cada pregunta puede ser de opciones (con opciones definidas por

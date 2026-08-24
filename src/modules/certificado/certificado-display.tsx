@@ -1,16 +1,28 @@
 import type { CertificadoContenido } from './queries'
+import { agruparPorNivel, type CompetenciaDestacada, type NivelCert } from './niveles'
+import { DOC } from '@/lib/constants/documento'
+import { Papel, PapelHeader, PapelIdentidad, PapelSectionHead } from '@/components/shared/documento-papel'
 
 /**
- * Render presentacional del contenido del certificado — mismas secciones que el
- * PDF (candidato, perfil profesional, fortalezas, contexto, formación, cursos,
- * experiencia, competencias, idiomas). Sin estado ni hooks; homogéneo con
- * `InformeDisplay`.
+ * Previsualización del certificado — espejo en HTML de `pdf-template.tsx`.
  *
- * Fortalezas y contexto sólo existen en síntesis v2+: las anteriores renderizan
- * igual, sin esas secciones.
+ * Se renderiza como "papel": fondo claro y colores fijos aunque la app esté en
+ * modo oscuro, porque lo que muestra es un documento impreso, no una pantalla.
+ * Si cambia una sección acá, tiene que cambiar también en el PDF: lo que el
+ * postulante ve y lo que descarga deben ser lo mismo.
  */
 
 const MESES = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+const NAVY = DOC.navy
+const GOLD = DOC.gold
+const GOLD_DARK = DOC.goldDark
+
+const nivelColor: Record<NivelCert, string> = {
+  Avanzado: GOLD_DARK,
+  Medio: NAVY,
+  Básico: DOC.muted,
+}
 
 function formatFecha(iso: string | null): string {
   if (!iso) return 'Actualidad'
@@ -19,163 +31,246 @@ function formatFecha(iso: string | null): string {
   return iso
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-primary-600">{children}</h3>
+function anio(iso: string | null): string {
+  return iso ? iso.split('-')[0] : ''
 }
 
-export function CertificadoDisplay({ data }: { data: CertificadoContenido }) {
-  const prosa = data.perfilIntegrado ?? data.personalidad
-  const parrafos = prosa ? prosa.split(/\n\n+/).map(p => p.trim()).filter(Boolean) : []
-  const competenciasTitulo = data.perfilIntegrado ? 'Otras competencias' : 'Competencias'
+function rangoAnios(inicio: string, fin: string | null): string {
+  return `${anio(inicio)} - ${fin ? anio(fin) : 'Presente'}`
+}
+
+function NivelChips({ items }: { items: { nombre: string; nivel: NivelCert }[] }) {
+  return (
+    <div className="space-y-1.5">
+      {agruparPorNivel(items, i => i.nivel).map(grupo => (
+        <div key={grupo.nivel} className="flex items-start gap-3">
+          <span
+            className="w-16 shrink-0 pt-[3px] text-[11.5px] font-bold"
+            style={{ color: nivelColor[grupo.nivel] }}
+          >
+            {grupo.nivel}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {grupo.items.map((item, i) => (
+              <span
+                key={i}
+                className={
+                  grupo.nivel === 'Avanzado'
+                    ? 'rounded border border-[#f0d089] bg-[#fdf6e6] px-2 py-0.5 text-[11.5px] font-semibold'
+                    : 'rounded border border-[#e6e7f0] bg-white px-2 py-0.5 text-[11.5px] text-[#3c414f]'
+                }
+                style={grupo.nivel === 'Avanzado' ? { color: GOLD_DARK } : undefined}
+              >
+                {item.nombre}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ItemRow({ titulo, org, fecha, descripcion }: { titulo: string; org: string; fecha: string; descripcion?: string | null }) {
+  return (
+    <div className="mt-2.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[13.5px] font-bold" style={{ color: NAVY }}>
+          {titulo} <span style={{ color: GOLD_DARK }}>• {org}</span>
+        </p>
+        <span className="shrink-0 text-[11.5px] text-[#6b7085]">{fecha}</span>
+      </div>
+      {descripcion && <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#3c414f]">{descripcion}</p>}
+    </div>
+  )
+}
+
+export function CertificadoDisplay({
+  data,
+  certificadoId,
+  emitidoEl,
+}: {
+  data: CertificadoContenido
+  /** Presentes solo cuando el certificado ya fue emitido: habilitan el bloque de verificación. */
+  certificadoId?: string
+  emitidoEl?: string
+}) {
+  const sintesis = data.perfilIntegrado ?? data.personalidad
+  const destacadas: CompetenciaDestacada[] = data.destacadas
+  let n = 0
 
   return (
-    <div className="space-y-6">
-      {/* Perfil profesional integrado (personalidad + trayectoria técnica) */}
-      <section>
-        <SectionTitle>{data.perfilIntegrado ? 'Perfil profesional' : 'Perfil de personalidad'}</SectionTitle>
-        {data.objetivo && (
-          <p className="mb-2 text-[13.5px] text-ink">
-            <span className="font-semibold">Qué estudió / qué busca:</span> {data.objetivo}
-          </p>
+    <Papel>
+      <PapelHeader
+        titulo="Certificado verificado"
+        meta={emitidoEl ? <>Emitido el {emitidoEl}</> : undefined}
+      />
+
+      <div className="px-5 pb-6 pt-4">
+        <PapelIdentidad nombre={data.nombre} subtitulo={data.objetivo}>
+          <span>
+            <strong className="text-[#1a1d29]">Email:</strong> {data.email}
+          </span>
+          {data.telefono && (
+            <span>
+              <strong className="text-[#1a1d29]">Teléfono:</strong> {data.telefono}
+            </span>
+          )}
+          {data.ubicacion && (
+            <span>
+              <strong className="text-[#1a1d29]">Ubicación:</strong> {data.ubicacion}
+            </span>
+          )}
+          {data.linkedin && (
+            <span>
+              <strong className="text-[#1a1d29]">LinkedIn:</strong> {data.linkedin}
+            </span>
+          )}
+        </PapelIdentidad>
+
+        {/* 1. Síntesis de personalidad */}
+        {sintesis && (
+          <section className="mt-5">
+            <PapelSectionHead n={++n}>Síntesis de personalidad</PapelSectionHead>
+            <div
+              className="mt-2 rounded-r-lg bg-[#f7f8fb] px-4 py-3 text-[13px] leading-relaxed text-[#3c414f]"
+              style={{ borderLeft: `3px solid ${GOLD}` }}
+            >
+              {sintesis}
+            </div>
+          </section>
         )}
-        <span className="inline-flex rounded bg-primary-50 px-2.5 py-1 text-[13px] font-semibold text-primary-600">
-          Eneatipo {data.eneatipoNumero} — {data.eneatipoNombre}
-        </span>
-        {data.humanDesign && (
-          <p className="mt-2 text-[13px] leading-relaxed text-soft">
-            <span className="font-semibold text-ink">Human Design:</span> Tipo {data.humanDesign.tipo_energetico} ·
-            Autoridad {data.humanDesign.autoridad_hd} · Perfil {data.humanDesign.perfil_hd}
-          </p>
+
+        {/* 2. Competencias destacadas */}
+        {destacadas.length > 0 && (
+          <section className="mt-5">
+            <PapelSectionHead n={++n}>Competencias destacadas</PapelSectionHead>
+            <div className="mt-2 rounded-lg bg-[#f7f8fb] px-4 py-3">
+              <p className="mb-2.5 text-[11.5px] text-[#6b7085]">
+                <strong className="text-[#1a1d29]">Evaluación de perfil y estilo de trabajo</strong> (Resultados
+                derivados del test de Eneagrama — Tipo {data.eneatipoNumero}: {data.eneatipoNombre})
+              </p>
+              <NivelChips items={destacadas} />
+            </div>
+          </section>
         )}
-        {parrafos.map((p, i) => (
-          <p key={i} className="mt-2 text-[13.5px] leading-relaxed text-ink">{p}</p>
-        ))}
-      </section>
 
-      {/* Fortalezas en acción — cada rasgo anclado en evidencia del perfil técnico */}
-      {data.fortalezas && data.fortalezas.length > 0 && (
-        <section>
-          <SectionTitle>Fortalezas en acción</SectionTitle>
-          <div className="space-y-3">
-            {data.fortalezas.map((f, i) => (
-              <div key={i} className="border-l-2 border-primary-100 pl-3">
-                <p className="text-[13.5px] font-semibold text-ink">{f.titulo}</p>
-                <p className="mt-0.5 text-[13.5px] leading-relaxed text-soft">{f.texto}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Contexto donde rinde mejor */}
-      {data.contextoIdeal && (
-        <section>
-          <SectionTitle>Contexto donde rinde mejor</SectionTitle>
-          <p className="text-[13.5px] leading-relaxed text-ink">{data.contextoIdeal}</p>
-        </section>
-      )}
-
-      {/* Formación académica */}
-      {data.formaciones.length > 0 && (
-        <section>
-          <SectionTitle>Formación académica</SectionTitle>
-          <div className="space-y-2">
-            {data.formaciones.map((f, i) => (
-              <div key={i}>
-                <p className="text-[13.5px] font-semibold text-ink">{f.titulo}</p>
-                <p className="text-[13px] text-muted">
-                  {f.institucion}
-                  {f.fecha_graduacion ? ` · ${formatFecha(f.fecha_graduacion)}` : ''}
+        {/* 3. Habilidades técnicas y herramientas (+ idiomas) */}
+        {data.competencias.length > 0 && (
+          <section className="mt-5">
+            <PapelSectionHead n={++n}>Habilidades técnicas y herramientas</PapelSectionHead>
+            <div className="mt-2 rounded-lg bg-[#f7f8fb] px-4 py-3">
+              <NivelChips items={data.competencias} />
+              {data.idiomas.length > 0 && (
+                <p className="mt-3 text-[12.5px] text-[#3c414f]">
+                  <strong className="text-[#1a1d29]">Idiomas:</strong>{' '}
+                  {data.idiomas.map(i => `${i.nombre} (${i.nivel_idioma.toLowerCase()})`).join(' · ')}
                 </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+              )}
+            </div>
+          </section>
+        )}
 
-      {/* Cursos */}
-      {data.cursos.length > 0 && (
-        <section>
-          <SectionTitle>Cursos y capacitaciones</SectionTitle>
-          <div className="space-y-2">
-            {data.cursos.map((c, i) => (
-              <div key={i}>
-                <p className="text-[13.5px] font-semibold text-ink">{c.nombre}</p>
-                <p className="text-[13px] text-muted">
-                  {[
-                    c.institucion,
-                    c.fecha_fin ? formatFecha(c.fecha_fin) : null,
-                    c.duracion_horas ? `${c.duracion_horas} h` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Experiencia laboral */}
-      {data.experiencias.length > 0 && (
-        <section>
-          <SectionTitle>Experiencia laboral</SectionTitle>
-          <div className="space-y-2">
+        {/* 4. Experiencia laboral */}
+        {data.experiencias.length > 0 && (
+          <section className="mt-5">
+            <PapelSectionHead n={++n}>Experiencia laboral (últimos 3 puestos)</PapelSectionHead>
             {data.experiencias.map((e, i) => (
-              <div key={i}>
-                <p className="text-[13.5px] font-semibold text-ink">{e.puesto}</p>
-                <p className="text-[13px] text-muted">
-                  {e.empresa} · {formatFecha(e.fecha_inicio)} — {formatFecha(e.fecha_fin)}
-                </p>
-              </div>
+              <ItemRow
+                key={i}
+                titulo={e.puesto}
+                org={e.empresa}
+                fecha={rangoAnios(e.fecha_inicio, e.fecha_fin)}
+                descripcion={e.descripcion}
+              />
             ))}
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* Competencias e idiomas */}
-      {(data.competencias.length > 0 || data.idiomas.length > 0) && (
-        <section className="grid gap-6 sm:grid-cols-2">
-          {data.competencias.length > 0 && (
-            <div>
-              <SectionTitle>{competenciasTitulo}</SectionTitle>
-              <div className="flex flex-wrap gap-1.5">
-                {data.competencias.map((c, i) => (
-                  <span key={i} className="rounded bg-neutral-100 px-2 py-0.5 text-[12.5px] text-soft">
-                    {c.nombre}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          {data.idiomas.length > 0 && (
-            <div>
-              <SectionTitle>Idiomas</SectionTitle>
-              <div className="space-y-1">
-                {data.idiomas.map((idioma, i) => (
-                  <p key={i} className="text-[13px] text-soft">
-                    {idioma.nombre} — {idioma.nivel_idioma}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
+        {/* 5. Formación académica (+ cursos) */}
+        {(data.formaciones.length > 0 || data.cursos.length > 0) && (
+          <section className="mt-5">
+            <PapelSectionHead n={++n}>Formación académica</PapelSectionHead>
+            {data.formaciones.map((f, i) => (
+              <ItemRow
+                key={`f${i}`}
+                titulo={f.titulo}
+                org={f.institucion}
+                fecha={f.fecha_graduacion ? `Graduación ${anio(f.fecha_graduacion)}` : 'En curso'}
+              />
+            ))}
+            {data.cursos.map((c, i) => (
+              <ItemRow
+                key={`c${i}`}
+                titulo={c.nombre}
+                org={c.institucion}
+                fecha={[c.fecha_fin ? formatFecha(c.fecha_fin) : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              />
+            ))}
+          </section>
+        )}
 
-      {/* Transparencia: qué se dejó fuera del certificado y por qué */}
-      {data.descartados && data.descartados.length > 0 && (
-        <section>
-          <SectionTitle>No incluido en este certificado</SectionTitle>
-          <div className="space-y-1.5">
+        {/* 6. Verificación — solo con certificado emitido */}
+        {certificadoId && (
+          <section className="mt-6 rounded-lg bg-[#f7f8fb] p-4">
+            <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[0.09em]" style={{ color: NAVY }}>
+              {++n}. Cómo se comprueba este certificado
+            </h3>
+            <dl className="space-y-1 text-[12px]">
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0 text-[10.5px] uppercase tracking-wide text-[#6b7085]">
+                  ID de verificación
+                </dt>
+                <dd className="font-bold" style={{ color: GOLD_DARK }}>
+                  {certificadoId}
+                </dd>
+              </div>
+              {emitidoEl && (
+                <div className="flex gap-3">
+                  <dt className="w-32 shrink-0 text-[10.5px] uppercase tracking-wide text-[#6b7085]">Emitido</dt>
+                  <dd className="font-bold text-[#1a1d29]">{emitidoEl}</dd>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0 text-[10.5px] uppercase tracking-wide text-[#6b7085]">Verificá en</dt>
+                <dd>
+                  <a
+                    href={`/verificar/${certificadoId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold underline"
+                    style={{ color: GOLD_DARK }}
+                  >
+                    miliors.com/verificar
+                  </a>
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-2.5 text-[10.5px] leading-relaxed text-[#9aa0b6]">
+              El PDF descargable lleva el código QR que abre esta verificación. La plataforma confirma que el
+              documento fue emitido por MiLiors, que no fue alterado y que sigue vigente. Este certificado acredita la
+              información validada por MiLiors; no constituye recomendación de contratación ni evaluación clínica. Las
+              competencias reflejan un marco de autoconocimiento (Eneagrama), no un test psicométrico estandarizado.
+            </p>
+          </section>
+        )}
+
+        {/* Transparencia: qué se dejó fuera del certificado y por qué */}
+        {data.descartados && data.descartados.length > 0 && (
+          <section className="mt-5 border-t border-[#e6e7f0] pt-3">
+            <p className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-[#6b7085]">
+              No incluido en este certificado
+            </p>
             {data.descartados.map((d, i) => (
-              <p key={i} className="text-[12.5px] leading-relaxed text-muted">
+              <p key={i} className="text-[11.5px] leading-relaxed text-[#6b7085]">
                 <span className="font-semibold">{d.label}</span> — {d.motivo}
               </p>
             ))}
-          </div>
-        </section>
-      )}
-    </div>
+          </section>
+        )}
+      </div>
+    </Papel>
   )
 }

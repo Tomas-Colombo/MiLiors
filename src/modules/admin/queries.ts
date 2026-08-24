@@ -1,6 +1,12 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { COMPETENCIAS } from '@/modules/informe/competencias'
+import {
+  NIVEL_COMPETENCIA,
+  VALORACION_COMPETENCIA,
+  valorEnum,
+  type ValoracionCompetencia,
+} from '@/lib/constants/enums'
 
 // ─── Métricas del dashboard ──────────────────────────────────────────────────
 
@@ -77,21 +83,38 @@ export async function getProvinciasAdmin(): Promise<ProvinciaAdmin[]> {
   return (data ?? []) as ProvinciaAdmin[]
 }
 
-export type LocalidadAdmin = {
+export type DepartamentoAdmin = {
   id: string
   nombre: string
-  departamento: string | null
   fecha_baja: string | null
   created_at: string
 }
 
-export async function getLocalidadesAdmin(provinciaId: string): Promise<LocalidadAdmin[]> {
+export async function getDepartamentosAdmin(provinciaId: string): Promise<DepartamentoAdmin[]> {
   if (!provinciaId) return []
   const admin = createAdminClient()
   const { data } = await admin
-    .from('localidad')
-    .select('id, nombre, departamento, fecha_baja, created_at')
+    .from('departamento')
+    .select('id, nombre, fecha_baja, created_at')
     .eq('provincia_id', provinciaId)
+    .order('nombre')
+  return (data ?? []) as DepartamentoAdmin[]
+}
+
+export type LocalidadAdmin = {
+  id: string
+  nombre: string
+  fecha_baja: string | null
+  created_at: string
+}
+
+export async function getLocalidadesAdmin(departamentoId: string): Promise<LocalidadAdmin[]> {
+  if (!departamentoId) return []
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('localidad')
+    .select('id, nombre, fecha_baja, created_at')
+    .eq('departamento_id', departamentoId)
     .order('nombre')
   return (data ?? []) as LocalidadAdmin[]
 }
@@ -185,8 +208,10 @@ export async function getPostulantesAdmin() {
   const { data } = await admin
     .from('perfil_postulante')
     .select(`
-      id, nombre_completo, perfil_en_busqueda, created_at,
+      id, nombre_completo, perfil_en_busqueda, created_at, carrera_id, carrera_otra,
       usuario(email),
+      carrera:carrera_id(nombre),
+      localidad(nombre, departamento_id, departamento(nombre, provincia_id, provincia(nombre))),
       test_eneagrama(test_eneagrama_dominante(id)),
       informe_personalidad(estado_informe)
     `)
@@ -195,7 +220,14 @@ export async function getPostulantesAdmin() {
   return (data ?? []).map((row: unknown) => {
     const r = row as {
       id: string; nombre_completo: string; perfil_en_busqueda: boolean; created_at: string
+      carrera_id: string | null; carrera_otra: string | null
       usuario: { email: string } | null
+      carrera: { nombre: string } | null
+      localidad: {
+        nombre: string
+        departamento_id: string
+        departamento: { nombre: string; provincia_id: string; provincia: { nombre: string } | null } | null
+      } | null
       test_eneagrama: { test_eneagrama_dominante: { id: string }[] } | null
       informe_personalidad: { estado_informe: string } | null
     }
@@ -205,6 +237,15 @@ export async function getPostulantesAdmin() {
       perfil_en_busqueda: r.perfil_en_busqueda,
       created_at: r.created_at,
       email: r.usuario?.email ?? null,
+      carrera_id: r.carrera_id,
+      // La carrera puede venir del catálogo o cargada a mano ("otra").
+      carrera: r.carrera?.nombre ?? r.carrera_otra ?? null,
+      es_carrera_otra: !r.carrera_id && !!r.carrera_otra,
+      // Cadena de ubicación: el perfil sólo guarda la localidad.
+      departamento_id: r.localidad?.departamento_id ?? null,
+      provincia_id: r.localidad?.departamento?.provincia_id ?? null,
+      nombre_localidad: r.localidad?.nombre ?? null,
+      nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
       eneagrama_completo: (r.test_eneagrama?.test_eneagrama_dominante.length ?? 0) > 0,
       estado_informe: r.informe_personalidad?.estado_informe ?? null,
     }
@@ -219,7 +260,7 @@ export async function getEmpresasAdmin() {
     .from('empresa')
     .select(`
       id, nombre_empresa, descripcion, fecha_baja, created_at,
-      perfil_reclutador(id, nombre_reclutador, usuario(email))
+      reclutador_empresa(perfil_reclutador(id, nombre_reclutador, usuario(email)))
     `)
     .order('created_at', { ascending: false })
 
@@ -227,7 +268,9 @@ export async function getEmpresasAdmin() {
     const r = row as {
       id: string; nombre_empresa: string; descripcion: string | null
       fecha_baja: string | null; created_at: string
-      perfil_reclutador: { id: string; nombre_reclutador: string; usuario: { email: string } | null }[]
+      reclutador_empresa: {
+        perfil_reclutador: { id: string; nombre_reclutador: string; usuario: { email: string } | null } | null
+      }[]
     }
     return {
       id: r.id,
@@ -235,11 +278,14 @@ export async function getEmpresasAdmin() {
       descripcion: r.descripcion,
       activa: !r.fecha_baja,
       created_at: r.created_at,
-      reclutadores: r.perfil_reclutador.map(rec => ({
-        id: rec.id,
-        nombre: rec.nombre_reclutador,
-        email: rec.usuario?.email ?? null,
-      })),
+      reclutadores: r.reclutador_empresa
+        .map(v => v.perfil_reclutador)
+        .filter((rec): rec is { id: string; nombre_reclutador: string; usuario: { email: string } | null } => !!rec)
+        .map(rec => ({
+          id: rec.id,
+          nombre: rec.nombre_reclutador,
+          email: rec.usuario?.email ?? null,
+        })),
     }
   })
 }
@@ -325,7 +371,7 @@ export async function getInformesAdmin() {
 // `postulante_id` para poder agrupar, nunca nombre ni email. Es telemetría del
 // modelo, no una ficha de la persona.
 
-export type ValoracionCompetencia = 'SUBESTIMA' | 'JUSTO' | 'SOBRESTIMA'
+export type { ValoracionCompetencia } from '@/lib/constants/enums'
 
 export type FeedbackCompetenciaRow = {
   id: string
@@ -432,14 +478,15 @@ export async function getFeedbackCompetenciasAdmin(
 ): Promise<FeedbackCompetenciaRow[]> {
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = admin
+  let query = admin
     .from('feedback_informe_competencia')
     .select('id, postulante_id, competencia_key, nivel_mostrado, valoracion, informe_generado_at, updated_at')
 
   if (filtros.competencia) query = query.eq('competencia_key', filtros.competencia)
-  if (filtros.nivel) query = query.eq('nivel_mostrado', filtros.nivel)
-  if (filtros.valoracion) query = query.eq('valoracion', filtros.valoracion)
+  const nivel = valorEnum(NIVEL_COMPETENCIA, filtros.nivel)
+  if (nivel) query = query.eq('nivel_mostrado', nivel)
+  const valoracion = valorEnum(VALORACION_COMPETENCIA, filtros.valoracion)
+  if (valoracion) query = query.eq('valoracion', valoracion)
   const rango = rangoISO(filtros)
   if (rango.desde) query = query.gte('updated_at', rango.desde)
   if (rango.hasta) query = query.lte('updated_at', rango.hasta)
@@ -492,14 +539,27 @@ export async function contarFeedbackCompetencias(): Promise<number> {
   return count ?? 0
 }
 
+/**
+ * Total histórico de respuestas globales, sin filtros. Junto con
+ * `contarFeedbackCompetencias` distingue "todavía no opinó nadie" de "opinaron,
+ * pero sólo la pregunta de cierre".
+ */
+export async function contarFeedbackGlobal(): Promise<number> {
+  const admin = createAdminClient()
+  const { count, error } = await admin
+    .from('feedback_informe')
+    .select('*', { count: 'exact', head: true })
+  if (error) logFeedbackError('el total de respuestas globales', error)
+  return count ?? 0
+}
+
 /** Respuestas a la pregunta global de cierre, con los mismos filtros aplicables. */
 export async function getFeedbackGlobalAdmin(
   filtros: FeedbackFiltros = {},
 ): Promise<FeedbackGlobalRow[]> {
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = admin
+  let query = admin
     .from('feedback_informe')
     .select('id, postulante_id, representatividad, comentario, updated_at')
 

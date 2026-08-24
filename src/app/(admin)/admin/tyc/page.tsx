@@ -1,7 +1,7 @@
 import { getTyCVersiones } from '@/modules/admin/queries'
 import { TyCAdmin } from './tyc-ui'
 
-export const metadata = { title: 'Términos y Condiciones — Admin TalentID' }
+export const metadata = { title: 'Términos y Condiciones — Admin MiLiors' }
 
 export default async function TyCPage() {
   const versiones = await getTyCVersiones()

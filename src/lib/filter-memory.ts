@@ -10,7 +10,7 @@
  * un listado: <AppSidebar> y <VolverLink>.
  */
 
-const PREFIJO = 'talentid-filters:'
+const PREFIJO = 'miliors-filters:'
 
 function clave(pathname: string) {
   return PREFIJO + pathname

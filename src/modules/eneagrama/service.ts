@@ -22,8 +22,7 @@ export async function resetearTestsEnProgreso(): Promise<void> {
   const admin = createAdminClient()
 
   // Obtener todos los tests que todavía no tienen dominantes calculados
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: testsEnProgreso } = await (admin.from('test_eneagrama') as any)
+  const { data: testsEnProgreso } = await admin.from('test_eneagrama')
     .select('id, test_eneagrama_dominante(id)')
 
   if (!testsEnProgreso || testsEnProgreso.length === 0) return
@@ -35,19 +34,16 @@ export async function resetearTestsEnProgreso(): Promise<void> {
   if (ids.length === 0) return
 
   // Borrar respuestas y puntajes de todos los tests en progreso
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('respuesta_item_eneagrama') as any)
+  await admin.from('respuesta_item_eneagrama')
     .delete()
     .in('test_eneagrama_id', ids)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('resultado_puntaje_eneagrama') as any)
+  await admin.from('resultado_puntaje_eneagrama')
     .delete()
     .in('test_eneagrama_id', ids)
 
   // Limpiar campos de resultado en los registros (los conservamos para reusar)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('test_eneagrama') as any)
+  await admin.from('test_eneagrama')
     .update({
       ala: null,
       tiene_empate_dominante: false,

@@ -25,7 +25,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Modal de cierre/eliminación con registro de contratación, y de reactivación
+  // Modal de pausa/eliminación con registro de contratación, y de reactivación
   const [modo, setModo] = useState<Modo | null>(null)
   const [origen, setOrigen] = useState<Origen>('ninguna')
   const [postulanteId, setPostulanteId] = useState('')
@@ -115,7 +115,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
 
   return (
     <div className="flex flex-col gap-2 items-center">
-      <div className="flex flex-wrap items-center justify-center gap-1.5">
+      <div className="flex flex-nowrap items-center justify-center gap-1.5">
         <Link
           href={`/reclutador/puestos/${puestoId}`}
           className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
@@ -150,7 +150,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
             disabled={isPending}
             className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-[6px] bg-error-solid px-2.5 text-[11.5px] font-semibold text-white hover:bg-error disabled:bg-neutral-disabled disabled:cursor-not-allowed"
           >
-            {isPending && modo === 'cerrar' ? <Spinner size={13} /> : 'Cerrar'}
+            {isPending && modo === 'cerrar' ? <Spinner size={13} /> : 'Pausar'}
           </button>
         ) : (
           <button
@@ -193,7 +193,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
             ? '¿Eliminar este puesto?'
             : modo === 'reactivar'
               ? '¿Reactivar este puesto?'
-              : '¿Cerrar este puesto?'
+              : '¿Pausar este puesto?'
         }
         footer={
           <>
@@ -206,7 +206,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
               loading={isPending}
               onClick={handleConfirmar}
             >
-              {modo === 'eliminar' ? 'Eliminar' : modo === 'reactivar' ? 'Reactivar' : 'Cerrar'}
+              {modo === 'eliminar' ? 'Eliminar' : modo === 'reactivar' ? 'Reactivar' : 'Pausar'}
             </Button>
           </>
         }
@@ -240,7 +240,8 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
           </div>
         ) : (
           <p className="text-sm text-ink-soft">
-            Dejará de recibir postulaciones. Podés <strong>reactivarlo</strong> más adelante.
+            Dejará de recibir postulaciones y deja de aparecer en las búsquedas. Podés
+            <strong> reactivarlo</strong> más adelante.
           </p>
         )}
 

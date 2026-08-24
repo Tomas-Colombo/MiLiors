@@ -6,7 +6,7 @@ import { getPuestoById, getPostulacionesRecibidas } from '@/modules/puestos/quer
 import { AsistenteCandidatos, type CandidatoItem } from './asistente-candidatos'
 import { MARCA_POSTULACION } from '@/lib/constants/enums'
 
-export const metadata = { title: 'Asistente IA del puesto — TalentID' }
+export const metadata = { title: 'Asistente IA del puesto — MiLiors' }
 
 // params in Next.js App Router dynamic routes is a Promise
 type Params = Promise<{ id: string }>

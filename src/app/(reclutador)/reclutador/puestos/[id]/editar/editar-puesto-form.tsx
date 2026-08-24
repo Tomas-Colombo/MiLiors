@@ -3,8 +3,11 @@
 import Link from 'next/link'
 import { useActionState, useState } from 'react'
 import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert } from '@/components/ui'
-import type { SelectOption } from '@/components/ui/select'
-import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
+import {
+  UbicacionSelector,
+  type ProvinciaOption,
+  type UbicacionInicial,
+} from '@/components/shared/ubicacion-selector'
 import { CarrerasMultiSelect } from '@/components/shared/carreras-multi-select'
 import { editarPuesto } from '@/modules/puestos/actions'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
@@ -12,23 +15,26 @@ import type { ActionResult } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
 import type { FormularioPreselector } from '@/modules/preselector/queries'
 import type { CarreraOption } from '@/modules/carreras/queries'
+import type { EmpresaOption } from '@/modules/empresas/queries'
 import { FormularioPreselectorEditor } from '../../formulario-preselector-editor'
 
 type Props = {
   puestoId: string
   puesto: PuestoItem & { perfil_psicologico_deseado: string | null }
+  /** Empresas del reclutador; incluye la del puesto aunque esté dada de baja. */
+  empresas: EmpresaOption[]
   sectores: { id: string; nombre_sector: string }[]
   carreras: CarreraOption[]
   formularioPreselector: FormularioPreselector | null
   /** true cuando el formulario ya tiene respuestas de postulantes y no se puede modificar. */
   formularioBloqueado?: boolean
   provincias: ProvinciaOption[]
-  localidadesIniciales: SelectOption[]
+  ubicacionInicial: UbicacionInicial | null
 }
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formularioPreselector, formularioBloqueado, provincias, localidadesIniciales }: Props) {
+export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carreras, formularioPreselector, formularioBloqueado, provincias, ubicacionInicial }: Props) {
   // editarPuesto signature is (puestoId, prevState, formData) — bind the id
   const boundAction = editarPuesto.bind(null, puestoId)
   const [state, action, isPending] = useActionState(boundAction, initialState)
@@ -37,6 +43,7 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
   // controlados a su defaultValue y se perderían los cambios sin guardar. El
   // estado los preserva para que solo se corrija el campo con error.
   const [values, setValues] = useState({
+    empresa_id: puesto.empresa_id,
     titulo_puesto: puesto.titulo_puesto,
     descripcion_texto: puesto.descripcion_texto ?? '',
     sector_id: puesto.sector_id ?? '',
@@ -53,6 +60,11 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
 
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
   const ubicacionAplica = modalidad !== UBICACION.REMOTO
+
+  const empresaOptions = empresas.map((e) => ({
+    value: e.id,
+    label: e.activa ? e.nombre_empresa : `${e.nombre_empresa} · de baja`,
+  }))
 
   const sectorOptions = [
     { value: '', label: 'Sin sector' },
@@ -74,6 +86,22 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
     <form action={action} className="space-y-5">
       {!state.success && state.error && <Alert tone="error" title={state.error} />}
       {state.success && <Alert tone="success" title="Puesto actualizado correctamente." />}
+
+      <Field
+        label="Empresa"
+        htmlFor="empresa_id"
+        required
+        error={fieldErrors.empresa_id?.[0]}
+      >
+        <FancySelect
+          id="empresa_id"
+          name="empresa_id"
+          options={empresaOptions}
+          value={values.empresa_id}
+          onChange={setValor('empresa_id')}
+          placeholder="Elegí la empresa"
+        />
+      </Field>
 
       <Field
         label="Título del puesto"
@@ -193,12 +221,9 @@ export function EditarPuestoForm({ puestoId, puesto, sectores, carreras, formula
       {ubicacionAplica && (
         <UbicacionSelector
           provincias={provincias}
-          defaultProvinciaId={puesto.provincia_id ?? undefined}
-          defaultLocalidadId={puesto.localidad_id ?? undefined}
-          defaultLocalidades={localidadesIniciales}
+          inicial={ubicacionInicial}
           required
-          provinciaError={fieldErrors.provincia_id?.[0]}
-          localidadError={fieldErrors.localidad_id?.[0]}
+          error={fieldErrors.localidad_id?.[0]}
         />
       )}
 

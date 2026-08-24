@@ -19,10 +19,10 @@ export function ConfigInactividad({ diasActual }: { diasActual: number }) {
 
   return (
     <Card className="mb-6">
-      <h2 className="text-[15px] font-bold text-ink">Cierre automático de puestos</h2>
+      <h2 className="text-[15px] font-bold text-ink">Pausa automática de puestos</h2>
       <p className="mt-1 text-[13px] text-muted">
         Los puestos activos sin actividad del reclutador (revisar postulaciones, cambiar
-        estados, notas o editar el puesto) durante este período se cierran automáticamente.
+        estados, notas o editar el puesto) durante este período se pausan automáticamente.
       </p>
 
       <form action={action} className="mt-4 flex flex-wrap items-end gap-3">

@@ -42,25 +42,40 @@ export type PostulanteDetalle = PostulanteCard & {
   informe: InformePersonalidadJSON | null
 }
 
+/**
+ * Embed de ubicación. El perfil sólo guarda `localidad_id`: departamento y
+ * provincia se alcanzan subiendo por las FKs del catálogo.
+ */
+type LocalidadEmbed = {
+  nombre: string
+  departamento: { nombre: string; provincia: { nombre: string } | null } | null
+}
+
 /** Buscar postulantes con perfil_en_busqueda=true */
 export const buscarPostulantes = cache(async (filtros?: {
   competenciaId?: string
   busqueda?: string
   provinciaId?: string
-  /** Localidades del departamento elegido (el perfil guarda localidad_id). */
-  localidadIds?: string[]
+  departamentoId?: string
   carrera?: string
   carreraOtra?: string
 }): Promise<PostulanteCard[]> => {
   const supabase = await createClient()
 
+  // Filtrar por provincia o departamento exige que el embed sea un JOIN interno.
+  // Sin filtro geográfico se deja LEFT: un perfil sin ubicación cargada sigue
+  // apareciendo en la búsqueda.
+  const filtraUbicacion = !!(filtros?.provinciaId || filtros?.departamentoId)
+  const embedUbicacion = filtraUbicacion
+    ? 'localidad!inner(nombre, departamento!inner(nombre, provincia!inner(nombre)))'
+    : 'localidad(nombre, departamento(nombre, provincia(nombre)))'
+
   // Query base: perfil_postulante en búsqueda con eneatipo
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase
+  let query = supabase
     .from('perfil_postulante')
     .select(`
-      id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, provincia_id, localidad_id,
-      provincia(nombre), localidad(nombre),
+      id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, localidad_id,
+      ${embedUbicacion},
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
     .eq('perfil_en_busqueda', true)
@@ -68,9 +83,10 @@ export const buscarPostulantes = cache(async (filtros?: {
   if (filtros?.busqueda) {
     query = query.ilike('nombre_completo', `%${filtros.busqueda}%`)
   }
-  if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
-  // Departamento → filtra por las localidades que lo componen. Array vacío = sin resultados.
-  if (filtros?.localidadIds) query = query.in('localidad_id', filtros.localidadIds)
+  // Provincia y departamento se filtran sobre el embed: el perfil sólo guarda
+  // la localidad y el resto de la jerarquía cuelga de ella.
+  if (filtros?.provinciaId) query = query.eq('localidad.departamento.provincia_id', filtros.provinciaId)
+  if (filtros?.departamentoId) query = query.eq('localidad.departamento_id', filtros.departamentoId)
   if (filtros?.carrera && UUID_RE.test(filtros.carrera)) {
     query = query.eq('carrera_id', filtros.carrera)
   }
@@ -117,8 +133,7 @@ export const buscarPostulantes = cache(async (filtros?: {
       carrera_otra: string | null
       carrera: { nombre: string } | null
       perfil_en_busqueda: boolean
-      provincia: { nombre: string } | null
-      localidad: { nombre: string } | null
+      localidad: LocalidadEmbed | null
       test_eneagrama: {
         tiene_empate_dominante: boolean
         test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
@@ -133,7 +148,7 @@ export const buscarPostulantes = cache(async (filtros?: {
       eneatipo_numero: primerDominante?.numero_eneatipo ?? null,
       eneatipo_nombre: primerDominante?.nombre ?? null,
       competencias: (competenciasPorPostulante[r.id] ?? []).map((c) => ({ nombre: c.nombre })),
-      nombre_provincia: r.provincia?.nombre ?? null,
+      nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
@@ -182,7 +197,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     .select(`
       id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda,
       telefono, enlace_linkedin, portfolio, ultima_conexion,
-      usuario(email), provincia(nombre), localidad(nombre),
+      usuario(email), localidad(nombre, departamento(nombre, provincia(nombre))),
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
     .eq('id', postulanteId)
@@ -201,8 +216,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     portfolio: string | null
     ultima_conexion: string | null
     usuario: { email: string } | null
-    provincia: { nombre: string } | null
-    localidad: { nombre: string } | null
+    localidad: LocalidadEmbed | null
     test_eneagrama: {
       tiene_empate_dominante: boolean
       test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
@@ -296,7 +310,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     eneatipo_numero: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ?? null,
     eneatipo_nombre: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,
     competencias,
-    nombre_provincia: p.provincia?.nombre ?? null,
+    nombre_provincia: p.localidad?.departamento?.provincia?.nombre ?? null,
     nombre_localidad: p.localidad?.nombre ?? null,
     email: contactoLiberado ? (p.usuario?.email ?? null) : null,
     telefono: contactoLiberado ? p.telefono : null,
@@ -347,8 +361,7 @@ export const getTodasLasNotasReclutador = cache(async (filters?: {
 
   const reclutadorId = (reclutador as { id: string }).id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase
+  let query = supabase
     .from('nota_privada')
     .select(`
       id, contenido, fecha_creacion, updated_at, puesto_id,

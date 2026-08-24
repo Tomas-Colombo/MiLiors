@@ -144,20 +144,6 @@ export function ProgressRing({ value, size = 54 }: { value: number; size?: numbe
   );
 }
 
-/* ============================ Skeleton ================================== */
-export function Skeleton({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn("rounded-md", className)}
-      style={{
-        background: "linear-gradient(90deg,#f1f2f5 25%,#e8e9ed 37%,#f1f2f5 63%)",
-        backgroundSize: "400px 100%",
-        animation: "ds-shimmer 1.4s infinite",
-      }}
-    />
-  );
-}
-
 /* ============================ Empty state ============================== */
 export function EmptyState({
   icon,

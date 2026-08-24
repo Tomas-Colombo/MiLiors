@@ -24,8 +24,7 @@ export async function crearSector(
   if (!nombre) return { success: false, error: 'Ingresá un nombre de sector.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('sector_industrial') as any).insert({ nombre_sector: nombre })
+  const { error } = await admin.from('sector_industrial').insert({ nombre_sector: nombre })
   if (error?.code === '23505') return { success: false, error: 'Ya existe un sector con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo crear el sector.' }
 
@@ -36,8 +35,7 @@ export async function crearSector(
 export async function desactivarSector(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('sector_industrial') as any)
+  const { error } = await admin.from('sector_industrial')
     .update({ fecha_baja_s: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo desactivar.' }
@@ -48,8 +46,7 @@ export async function desactivarSector(id: string): Promise<ActionResult> {
 export async function reactivarSector(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('sector_industrial') as any)
+  const { error } = await admin.from('sector_industrial')
     .update({ fecha_baja_s: null })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo reactivar.' }
@@ -68,8 +65,7 @@ export async function crearCompetencia(
   if (!nombre) return { success: false, error: 'Ingresá un nombre de competencia.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('competencia') as any).insert({ nombre })
+  const { error } = await admin.from('competencia').insert({ nombre })
   if (error?.code === '23505') return { success: false, error: 'Ya existe una competencia con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo crear la competencia.' }
 
@@ -80,8 +76,7 @@ export async function crearCompetencia(
 export async function desactivarCompetencia(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('competencia') as any)
+  const { error } = await admin.from('competencia')
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo desactivar.' }
@@ -92,8 +87,7 @@ export async function desactivarCompetencia(id: string): Promise<ActionResult> {
 export async function reactivarCompetencia(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('competencia') as any)
+  const { error } = await admin.from('competencia')
     .update({ fecha_baja: null })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo reactivar.' }
@@ -112,8 +106,7 @@ export async function crearIdioma(
   if (!nombre) return { success: false, error: 'Ingresá un nombre de idioma.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('idioma_catalogo') as any).insert({ nombre })
+  const { error } = await admin.from('idioma_catalogo').insert({ nombre })
   if (error?.code === '23505') return { success: false, error: 'Ya existe un idioma con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo crear el idioma.' }
 
@@ -124,8 +117,7 @@ export async function crearIdioma(
 export async function desactivarIdioma(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('idioma_catalogo') as any)
+  const { error } = await admin.from('idioma_catalogo')
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo desactivar.' }
@@ -136,8 +128,7 @@ export async function desactivarIdioma(id: string): Promise<ActionResult> {
 export async function reactivarIdioma(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('idioma_catalogo') as any)
+  const { error } = await admin.from('idioma_catalogo')
     .update({ fecha_baja: null })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo reactivar.' }
@@ -156,8 +147,7 @@ export async function crearCarrera(
   if (!nombre) return { success: false, error: 'Ingresá el nombre de la carrera.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('carrera') as any).insert({ nombre })
+  const { error } = await admin.from('carrera').insert({ nombre })
   if (error?.code === '23505') return { success: false, error: 'Ya existe una carrera con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo crear la carrera.' }
 
@@ -171,8 +161,7 @@ export async function renombrarCarrera(id: string, nuevoNombre: string): Promise
   if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('carrera') as any).update({ nombre: limpio }).eq('id', id)
+  const { error } = await admin.from('carrera').update({ nombre: limpio }).eq('id', id)
   if (error?.code === '23505') return { success: false, error: 'Ya existe una carrera con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo actualizar la carrera.' }
 
@@ -183,8 +172,7 @@ export async function renombrarCarrera(id: string, nuevoNombre: string): Promise
 export async function desactivarCarrera(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('carrera') as any)
+  const { error } = await admin.from('carrera')
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo desactivar.' }
@@ -195,8 +183,7 @@ export async function desactivarCarrera(id: string): Promise<ActionResult> {
 export async function reactivarCarrera(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('carrera') as any).update({ fecha_baja: null }).eq('id', id)
+  const { error } = await admin.from('carrera').update({ fecha_baja: null }).eq('id', id)
   if (error) return { success: false, error: 'No se pudo reactivar.' }
   revalidatePath('/admin/carreras')
   return { success: true, data: undefined }
@@ -225,8 +212,7 @@ export async function promoverCarreraOtra(nombre: string): Promise<ActionResult>
   let carreraId = (existente as { id: string } | null)?.id ?? null
 
   if (!carreraId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: creada, error } = await (admin.from('carrera') as any)
+    const { data: creada, error } = await admin.from('carrera')
       .insert({ nombre: limpio })
       .select('id')
       .single()
@@ -248,8 +234,7 @@ export async function promoverCarreraOtra(nombre: string): Promise<ActionResult>
   }
 
   // 2. Re-vincular perfiles que tenían ese texto libre.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (admin.from('perfil_postulante') as any)
+  const { error: updateError } = await admin.from('perfil_postulante')
     .update({ carrera_id: carreraId, carrera_otra: null })
     .ilike('carrera_otra', limpio)
 
@@ -270,8 +255,7 @@ export async function crearProvincia(
   if (!nombre) return { success: false, error: 'Ingresá el nombre de la provincia.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('provincia') as any).insert({ nombre })
+  const { error } = await admin.from('provincia').insert({ nombre })
   if (error?.code === '23505') return { success: false, error: 'Ya existe una provincia con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo crear la provincia.' }
 
@@ -285,8 +269,7 @@ export async function renombrarProvincia(id: string, nombre: string): Promise<Ac
   if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('provincia') as any).update({ nombre: limpio }).eq('id', id)
+  const { error } = await admin.from('provincia').update({ nombre: limpio }).eq('id', id)
   if (error?.code === '23505') return { success: false, error: 'Ya existe una provincia con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo actualizar la provincia.' }
 
@@ -297,8 +280,7 @@ export async function renombrarProvincia(id: string, nombre: string): Promise<Ac
 export async function desactivarProvincia(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('provincia') as any)
+  const { error } = await admin.from('provincia')
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo desactivar.' }
@@ -309,8 +291,65 @@ export async function desactivarProvincia(id: string): Promise<ActionResult> {
 export async function reactivarProvincia(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('provincia') as any).update({ fecha_baja: null }).eq('id', id)
+  const { error } = await admin.from('provincia').update({ fecha_baja: null }).eq('id', id)
+  if (error) return { success: false, error: 'No se pudo reactivar.' }
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+// ─── Ubicación: departamentos ────────────────────────────────────────────────
+
+export async function crearDepartamento(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin()
+  const provinciaId = formData.get('provincia_id')?.toString()
+  const nombre = formData.get('nombre')?.toString().trim()
+  if (!provinciaId) return { success: false, error: 'Seleccioná una provincia primero.' }
+  if (!nombre) return { success: false, error: 'Ingresá el nombre del departamento.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('departamento').insert({
+    provincia_id: provinciaId,
+    nombre,
+  })
+  if (error?.code === '23505') return { success: false, error: 'Ya existe un departamento con ese nombre en la provincia.' }
+  if (error) return { success: false, error: 'No se pudo crear el departamento.' }
+
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function renombrarDepartamento(id: string, nombre: string): Promise<ActionResult> {
+  await requireAdmin()
+  const limpio = nombre.trim()
+  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('departamento').update({ nombre: limpio }).eq('id', id)
+  if (error?.code === '23505') return { success: false, error: 'Ya existe un departamento con ese nombre en la provincia.' }
+  if (error) return { success: false, error: 'No se pudo actualizar el departamento.' }
+
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function desactivarDepartamento(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  const { error } = await admin.from('departamento')
+    .update({ fecha_baja: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { success: false, error: 'No se pudo desactivar.' }
+  revalidatePath('/admin/ubicaciones')
+  return { success: true, data: undefined }
+}
+
+export async function reactivarDepartamento(id: string): Promise<ActionResult> {
+  await requireAdmin()
+  const admin = createAdminClient()
+  const { error } = await admin.from('departamento').update({ fecha_baja: null }).eq('id', id)
   if (error) return { success: false, error: 'No se pudo reactivar.' }
   revalidatePath('/admin/ubicaciones')
   return { success: true, data: undefined }
@@ -323,18 +362,15 @@ export async function crearLocalidad(
   formData: FormData
 ): Promise<ActionResult> {
   await requireAdmin()
-  const provinciaId = formData.get('provincia_id')?.toString()
+  const departamentoId = formData.get('departamento_id')?.toString()
   const nombre = formData.get('nombre')?.toString().trim()
-  const departamento = formData.get('departamento')?.toString().trim() || null
-  if (!provinciaId) return { success: false, error: 'Seleccioná una provincia primero.' }
+  if (!departamentoId) return { success: false, error: 'Seleccioná un departamento primero.' }
   if (!nombre) return { success: false, error: 'Ingresá el nombre de la localidad.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('localidad') as any).insert({
-    provincia_id: provinciaId,
+  const { error } = await admin.from('localidad').insert({
+    departamento_id: departamentoId,
     nombre,
-    departamento,
   })
   if (error) return { success: false, error: 'No se pudo crear la localidad.' }
 
@@ -348,8 +384,7 @@ export async function renombrarLocalidad(id: string, nombre: string): Promise<Ac
   if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('localidad') as any).update({ nombre: limpio }).eq('id', id)
+  const { error } = await admin.from('localidad').update({ nombre: limpio }).eq('id', id)
   if (error) return { success: false, error: 'No se pudo actualizar la localidad.' }
 
   revalidatePath('/admin/ubicaciones')
@@ -359,8 +394,7 @@ export async function renombrarLocalidad(id: string, nombre: string): Promise<Ac
 export async function desactivarLocalidad(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('localidad') as any)
+  const { error } = await admin.from('localidad')
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo desactivar.' }
@@ -371,8 +405,7 @@ export async function desactivarLocalidad(id: string): Promise<ActionResult> {
 export async function reactivarLocalidad(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('localidad') as any).update({ fecha_baja: null }).eq('id', id)
+  const { error } = await admin.from('localidad').update({ fecha_baja: null }).eq('id', id)
   if (error) return { success: false, error: 'No se pudo reactivar.' }
   revalidatePath('/admin/ubicaciones')
   return { success: true, data: undefined }
@@ -397,8 +430,7 @@ export async function editarPregunta(
     return { success: false, error: 'Eneatipo debe ser entre 1 y 9.' }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('pregunta_eneagrama') as any)
+  const { error } = await admin.from('pregunta_eneagrama')
     .update({ enunciado, eneatipo_asociado })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo guardar la pregunta.' }
@@ -410,8 +442,7 @@ export async function editarPregunta(
 export async function eliminarPregunta(id: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('pregunta_eneagrama') as any)
+  const { error } = await admin.from('pregunta_eneagrama')
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar la pregunta.' }
@@ -423,8 +454,7 @@ export async function eliminarPregunta(id: string): Promise<ActionResult> {
 export async function togglePausarPregunta(id: string, pausada: boolean): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('pregunta_eneagrama') as any)
+  const { error } = await admin.from('pregunta_eneagrama')
     .update({ pausada })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo cambiar el estado.' }
@@ -450,8 +480,7 @@ export async function publicarTyC(
   const admin = createAdminClient()
 
   // 1. Insertar la nueva versión (queda vigente: fecha_baja_tyc = null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: nueva, error } = await (admin.from('terminos_y_condiciones') as any)
+  const { data: nueva, error } = await admin.from('terminos_y_condiciones')
     .insert({ version, descripcion })
     .select('id')
     .single()
@@ -459,8 +488,7 @@ export async function publicarTyC(
   if (error || !nueva) return { success: false, error: 'No se pudo publicar la nueva versión.' }
 
   // 2. Dar de baja las versiones vigentes anteriores (debe quedar una sola vigente)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('terminos_y_condiciones') as any)
+  await admin.from('terminos_y_condiciones')
     .update({ fecha_baja_tyc: new Date().toISOString() })
     .is('fecha_baja_tyc', null)
     .neq('id', (nueva as { id: string }).id)
@@ -489,8 +517,7 @@ export async function actualizarDiasInactividad(
   }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('configuracion_sistema') as any)
+  const { error } = await admin.from('configuracion_sistema')
     .update({ dias_inactividad_cierre: dias, updated_at: new Date().toISOString() })
     .eq('id', true)
   if (error) return { success: false, error: 'No se pudo actualizar la configuración.' }
@@ -515,8 +542,7 @@ export async function actualizarDiasReactivarFeedback(
   }
 
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('configuracion_sistema') as any)
+  const { error } = await admin.from('configuracion_sistema')
     .update({ dias_reactivar_feedback: dias, updated_at: new Date().toISOString() })
     .eq('id', true)
   if (error) return { success: false, error: 'No se pudo actualizar la configuración.' }
@@ -531,8 +557,7 @@ export async function actualizarDiasReactivarFeedback(
 export async function desactivarPostulante(postulanteId: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('perfil_postulante') as any)
+  const { error } = await admin.from('perfil_postulante')
     .update({ perfil_en_busqueda: false })
     .eq('id', postulanteId)
   if (error) return { success: false, error: 'No se pudo desactivar el perfil.' }
@@ -543,8 +568,7 @@ export async function desactivarPostulante(postulanteId: string): Promise<Action
 export async function reactivarPostulante(postulanteId: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('perfil_postulante') as any)
+  const { error } = await admin.from('perfil_postulante')
     .update({ perfil_en_busqueda: true })
     .eq('id', postulanteId)
   if (error) return { success: false, error: 'No se pudo reactivar el perfil.' }

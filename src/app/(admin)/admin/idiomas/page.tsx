@@ -6,7 +6,7 @@ import { CrearIdiomaForm, IdiomaAcciones } from './idiomas-ui'
 import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Idiomas — Admin TalentID' }
+export const metadata = { title: 'Idiomas — Admin MiLiors' }
 
 type Idioma = {
   id: string

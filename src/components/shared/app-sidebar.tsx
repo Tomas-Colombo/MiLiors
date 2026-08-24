@@ -10,6 +10,7 @@ import {
   PanelLeftOpenIcon,
 } from '@/components/icons'
 import { ThemeToggle } from '@/components/theme/theme-toggle'
+import { BrandLogo } from '@/components/shared/brand-logo'
 import { borrarFiltros, hrefConFiltros } from '@/lib/filter-memory'
 import { cerrarSesion } from '@/modules/auth/actions'
 
@@ -28,8 +29,8 @@ type Props = {
   settingsHref?: string
 }
 
-const COLLAPSE_STORAGE_KEY = 'talentid-sidebar-collapsed'
-const COLLAPSE_CHANGE_EVENT = 'talentid-sidebar-collapse-change'
+const COLLAPSE_STORAGE_KEY = 'miliors-sidebar-collapsed'
+const COLLAPSE_CHANGE_EVENT = 'miliors-sidebar-collapse-change'
 
 function subscribeCollapsed(callback: () => void) {
   window.addEventListener(COLLAPSE_CHANGE_EVENT, callback)
@@ -107,19 +108,14 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
       {/* Brand + colapsar */}
       <div className={['mb-6 flex items-center px-1', collapsed ? 'flex-col gap-3' : 'justify-between gap-2'].join(' ')}>
         <div className="flex min-w-0 items-center gap-2.5 px-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/LogoTalentID.svg"
-            alt="TalentID"
-            className="h-11 w-11 flex-none object-contain"
-          />
+          <BrandLogo size={40} className="h-10 w-11" />
           {!collapsed && (
             <div className="min-w-0">
               <div
                 className="text-[13.5px] font-extrabold tracking-tight text-white"
                 style={{ fontFamily: 'var(--font-heading)' }}
               >
-                TalentID
+                MiLiors
               </div>
               <div className="truncate text-[10px] font-medium" style={{ color: 'var(--sidebar-item-text)' }}>
                 {rolLabel}
@@ -164,6 +160,9 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
               ].join(' ')}
               style={{
                 background: active ? 'var(--sidebar-item-active-bg)' : 'transparent',
+                // El aro interno es lo que despega el ítem activo del fondo de
+                // la barra sin sumarle un borde que corra el layout.
+                boxShadow: active ? 'inset 0 0 0 1px var(--sidebar-item-active-ring)' : 'none',
                 color: active ? 'var(--sidebar-item-text-active)' : 'var(--sidebar-item-text)',
                 fontWeight: active ? 600 : 500,
               }}
@@ -182,7 +181,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
             >
               <span
                 className="relative flex-none"
-                style={{ color: active ? 'var(--sidebar-item-text-active)' : 'var(--sidebar-item-text)' }}
+                style={{ color: active ? 'var(--sidebar-icon-active)' : 'var(--sidebar-item-text)' }}
               >
                 {item.icon}
                 {item.badge && collapsed && (

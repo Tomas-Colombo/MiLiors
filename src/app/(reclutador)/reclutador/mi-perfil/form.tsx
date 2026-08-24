@@ -2,17 +2,10 @@
 
 import { useActionState } from 'react'
 import { actualizarPerfilReclutador } from '@/modules/perfil/actions'
-import { Button, Field, Input, Textarea, Alert } from '@/components/ui'
+import { Button, Field, Input, Alert } from '@/components/ui'
 import type { ActionResult } from '@/lib/types/domain'
 
-type Perfil = {
-  nombre_reclutador: string
-  empresa: {
-    nombre_empresa: string
-    descripcion: string | null
-    link_url: string | null
-  } | null
-} | null
+type Perfil = { nombre_reclutador: string } | null
 
 const initialState: ActionResult = { success: false, error: '' }
 
@@ -42,52 +35,6 @@ export function PerfilReclutadorForm({ perfil }: { perfil: Perfil }) {
           placeholder="Ej: Juan Pérez"
           defaultValue={perfil?.nombre_reclutador ?? ''}
           status={fieldErrors.nombre_reclutador ? 'error' : 'default'}
-        />
-      </Field>
-
-      <Field
-        label="Nombre de la empresa"
-        htmlFor="nombre_empresa"
-        required
-        error={fieldErrors.nombre_empresa?.[0]}
-      >
-        <Input
-          id="nombre_empresa"
-          name="nombre_empresa"
-          placeholder="Ej: Acme Corp"
-          defaultValue={perfil?.empresa?.nombre_empresa ?? ''}
-          status={fieldErrors.nombre_empresa ? 'error' : 'default'}
-        />
-      </Field>
-
-      <Field
-        label="Descripción de la empresa"
-        htmlFor="descripcion"
-        hint="Breve descripción de la empresa (opcional)."
-        error={fieldErrors.descripcion?.[0]}
-      >
-        <Textarea
-          id="descripcion"
-          name="descripcion"
-          placeholder="A qué se dedica la empresa…"
-          rows={3}
-          defaultValue={perfil?.empresa?.descripcion ?? ''}
-          status={fieldErrors.descripcion ? 'error' : 'default'}
-        />
-      </Field>
-
-      <Field
-        label="Sitio web"
-        htmlFor="link_url"
-        error={fieldErrors.link_url?.[0]}
-      >
-        <Input
-          id="link_url"
-          name="link_url"
-          type="url"
-          placeholder="https://ejemplo.com"
-          defaultValue={perfil?.empresa?.link_url ?? ''}
-          status={fieldErrors.link_url ? 'error' : 'default'}
         />
       </Field>
 

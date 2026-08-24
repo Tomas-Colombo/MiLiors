@@ -22,7 +22,7 @@ export default async function ReclutadorPublicoPage({ params, searchParams }: Pr
   const reclutador = await getReclutadorPublico(id)
   if (!reclutador) notFound()
 
-  const { nombre_reclutador, empresa, puestos_activos } = reclutador
+  const { nombre_reclutador, empresas, puestos_activos } = reclutador
   const { page, pageCount, slice } = paginar(puestos_activos, pageParam)
 
   return (
@@ -37,38 +37,53 @@ export default async function ReclutadorPublicoPage({ params, searchParams }: Pr
           Buscar puestos
         </VolverLink>
 
-        {/* Header */}
+        {/* Header: el perfil es del reclutador, que puede representar a varias empresas. */}
         <Card padding="lg">
           <div className="flex items-start gap-4">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-tint text-primary-600">
-              <BuildingIcon size={22} />
+              <UserIcon size={22} />
             </span>
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-extrabold text-ink leading-snug">
-                {empresa?.nombre_empresa ?? 'Empresa'}
-              </h1>
-              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
-                <UserIcon size={13} />
-                {nombre_reclutador}
+              <h1 className="text-xl font-extrabold text-ink leading-snug">{nombre_reclutador}</h1>
+              <p className="mt-0.5 text-sm text-muted">
+                {empresas.length === 0
+                  ? 'Reclutador'
+                  : empresas.length === 1
+                    ? 'Recluta para 1 empresa'
+                    : `Recluta para ${empresas.length} empresas`}
               </p>
-              {empresa?.link_url && (
-                <a
-                  href={empresa.link_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
-                >
-                  Sitio web ↗
-                </a>
-              )}
             </div>
           </div>
 
-          {empresa?.descripcion && (
-            <div className="mt-5 border-t border-neutral-100 pt-4">
-              <p className="text-sm text-ink-soft leading-relaxed whitespace-pre-wrap">
-                {empresa.descripcion}
-              </p>
+          {empresas.length > 0 && (
+            <div className="mt-5 space-y-4 border-t border-neutral-100 pt-4">
+              {empresas.map((emp) => (
+                <div key={emp.id} className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+                    <BuildingIcon size={17} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-semibold text-ink leading-snug">
+                      {emp.nombre_empresa}
+                    </p>
+                    {emp.descripcion && (
+                      <p className="mt-0.5 text-[13px] text-ink-soft leading-relaxed whitespace-pre-wrap">
+                        {emp.descripcion}
+                      </p>
+                    )}
+                    {emp.link_url && (
+                      <a
+                        href={emp.link_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                      >
+                        Sitio web ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </Card>
@@ -104,6 +119,9 @@ export default async function ReclutadorPublicoPage({ params, searchParams }: Pr
 
                   {/* Badges */}
                   <div className="flex flex-wrap gap-1.5">
+                    {puesto.nombre_empresa && (
+                      <Badge tone="primary">{puesto.nombre_empresa}</Badge>
+                    )}
                     <Badge tone="neutral">
                       {UBICACION_LABEL[puesto.ubicacion] ?? puesto.ubicacion}
                     </Badge>

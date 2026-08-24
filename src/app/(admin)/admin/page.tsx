@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { getMetricas } from '@/modules/admin/queries'
 import { KpiCard, Card, Badge } from '@/components/ui'
 import {
@@ -11,29 +10,18 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
   AlertCircleIcon,
-  ArrowRightIcon,
 } from '@/components/icons'
+import { QuickLinksAdmin } from './quick-links'
 
-export const metadata = { title: 'Dashboard — Admin TalentID' }
+export const metadata = { title: 'Dashboard — Admin MiLiors' }
 
 export default async function AdminDashboard() {
   const m = await getMetricas()
 
-  const quickLinks = [
-    { href: '/admin/sectores', label: 'Sectores', description: 'Gestionar sectores industriales' },
-    { href: '/admin/competencias', label: 'Habilidades/Tecnologías', description: 'Gestionar habilidades y tecnologías' },
-    { href: '/admin/idiomas', label: 'Idiomas', description: 'Gestionar catálogo de idiomas' },
-    { href: '/admin/ubicaciones', label: 'Ubicaciones', description: 'Gestionar provincias y localidades' },
-    { href: '/admin/postulantes', label: 'Postulantes', description: 'Moderar perfiles de postulantes' },
-    { href: '/admin/empresas', label: 'Empresas', description: 'Ver empresas y reclutadores' },
-    { href: '/admin/informes', label: 'Informes', description: 'Monitor de informes de personalidad' },
-    { href: '/admin/preguntas', label: 'Preguntas eneagrama', description: 'Gestionar banco de preguntas del test' },
-  ]
-
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
       <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Dashboard</h1>
-      <p className="mt-1 text-[13px] text-muted">Vista general del sistema TalentID</p>
+      <p className="mt-1 text-[13px] text-muted">Vista general del sistema MiLiors</p>
 
       {/* KPI Grid */}
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -114,25 +102,11 @@ export default async function AdminDashboard() {
 
       {/* Quick links */}
       <h2 className="mt-10 text-[15px] font-bold text-ink">Accesos rápidos</h2>
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {quickLinks.map(link => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="group flex items-center justify-between rounded-xl border border-neutral-200 bg-surface px-5 py-4 shadow-card transition-colors hover:border-primary-200 hover:bg-primary-ghost-hover"
-          >
-            <div>
-              <p className="text-[13.5px] font-semibold text-ink group-hover:text-primary-600">{link.label}</p>
-              <p className="text-[12px] text-muted">{link.description}</p>
-            </div>
-            <ArrowRightIcon size={16} className="text-neutral-400 group-hover:text-primary-600" />
-          </Link>
-        ))}
-      </div>
+      <QuickLinksAdmin />
 
       {/* Stats footer */}
       <div className="mt-10 flex items-center gap-6 text-[12px] text-neutral-400">
-        <span>Puestos cerrados: <strong className="text-ink-soft">{m.puestosCerrados}</strong></span>
+        <span>Puestos pausados: <strong className="text-ink-soft">{m.puestosCerrados}</strong></span>
       </div>
     </div>
   )

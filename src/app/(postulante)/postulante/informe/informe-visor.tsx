@@ -4,7 +4,7 @@ import { useTransition, useState } from 'react'
 import { Alert, Skeleton, Card, Badge, Button } from '@/components/ui'
 import { generarInforme } from '@/modules/informe/actions'
 import type { InformeData, FeedbackInforme } from '@/modules/informe/queries'
-import { InformeDisplay } from '@/modules/informe/informe-display'
+import { InformePapel } from '@/modules/informe/informe-papel'
 import { ValoracionCompetenciaControl, FeedbackGlobalForm } from './informe-feedback'
 import { competenciaKeyPorNombre } from '@/modules/informe/competencias'
 
@@ -12,6 +12,8 @@ type Props = {
   informe: InformeData | null
   /** null mientras no haya informe LISTO — no hay nada que valorar. */
   feedback?: FeedbackInforme | null
+  /** Se muestra en la ficha del documento, igual que en el PDF. */
+  email?: string
 }
 
 function formatFecha(iso: string): string {
@@ -22,7 +24,7 @@ function formatFecha(iso: string): string {
   }
 }
 
-export function InformeVisor({ informe, feedback }: Props) {
+export function InformeVisor({ informe, feedback, email }: Props) {
   const [isPending, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -69,30 +71,23 @@ export function InformeVisor({ informe, feedback }: Props) {
           </Button>
         </div>
 
-        {/* Encabezado */}
-        <Card padding="lg">
-          <h2 className="text-xl font-extrabold text-ink">{data.nombre}</h2>
-          {data.subtitulo && <p className="mt-1 text-sm text-muted">{data.subtitulo}</p>}
-        </Card>
-
-        {/* Contenido estructurado */}
-        <Card padding="lg">
-          <InformeDisplay
-            data={data}
-            variant="full"
-            renderCompetenciaExtra={
-              feedback
-                ? c => {
-                    // Un informe viejo puede traer competencias que ya no están
-                    // en el motor: sin key no hay dónde guardar la valoración.
-                    const key = competenciaKeyPorNombre(c.nombre)
-                    if (!key) return null
-                    return <ValoracionCompetenciaControl nombre={c.nombre} inicial={feedback.competencias[key]} />
-                  }
-                : undefined
-            }
-          />
-        </Card>
+        {/* El informe como documento — mismo diseño que el PDF que se descarga */}
+        <InformePapel
+          data={data}
+          email={email}
+          fechaGeneracion={informe.fecha_generacion ? formatFecha(informe.fecha_generacion) : undefined}
+          renderCompetenciaExtra={
+            feedback
+              ? c => {
+                  // Un informe viejo puede traer competencias que ya no están
+                  // en el motor: sin key no hay dónde guardar la valoración.
+                  const key = competenciaKeyPorNombre(c.nombre)
+                  if (!key) return null
+                  return <ValoracionCompetenciaControl nombre={c.nombre} inicial={feedback.competencias[key]} />
+                }
+              : undefined
+          }
+        />
 
         {/* Cierre: una sola pregunta para el informe entero */}
         {feedback && (

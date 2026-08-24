@@ -1,5 +1,5 @@
 /**
- * TalentID · Iconografía
+ * MiLiors · Iconografía
  *
  * Set de íconos de línea estilo Lucide: trazo 2px, extremos redondeados,
  * grilla de 24px. Heredan `currentColor`, por lo que toman el color del

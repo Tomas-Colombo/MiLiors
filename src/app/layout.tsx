@@ -24,8 +24,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TalentID",
-  description: "Plataforma SaaS de reclutamiento — sistema de diseño TalentID.",
+  title: {
+    default: "MiLiors · Talentos al servicio del mundo",
+    template: "%s",
+  },
+  description:
+    "MiLiors — talentos al servicio del mundo. Revela tu personalidad, conoce tu potencial laboral y compártelo con certificados verificados.",
 };
 
 // Script inline en <head>: se ejecuta síncronamente durante el parseo del HTML,
@@ -33,7 +37,7 @@ export const metadata: Metadata = {
 // Se escribe en una sola línea para no romper el payload RSC de Next.js (JSONL).
 // suppressHydrationWarning en <html> le dice a React que el className puede
 // diferir entre servidor y cliente (la clase "dark" la agrega este script).
-const BOOT_SCRIPT = `(function(){try{if(localStorage.getItem('talentid-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}try{if(localStorage.getItem('talentid-sidebar-collapsed')==='true')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})()`;
+const BOOT_SCRIPT = `(function(){try{if(localStorage.getItem('miliors-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}try{if(localStorage.getItem('miliors-sidebar-collapsed')==='true')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})()`;
 
 export default function RootLayout({
   children,

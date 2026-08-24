@@ -139,7 +139,7 @@ export function PostulacionesLineChart({ points }: { points: ChartPoint[] }) {
       {/* Tooltip */}
       {active !== null && points[active] && (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 shadow-md"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-neutral-300 bg-neutral-0 px-3 py-2 shadow-md"
           style={{ left: `${(x(active) / VB_W) * 100}%`, top: `${(y(points[active].value) / VB_H) * 100 - 2}%` }}
         >
           <div className="text-[11px] text-muted whitespace-nowrap">{points[active].fullLabel}</div>

@@ -5,11 +5,12 @@ import { Card } from '@/components/ui'
 import { ChevronLeftIcon } from '@/components/icons'
 import { getPuestoById, getSectores } from '@/modules/puestos/queries'
 import { getFormularioDePuesto, formularioTieneRespuestas } from '@/modules/preselector/queries'
-import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getProvincias, getUbicacionInicial } from '@/modules/ubicacion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
+import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { EditarPuestoForm } from './editar-puesto-form'
 
-export const metadata = { title: 'Editar puesto — TalentID' }
+export const metadata = { title: 'Editar puesto — MiLiors' }
 
 // params in Next.js App Router dynamic routes is a Promise
 type Params = Promise<{ id: string }>
@@ -17,19 +18,18 @@ type Params = Promise<{ id: string }>
 export default async function EditarPuestoPage({ params }: { params: Params }) {
   const { id } = await params
 
-  const [puesto, sectores, formularioPreselector, formularioBloqueado, provincias, carreras] = await Promise.all([
+  const [puesto, sectores, formularioPreselector, formularioBloqueado, provincias, carreras, empresas] = await Promise.all([
     getPuestoById(id),
     getSectores(),
     getFormularioDePuesto(id),
     formularioTieneRespuestas(id),
     getProvincias(),
     getCarreras(),
+    getMisEmpresasBase(),
   ])
   if (!puesto) notFound()
 
-  const localidadesIniciales = puesto.provincia_id
-    ? await getLocalidadesPorProvincia(puesto.provincia_id)
-    : []
+  const ubicacionInicial = await getUbicacionInicial(puesto.localidad_id)
 
   return (
     <TyCGate>
@@ -51,12 +51,13 @@ export default async function EditarPuestoPage({ params }: { params: Params }) {
           <EditarPuestoForm
             puestoId={id}
             puesto={puesto}
+            empresas={empresas}
             sectores={sectores}
             carreras={carreras}
             formularioPreselector={formularioPreselector}
             formularioBloqueado={formularioBloqueado}
             provincias={provincias}
-            localidadesIniciales={localidadesIniciales}
+            ubicacionInicial={ubicacionInicial}
           />
         </Card>
       </div>

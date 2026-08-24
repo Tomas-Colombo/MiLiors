@@ -4,18 +4,16 @@ import { requireEneagramaCompleto } from '@/lib/guards'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { VisibilityToggle } from '@/modules/visibilidad/visibility-toggle'
 import {
-  UserIcon,
-  GridIcon,
-  FileIcon,
-  ShieldIcon,
   SearchIcon,
-  CheckCircleIcon,
-  ArrowRightIcon,
+  StarIcon,
+  UsersIcon,
+  BarChartIcon,
 } from '@/components/icons'
 import Link from 'next/link'
-import { EneatipoRadar } from './eneatipo-radar'
+import { PERFILES_PROFESIONALES } from '@/modules/eneagrama/perfiles-profesionales'
+import { QuickLinksPostulante } from './quick-links'
 
-export const metadata = { title: 'Inicio — TalentID' }
+export const metadata = { title: 'Inicio — MiLiors' }
 
 const ENEATIPO_NOMBRES: Record<number, string> = {
   1: 'El reformador',
@@ -28,45 +26,6 @@ const ENEATIPO_NOMBRES: Record<number, string> = {
   8: 'El desafiador',
   9: 'El pacificador',
 }
-
-const QUICK_LINKS = [
-  {
-    href: '/postulante/perfil',
-    icon: <UserIcon size={17} />,
-    title: 'Perfil técnico',
-    desc: 'Formación, experiencia e idiomas',
-  },
-  {
-    href: '/postulante/informe',
-    icon: <FileIcon size={17} />,
-    title: 'Informe de personalidad',
-    desc: 'Tu perfil generado por IA',
-  },
-  {
-    href: '/postulante/certificado',
-    icon: <ShieldIcon size={17} />,
-    title: 'Certificado',
-    desc: 'PDF verificable con QR',
-  },
-  {
-    href: '/postulante/puestos',
-    icon: <SearchIcon size={17} />,
-    title: 'Buscar puestos',
-    desc: 'Explorá oportunidades',
-  },
-  {
-    href: '/postulante/postulaciones',
-    icon: <CheckCircleIcon size={17} />,
-    title: 'Mis postulaciones',
-    desc: 'Estado de tus aplicaciones',
-  },
-  {
-    href: '/postulante/human-design',
-    icon: <GridIcon size={17} />,
-    title: 'Perfil de personalidad',
-    desc: 'Tipo energético y autoridad',
-  },
-]
 
 export default async function PostulanteDashboard() {
   const session = await verifySession()
@@ -90,7 +49,6 @@ export default async function PostulanteDashboard() {
   const perfilEnBusqueda = perfilTyped?.perfil_en_busqueda ?? false
   const perfilId = perfilTyped?.id
 
-  let puntajes: { eneatipo_numero: number; puntaje_crudo: number }[] = []
   let dominantes: { numero: number; nombre: string }[] = []
 
   if (perfilId) {
@@ -105,21 +63,10 @@ export default async function PostulanteDashboard() {
 
       // Misma fuente de verdad que el perfil de personalidad: todos los dominantes
       // (puede haber 1, 2 o 3 en caso de empate legítimo), sin recortar a uno solo.
-      const [{ data: puntajesData }, { data: dominantesData }] = await Promise.all([
-        supabase
-          .from('resultado_puntaje_eneagrama')
-          .select('eneatipo_numero, puntaje_crudo')
-          .eq('test_eneagrama_id', testId)
-          .order('eneatipo_numero'),
-        supabase
-          .from('test_eneagrama_dominante')
-          .select('eneatipo:eneatipo_id(numero_eneatipo, nombre)')
-          .eq('test_eneagrama_id', testId),
-      ])
-
-      if (puntajesData) {
-        puntajes = puntajesData as { eneatipo_numero: number; puntaje_crudo: number }[]
-      }
+      const { data: dominantesData } = await supabase
+        .from('test_eneagrama_dominante')
+        .select('eneatipo:eneatipo_id(numero_eneatipo, nombre)')
+        .eq('test_eneagrama_id', testId)
 
       if (dominantesData) {
         dominantes = (dominantesData as { eneatipo: { numero_eneatipo: number; nombre: string } | null }[])
@@ -130,9 +77,10 @@ export default async function PostulanteDashboard() {
   }
 
   const nombrePrimero = nombre.split(' ')[0]
-  // El radar sólo muestra datos cuando hay un resultado válido persistido (9 puntajes
-  // + al menos un dominante). Si el test fue inválido y nunca se persistió, no hay nada que mostrar.
-  const tieneRadar = puntajes.length === 9 && dominantes.length > 0
+  // En caso de empate se muestra el primer dominante y se avisa del empate: el
+  // detalle de ambos vive en el perfil de personalidad.
+  const principal = dominantes[0]
+  const perfilProfesional = principal ? PERFILES_PROFESIONALES[principal.numero] : undefined
 
   return (
     <TyCGate>
@@ -146,63 +94,73 @@ export default async function PostulanteDashboard() {
           >
             ¡Hola, {nombrePrimero}!
           </h1>
-          <p className="mt-1 text-sm text-muted">Bienvenido a tu espacio en TalentID.</p>
+          <p className="mt-1 text-sm text-muted">Bienvenido a tu espacio en MiLiors.</p>
         </div>
 
         <div className="flex gap-6 items-start flex-wrap lg:flex-nowrap">
 
-          {/* ─── Columna principal: Radar ─── */}
+          {/* ─── Columna principal: Perfil profesional ─── */}
           <div className="flex-1 min-w-0">
             <div
               className="rounded-[14px] bg-surface p-8"
               style={{ border: '1px solid var(--color-border-soft)' }}
             >
-              <div className="mb-6 flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
-                <div>
+              {perfilProfesional && principal ? (
+                <>
                   <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-accent-violet)' }}>
-                    Perfil de eneagrama
+                    Tu perfil profesional
                   </p>
-                  <h2
-                    className="text-xl font-semibold leading-snug"
-                    style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: 'var(--color-ink)' }}
-                  >
-                    Distribución de los 9 eneatipos
+                  <h2 className="text-2xl font-semibold leading-snug" style={{ color: 'var(--color-ink)' }}>
+                    {perfilProfesional.titulo}
                   </h2>
-                  <p className="mt-1 text-xs text-muted max-w-xs">
-                    Visualización de forma y proporción relativa entre los 9 ejes.
+                  <p className="mt-1 text-xs text-muted">
+                    Resultado de tu test de eneagrama · Tipo {principal.numero} —{' '}
+                    {ENEATIPO_NOMBRES[principal.numero] ?? principal.nombre}
+                    {dominantes.length > 1 && (
+                      <> · Empate con {dominantes.slice(1).map((d) => `tipo ${d.numero}`).join(', ')}</>
+                    )}
                   </p>
-                </div>
 
-                {dominantes.length > 0 && (
-                  <div
-                    className="flex-none rounded-xl px-5 py-3 text-center"
-                    style={{ background: 'var(--color-accent-violet-bg)', minWidth: 132 }}
-                  >
-                    <p className="text-[11px] text-muted mb-0.5">
-                      {dominantes.length > 1 ? 'Tus eneatipos' : 'Tu eneatipo'}
-                    </p>
-                    <p
-                      className="text-3xl font-semibold leading-none"
-                      style={{ fontFamily: 'var(--font-heading), Georgia, serif', color: 'var(--color-accent-violet)' }}
+                  <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--color-ink)' }}>
+                    {perfilProfesional.resumen}
+                  </p>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                    {[
+                      { icon: <StarIcon size={16} />, label: 'Fortaleza principal', text: perfilProfesional.fortaleza },
+                      { icon: <UsersIcon size={16} />, label: 'Entorno donde rendís mejor', text: perfilProfesional.entorno },
+                      { icon: <BarChartIcon size={16} />, label: 'Área a desarrollar', text: perfilProfesional.desarrollo },
+                    ].map((b) => (
+                      <div
+                        key={b.label}
+                        className="rounded-[10px] px-4 py-3.5"
+                        style={{ background: 'var(--color-page)', border: '1px solid var(--color-border-soft)' }}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5" style={{ color: 'var(--color-accent-violet)' }}>
+                          {b.icon}
+                          <span className="text-[11px] font-semibold uppercase tracking-wide">{b.label}</span>
+                        </div>
+                        <p className="text-[13px] leading-snug" style={{ color: 'var(--color-ink)' }}>{b.text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex items-center gap-3 flex-wrap">
+                    <Link
+                      href="/postulante/puestos"
+                      className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
                     >
-                      {dominantes.map((d) => d.numero).join(' / ')}
-                    </p>
-                    <p className="text-[11px] font-medium mt-1.5" style={{ color: 'var(--color-ink)' }}>
-                      {dominantes.map((d) => ENEATIPO_NOMBRES[d.numero] ?? d.nombre).join(' · ')}
-                    </p>
+                      <SearchIcon size={15} />
+                      Buscar puestos para tu perfil
+                    </Link>
+                    <Link href="/postulante/informe" className="text-sm font-semibold text-muted hover:text-ink transition-colors">
+                      Ver informe completo →
+                    </Link>
                   </div>
-                )}
-              </div>
-
-              {tieneRadar ? (
-                <div className="flex justify-center">
-                  <div style={{ width: '100%', maxWidth: 440, padding: '0 40px' }}>
-                    <EneatipoRadar puntajes={puntajes} dominantes={dominantes.map((d) => d.numero)} size={440} />
-                  </div>
-                </div>
+                </>
               ) : (
                 <div className="flex items-center justify-center py-16">
-                  <p className="text-sm text-muted">Completá el test de Eneagrama para ver tu gráfico.</p>
+                  <p className="text-sm text-muted">Completá el test de Eneagrama para ver tu perfil profesional.</p>
                 </div>
               )}
             </div>
@@ -226,37 +184,7 @@ export default async function PostulanteDashboard() {
             </div>
 
             {/* Accesos rápidos */}
-            <div
-              className="rounded-[14px] bg-surface px-5 py-4"
-              style={{ border: '1px solid var(--color-border-soft)' }}
-            >
-              <h2
-                className="text-[11px] font-semibold uppercase tracking-widest mb-3"
-                style={{ color: 'var(--color-accent-violet)' }}
-              >
-                Accesos rápidos
-              </h2>
-              <div className="flex flex-col gap-0.5">
-                {QUICK_LINKS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center gap-3 rounded-[9px] px-3 py-2.5 transition-colors group hover:bg-accent-violet-bg"
-                    style={{ color: 'var(--color-ink)' }}
-                  >
-                    <span className="flex-none" style={{ color: 'var(--color-accent-violet)' }}>{item.icon}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[13px] font-semibold leading-tight">{item.title}</span>
-                      <span className="block text-[11px] text-muted leading-tight mt-0.5">{item.desc}</span>
-                    </span>
-                    <ArrowRightIcon
-                      size={13}
-                      className="flex-none text-neutral-300 group-hover:text-primary-600 transition-colors"
-                    />
-                  </Link>
-                ))}
-              </div>
-            </div>
+            <QuickLinksPostulante />
           </div>
         </div>
       </div>

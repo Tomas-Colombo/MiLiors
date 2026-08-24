@@ -5,11 +5,11 @@ export type AlertaInactividad = {
 }
 
 /**
- * Alerta visual de cierre automático próximo, calculada comparando
+ * Alerta visual de pausa automática próxima, calculada comparando
  * `fecha_ultima_actividad` con hoy (no requiere columna nueva en la DB).
  *
- *   - Rojo:     a 1 día (o menos) del cierre → "Se cierra mañana".
- *   - Amarillo: entre el 60% del período y 2 días antes del cierre →
+ *   - Rojo:     a 1 día (o menos) de la pausa → "Se pausa mañana".
+ *   - Amarillo: entre el 60% del período y 2 días antes de la pausa →
  *               "Inactivo hace X días".
  *   - null:     el puesto todavía no entró en zona de alerta.
  *
@@ -27,7 +27,7 @@ export function calcularAlertaInactividad(
   const diasRestantes = diasLimite - diasInactivo
 
   if (diasRestantes <= 1) {
-    return { tone: 'error', label: 'Se cierra mañana', diasInactivo }
+    return { tone: 'error', label: 'Se pausa mañana', diasInactivo }
   }
 
   const umbralAmarillo = Math.ceil(diasLimite * 0.6)

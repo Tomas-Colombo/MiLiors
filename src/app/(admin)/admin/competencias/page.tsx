@@ -3,10 +3,10 @@ import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon } from '@/components/icons'
 import { CrearCompetenciaForm, CompetenciaAcciones } from './competencias-ui'
-import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
+import { SearchInput, FilterSelect, FiltroFechas, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Habilidades/Tecnologías — Admin TalentID' }
+export const metadata = { title: 'Habilidades/Tecnologías — Admin MiLiors' }
 
 type Competencia = {
   id: string
@@ -21,25 +21,50 @@ const ESTADO_OPTS = [
   { value: 'inactiva', label: 'Inactivas' },
 ]
 
+const ORDEN_OPTS = [
+  { value: '', label: 'Nombre (A–Z)' },
+  { value: 'nombre_desc', label: 'Nombre (Z–A)' },
+  { value: 'alta_desc', label: 'Alta: más reciente' },
+  { value: 'alta_asc', label: 'Alta: más antigua' },
+]
+
+const FILTRO_KEYS = ['q', 'estado', 'desde', 'hasta', 'orden']
+
 export default async function CompetenciasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; page?: string }>
+  searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string; orden?: string; page?: string }>
 }) {
   const sp = await searchParams
   const todas = await getCompetenciasAdmin()
 
   const q = sp.q?.trim().toLowerCase() ?? ''
   const estado = sp.estado ?? ''
+  const desde = sp.desde ?? ''
+  // El rango es inclusive: `hasta` corta al final del día elegido.
+  const hasta = sp.hasta ? `${sp.hasta}T23:59:59.999Z` : ''
 
   const filtradas = todas.filter(c => {
     if (estado === 'activa' && c.fecha_baja) return false
     if (estado === 'inactiva' && !c.fecha_baja) return false
+    if (desde && c.created_at < desde) return false
+    if (hasta && c.created_at > hasta) return false
     if (q && !c.nombre.toLowerCase().includes(q)) return false
     return true
   })
 
-  const { page, pageCount, slice } = paginar(filtradas, sp.page)
+  // La query ya viene alfabética; el resto de los órdenes se aplica acá.
+  const orden = sp.orden ?? ''
+  const visibles =
+    orden === ''
+      ? filtradas
+      : [...filtradas].sort((a, b) => {
+          if (orden === 'alta_desc') return b.created_at.localeCompare(a.created_at)
+          if (orden === 'alta_asc') return a.created_at.localeCompare(b.created_at)
+          return -a.nombre.localeCompare(b.nombre, 'es')
+        })
+
+  const { page, pageCount, slice } = paginar(visibles, sp.page)
 
   const columns: Column<Competencia>[] = [
     {
@@ -86,15 +111,22 @@ export default async function CompetenciasPage({
         <CrearCompetenciaForm />
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput placeholder="Buscar habilidad/tecnología…" />
         <FilterSelect paramKey="estado" options={ESTADO_OPTS} ariaLabel="Filtrar por estado" className="w-full sm:w-44" />
-        <ClearFilters keys={['q', 'estado']} />
-        {filtradas.length !== todas.length && (
-          <span className="whitespace-nowrap text-xs text-muted sm:ml-auto">
-            {filtradas.length} de {todas.length}
-          </span>
-        )}
+        <FilterSelect paramKey="orden" options={ORDEN_OPTS} ariaLabel="Ordenar habilidades" className="w-full sm:w-48" />
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <FiltroFechas label="fecha de alta" />
+        <div className="flex items-center gap-3 sm:pb-1">
+          <ClearFilters keys={FILTRO_KEYS} />
+          {visibles.length !== todas.length && (
+            <span className="whitespace-nowrap text-xs text-muted">
+              {visibles.length} de {todas.length}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">

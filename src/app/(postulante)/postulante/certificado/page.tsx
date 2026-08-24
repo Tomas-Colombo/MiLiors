@@ -7,7 +7,7 @@ import { getInformeActual } from '@/modules/informe/queries'
 import { SINTESIS_VERSION, type CertificadoSintesisJSON } from '@/lib/types/certificado'
 import { CertificadoUI } from './certificado-ui'
 
-export const metadata = { title: 'Mi Certificado — TalentID' }
+export const metadata = { title: 'Mi Certificado — MiLiors' }
 
 export default async function CertificadoPage() {
   const session = await verifySession()

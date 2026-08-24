@@ -114,7 +114,7 @@ export function CarrerasMultiSelect({
       </div>
 
       {open && filtradas.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
+        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-300 bg-neutral-0 p-1.5 shadow-md">
           {filtradas.map((opt) => (
             <button
               key={opt.value}

@@ -37,7 +37,7 @@ import { getFormularioDePuesto, getRespuestasDePostulacion } from '@/modules/pre
 import { evaluarRespuestasCriticas } from '@/modules/preselector/evaluador'
 import { NotasPanel } from './notas-panel'
 
-export const metadata = { title: 'Detalle de postulante — TalentID' }
+export const metadata = { title: 'Detalle de postulante — MiLiors' }
 
 // params in Next.js App Router dynamic routes is a Promise
 type Params = Promise<{ id: string }>

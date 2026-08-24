@@ -3,17 +3,20 @@ import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilPostulanteForm } from './form'
+import { PrivacidadPersonalidad } from './privacidad'
 import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
-import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getProvincias, getUbicacionInicial } from '@/modules/ubicacion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
 
-export const metadata = { title: 'Mi perfil — TalentID' }
+export const metadata = { title: 'Mi perfil — MiLiors' }
 
 async function getPerfilPostulante(userId: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, provincia_id, localidad_id')
+    .select(
+      'id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, mostrar_personalidad_publico'
+    )
     .eq('usuario_id', userId)
     .single()
 
@@ -25,8 +28,8 @@ async function getPerfilPostulante(userId: string) {
     carrera_otra: string | null
     enlace_linkedin: string | null
     portfolio: string | null
-    provincia_id: string | null
     localidad_id: string | null
+    mostrar_personalidad_publico: boolean
   } | null
 }
 
@@ -38,9 +41,7 @@ export default async function MiPerfilPostulantePage() {
     getProvincias(),
     getCarreras(),
   ])
-  const localidadesIniciales = perfil?.provincia_id
-    ? await getLocalidadesPorProvincia(perfil.provincia_id)
-    : []
+  const ubicacionInicial = await getUbicacionInicial(perfil?.localidad_id)
 
   return (
     <div className="mx-auto max-w-xl px-6 py-10 space-y-8">
@@ -55,9 +56,17 @@ export default async function MiPerfilPostulantePage() {
           email={session.email}
           provincias={provincias}
           carreras={carreras}
-          localidadesIniciales={localidadesIniciales}
+          ubicacionInicial={ubicacionInicial}
         />
       </Card>
+
+      <div>
+        <h2 className="text-lg font-bold tracking-tight text-ink mb-1">Privacidad</h2>
+        <p className="text-sm text-muted mb-4">Qué se ve de vos cuando alguien verifica tu certificado.</p>
+        <Card padding="lg">
+          <PrivacidadPersonalidad inicial={perfil?.mostrar_personalidad_publico ?? true} />
+        </Card>
+      </div>
 
       <div>
         <h2 className="text-lg font-bold tracking-tight text-ink mb-1">Seguridad</h2>

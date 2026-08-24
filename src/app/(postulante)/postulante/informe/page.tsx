@@ -6,10 +6,10 @@ import { InformeVisor } from './informe-visor'
 
 export const maxDuration = 300
 
-export const metadata = { title: 'Informe de Personalidad — TalentID' }
+export const metadata = { title: 'Informe de Personalidad — MiLiors' }
 
 export default async function InformePage() {
-  await verifySession()
+  const session = await verifySession()
   await requireEneagramaCompleto()
   const informe = await getInformeActual()
 
@@ -30,7 +30,7 @@ export default async function InformePage() {
             Generado a partir de tu Eneagrama y Human Design.
           </p>
         </div>
-        <InformeVisor informe={informe} feedback={feedback} />
+        <InformeVisor informe={informe} feedback={feedback} email={session.email} />
       </div>
     </TyCGate>
   )

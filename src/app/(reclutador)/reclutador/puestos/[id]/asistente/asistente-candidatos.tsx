@@ -147,7 +147,7 @@ export function AsistenteCandidatos({ puestoId, candidatos }: Props) {
                     href={`/reclutador/postulantes/${f.postulanteId}?postulacion=${f.postulacionId}&from=puesto-asistente`}
                     className="inline-flex h-8 items-center rounded-md bg-primary-tint px-3 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
                   >
-                    Ver perfil
+                    Evaluar perfil
                   </Link>
                   <button
                     type="button"

@@ -1,5 +1,5 @@
 -- =============================================================================
--- TalentID — Seed inicial
+-- MiLiors — Seed inicial
 -- =============================================================================
 -- IMPORTANTE: Ejecutar DESPUÉS de aplicar las migraciones 001 y 002.
 -- Las 135 preguntas son PLACEHOLDER hasta que la propietaria valide el
@@ -268,7 +268,7 @@ ON CONFLICT (nombre) DO NOTHING;
 INSERT INTO terminos_y_condiciones (version, descripcion, fecha_publicacion) VALUES
   (
     '1.0',
-    'Al utilizar TalentID, usted acepta que sus datos personales y de perfil serán utilizados para facilitar procesos de reclutamiento. TalentID es una plataforma de intermediación: conecta postulantes con empresas reclutadoras. Los datos de personalidad obtenidos mediante el test de Eneagrama y Human Design son de uso exclusivo en la plataforma y no serán compartidos con terceros sin su consentimiento. Puede activar o desactivar su visibilidad en cualquier momento. Para más información, consulte nuestra política de privacidad. [PLACEHOLDER — reemplazar con el texto legal definitivo antes del lanzamiento]',
+    'Al utilizar MiLiors, usted acepta que sus datos personales y de perfil serán utilizados para facilitar procesos de reclutamiento. MiLiors es una plataforma de intermediación: conecta postulantes con empresas reclutadoras. Los datos de personalidad obtenidos mediante el test de Eneagrama y Human Design son de uso exclusivo en la plataforma y no serán compartidos con terceros sin su consentimiento. Puede activar o desactivar su visibilidad en cualquier momento. Para más información, consulte nuestra política de privacidad. [PLACEHOLDER — reemplazar con el texto legal definitivo antes del lanzamiento]',
     NOW()
   )
 ON CONFLICT (version) DO NOTHING;
@@ -288,5 +288,5 @@ ON CONFLICT (version) DO NOTHING;
 
 -- DESCOMENTAR y reemplazar el UUID una vez creado el usuario en Supabase Auth:
 -- INSERT INTO usuario (id, email, rol_usuario) VALUES
---   ('00000000-0000-0000-0000-000000000001', 'admin@talentid.com.ar', 'ADMIN')
+--   ('00000000-0000-0000-0000-000000000001', 'admin@miliors.com.ar', 'ADMIN')
 -- ON CONFLICT (id) DO NOTHING;

@@ -48,15 +48,15 @@ export function OnboardingEmpresaForm() {
 
       <Field
         label="Sitio web"
-        htmlFor="url_empresa"
-        error={fieldErrors.url_empresa?.[0]}
+        htmlFor="link_url"
+        error={fieldErrors.link_url?.[0]}
       >
         <Input
-          id="url_empresa"
-          name="url_empresa"
+          id="link_url"
+          name="link_url"
           type="url"
           placeholder="https://ejemplo.com"
-          status={fieldErrors.url_empresa ? 'error' : 'default'}
+          status={fieldErrors.link_url ? 'error' : 'default'}
         />
       </Field>
 

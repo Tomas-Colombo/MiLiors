@@ -2,7 +2,7 @@ import { verifySession } from '@/lib/dal'
 import { Card } from '@/components/ui'
 import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
 
-export const metadata = { title: 'Mi cuenta — Admin TalentID' }
+export const metadata = { title: 'Mi cuenta — Admin MiLiors' }
 
 export default async function AdminMiCuentaPage() {
   const session = await verifySession()

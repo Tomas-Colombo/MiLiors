@@ -2,13 +2,43 @@ import { getInformesAdmin } from '@/modules/admin/queries'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { FileIcon } from '@/components/icons'
-import { FiltrosInformes } from './filtros-informes'
-import { Paginador } from '@/components/shared/list-controls'
+import {
+  SearchInput,
+  FilterSelect,
+  FiltroFechas,
+  ClearFilters,
+  Paginador,
+} from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Informes — Admin TalentID' }
+export const metadata = { title: 'Informes — Admin MiLiors' }
 
-type SearchParams = Promise<{ q?: string; orden?: string; estado?: string; page?: string }>
+type SearchParams = Promise<{
+  q?: string
+  orden?: string
+  estado?: string
+  desde?: string
+  hasta?: string
+  page?: string
+}>
+
+const ESTADO_OPTS = [
+  { value: '', label: 'Todos los estados' },
+  { value: 'LISTO', label: 'Listos' },
+  { value: 'PENDIENTE', label: 'Pendientes' },
+  { value: 'ERROR', label: 'En error' },
+]
+
+const ORDEN_OPTS = [
+  { value: '', label: 'Actualización: más reciente' },
+  { value: 'actualizacion_asc', label: 'Actualización: más antigua' },
+  { value: 'generado_desc', label: 'Generación: más reciente' },
+  { value: 'generado_asc', label: 'Generación: más antigua' },
+  { value: 'participante_az', label: 'Participante (A–Z)' },
+  { value: 'participante_za', label: 'Participante (Z–A)' },
+]
+
+const FILTRO_KEYS = ['q', 'estado', 'desde', 'hasta', 'orden']
 
 type InformeRow = {
   id: string
@@ -52,9 +82,15 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
 
   const q = sp.q?.trim().toLowerCase() ?? ''
   const estado = sp.estado ?? ''
+  const desde = sp.desde ?? ''
+  // El rango es inclusive: `hasta` corta al final del día elegido. Se aplica
+  // sobre la fecha de generación, que es la que se ordena y se muestra.
+  const hasta = sp.hasta ? `${sp.hasta}T23:59:59.999Z` : ''
 
   const filtrados = todos.filter(row => {
     if (estado && row.estado_informe !== estado) return false
+    if (desde && (!row.fecha_generacion || row.fecha_generacion < desde)) return false
+    if (hasta && (!row.fecha_generacion || row.fecha_generacion > hasta)) return false
     if (q) {
       const enNombre = row.nombre_completo.toLowerCase().includes(q)
       const enEmail = row.email?.toLowerCase().includes(q) ?? false
@@ -122,8 +158,22 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
         {todos.length} informes en total. Filtrá y ordená para encontrar los que buscás.
       </p>
 
-      <div className="mt-6">
-        <FiltrosInformes totalVisible={informes.length} totalTotal={todos.length} />
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <SearchInput placeholder="Buscar por participante…" />
+        <FilterSelect paramKey="estado" options={ESTADO_OPTS} ariaLabel="Filtrar por estado" className="w-full sm:w-44" />
+        <FilterSelect paramKey="orden" options={ORDEN_OPTS} ariaLabel="Ordenar informes" className="w-full sm:w-56" />
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <FiltroFechas label="fecha de generación" />
+        <div className="flex items-center gap-3 sm:pb-1">
+          <ClearFilters keys={FILTRO_KEYS} />
+          {informes.length !== todos.length && (
+            <span className="whitespace-nowrap text-xs text-muted">
+              {informes.length} de {todos.length}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-6">

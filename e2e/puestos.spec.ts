@@ -76,7 +76,7 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
     await expect(page.getByLabel('Título del puesto')).toHaveValue(updated)
   })
 
-  test('TC-PUE-012 — Cerrar puesto → desaparece de vista del postulante', async ({ page }) => {
+  test('TC-PUE-012 — Pausar puesto → desaparece de vista del postulante', async ({ page }) => {
     // Create a puesto to close
     const title = `E2E Cerrar ${Date.now()}`
     await page.goto('/reclutador/puestos/nuevo')
@@ -89,7 +89,7 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
 
     // Close/reactivate actions live in the puestos list, not the detail page.
     const row = await findPuestoRow(page, title)
-    await row.getByRole('button', { name: 'Cerrar', exact: true }).click()
+    await row.getByRole('button', { name: 'Pausar', exact: true }).click()
 
     // After closing, the row flips to a "Reactivar" button.
     await expect(row.getByRole('button', { name: 'Reactivar', exact: true })).toBeVisible({ timeout: 8000 })
@@ -108,11 +108,11 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
 
     // Close then reactivate from the puestos list.
     const row = await findPuestoRow(page, title)
-    await row.getByRole('button', { name: 'Cerrar', exact: true }).click()
+    await row.getByRole('button', { name: 'Pausar', exact: true }).click()
     await row.getByRole('button', { name: 'Reactivar', exact: true }).click()
 
     // After reactivation, the close button should be back.
-    await expect(row.getByRole('button', { name: 'Cerrar', exact: true })).toBeVisible({ timeout: 8000 })
+    await expect(row.getByRole('button', { name: 'Pausar', exact: true })).toBeVisible({ timeout: 8000 })
   })
 })
 

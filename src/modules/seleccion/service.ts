@@ -105,8 +105,7 @@ export async function generarInformeSeleccion(
 
   // Cada candidato debe haberse postulado a ESTE puesto: es la barrera que evita
   // pedir informes sobre postulantes ajenos al proceso.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: postulacionesRaw } = await (admin as any)
+  const { data: postulacionesRaw } = await admin
     .from('postulacion')
     .select('postulante_id')
     .eq('puesto_id', puestoId)
@@ -176,10 +175,8 @@ export async function generarInformeSeleccion(
 
 /** Carga el contexto completo de un candidato (mismas fuentes que el asistente 1-a-1). */
 async function loadCandidatoContexto(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  admin: any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
+  admin: ReturnType<typeof createAdminClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   reclutadorId: string,
   puestoId: string,
   postulanteId: string

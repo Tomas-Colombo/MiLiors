@@ -54,7 +54,7 @@ export const getTestActual = cache(async () => {
   // eneatipo_id, que quedó deprecada al pasar a soportar múltiples dominantes.
   const { data: test } = await supabase
     .from('test_eneagrama')
-    .select('id, fecha_realizacion, updated_at, test_eneagrama_dominante(id)')
+    .select('id, fecha_realizacion, updated_at, veces_completado, test_eneagrama_dominante(id)')
     .eq('postulante_id', (perfil as { id: string }).id)
     .single()
 
@@ -70,6 +70,7 @@ export const getTestActual = cache(async () => {
     id: string
     fecha_realizacion: string
     updated_at: string
+    veces_completado: number
     test_eneagrama_dominante: { id: string }[]
   }
 
@@ -79,6 +80,7 @@ export const getTestActual = cache(async () => {
       id: testTyped.id,
       fecha_realizacion: testTyped.fecha_realizacion,
       updated_at: testTyped.updated_at,
+      veces_completado: testTyped.veces_completado ?? 0,
       completo: testTyped.test_eneagrama_dominante.length > 0,
     },
     respuestas: (respuestas ?? []) as { pregunta_id: string; valor_respondido: number }[],
@@ -94,7 +96,7 @@ export const getPerfilPostulante = cache(async () => {
 
   const { data } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, provincia_id, localidad_id')
+    .select('id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id')
     .eq('usuario_id', session.id)
     .single()
 
@@ -106,7 +108,6 @@ export const getPerfilPostulante = cache(async () => {
     carrera_otra: string | null
     enlace_linkedin: string | null
     portfolio: string | null
-    provincia_id: string | null
     localidad_id: string | null
   } | null
 })

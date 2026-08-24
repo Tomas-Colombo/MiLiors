@@ -145,7 +145,7 @@ export function DateInput({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-2 w-[268px] rounded-lg border border-neutral-200 bg-surface p-2 shadow-md">
+        <div className="absolute z-20 mt-2 w-[268px] rounded-lg border border-neutral-300 bg-neutral-0 p-2 shadow-md">
           <div className="flex items-center justify-between px-0.5 pb-1.5">
             <div className="flex items-center gap-0.5">
               <NavBtn label="Año anterior" onClick={() => setView((v) => new Date(v.getFullYear() - 1, v.getMonth(), 1))}>

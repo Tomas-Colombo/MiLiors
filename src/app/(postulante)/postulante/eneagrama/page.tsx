@@ -6,10 +6,11 @@ import {
   getPerfilPostulante,
 } from '@/modules/eneagrama/queries'
 import { getHumanDesign } from '@/modules/human-design/queries'
+import { evaluarRehacer } from '@/modules/eneagrama/rehacer-policy'
 import { EneagramaWizard } from './eneagrama-wizard'
 import { redirect } from 'next/navigation'
 
-export const metadata = { title: 'Test de Eneagrama — TalentID' }
+export const metadata = { title: 'Test de Eneagrama — MiLiors' }
 
 export default async function EneagramaPage() {
   await verifySession()
@@ -30,6 +31,11 @@ export default async function EneagramaPage() {
       respuestasMap[r.pregunta_id] = r.valor_respondido
     }
   }
+
+  const estado = evaluarRehacer(
+    testActual?.test?.veces_completado ?? 0,
+    testActual?.test?.fecha_realizacion ?? null
+  )
 
   return (
     <div className="min-h-screen bg-surface-page">
@@ -54,6 +60,12 @@ export default async function EneagramaPage() {
         respuestasIniciales={respuestasMap}
         yaCompleto={!!testActual?.test?.completo}
         humanDesignCompleto={!!humanDesign}
+        estadoRehacer={{
+          puedeRehacer: estado.puedeRehacer,
+          primeraVez: estado.primeraVez,
+          esAjusteInicial: estado.esAjusteInicial,
+          disponibleDesde: estado.disponibleDesde?.toISOString() ?? null,
+        }}
       />
     </div>
   )

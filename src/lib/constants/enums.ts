@@ -75,6 +75,18 @@ export const NIVEL_IDIOMA_LABEL: Record<string, string> = {
   NATIVO: 'Nativo',
 }
 
+export const VALORACION_COMPETENCIA = ['SUBESTIMA', 'JUSTO', 'SOBRESTIMA'] as const
+export type ValoracionCompetencia = (typeof VALORACION_COMPETENCIA)[number]
+
+export const NIVEL_COMPETENCIA = ['BASICO', 'INTERMEDIO', 'AVANZADO'] as const
+export type NivelCompetencia = (typeof NIVEL_COMPETENCIA)[number]
+
+export const NIVEL_COMPETENCIA_LABEL: Record<NivelCompetencia, string> = {
+  BASICO: 'Básico',
+  INTERMEDIO: 'Intermedio',
+  AVANZADO: 'Avanzado',
+}
+
 export const TIPO_ENERGETICO_HD = [
   'Generador',
   'Generador Manifestante',
@@ -98,7 +110,7 @@ export const AUTORIDAD_HD = [
   'Sacral',
   'Esplénico',
   'Ego/Corazón',
-  'Auto-Proyectada',
+  'Auto-Proyectado',
   'Mental/Ambiental',
   'Lunar',
 ] as const
@@ -214,6 +226,20 @@ export const TIPO_PREGUNTA_PRESELECTOR_LABEL: Record<string, string> = {
 }
 
 // Rutas por rol (para uso en proxy y redirecciones)
+/**
+ * Filtra un valor suelto (típicamente de la querystring) contra los valores de
+ * un enum de la DB. Devuelve null si no es uno de ellos, para que un parámetro
+ * adulterado se ignore en vez de viajar a PostgREST como valor de enum.
+ */
+export function valorEnum<T extends string>(
+  validos: Readonly<Record<string, T>> | readonly T[],
+  valor: string | null | undefined,
+): T | null {
+  if (!valor) return null
+  const lista = Array.isArray(validos) ? validos : Object.values(validos)
+  return (lista as readonly string[]).includes(valor) ? (valor as T) : null
+}
+
 export const RUTAS_POR_ROL: Record<string, string> = {
   ADMIN: '/admin',
   POSTULANTE: '/postulante',

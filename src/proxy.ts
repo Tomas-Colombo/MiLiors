@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { rolDeUsuario, rutaDeRol } from '@/lib/rol'
 
 // Rutas que NO requieren autenticación
 const PUBLIC_PATHS = [
@@ -56,16 +57,10 @@ export async function proxy(request: NextRequest) {
   if (isPublic) {
     // Si el usuario ya está logueado y va al login/registro, redirigir al dashboard de su rol
     if (user && (pathname === '/login' || pathname === '/registro')) {
-      // El rol está en user.user_metadata.rol
-      const rol = user.user_metadata?.rol as string | undefined
-      const destino = rol === 'POSTULANTE'
-        ? '/postulante'
-        : rol === 'RECLUTADOR'
-        ? '/reclutador'
-        : rol === 'ADMIN'
-        ? '/admin'
-        : '/login'
-      return NextResponse.redirect(new URL(destino, request.url))
+      const destino = rutaDeRol(rolDeUsuario(user))
+      // Sin rol utilizable no hay adónde mandarlo: se lo deja ver el login en
+      // lugar de redirigir /login → /login, que es un bucle de redirección.
+      if (destino) return NextResponse.redirect(new URL(destino, request.url))
     }
     return response
   }
@@ -86,8 +81,7 @@ export async function proxy(request: NextRequest) {
 
   if (!isPrefetch) {
     // check_session() devuelve el motivo de cierre ('revocada' | 'inactividad') o null.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: motivo } = await (supabase.rpc as any)('check_session')
+    const { data: motivo } = await supabase.rpc('check_session')
     if (motivo) {
       await supabase.auth.signOut()
       const cierre = NextResponse.redirect(new URL(`/login?motivo=${motivo}`, request.url))
@@ -98,19 +92,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // Verificar rol para rutas de rol específico
-  const rol = user.user_metadata?.rol as string | undefined
+  const rol = rolDeUsuario(user)
   for (const [prefix, requiredRole] of Object.entries(ROLE_PATHS)) {
     if (pathname.startsWith(prefix)) {
       if (rol !== requiredRole) {
-        // Redirigir al dashboard del rol correcto
-        const destino =
-          rol === 'POSTULANTE'
-            ? '/postulante'
-            : rol === 'RECLUTADOR'
-            ? '/reclutador'
-            : rol === 'ADMIN'
-            ? '/admin'
-            : '/login'
+        // Al dashboard del rol correcto; sin rol utilizable, al login.
+        const destino = rutaDeRol(rol) ?? '/login'
         return NextResponse.redirect(new URL(destino, request.url))
       }
       break

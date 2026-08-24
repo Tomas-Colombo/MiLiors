@@ -78,12 +78,12 @@ export async function MetricasSection() {
         <QuickMetric
           value={m.postulacionesRecibidas}
           label="Postulaciones recibidas"
-          hint="Total acumulado desde que empezaste a usar TalentID."
+          hint="Total acumulado desde que empezaste a usar MiLiors."
         />
         <QuickMetric
           value={m.candidatosSinAccion}
           label="Candidatos sin acción"
-          hint="Postulaciones que todavía no revisaste."
+          hint="Postulaciones que todavía no evaluaste."
           alert={m.candidatosSinAccion > 0}
         />
       </div>

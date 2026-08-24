@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
+import type { NivelCompetencia } from '@/lib/constants/enums'
 
 // Base type for the full technical profile with all relations
 export type PerfilTecnicoCompleto = {
@@ -50,6 +51,8 @@ export type IdiomaItem = {
 export type CompetenciaItem = {
   id: string
   nombre: string
+  /** Nivel de dominio del postulante. Ausente en los items del catálogo. */
+  nivel?: NivelCompetencia
 }
 
 /** Loads the full technical profile for the current applicant */
@@ -110,7 +113,7 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
       .eq('perfil_tecnico_id', ptTyped.id),
     supabase
       .from('postulante_competencia')
-      .select('competencia_id, competencia(id, nombre)')
+      .select('competencia_id, nivel, competencia(id, nombre)')
       .eq('perfil_tecnico_id', ptTyped.id),
   ])
 
@@ -124,8 +127,10 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
     experiencias: ((experiencias.data ?? []) as ExperienciaItem[]),
     idiomas: ((idiomas.data ?? []) as IdiomaItem[]),
     competencias: (competenciasJoin.data ?? []).map((row: unknown) => {
-      const r = row as { competencia: { id: string; nombre: string } | null }
-      return r.competencia ? { id: r.competencia.id, nombre: r.competencia.nombre } : null
+      const r = row as { nivel: NivelCompetencia | null; competencia: { id: string; nombre: string } | null }
+      if (!r.competencia) return null
+      const item: CompetenciaItem = { id: r.competencia.id, nombre: r.competencia.nombre, nivel: r.nivel ?? 'BASICO' }
+      return item
     }).filter((c): c is CompetenciaItem => c !== null),
   }
 })

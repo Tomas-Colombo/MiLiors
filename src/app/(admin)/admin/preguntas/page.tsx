@@ -13,7 +13,7 @@ import {
 import { SearchInput, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
-export const metadata = { title: 'Preguntas eneagrama — Admin TalentID' }
+export const metadata = { title: 'Preguntas eneagrama — Admin MiLiors' }
 
 type Pregunta = {
   id: string

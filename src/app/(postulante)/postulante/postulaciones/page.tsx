@@ -6,9 +6,9 @@ import { FileIcon, ChevronLeftIcon, ChevronRightIcon, ArrowRightIcon } from '@/c
 import { getMisPostulaciones, POSTULACIONES_PER_PAGE } from '@/modules/puestos/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import type { BadgeProps } from '@/components/ui/badge'
-import { PostulacionesFilters } from './filters'
+import { FiltrosPostulaciones } from './filtros-postulaciones'
 
-export const metadata = { title: 'Mis postulaciones — TalentID' }
+export const metadata = { title: 'Mis postulaciones — MiLiors' }
 
 type Tone = NonNullable<BadgeProps['tone']>
 
@@ -68,7 +68,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
           />
         ) : (
           <>
-            <PostulacionesFilters />
+            <FiltrosPostulaciones />
 
             {total === 0 ? (
               <EmptyState

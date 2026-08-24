@@ -2,23 +2,26 @@ import 'server-only'
 import { renderToBuffer } from '@react-pdf/renderer'
 import QRCode from 'qrcode'
 import React from 'react'
+import { getLogoBase64 } from '@/lib/documento-logo'
 import { CertificadoPDF } from './pdf-template'
 import type { CertificadoPDFProps } from './pdf-template'
 
-export type CertificadoInput = Omit<CertificadoPDFProps, 'qrBase64'>
+export type CertificadoInput = Omit<CertificadoPDFProps, 'qrBase64' | 'logoBase64'>
 
 export async function generarPDFBuffer(input: CertificadoInput): Promise<Buffer> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://talentid.com.ar'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://miliors.com'
   const verificarUrl = `${appUrl}/verificar/${input.certificadoId}`
 
-  // Generate QR as base64 PNG
-  const qrBase64 = await QRCode.toDataURL(verificarUrl, {
-    width: 200,
-    margin: 1,
-    color: { dark: '#1c2030', light: '#ffffff' },
-  })
+  const [qrBase64, logoBase64] = await Promise.all([
+    QRCode.toDataURL(verificarUrl, {
+      width: 240,
+      margin: 1,
+      color: { dark: '#16213a', light: '#ffffff' },
+    }),
+    getLogoBase64(),
+  ])
 
-  const props: CertificadoPDFProps = { ...input, qrBase64 }
+  const props: CertificadoPDFProps = { ...input, qrBase64, logoBase64 }
 
   // Render PDF to Buffer
   // @ts-expect-error — renderToBuffer typing mismatch between React versions; works at runtime

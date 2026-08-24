@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { verifySession, getTyCVigente } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui'
@@ -5,24 +6,17 @@ import { TyCLector } from '@/components/shared/tyc-lector'
 import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
 import { PerfilReclutadorForm } from './form'
 
-export const metadata = { title: 'Mi perfil — TalentID' }
+export const metadata = { title: 'Mi perfil — MiLiors' }
 
-type PerfilReclutadorData = {
-  nombre_reclutador: string
-  empresa: {
-    nombre_empresa: string
-    descripcion: string | null
-    link_url: string | null
-  } | null
-} | null
+type PerfilReclutadorData = { nombre_reclutador: string } | null
 
 async function getPerfilReclutador(userId: string): Promise<PerfilReclutadorData> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('perfil_reclutador')
-    .select('nombre_reclutador, empresa(nombre_empresa, descripcion, link_url)')
+    .select('nombre_reclutador')
     .eq('usuario_id', userId)
-    .single()
+    .maybeSingle()
 
   return data as PerfilReclutadorData
 }
@@ -35,7 +29,13 @@ export default async function MiPerfilReclutadorPage() {
     <div className="mx-auto max-w-xl px-6 py-10 space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-ink">Mi perfil</h1>
-        <p className="mt-1 text-sm text-muted">Actualizá tus datos y los de tu empresa.</p>
+        <p className="mt-1 text-sm text-muted">
+          Actualizá tus datos. Las empresas se administran en{' '}
+          <Link href="/reclutador/empresas" className="font-medium text-primary-600 hover:underline">
+            Mis empresas
+          </Link>
+          .
+        </p>
       </div>
 
       <Card padding="lg">

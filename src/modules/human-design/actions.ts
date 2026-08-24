@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import type { TablesInsert } from '@/lib/types/database.types'
 import { humanDesignSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -56,8 +57,7 @@ export async function guardarHumanDesign(
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = {
+  const payload: Omit<TablesInsert<'human_design'>, 'postulante_id' | 'veces_guardado'> = {
     tipo_energetico: parsed.data.tipo_energetico,
     energy_type_classification: parsed.data.energy_type_classification,
     autoridad_hd: parsed.data.autoridad_hd,
@@ -67,14 +67,12 @@ export async function guardarHumanDesign(
 
   let error: unknown
   if (existingTyped) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (admin.from('human_design') as any)
+    const result = await admin.from('human_design')
       .update({ ...payload, veces_guardado: existingTyped.veces_guardado + 1 })
       .eq('id', existingTyped.id)
     error = result.error
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (admin.from('human_design') as any)
+    const result = await admin.from('human_design')
       .insert({ postulante_id: postulanteId, ...payload, veces_guardado: 1 })
     error = result.error
   }
@@ -83,14 +81,12 @@ export async function guardarHumanDesign(
 
   // Editar HD → informe y certificado quedan DESACTUALIZADOS. No se regenera
   // automáticamente: el postulante toca "Actualizar" en /postulante/informe.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('certificado_pdf') as any)
+  await admin.from('certificado_pdf')
     .update({ desactualizado: true })
     .eq('postulante_id', postulanteId)
   // Solo marcamos el informe si ya hay uno generado (LISTO); si todavía no existe,
   // se generará al completar el Eneagrama, ya con el HD incluido.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('informe_personalidad') as any)
+  await admin.from('informe_personalidad')
     .update({ desactualizado: true })
     .eq('postulante_id', postulanteId)
     .eq('estado_informe', 'LISTO')

@@ -121,8 +121,8 @@ test.describe('M06 — Postulaciones: flujo reclutador', () => {
     await page.getByLabel('Filtrar por puesto').selectOption({ label: title })
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('button', { name: 'Marcar como visto' }).first().click()
-    await expect(page.getByText('Vista').first()).toBeVisible({ timeout: 10000 })
+    await page.getByRole('button', { name: 'Marcar como evaluado' }).first().click()
+    await expect(page.getByText('Evaluada').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('TC-POST-007 — Reclutador avanza VISTO → PROCESO_FINALIZADO (No avanza)', async ({ page }) => {
@@ -142,8 +142,8 @@ test.describe('M06 — Postulaciones: flujo reclutador', () => {
     await page.getByLabel('Filtrar por puesto').selectOption({ label: title })
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('button', { name: 'Marcar como visto' }).first().click()
-    await expect(page.getByText('Vista').first()).toBeVisible({ timeout: 10000 })
+    await page.getByRole('button', { name: 'Marcar como evaluado' }).first().click()
+    await expect(page.getByText('Evaluada').first()).toBeVisible({ timeout: 10000 })
 
     await page.getByRole('button', { name: 'No avanzar' }).first().click()
     await expect(page.getByText('No avanza').first()).toBeVisible({ timeout: 10000 })

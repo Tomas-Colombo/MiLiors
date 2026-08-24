@@ -4,47 +4,82 @@ import { TyCGate } from '@/components/shared/tyc-gate'
 import { Badge, EmptyState, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, AlertCircleIcon } from '@/components/icons'
-import { cn } from '@/lib/utils'
-import { getMisPuestos } from '@/modules/puestos/queries'
+import {
+  getMisPuestos,
+  getConteoPostulacionesCicloActual,
+  getCiclosVigentes,
+} from '@/modules/puestos/queries'
 import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
+import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { PuestoAcciones } from './puesto-acciones'
 import { FiltrosPuestos } from './filtros-puestos'
 
-export const metadata = { title: 'Mis puestos — TalentID' }
+export const metadata = { title: 'Mis puestos — MiLiors' }
 
-type SearchParams = Promise<{ orden?: string; estado?: string; q?: string; page?: string }>
+type SearchParams = Promise<{
+  orden?: string; estado?: string; empresa?: string; q?: string; page?: string
+}>
 
 export default async function MisPuestosPage({
   searchParams,
 }: {
   searchParams: SearchParams
 }) {
-  const { orden, estado, q: qRaw, page: pageParam } = await searchParams
+  const { orden, estado, empresa: filtroEmpresa, q: qRaw, page: pageParam } = await searchParams
   const q = qRaw?.trim().toLowerCase() ?? ''
-  const [puestos, { diasInactividadCierre }] = await Promise.all([
+  const [puestos, { diasInactividadCierre }, empresas] = await Promise.all([
     getMisPuestos(),
     getConfiguracionSistema(),
+    getMisEmpresasBase(),
   ])
 
-  // Filtro por estado (activo / cerrado) y búsqueda por título sobre los datos ya cargados
+  // Todas las empresas del reclutador, no solo las que ya tienen puestos.
+  const empresaOpts = empresas.map((e) => ({
+    value: e.id,
+    label: e.activa ? e.nombre_empresa : `${e.nombre_empresa} · de baja`,
+  }))
+
+  // Filtro por estado (activo / cerrado), empresa y búsqueda por título sobre los datos ya cargados
   const filtered = puestos.filter((p) => {
     if (estado === 'activo' && !p.activo) return false
     if (estado === 'cerrado' && p.activo) return false
+    if (filtroEmpresa && p.empresa_id !== filtroEmpresa) return false
     if (q && !p.titulo_puesto.toLowerCase().includes(q)) return false
     return true
   })
 
-  // Orden por fecha de publicación (por defecto: más recientes primero)
+  // El ciclo vigente define las dos fechas de la tabla: apertura (inicio) y pausa
+  // (fin, solo si el ciclo está cerrado). Hace falta para todos los puestos, no
+  // solo para la página visible, porque también se ordena por la fecha de pausa.
+  const ciclos = await getCiclosVigentes(filtered.map((p) => p.id))
+  const apertura = (p: { id: string; fecha_publicacion: string }) =>
+    ciclos.get(p.id)?.inicio ?? p.fecha_publicacion
+  const pausa = (p: { id: string }) => ciclos.get(p.id)?.fin ?? null
+
   const visibles = [...filtered].sort((a, b) => {
-    const diff =
-      new Date(a.fecha_publicacion).getTime() - new Date(b.fecha_publicacion).getTime()
+    // Orden por fecha de pausa: los puestos activos (sin pausa) van al final.
+    if (orden === 'pausa' || orden === 'pausa_antiguos') {
+      const pa = pausa(a)
+      const pb = pausa(b)
+      if (!pa && !pb) return 0
+      if (!pa) return 1
+      if (!pb) return -1
+      const diff = new Date(pa).getTime() - new Date(pb).getTime()
+      return orden === 'pausa_antiguos' ? diff : -diff
+    }
+
+    // Por defecto, orden por fecha de apertura (más recientes primero).
+    const diff = new Date(apertura(a)).getTime() - new Date(apertura(b)).getTime()
     return orden === 'antiguos' ? diff : -diff
   })
 
   const { page, pageCount, slice } = paginar(visibles, pageParam)
+
+  // Sólo la página visible necesita el conteo de postulaciones.
+  const conteoPostulaciones = await getConteoPostulacionesCicloActual(slice.map((p) => p.id))
 
   type Puesto = (typeof visibles)[number]
 
@@ -53,12 +88,19 @@ export default async function MisPuestosPage({
       key: 'titulo',
       header: 'Título',
       width: '2fr',
-      cell: (p) => (
-        <div>
-          <p className="truncate text-[13px] font-semibold text-ink">{p.titulo_puesto}</p>
-          {p.nombre_sector && <p className="text-xs text-neutral-400">{p.nombre_sector}</p>}
-        </div>
-      ),
+      cell: (p) => {
+        const postulaciones = conteoPostulaciones.get(p.id) ?? 0
+        return (
+          <div>
+            <p className="truncate text-[13px] font-semibold text-ink">{p.titulo_puesto}</p>
+            <p className="text-xs text-neutral-400">
+              {p.nombre_empresa && `${p.nombre_empresa} · `}
+              {postulaciones} postulación{postulaciones !== 1 ? 'es' : ''}
+              {p.nombre_sector && ` · ${p.nombre_sector}`}
+            </p>
+          </div>
+        )
+      },
     },
     {
       key: 'estado',
@@ -66,8 +108,8 @@ export default async function MisPuestosPage({
       align: 'center',
       width: '1.5fr',
       cell: (p) => {
-        // La alerta solo aplica a puestos activos (los cerrados ya no corren
-        // riesgo de cierre automático).
+        // La alerta solo aplica a puestos activos (los pausados ya no corren
+        // riesgo de pausa automática).
         const alerta =
           p.activo && p.fecha_ultima_actividad
             ? calcularAlertaInactividad(p.fecha_ultima_actividad, diasInactividadCierre)
@@ -84,36 +126,29 @@ export default async function MisPuestosPage({
               />
             ) : (
               <Badge tone={p.activo ? 'success' : 'neutral'} dot>
-                {p.activo ? 'Activo' : 'Cerrado'}
+                {p.activo ? 'Activo' : 'Pausado'}
               </Badge>
             )}
             {alerta && (
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11.5px] font-semibold leading-none',
-                  alerta.tone === 'error'
-                    ? 'border-error-border bg-error-bg text-error'
-                    : 'border-warning-border bg-warning-bg text-warning',
-                )}
-              >
+              <Badge tone={alerta.tone === 'error' ? 'error' : 'warning'} className="whitespace-nowrap">
                 {alerta.tone === 'error' ? (
                   <AlertCircleIcon size={13} strokeWidth={2.5} className="flex-none" />
                 ) : (
                   <AlertTriangleIcon size={13} strokeWidth={2.5} className="flex-none" />
                 )}
                 {alerta.label}
-              </span>
+              </Badge>
             )}
           </div>
         )
       },
     },
     {
-      key: 'publicado',
-      header: 'Publicado',
+      key: 'apertura',
+      header: 'Apertura',
       cell: (p) => (
         <span className="text-[13px] text-neutral-400">
-          {new Date(p.fecha_publicacion).toLocaleDateString('es-AR', {
+          {new Date(apertura(p)).toLocaleDateString('es-AR', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -122,10 +157,29 @@ export default async function MisPuestosPage({
       ),
     },
     {
+      key: 'pausado',
+      header: 'Pausado',
+      cell: (p) => {
+        const fin = pausa(p)
+        // Ciclo abierto: el puesto está corriendo y no hay pausa que mostrar.
+        if (!fin) return <span className="text-[13px] text-neutral-300">—</span>
+        return (
+          <span className="text-[13px] text-neutral-400">
+            {new Date(fin).toLocaleDateString('es-AR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            })}
+          </span>
+        )
+      },
+    },
+    {
       key: 'acciones',
       header: 'Acciones',
       align: 'center',
-      width: '360px',
+      // Ancho fijo suficiente para que las seis acciones entren en una sola fila.
+      width: '380px',
       cell: (p) => <PuestoAcciones puestoId={p.id} activo={p.activo} />,
     },
   ]
@@ -149,7 +203,11 @@ export default async function MisPuestosPage({
 
         {puestos.length > 0 && (
           <Suspense>
-            <FiltrosPuestos totalVisible={visibles.length} totalTotal={puestos.length} />
+            <FiltrosPuestos
+              empresas={empresaOpts}
+              totalVisible={visibles.length}
+              totalTotal={puestos.length}
+            />
           </Suspense>
         )}
 

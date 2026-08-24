@@ -43,6 +43,19 @@ const sizes: Record<Size, string> = {
   lg: "h-12 px-6 text-[15px] rounded-[9px]",
 };
 
+/**
+ * Clases de un botón, sin el <button>. Sirve para pintar como botón algo que
+ * tiene que ser otro elemento — típicamente un <Link> de next/navigation, donde
+ * anidar un <button> dentro del <a> sería HTML inválido.
+ */
+export function buttonClassName({
+  variant = "primary",
+  size = "md",
+  className,
+}: { variant?: Variant; size?: Size; className?: string } = {}) {
+  return cn(base, variants[variant], sizes[size], className);
+}
+
 export function Button({
   variant = "primary",
   size = "md",
@@ -56,7 +69,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={cn(base, variants[variant], sizes[size], className)}
+      className={buttonClassName({ variant, size, className })}
       disabled={disabled || loading}
       {...props}
     >

@@ -11,7 +11,7 @@ import { FiltrosNotas } from './filtros-notas'
 import { NotaTexto } from '@/components/shared/nota-texto'
 import { EliminarNotaBtn } from './eliminar-nota-btn'
 
-export const metadata = { title: 'Mis notas — TalentID' }
+export const metadata = { title: 'Mis notas — MiLiors' }
 
 type SearchParams = Promise<{ candidato?: string; dias?: string; q?: string; page?: string }>
 

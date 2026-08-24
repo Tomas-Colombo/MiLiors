@@ -46,3 +46,35 @@ The role-based session policy expects a **short, global access-token lifetime**.
 - Forced revocation of any session via the `revocada` flag (see `src/modules/admin/sessions.ts`).
 
 The inactivity limit lives in `src/lib/session/policy.ts` and is mirrored as `interval '1 hour'` in migration `20260715000000_sesion_actividad.sql` — keep both in sync.
+
+## Migrations — naming
+
+Every file in `supabase/migrations/` must be `<version>_<name>.sql`, where `<version>` is a **unique** 14-digit `YYYYMMDDHHMMSS` timestamp. The version is what orders the migrations and what the CLI records in `supabase_migrations.schema_migrations`.
+
+Two files sharing a version is a bug: the apply order between them falls back to whatever the filesystem returns, and `supabase db push` cannot record both (the version column is the primary key). Two pairs collided and were renumbered in place:
+
+| Was | Now |
+| --- | --- |
+| `20260709000001_ubicacion_geografica.sql` | `20260709000002_ubicacion_geografica.sql` |
+| `20260714000001_puesto_carrera.sql` | `20260714000003_puesto_carrera.sql` |
+
+Both files are independent of the migration they collided with, so the renumbering does not change any real dependency. `20260713000001_carreras.sql` referenced the old ubicación filename in a comment and was updated.
+
+**If — and only if — these migrations were applied with `supabase db push`**, the recorded history still holds the old versions and has to be reconciled once, or the CLI will try to re-apply them:
+
+```sql
+UPDATE supabase_migrations.schema_migrations
+   SET version = '20260709000002'
+ WHERE version = '20260709000001' AND name = 'ubicacion_geografica';
+
+UPDATE supabase_migrations.schema_migrations
+   SET version = '20260714000003'
+ WHERE version = '20260714000001' AND name = 'puesto_carrera';
+```
+
+If the schema was built by pasting SQL into the dashboard editor (no `config.toml`, no linked project), there is no history table to fix and the rename is enough.
+
+### Still inconsistent
+
+- `001_`–`005_` use a sequential prefix instead of a timestamp. They sort correctly ahead of every timestamped file, so nothing is ambiguous; renaming them would cost another history reconciliation for no functional gain. Left as is on purpose.
+- `seed.sql`, `seed_informe_mock.sql` and `seed_ubicacion.sql` live inside `migrations/` but are not migrations. They have no version prefix so the CLI skips them, but they belong outside that directory.

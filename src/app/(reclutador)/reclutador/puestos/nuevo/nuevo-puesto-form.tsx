@@ -11,9 +11,12 @@ import { publicarPuesto } from '@/modules/puestos/actions'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import type { CarreraOption } from '@/modules/carreras/queries'
+import type { EmpresaOption } from '@/modules/empresas/queries'
 import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
 
 type Props = {
+  /** Empresas activas del reclutador: el puesto se publica para una de ellas. */
+  empresas: EmpresaOption[]
   sectores: { id: string; nombre_sector: string }[]
   provincias: ProvinciaOption[]
   carreras: CarreraOption[]
@@ -24,7 +27,7 @@ type Props = {
 // publicarPuesto returns ActionResult<{ puestoId: string }> — match the generic
 const initialState: ActionResult<{ puestoId: string }> = { success: false, error: '' }
 
-export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactividad }: Props) {
+export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, diasInactividad }: Props) {
   const router = useRouter()
   const [state, action, isPending] = useActionState(publicarPuesto, initialState)
   const [modalidad, setModalidad] = useState('')
@@ -33,6 +36,8 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
   // que el reclutador solo corrija el campo con error. Los SearchableSelect
   // (carrera, idioma, ubicación) conservan su valor por su propio estado interno.
   const [values, setValues] = useState({
+    // Con una sola empresa no hay nada que elegir: queda seleccionada de entrada.
+    empresa_id: empresas.length === 1 ? empresas[0].id : '',
     titulo_puesto: '',
     descripcion_texto: '',
     sector_id: '',
@@ -58,6 +63,8 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
   // La ubicación se pide siempre salvo que la modalidad sea remota.
   const ubicacionAplica = modalidad !== UBICACION.REMOTO
 
+  const empresaOptions = empresas.map((e) => ({ value: e.id, label: e.nombre_empresa }))
+
   const sectorOptions = [
     { value: '', label: 'Sin sector' },
     ...sectores.map((s) => ({ value: s.id, label: s.nombre_sector })),
@@ -73,6 +80,23 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
       {!state.success && state.error && (
         <Alert tone="error" title={state.error} />
       )}
+
+      <Field
+        label="Empresa"
+        htmlFor="empresa_id"
+        required
+        error={fieldErrors.empresa_id?.[0]}
+        hint="Para qué empresa se publica este puesto."
+      >
+        <FancySelect
+          id="empresa_id"
+          name="empresa_id"
+          options={empresaOptions}
+          value={values.empresa_id}
+          onChange={setValor('empresa_id')}
+          placeholder="Elegí la empresa"
+        />
+      </Field>
 
       <Field
         label="Título del puesto"
@@ -197,8 +221,7 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
         <UbicacionSelector
           provincias={provincias}
           required
-          provinciaError={fieldErrors.provincia_id?.[0]}
-          localidadError={fieldErrors.localidad_id?.[0]}
+          error={fieldErrors.localidad_id?.[0]}
         />
       )}
 
@@ -257,7 +280,7 @@ export function NuevoPuestoForm({ sectores, provincias, carreras, diasInactivida
       <p className="mt-3">
         ⚠️ Tené en cuenta que si no registramos actividad tuya en este puesto durante{' '}
         <strong>{diasInactividad} días</strong> (revisar postulaciones, cambiar estados o
-        editar el puesto), lo cerraremos automáticamente para no mantener búsquedas sin
+        editar el puesto), lo pausaremos automáticamente para no mantener búsquedas sin
         atención activa.
       </p>
     </Modal>

@@ -5,11 +5,43 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import type { TablesInsert } from '@/lib/types/database.types'
 import { onboardingPostulanteSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 import { calcularResultadoEneagrama, ErrorRespuestasIncompletas } from './calculator'
 import { validarCalidadTest } from './quality-validator'
+import { evaluarRehacer, formatearFecha } from './rehacer-policy'
 import { generarInforme } from '@/modules/informe/actions'
+
+/**
+ * Todo perfil nuevo arranca con Español como idioma nativo: es el idioma del
+ * mercado al que apunta la plataforma. Queda como un idioma más del perfil
+ * técnico, así que el postulante puede editarlo o eliminarlo.
+ * Errores no fatales: el onboarding no debe fallar por esto.
+ */
+async function sembrarIdiomaEspanol(postulanteId: string): Promise<void> {
+  const admin = createAdminClient()
+
+  const { data: perfilTecnico, error } = await admin.from('perfil_tecnico')
+    .insert({ postulante_id: postulanteId })
+    .select('id')
+    .single()
+
+  if (error || !perfilTecnico) {
+    console.error('[onboarding] No se pudo crear el perfil técnico inicial:', error)
+    return
+  }
+
+  const { error: errorIdioma } = await admin.from('idioma').insert({
+    perfil_tecnico_id: (perfilTecnico as { id: string }).id,
+    nombre: 'Español',
+    nivel_idioma: 'NATIVO',
+  })
+
+  if (errorIdioma) {
+    console.error('[onboarding] No se pudo agregar el idioma español por defecto:', errorIdioma)
+  }
+}
 
 // ─── Onboarding: guardar datos básicos ───────────────────────────────────────
 export async function guardarDatosBasicos(
@@ -20,7 +52,6 @@ export async function guardarDatosBasicos(
 
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
-    provincia_id: formData.get('provincia_id') || '',
     localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
     carrera_id: formData.get('carrera_id') || undefined,
@@ -47,11 +78,9 @@ export async function guardarDatosBasicos(
     .eq('usuario_id', session.id)
     .single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = {
+  const payload: TablesInsert<'perfil_postulante'> = {
     usuario_id: session.id,
     nombre_completo: parsed.data.nombre_completo,
-    provincia_id: parsed.data.provincia_id,
     localidad_id: parsed.data.localidad_id,
     telefono: parsed.data.telefono || null,
     carrera_id: parsed.data.carrera_id || null,
@@ -62,8 +91,7 @@ export async function guardarDatosBasicos(
 
   let error
   if (existente) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (supabase.from('perfil_postulante') as any)
+    const result = await supabase.from('perfil_postulante')
       .update(payload)
       .eq('id', (existente as { id: string }).id)
     error = result.error
@@ -72,12 +100,18 @@ export async function guardarDatosBasicos(
     // reclutadores por defecto. Si no lo desea, puede desactivar la visibilidad
     // desde su perfil. En la actualización nunca se toca este flag para respetar
     // la elección previa del postulante.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (supabase.from('perfil_postulante') as any).insert({
-      ...payload,
-      perfil_en_busqueda: true,
-    })
+    const result = await supabase.from('perfil_postulante')
+      .insert({
+        ...payload,
+        perfil_en_busqueda: true,
+      })
+      .select('id')
+      .single()
     error = result.error
+
+    if (!error && result.data) {
+      await sembrarIdiomaEspanol((result.data as { id: string }).id)
+    }
   }
 
   if (error) {
@@ -107,12 +141,27 @@ export async function iniciarTest(perfilId: string): Promise<ActionResult<{ test
   // Verificar si ya existe un test
   const { data: testExistente } = await supabase
     .from('test_eneagrama')
-    .select('id')
+    .select('id, veces_completado, fecha_realizacion')
     .eq('postulante_id', perfilId)
     .single()
 
   if (testExistente) {
-    const testId = (testExistente as { id: string }).id
+    const testTyped = testExistente as {
+      id: string
+      veces_completado: number | null
+      fecha_realizacion: string | null
+    }
+    const testId = testTyped.id
+
+    // Regla de espera entre repeticiones. Se valida en el servidor antes de
+    // borrar nada: el bloqueo de la UI es sólo una ayuda visual.
+    const estado = evaluarRehacer(testTyped.veces_completado ?? 0, testTyped.fecha_realizacion)
+    if (!estado.puedeRehacer && estado.disponibleDesde) {
+      return {
+        success: false,
+        error: `Vas a poder rehacer el Eneagrama a partir del ${formatearFecha(estado.disponibleDesde)}.`,
+      }
+    }
 
     // Reiniciar respuestas para permitir un nuevo intento. El resultado anterior
     // (dominantes, puntajes, ala, fecha_realizacion) se conserva intacto hasta que
@@ -120,8 +169,7 @@ export async function iniciarTest(perfilId: string): Promise<ActionResult<{ test
     // nuevo intento falla (incompleto o inválido por calidad), el postulante sigue
     // teniendo su resultado previo vigente y el resto de la app (navegación entre
     // módulos, certificado, informe) no se rompe.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('respuesta_item_eneagrama') as any)
+    await admin.from('respuesta_item_eneagrama')
       .delete()
       .eq('test_eneagrama_id', testId)
 
@@ -129,8 +177,7 @@ export async function iniciarTest(perfilId: string): Promise<ActionResult<{ test
   }
 
   // Crear nuevo test
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: nuevoTest, error } = await (admin.from('test_eneagrama') as any)
+  const { data: nuevoTest, error } = await admin.from('test_eneagrama')
     .insert({ postulante_id: perfilId })
     .select('id')
     .single()
@@ -173,8 +220,7 @@ export async function guardarRespuesta(
   if (!perfil) return { success: false, error: 'Acceso denegado.' }
 
   // Upsert de la respuesta
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('respuesta_item_eneagrama') as any).upsert(
+  const { error } = await supabase.from('respuesta_item_eneagrama').upsert(
     {
       test_eneagrama_id: testId,
       pregunta_id: preguntaId,
@@ -196,13 +242,13 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
   // Verificar ownership
   const { data: test } = await supabase
     .from('test_eneagrama')
-    .select('id, postulante_id')
+    .select('id, postulante_id, veces_completado')
     .eq('id', testId)
     .single()
 
   if (!test) return { success: false, error: 'Test no encontrado.' }
 
-  const testTyped = test as { id: string; postulante_id: string }
+  const testTyped = test as { id: string; postulante_id: string; veces_completado: number | null }
 
   const { data: perfil } = await supabase
     .from('perfil_postulante')
@@ -298,25 +344,25 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
 
   // Actualizar test_eneagrama (ya sin eneatipo_id). Recién acá, con el resultado
   // ya validado, se sobrescribe el intento anterior — nunca antes de validar.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('test_eneagrama') as any)
+  await admin.from('test_eneagrama')
     .update({
       ala: resultado.ala,
       tiene_empate_dominante: resultado.tieneEmpateDominante,
       dominantes_empate: resultado.tieneEmpateDominante ? resultado.dominantes : null,
       tiene_empate_ala: resultado.tieneEmpateAla,
       fecha_realizacion: new Date().toISOString(),
+      // Sólo cuentan las realizaciones con resultado válido: un intento
+      // descartado por calidad no consume la espera de 6 meses.
+      veces_completado: (testTyped.veces_completado ?? 0) + 1,
     })
     .eq('id', testId)
 
   // Borrar dominantes anteriores e insertar los nuevos
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('test_eneagrama_dominante') as any)
+  await admin.from('test_eneagrama_dominante')
     .delete()
     .eq('test_eneagrama_id', testId)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('test_eneagrama_dominante') as any)
+  await admin.from('test_eneagrama_dominante')
     .insert(dominantesValidos.map(d => ({
       test_eneagrama_id: testId,
       eneatipo_id: d.id,
@@ -331,8 +377,7 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     puntaje_crudo: p.puntajeCrudo,
     porcentaje: p.porcentaje,
   }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('resultado_puntaje_eneagrama') as any)
+  await admin.from('resultado_puntaje_eneagrama')
     .upsert(filasPuntaje, { onConflict: 'test_eneagrama_id,eneatipo_numero' })
 
   // Informe de personalidad: la primera vez se genera automáticamente; al REHACER
@@ -352,19 +397,16 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
 
   if (yaGenerado) {
     // Rehacer test → informe y certificado quedan desactualizados (sin regenerar).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('informe_personalidad') as any)
+    await admin.from('informe_personalidad')
       .update({ desactualizado: true })
       .eq('id', infPrev!.id)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin.from('certificado_pdf') as any)
+    await admin.from('certificado_pdf')
       .update({ desactualizado: true })
       .eq('postulante_id', testTyped.postulante_id)
   } else {
     // Primera vez (o generación previa fallida): asegurar registro y auto-generar.
     if (!infPrev) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (admin.from('informe_personalidad') as any).insert({
+      await admin.from('informe_personalidad').insert({
         postulante_id: testTyped.postulante_id,
         estado_informe: 'PENDIENTE',
       })
@@ -379,6 +421,7 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
 
   revalidatePath('/postulante')
   revalidatePath('/postulante/eneagrama')
+  revalidatePath('/postulante/human-design')
 
   const primero = dominantesValidos[0]
   return { success: true, data: { eneatipoNumero: primero.numero, eneatipoNombre: primero.nombre } }

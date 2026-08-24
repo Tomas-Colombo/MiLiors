@@ -1,26 +1,22 @@
 'use server'
 
 import {
-  getLocalidadesPorProvincia,
   getDepartamentosPorProvincia,
-  type LocalidadOption,
-  type DepartamentoOption,
+  getLocalidadesPorDepartamento,
+  type UbicacionOption,
 } from './queries'
 
 /**
- * Server action para que el selector de ubicación (cliente) cargue las
- * localidades de una provincia bajo demanda, sin traer las ~4000 de una vez.
+ * Server actions para que el selector de ubicación (cliente) cargue cada nivel
+ * bajo demanda: son ~514 departamentos y ~4000 localidades, traerlos enteros
+ * al montar el formulario no tiene sentido.
  */
-export async function cargarLocalidades(provinciaId: string): Promise<LocalidadOption[]> {
-  if (!provinciaId) return []
-  return getLocalidadesPorProvincia(provinciaId)
-}
-
-/**
- * Server action para cargar los departamentos de una provincia bajo demanda
- * (usado por los filtros de puestos y postulantes).
- */
-export async function cargarDepartamentos(provinciaId: string): Promise<DepartamentoOption[]> {
+export async function cargarDepartamentos(provinciaId: string): Promise<UbicacionOption[]> {
   if (!provinciaId) return []
   return getDepartamentosPorProvincia(provinciaId)
+}
+
+export async function cargarLocalidades(departamentoId: string): Promise<UbicacionOption[]> {
+  if (!departamentoId) return []
+  return getLocalidadesPorDepartamento(departamentoId)
 }

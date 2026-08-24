@@ -3,88 +3,119 @@
 import { useState, useTransition } from 'react'
 import { Field, SearchableSelect } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
-import { cargarLocalidades } from '@/modules/ubicacion/actions'
+import { cargarDepartamentos, cargarLocalidades } from '@/modules/ubicacion/actions'
 
 export type ProvinciaOption = { id: string; nombre: string }
 
+/** Cadena ya guardada + las opciones de cada nivel elegido (modo edición). */
+export type UbicacionInicial = {
+  provinciaId: string
+  departamentoId: string
+  localidadId: string
+  departamentos: SelectOption[]
+  localidades: SelectOption[]
+}
+
 interface UbicacionSelectorProps {
   provincias: ProvinciaOption[]
-  /** Provincia/localidad ya guardadas (modo edición). */
-  defaultProvinciaId?: string
-  defaultLocalidadId?: string
-  /** Localidades de la provincia inicial (para mostrar la etiqueta sin recargar). */
-  defaultLocalidades?: SelectOption[]
+  inicial?: UbicacionInicial | null
   required?: boolean
   /** Ej. puesto remoto: la ubicación no aplica. */
   disabled?: boolean
-  provinciaError?: string
-  localidadError?: string
+  /** Error de validación de `localidad_id` (el único campo que se envía). */
+  error?: string
 }
 
 /**
- * Selector de ubicación (provincia + localidad) reutilizable.
- * - Provincia: combobox con búsqueda restringido a la lista.
- * - Localidad: depende de la provincia; sus opciones se cargan bajo demanda
- *   (no se traen las ~4000 de una vez). Se resetea al cambiar de provincia.
- * Escribe los valores en <input hidden name="provincia_id"> y "localidad_id".
+ * Selector de ubicación en cascada: provincia → departamento → localidad.
+ * Cada nivel carga sus opciones bajo demanda y se resetea al cambiar el de
+ * arriba. Sólo escribe <input hidden name="localidad_id">: el departamento y la
+ * provincia se infieren de la localidad por FK, no se guardan por separado.
  */
 export function UbicacionSelector({
   provincias,
-  defaultProvinciaId,
-  defaultLocalidadId,
-  defaultLocalidades = [],
+  inicial,
   required,
   disabled,
-  provinciaError,
-  localidadError,
+  error,
 }: UbicacionSelectorProps) {
-  const [provinciaId, setProvinciaId] = useState(defaultProvinciaId ?? '')
-  const [localidades, setLocalidades] = useState<SelectOption[]>(defaultLocalidades)
-  const [pending, startTransition] = useTransition()
+  const [provinciaId, setProvinciaId] = useState(inicial?.provinciaId ?? '')
+  const [departamentoId, setDepartamentoId] = useState(inicial?.departamentoId ?? '')
+  const [departamentos, setDepartamentos] = useState<SelectOption[]>(inicial?.departamentos ?? [])
+  const [localidades, setLocalidades] = useState<SelectOption[]>(inicial?.localidades ?? [])
+  const [pendingDep, startDep] = useTransition()
+  const [pendingLoc, startLoc] = useTransition()
 
   const provinciaOptions: SelectOption[] = provincias.map((p) => ({ value: p.id, label: p.nombre }))
 
   function handleProvinciaChange(value: string) {
     setProvinciaId(value)
+    setDepartamentoId('')
+    setDepartamentos([])
     setLocalidades([])
     if (!value) return
-    startTransition(async () => {
-      const opciones = await cargarLocalidades(value)
-      setLocalidades(opciones)
-    })
+    startDep(async () => setDepartamentos(await cargarDepartamentos(value)))
+  }
+
+  function handleDepartamentoChange(value: string) {
+    setDepartamentoId(value)
+    setLocalidades([])
+    if (!value) return
+    startLoc(async () => setLocalidades(await cargarLocalidades(value)))
   }
 
   if (disabled) {
-    // Ubicación no aplica (ej. puesto remoto): no se envía provincia/localidad.
+    // Ubicación no aplica (ej. puesto remoto): no se envía localidad.
     return null
   }
 
-  // La localidad guardada solo aplica mientras no se cambie de provincia.
-  const localidadDefault = provinciaId === defaultProvinciaId ? defaultLocalidadId : undefined
+  // Lo guardado sólo aplica mientras no se cambie el nivel de arriba.
+  const departamentoDefault = provinciaId === inicial?.provinciaId ? inicial.departamentoId : undefined
+  const localidadDefault = departamentoId === inicial?.departamentoId ? inicial.localidadId : undefined
+
+  // El error de localidad se muestra bajo el último campo visible: si todavía
+  // no eligió provincia, ahí es donde tiene que ir a corregir.
+  const errorEn = !provinciaId ? 'provincia' : !departamentoId ? 'departamento' : 'localidad'
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Field label="Provincia" required={required} error={provinciaError}>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <Field label="Provincia" required={required} error={errorEn === 'provincia' ? error : undefined}>
         <SearchableSelect
-          name="provincia_id"
           options={provinciaOptions}
           placeholder="Elegí una provincia…"
-          defaultValue={defaultProvinciaId}
+          defaultValue={inicial?.provinciaId}
           onValueChange={handleProvinciaChange}
         />
       </Field>
 
-      {/* La localidad solo se puede elegir después de la provincia: hasta
-          entonces el campo no se muestra. */}
+      {/* Cada nivel aparece recién cuando el de arriba está elegido. */}
       {provinciaId && (
-        <Field label="Localidad" required={required} error={localidadError}>
+        <Field
+          label="Departamento"
+          required={required}
+          error={errorEn === 'departamento' ? error : undefined}
+        >
           {/* key=provinciaId → se remonta y resetea al cambiar de provincia */}
           <SearchableSelect
             key={provinciaId}
+            options={departamentos}
+            defaultValue={departamentoDefault}
+            loading={pendingDep}
+            placeholder={pendingDep ? 'Cargando departamentos…' : 'Elegí un departamento…'}
+            onValueChange={handleDepartamentoChange}
+          />
+        </Field>
+      )}
+
+      {departamentoId && (
+        <Field label="Localidad" required={required} error={errorEn === 'localidad' ? error : undefined}>
+          <SearchableSelect
+            key={departamentoId}
             name="localidad_id"
             options={localidades}
             defaultValue={localidadDefault}
-            placeholder={pending ? 'Cargando localidades…' : 'Elegí una localidad…'}
+            loading={pendingLoc}
+            placeholder={pendingLoc ? 'Cargando localidades…' : 'Elegí una localidad…'}
           />
         </Field>
       )}

@@ -9,8 +9,7 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase.rpc as any)('touch_session_activity')
+  await supabase.rpc('touch_session_activity')
 
   return new NextResponse(null, { status: 204 })
 }

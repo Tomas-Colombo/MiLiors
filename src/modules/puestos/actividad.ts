@@ -16,8 +16,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 export async function marcarActividadPuesto(puestoId: string | null | undefined): Promise<void> {
   if (!puestoId) return
   const admin = createAdminClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('puesto') as any)
+  const { error } = await admin.from('puesto')
     .update({ fecha_ultima_actividad: new Date().toISOString() })
     .eq('id', puestoId)
   if (error) {

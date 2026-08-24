@@ -1,9 +1,14 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { FancySelect, DateInput } from '@/components/ui'
-import { TrashIcon, FilterIcon } from '@/components/icons'
+import { FilterIcon } from '@/components/icons'
+import {
+  CampoFiltro,
+  ClearFilters,
+  TotalFiltrado,
+  useSetParam,
+} from '@/components/shared/list-controls'
 import { COMPETENCIAS, ENEATIPO_NOMBRES } from '@/modules/informe/competencias'
 
 type Props = {
@@ -50,39 +55,16 @@ const COMPETENCIA_OPTS = [
 /** Claves que cuentan como "filtro activo" para el badge y para Limpiar. */
 const CLAVES = ['eneatipo', 'competencia', 'nivel', 'valoracion', 'dias', 'desde', 'hasta'] as const
 
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
-      {children}
-    </div>
-  )
-}
-
 export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const { searchParams, setParams } = useSetParam()
   const [abierto, setAbierto] = useState(false)
 
+  // `pageC` es el paginador del segundo listado de esta pantalla: al filtrar,
+  // los dos vuelven a su primera página.
   const setParam = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
-      }
-      params.delete('page')
-      const qs = params.toString()
-      router.replace(qs ? `${pathname}?${qs}` : pathname)
-    },
-    [router, pathname, searchParams],
+    (key: string, value: string) => setParams({ [key]: value || null, pageC: null }),
+    [setParams],
   )
-
-  const limpiarFiltros = useCallback(() => {
-    router.replace(pathname)
-  }, [router, pathname])
 
   const activos = CLAVES.filter(k => searchParams.get(k)).length
   const desde = searchParams.get('desde') ?? ''
@@ -121,63 +103,50 @@ export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
           </button>
         )}
 
-        {activos > 0 && (
-          <button
-            type="button"
-            onClick={limpiarFiltros}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300 transition-colors whitespace-nowrap"
-          >
-            <TrashIcon size={14} />
-            Limpiar filtros
-          </button>
-        )}
+        <ClearFilters keys={[...CLAVES]} alsoClear={['pageC']} />
 
-        {totalVisible !== totalTotal && (
-          <span className="ml-auto whitespace-nowrap text-xs text-muted">
-            {totalVisible} de {totalTotal}
-          </span>
-        )}
+        <TotalFiltrado visible={totalVisible} total={totalTotal} />
       </div>
 
       {panelAbierto && (
         <div className="grid grid-cols-1 gap-4 rounded-xl border border-neutral-200 bg-surface p-4 sm:grid-cols-3">
-          <Campo label="Eneatipo dominante">
+          <CampoFiltro label="Eneatipo dominante">
             <FancySelect
               options={ENEATIPO_OPTS}
               value={searchParams.get('eneatipo') ?? ''}
               onChange={value => setParam('eneatipo', value)}
               aria-label="Filtrar por eneatipo dominante"
             />
-          </Campo>
+          </CampoFiltro>
 
-          <Campo label="Competencia">
+          <CampoFiltro label="Competencia">
             <FancySelect
               options={COMPETENCIA_OPTS}
               value={searchParams.get('competencia') ?? ''}
               onChange={value => setParam('competencia', value)}
               aria-label="Filtrar por competencia"
             />
-          </Campo>
+          </CampoFiltro>
 
-          <Campo label="Nivel mostrado">
+          <CampoFiltro label="Nivel mostrado">
             <FancySelect
               options={NIVEL_OPTS}
               value={searchParams.get('nivel') ?? ''}
               onChange={value => setParam('nivel', value)}
               aria-label="Filtrar por nivel mostrado"
             />
-          </Campo>
+          </CampoFiltro>
 
-          <Campo label="Valoración">
+          <CampoFiltro label="Valoración">
             <FancySelect
               options={VALORACION_OPTS}
               value={searchParams.get('valoracion') ?? ''}
               onChange={value => setParam('valoracion', value)}
               aria-label="Filtrar por valoración"
             />
-          </Campo>
+          </CampoFiltro>
 
-          <Campo label="Período">
+          <CampoFiltro label="Período">
             <FancySelect
               options={DIAS_OPTS}
               value={searchParams.get('dias') ?? ''}
@@ -185,7 +154,7 @@ export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
               disabled={hayRango}
               aria-label="Filtrar por período"
             />
-          </Campo>
+          </CampoFiltro>
 
           <div className="space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">

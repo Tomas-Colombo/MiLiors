@@ -11,8 +11,8 @@
 @custom-variant sidebar-collapsed (&:where(.sidebar-collapsed, .sidebar-collapsed *));
 
 /* =========================================================================
-   TalentID · Design System — Single source of truth (v1.0)
-   Extraído de "TalentID Design System.dc.html".
+   MiLiors · Design System — Single source of truth (v1.0)
+   Extraído de "MiLiors Design System.dc.html".
 
    Los tokens se declaran con la directiva @theme de Tailwind v4, por lo que
    cada token genera automáticamente utilidades (bg-*, text-*, border-*,
@@ -26,51 +26,75 @@
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
   --font-heading: var(--font-fraunces), Georgia, serif;
 
-  /* ----- Color · Primario (violeta de marca) ---------------------------- */
-  --color-primary-50: #f1edff;
-  --color-primary-100: #e4dbfe;
-  --color-primary-300: #b6a4ff;
-  --color-primary-500: #9d80fe;
-  --color-primary-600: #7c5cfc; /* tono base */
-  --color-primary-700: #5d3ce1;
+  /* ----- Color · Primario (azul corporativo) ---------------------------- */
+  --color-primary-50: #eef4fe;
+  --color-primary-100: #e7effd;
+  --color-primary-300: #a8c5f8;
+  --color-primary-500: #4b86f0;
+  /* Un punto más oscuro que el acento de marca (#2f6fed) a propósito: este es
+     el token que pinta TEXTO (enlaces, botones ghost/tonal) y sobre el vidrio
+     #2f6fed se queda en 4.04:1, por debajo de AA. Con #2564dc da 4.75:1 sobre
+     la tarjeta y 5.34:1 en blanco sobre azul. El acento puro vive en
+     `--accent` y se usa en gradientes, bordes e íconos (bar de 3:1). */
+  --color-primary-600: #2564dc; /* tono base */
+  --color-primary-700: #1f57c9;
   /* tonos de interacción del primario */
-  --color-primary-hover: #6e4fec;
-  --color-primary-active: #5d3ce1;
+  --color-primary-hover: #2864dc;
+  --color-primary-active: #1f57c9;
   /* fondos tonales / hovers de marca */
-  --color-primary-tint: #f1edff; /* fondo tonal */
-  --color-primary-tint-hover: #e6ddfe; /* hover tonal */
-  --color-primary-ghost-hover: #f6f2ff; /* hover ghost */
-  --color-primary-ring: #f1edff; /* anillo de foco */
+  --color-primary-tint: #e7effd; /* fondo tonal */
+  --color-primary-tint-hover: #d8e5fc; /* hover tonal */
+  --color-primary-ghost-hover: #f3f7fe; /* hover ghost */
+  --color-primary-ring: #e7effd; /* anillo de foco */
+
+  /* ----- Color · Dorado de marca (isotipo, énfasis, sellos) -------------
+     Nunca para texto largo sobre blanco: no alcanza contraste AA. Se usa en
+     gradientes, filetes, iconografía y palabras destacadas de titulares. */
+  --color-gold-50: #fdf6e6;
+  --color-gold-100: #f9ead0;
+  --color-gold-300: #f0d089;
+  --color-gold-500: #d9ab4d;
+  --color-gold-600: #c79a3f; /* tono base */
+  --color-gold-700: #a4732a; /* el único que pasa AA sobre blanco */
 
   /* ----- Color · Neutrales fríos ---------------------------------------- */
   --color-neutral-0: #ffffff;
   --color-neutral-50: #f6f7f9; /* fondo de página */
   --color-neutral-100: #f1f2f5; /* divisores suaves / chips neutros */
   --color-neutral-150: #f4f5f7; /* separador de filas de tabla */
-  --color-neutral-200: #e6e7f0; /* borde por defecto */
-  --color-neutral-300: #dbdde9; /* borde fuerte */
+  --color-neutral-200: #dde5f1; /* borde por defecto */
+  --color-neutral-300: #c9d4e6; /* borde fuerte */
   --color-neutral-400: #9aa0b6; /* texto faint / placeholders */
   --color-neutral-500: #6b7085; /* texto secundario */
   --color-neutral-700: #3c414f; /* texto fuerte */
   --color-neutral-900: #1a1d29; /* texto principal */
-  --color-neutral-disabled: #c9c7d4; /* texto/relleno deshabilitado */
+  --color-neutral-disabled: #c2cad8; /* texto/relleno deshabilitado */
 
   /* alias semánticos de superficie y texto */
-  --color-page: #faf3f7;
-  --color-surface: #ffffff;
-  --color-surface-page: #faf3f7; /* alias bg-surface-page */
-  --color-line: #e6e7f0;
-  --color-line-strong: #dbdde9;
+  --color-page: #e9eef7;
+  /* Vidrio esmerilado: el desenfoque lo agrega la regla `.bg-surface` de más
+     abajo; acá sólo vive el color translúcido. */
+  --color-surface: rgba(255, 255, 255, .72);
+  --color-surface-page: #e9eef7; /* alias bg-surface-page */
+  --color-line: #dde5f1;
+  --color-line-strong: #c9d4e6;
   --color-divider: #f1f2f5;
   --color-ink: #1a1d29;
   --color-ink-soft: #3c414f;
   --color-soft: #3c414f;   /* alias text-soft (usado en registro-form y eneagrama-wizard) */
-  --color-muted: #6b7085;
-  --color-faint: #9aa0b6;
+  /* #6b7085 (el gris de la paleta) se queda en 4.36:1 sobre el vidrio; este
+     tono un punto más oscuro llega a 4.76:1. */
+  --color-muted: #656a80;
+  --color-faint: #9aa0b6; /* deliberadamente por debajo de AA: placeholders y
+                             texto decorativo, nunca contenido */
 
   /* ----- Color · Acentos semánticos (KPIs / íconos / gráficos) ---------- */
-  --color-accent-violet: #7c5cfc;
-  --color-accent-violet-bg: #f1edff;
+  /* `accent-violet` conserva el nombre por compatibilidad con los componentes
+     que ya lo consumen; su valor es el azul corporativo. */
+  --color-accent-violet: #2f6fed;
+  --color-accent-violet-bg: #e7effd;
+  --color-accent-gold: #a4732a;
+  --color-accent-gold-bg: #fdf6e6;
   --color-accent-green: #2bb673;
   --color-accent-green-bg: #e3f7ed;
   --color-accent-amber: #f5a524;
@@ -79,7 +103,7 @@
   --color-accent-blue-bg: #e4effe;
 
   /* ----- Color · Estados ------------------------------------------------ */
-  --color-success: #178a52;
+  --color-success: #16a34a;
   --color-success-strong: #0f6e40;
   --color-success-solid: #2bb673;
   --color-success-bg: #e3f7ed;
@@ -111,14 +135,15 @@
   /* rounded-full (999px) ya existe por defecto */
 
   /* ----- Elevación ------------------------------------------------------ */
-  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.05);
-  --shadow-card-raised: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-xs: 0 1px 2px rgba(30, 40, 60, 0.05);
+  --shadow-card: 0 10px 30px rgba(30, 40, 60, 0.08);
+  --shadow-card-raised: 0 16px 40px rgba(30, 40, 60, 0.14);
   --shadow-md: 0 6px 16px rgba(16, 24, 40, 0.1); /* dropdowns */
   --shadow-lg: 0 20px 48px rgba(16, 24, 40, 0.18); /* modales */
-  --shadow-primary: 0 4px 12px rgba(124, 92, 252, 0.3); /* botón primario */
-  --shadow-primary-hover: 0 6px 16px rgba(124, 92, 252, 0.4);
-  --shadow-promo: 0 10px 28px rgba(124, 92, 252, 0.28); /* card promocional */
+  --shadow-primary: 0 4px 12px rgba(47, 111, 237, 0.3); /* botón primario */
+  --shadow-primary-hover: 0 6px 16px rgba(47, 111, 237, 0.4);
+  --shadow-promo: 0 10px 28px rgba(47, 111, 237, 0.28); /* card promocional */
+  --shadow-gold: 0 4px 14px rgba(164, 115, 42, 0.28); /* realces dorados */
   --shadow-toast: 0 10px 28px rgba(16, 24, 40, 0.22);
 }
 
@@ -126,37 +151,87 @@
    Gradientes y duraciones de marca (fuera de @theme: se consumen vía var())
    ========================================================================= */
 :root {
-  --gradient-brand: linear-gradient(135deg, #9d80fe, #5d3ce1);
-  --gradient-brand-soft: linear-gradient(150deg, #9d80fe, #5d3ce1);
-  --gradient-promo: linear-gradient(155deg, #9d80fe, #5d3ce1);
-  --gradient-avatar: linear-gradient(135deg, #b6a4ff, #9d80fe);
-  --gradient-progress: linear-gradient(90deg, #9d80fe, #7c5cfc);
+  /* Los gradientes que llevan texto blanco encima (botón primario, PromoCard,
+     avatares con iniciales) no pueden pasar de #2f6fed en su extremo claro:
+     ahí el blanco da 4.55:1 y con #4b86f0 caería a 3.52:1. El azul claro de
+     marca vive en `--logo-grad` y en los gradientes decorativos. */
+  --gradient-brand: linear-gradient(150deg, #2f6fed, #1f57c9);
+  --gradient-promo: linear-gradient(155deg, #2f6fed, #1a4bb0);
+  --gradient-avatar: linear-gradient(135deg, #2f6fed, #1f57c9);
+  /* Decorativos, sin texto encima: acá sí entra el azul claro. */
+  --gradient-brand-soft: linear-gradient(150deg, #6b9bf4, #2f6fed);
+  --gradient-progress: linear-gradient(90deg, #4b86f0, #2f6fed);
 
-  /* Sidebar oscuro */
-  --sidebar-bg: #1E1B3A;
-  --sidebar-item-active-bg: #322D5C;
-  --sidebar-item-hover-bg: #2A2550;
-  --sidebar-item-text: #B8B3DC;
-  --sidebar-item-text-active: #ffffff;
-  --sidebar-border: #2D2A4A;
-  --sidebar-logo-gradient: linear-gradient(135deg, #8B7FFF, #5B4FE8);
+  /* Dorado del isotipo: mismo barrido metálico que el logo. Queda reservado a
+     la marca (isotipo, eslogan, sellos), no a la UI de producto. */
+  --gradient-gold: linear-gradient(135deg, #a4732a 0%, #f0d089 45%, #c79a3f 100%);
+  --gradient-gold-soft: linear-gradient(135deg, #c79a3f, #f0d089);
+
+  /* ----- Lienzo de página ---------------------------------------------- */
+  --page-bg: var(--color-page);
+
+  /* ----- Barra de navegación (sidebar) ---------------------------------- */
+  --nav-bg: #16213a;
+  --nav-border: #24304a;
+  --nav-text: #c8d4e8;
+  --nav-text-muted: #8ea0bd;
+  --nav-item-active-bg: rgba(90, 150, 240, .22);
+  --nav-item-active-ring: rgba(255, 255, 255, .14);
+  --nav-item-active-text: #ffffff;
+  --nav-icon-active: #a9c4f5;
+  --logo-grad: linear-gradient(150deg, #4b86f0, #2f6fed);
+
+  /* Alias que consumen los componentes ya existentes del sidebar. */
+  --sidebar-bg: var(--nav-bg);
+  --sidebar-item-active-bg: var(--nav-item-active-bg);
+  --sidebar-item-active-ring: var(--nav-item-active-ring);
+  --sidebar-item-hover-bg: rgba(90, 150, 240, .10);
+  --sidebar-item-text: var(--nav-text-muted);
+  --sidebar-item-text-active: var(--nav-item-active-text);
+  --sidebar-icon-active: var(--nav-icon-active);
+  --sidebar-border: var(--nav-border);
+  --sidebar-logo-gradient: var(--logo-grad);
+
+  /* ----- Acento corporativo --------------------------------------------- */
+  --accent: #2f6fed; /* acento de marca puro: fills, bordes, íconos */
+  --accent-soft: var(--color-primary-tint);
+
+  /* ----- Tarjetas de vidrio ---------------------------------------------
+     `--card-bg` es el mismo valor que `--color-surface`: la utilidad
+     `bg-surface` pinta el color y la regla `.bg-surface` de más abajo agrega
+     el desenfoque. Si el degradado del lienzo llega a comerse la legibilidad
+     de algún texto, subir a rgba(255,255,255,.72). */
+  --card-bg: var(--color-surface);
+  --card-border: rgba(255, 255, 255, .72);
+  /* .6 dejaba `--color-muted` en 4.13:1 sobre el foco más brillante del
+     degradado; a .72 el mismo texto sube a 4.76:1. */
+  --card-blur: blur(16px) saturate(1.08);
+  --card-shadow: var(--shadow-card);
+
+  /* ----- Texto ----------------------------------------------------------- */
+  --text-strong: var(--color-ink);
+  --text-body: var(--color-ink-soft);
+  --text-muted: var(--color-muted);
+  --text-faint: var(--color-faint);
+
+  --success: var(--color-success);
 
   /* Acento extendido para el dashboard */
-  --color-accent-light: #8B7FFF;
-  --color-surface-badge: #f1edff;
-  --color-border-soft: #e9e3fb;
+  --color-accent-light: #6b9bf4;
+  --color-surface-badge: #e7effd;
+  --color-border-soft: #dde5f1;
   --color-chart-grid: var(--color-border-soft);
 
   /* Cita destacada */
-  --quote-bg: #faf9ff;
-  --quote-border: #7c5cfc;
-  --quote-text: #4a3d7a;
+  --quote-bg: #f3f7fe;
+  --quote-border: #2f6fed;
+  --quote-text: #23477f;
 
-  /* Fondo de página (mesh gradient sobre el lienzo rosado) */
+  /* Fondo de página: color plano + tres focos de luz azul fijos al viewport */
   --page-mesh:
-    radial-gradient(760px 460px at 12% -4%,  rgba(124, 92, 252, .22), transparent 62%),
-    radial-gradient(880px 560px at 104% 12%, rgba(236, 120, 170, .24), transparent 64%),
-    radial-gradient(720px 640px at 60% 114%, rgba(120, 175, 240, .20), transparent 62%);
+    radial-gradient(760px 460px at 12% -4%,  rgba(47, 111, 237, .24), transparent 62%),
+    radial-gradient(880px 560px at 104% 12%, rgba(30, 90, 200, .22), transparent 64%),
+    radial-gradient(720px 640px at 60% 114%, rgba(90, 140, 230, .20), transparent 62%);
 
   /* Layout */
   --app-sidebar-width: 248px;
@@ -173,36 +248,65 @@
 .dark {
   color-scheme: dark;
 
-  --color-page: #191a1e;
-  --color-surface: #30343d;
-  --color-surface-page: #191a1e;
+  /* El azul corporativo #2f6fed no llega a AA sobre el lienzo oscuro: en
+     oscuro el acento se aclara a #6fa3ff y ése es el que se usa en labels,
+     íconos y bordes. Nunca el azul del modo claro. */
+  --color-primary-50: rgba(111, 163, 255, .10);
+  --color-primary-100: rgba(111, 163, 255, .14);
+  --color-primary-300: #8fb6f7;
+  --color-primary-500: #5b92f2;
+  --color-primary-600: #6fa3ff;
+  --color-primary-700: #9ac1ff;
+  --color-primary-hover: #86b3ff;
+  --color-primary-active: #5b92f2;
+  --color-primary-tint: rgba(111, 163, 255, .14);
+  --color-primary-tint-hover: rgba(111, 163, 255, .22);
+  --color-primary-ghost-hover: rgba(111, 163, 255, .10);
+  --color-primary-ring: rgba(111, 163, 255, .30);
 
-  --color-neutral-0: #30343d;
-  --color-neutral-50: #363a44;
-  --color-neutral-100: #3c404b;
-  --color-neutral-150: #3e4350;
-  --color-neutral-200: #464b5a;
-  --color-neutral-300: #545a70;
-  --color-neutral-400: #8188a0;
-  --color-neutral-500: #9aa0b8;
-  --color-neutral-700: #c8ccdc;
-  --color-neutral-900: #f2f3f8;
-  --color-neutral-disabled: #565b70;
+  --color-gold-50: #2a2413;
+  --color-gold-100: #3a3119;
+  --color-gold-300: #c79a3f;
+  --color-gold-500: #ddb45e;
+  --color-gold-600: #e5c179;
+  --color-gold-700: #f0d089;
 
-  --color-line: #464b5a;
-  --color-line-strong: #545a70;
-  --color-divider: #3c404b;
-  --color-ink: #f1f2f7;
-  --color-ink-soft: #c4c8da;
-  --color-soft: #c4c8da;
-  --color-muted: #9298b0;
-  --color-faint: #767c94;
+  --color-page: #0e131d;
+  --color-surface: rgba(28, 37, 54, .62);
+  --color-surface-page: #0e131d;
 
-  --color-accent-violet-bg: #2a2550;
+  /* Superficies opacas de formulario: `--color-neutral-0` es el fondo de los
+     controles y `--color-neutral-300` su borde (ver input/select). */
+  --color-neutral-0: #1b2331;
+  --color-neutral-50: #1f2836;
+  --color-neutral-100: #232c3c;
+  --color-neutral-150: #262f40;
+  --color-neutral-200: #232c3c;
+  --color-neutral-300: #2a3444;
+  --color-neutral-400: #6b7484;
+  --color-neutral-500: #8b95a6;
+  --color-neutral-700: #bfc7d6;
+  --color-neutral-900: #ffffff;
+  --color-neutral-disabled: #47516180;
+
+  --color-line: #232c3c;
+  --color-line-strong: #2a3444;
+  --color-divider: #1f2836;
+  --color-ink: #ffffff;
+  --color-ink-soft: #bfc7d6;
+  --color-soft: #bfc7d6;
+  --color-muted: #8b95a6;
+  --color-faint: #6b7484;
+
+  --color-accent-violet: #6fa3ff;
+  --color-accent-violet-bg: rgba(111, 163, 255, .14);
+  --color-accent-gold: #e5c179;
+  --color-accent-gold-bg: #2a2413;
   --color-accent-green-bg: #123524;
   --color-accent-amber-bg: #3a2a0d;
   --color-accent-blue-bg: #122a4a;
 
+  --color-success: #4ade80;
   --color-success-bg: #123524;
   --color-success-border: #1d5c3d;
   --color-warning-bg: #3a2a0d;
@@ -212,23 +316,53 @@
   --color-info-bg: #122a4a;
   --color-info-border: #1d4f8f;
 
-  --color-surface-badge: #242838;
-  --color-border-soft: #2d3142;
+  /* Mismo criterio que en claro: el relleno de los botones se mantiene
+     saturado para que el texto blanco siga por encima de 4.5:1. */
+  --gradient-brand: linear-gradient(150deg, #2f6fed, #1f57c9);
+  --gradient-promo: linear-gradient(155deg, #2f6fed, #1a4bb0);
+  --gradient-avatar: linear-gradient(135deg, #2f6fed, #1f57c9);
+  --gradient-brand-soft: linear-gradient(150deg, #6fa3ff, #4b86f0);
+  --gradient-progress: linear-gradient(90deg, #5b92f2, #6fa3ff);
+
+  --page-bg: var(--color-page);
+
+  --nav-bg: #131a28;
+  --nav-border: #1f2838;
+  --nav-text: #c2ccdd;
+  --nav-text-muted: #7d8899;
+  --nav-item-active-bg: rgba(90, 150, 240, .18);
+  --nav-item-active-ring: rgba(120, 170, 250, .32);
+  --nav-item-active-text: #ffffff;
+  --nav-icon-active: #8fb6f7;
+  --logo-grad: linear-gradient(150deg, #5b92f2, #2f6fed);
+  --sidebar-item-hover-bg: rgba(90, 150, 240, .09);
+
+  --accent: #6fa3ff;
+  --accent-soft: rgba(111, 163, 255, .14);
+
+  --card-border: rgba(255, 255, 255, .09);
+  --card-blur: blur(18px) saturate(1.15);
+
+  --color-accent-light: #8fb6f7;
+  --color-surface-badge: rgba(111, 163, 255, .14);
+  --color-border-soft: #232c3c;
   /* Más contraste que --color-border-soft/--color-line: con esos tokens las
      líneas de grilla del radar de eneatipo (1px, algunas punteadas) seguían
      ilegibles sobre --color-surface en modo oscuro. */
   --color-chart-grid: var(--color-neutral-400);
 
-  --sidebar-border: #34304f;
+  --quote-bg: rgba(111, 163, 255, .07);
+  --quote-border: #6fa3ff;
+  --quote-text: #b9cdf2;
 
   --page-mesh:
-    radial-gradient(760px 460px at 12% -4%,  rgba(139, 127, 255, .16), transparent 62%),
-    radial-gradient(880px 560px at 104% 12%, rgba(214, 100, 150, .14), transparent 64%),
-    radial-gradient(720px 640px at 60% 114%, rgba(100, 150, 220, .13), transparent 62%);
+    radial-gradient(760px 460px at 12% -4%,  rgba(47, 111, 237, .20), transparent 62%),
+    radial-gradient(880px 560px at 104% 12%, rgba(30, 80, 190, .18), transparent 64%),
+    radial-gradient(720px 640px at 60% 114%, rgba(70, 120, 220, .15), transparent 62%);
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-card-raised: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 10px 32px rgba(0, 0, 0, 0.38);
+  --shadow-card-raised: 0 16px 44px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
   --shadow-toast: 0 10px 28px rgba(0, 0, 0, 0.5);
@@ -247,7 +381,7 @@ html {
 
 body {
   margin: 0;
-  background-color: var(--color-page);
+  background-color: var(--page-bg);
   background-image: var(--page-mesh);
   background-attachment: fixed;
   color: var(--color-ink);
@@ -266,8 +400,44 @@ body {
   background-attachment: fixed;
 }
 
+/* =========================================================================
+   Tarjetas de vidrio esmerilado
+   `--color-surface` ya es translúcido, así que `bg-surface` sólo aporta el
+   color: el desenfoque va acá, sobre la misma utilidad, para no tocar el
+   markup de ningún componente. Va fuera de @layer a propósito — así gana a
+   las utilidades de Tailwind sin recurrir a !important.
+   ========================================================================= */
+.bg-surface {
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+}
+
+/* `shadow-card` marca las superficies que son tarjetas (no inputs ni menús):
+   son las únicas que llevan el borde de luz y la sombra ambiental del vidrio. */
+.shadow-card {
+  border-color: var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+/* Los controles de formulario mantienen fondo opaco: sobre el degradado del
+   lienzo, un control translúcido pierde el contraste que necesita el texto.
+   Incluye los `button` que hacen de disparador de select/date-picker y los
+   botones secundarios. */
+input.bg-surface,
+select.bg-surface,
+textarea.bg-surface,
+button.bg-surface {
+  background-color: var(--color-neutral-0);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 ::selection {
-  background: #e6ddfe;
+  background: #d8e5fc;
+}
+
+.dark ::selection {
+  background: rgba(111, 163, 255, .30);
 }
 
 /* =========================================================================

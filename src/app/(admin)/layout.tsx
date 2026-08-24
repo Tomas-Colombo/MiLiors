@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
-import { verifySession } from '@/lib/dal'
+import { requireRol } from '@/lib/guards'
 import {
   HomeIcon,
   BuildingIcon,
@@ -35,11 +34,7 @@ const NAV_ITEMS = [
 ]
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await verifySession()
-
-  if (session.rol !== 'ADMIN') {
-    redirect('/login')
-  }
+  const session = await requireRol('ADMIN')
 
   return (
     <div className="flex min-h-screen bg-surface-page">

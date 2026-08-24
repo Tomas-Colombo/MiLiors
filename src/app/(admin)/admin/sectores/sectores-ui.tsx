@@ -1,7 +1,7 @@
 'use client'
 
-import { useActionState, useTransition, useEffect, useRef } from 'react'
-import { Button, Input, Field, Alert } from '@/components/ui'
+import { useActionState, useTransition, useEffect, useRef, useState } from 'react'
+import { Button, Input, Field, Alert, ConfirmDialog } from '@/components/ui'
 import { PlusIcon } from '@/components/icons'
 import { crearSector, desactivarSector, reactivarSector } from '@/modules/admin/actions'
 import type { ActionResult } from '@/lib/types/domain'
@@ -45,13 +45,7 @@ export function CrearSectorForm() {
 
 export function SectorAcciones({ id, activo }: { id: string; activo: boolean }) {
   const [isPending, startTransition] = useTransition()
-
-  function handleDesactivar() {
-    if (!confirm('¿Desactivar este sector? Seguirá existiendo como baja lógica.')) return
-    startTransition(async () => {
-      await desactivarSector(id)
-    })
-  }
+  const [confirmando, setConfirmando] = useState(false)
 
   function handleReactivar() {
     startTransition(async () => {
@@ -59,27 +53,42 @@ export function SectorAcciones({ id, activo }: { id: string; activo: boolean }) 
     })
   }
 
-  if (activo) {
+  if (!activo) {
     return (
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={handleDesactivar}
-        loading={isPending}
-      >
-        Desactivar
+      <Button variant="tonal" size="sm" onClick={handleReactivar} loading={isPending}>
+        Reactivar
       </Button>
     )
   }
 
   return (
-    <Button
-      variant="tonal"
-      size="sm"
-      onClick={handleReactivar}
-      loading={isPending}
-    >
-      Reactivar
-    </Button>
+    <>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => setConfirmando(true)}
+        loading={isPending}
+      >
+        Desactivar
+      </Button>
+
+      <ConfirmDialog
+        open={confirmando}
+        onClose={() => setConfirmando(false)}
+        onConfirm={() =>
+          startTransition(async () => {
+            await desactivarSector(id)
+            setConfirmando(false)
+          })
+        }
+        tone="destructive"
+        title="¿Desactivar este sector?"
+        confirmLabel="Desactivar"
+        loading={isPending}
+      >
+        Es una baja lógica: no se borra nada y podés reactivarlo cuando quieras. Deja de
+        ofrecerse al publicar puestos, y los puestos que ya lo tienen asignado lo conservan.
+      </ConfirmDialog>
+    </>
   )
 }

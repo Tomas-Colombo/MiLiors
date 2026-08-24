@@ -1,13 +1,18 @@
 'use client'
 
-import { useActionState, useTransition, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useRef } from 'react'
 import { Button, Input, Field, Alert } from '@/components/ui'
+import { CatalogoAcciones } from '@/components/admin/catalogo-acciones'
 import { PlusIcon } from '@/components/icons'
 import {
   crearProvincia,
   renombrarProvincia,
   desactivarProvincia,
   reactivarProvincia,
+  crearDepartamento,
+  renombrarDepartamento,
+  desactivarDepartamento,
+  reactivarDepartamento,
   crearLocalidad,
   renombrarLocalidad,
   desactivarLocalidad,
@@ -50,41 +55,29 @@ export function CrearProvinciaForm() {
 }
 
 export function ProvinciaAcciones({ id, nombre, activo }: { id: string; nombre: string; activo: boolean }) {
-  const [isPending, startTransition] = useTransition()
-
-  function handleEditar() {
-    const nuevo = window.prompt('Nuevo nombre de la provincia:', nombre)
-    if (nuevo == null || nuevo.trim() === '' || nuevo.trim() === nombre) return
-    startTransition(async () => {
-      const res = await renombrarProvincia(id, nuevo)
-      if (!res.success) window.alert(res.error)
-    })
-  }
-
-  function handleToggle() {
-    if (activo && !window.confirm('¿Desactivar esta provincia? Seguirá existiendo como baja lógica.')) return
-    startTransition(async () => {
-      if (activo) await desactivarProvincia(id)
-      else await reactivarProvincia(id)
-    })
-  }
-
   return (
-    <div className="flex justify-end gap-2">
-      <Button variant="ghost" size="sm" onClick={handleEditar} loading={isPending}>
-        Editar
-      </Button>
-      <Button variant={activo ? 'secondary' : 'tonal'} size="sm" onClick={handleToggle} loading={isPending}>
-        {activo ? 'Desactivar' : 'Reactivar'}
-      </Button>
-    </div>
+    <CatalogoAcciones
+      nombre={nombre}
+      activo={activo}
+      esta="esta provincia"
+      etiquetaNombre="Nombre de la provincia"
+      onRenombrar={(valor) => renombrarProvincia(id, valor)}
+      onDesactivar={() => desactivarProvincia(id)}
+      onReactivar={() => reactivarProvincia(id)}
+      consecuencia={
+        <>
+          Es una baja lógica: no se borra nada y podés reactivarla cuando quieras. Deja de
+        ofrecerse al elegir ubicación, junto con sus departamentos y localidades.
+        </>
+      }
+    />
   )
 }
 
-// ─── Localidades ──────────────────────────────────────────────────────────────
+// ─── Departamentos ────────────────────────────────────────────────────────────
 
-export function CrearLocalidadForm({ provinciaId }: { provinciaId: string }) {
-  const [state, action, pending] = useActionState(crearLocalidad, initialState)
+export function CrearDepartamentoForm({ provinciaId }: { provinciaId: string }) {
+  const [state, action, pending] = useActionState(crearDepartamento, initialState)
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
@@ -95,11 +88,55 @@ export function CrearLocalidadForm({ provinciaId }: { provinciaId: string }) {
     <div className="space-y-3">
       <form ref={formRef} action={action} className="flex items-end gap-3">
         <input type="hidden" name="provincia_id" value={provinciaId} />
+        <Field label="Nuevo departamento" htmlFor="dep-nombre" className="flex-1">
+          <Input id="dep-nombre" name="nombre" placeholder="Ej: Capital" required />
+        </Field>
+        <Button type="submit" size="md" loading={pending} leftIcon={<PlusIcon size={15} />}>
+          Agregar
+        </Button>
+      </form>
+      {state.success && <Alert tone="success" title="Departamento creado correctamente." />}
+      {!state.success && state.error && <Alert tone="error" title={state.error} />}
+    </div>
+  )
+}
+
+export function DepartamentoAcciones({ id, nombre, activo }: { id: string; nombre: string; activo: boolean }) {
+  return (
+    <CatalogoAcciones
+      nombre={nombre}
+      activo={activo}
+      esta="este departamento"
+      etiquetaNombre="Nombre del departamento"
+      onRenombrar={(valor) => renombrarDepartamento(id, valor)}
+      onDesactivar={() => desactivarDepartamento(id)}
+      onReactivar={() => reactivarDepartamento(id)}
+      consecuencia={
+        <>
+          Es una baja lógica: no se borra nada y podés reactivarlo cuando quieras. Deja de
+        ofrecerse al elegir ubicación, junto con sus localidades.
+        </>
+      }
+    />
+  )
+}
+
+// ─── Localidades ──────────────────────────────────────────────────────────────
+
+export function CrearLocalidadForm({ departamentoId }: { departamentoId: string }) {
+  const [state, action, pending] = useActionState(crearLocalidad, initialState)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    if (state.success) formRef.current?.reset()
+  }, [state])
+
+  return (
+    <div className="space-y-3">
+      <form ref={formRef} action={action} className="flex items-end gap-3">
+        <input type="hidden" name="departamento_id" value={departamentoId} />
         <Field label="Nueva localidad" htmlFor="nombre" className="flex-1">
           <Input id="nombre" name="nombre" placeholder="Ej: San Martín" required />
-        </Field>
-        <Field label="Departamento (opcional)" htmlFor="departamento" className="flex-1">
-          <Input id="departamento" name="departamento" placeholder="Ej: Capital" />
         </Field>
         <Button type="submit" size="md" loading={pending} leftIcon={<PlusIcon size={15} />}>
           Agregar
@@ -112,33 +149,21 @@ export function CrearLocalidadForm({ provinciaId }: { provinciaId: string }) {
 }
 
 export function LocalidadAcciones({ id, nombre, activo }: { id: string; nombre: string; activo: boolean }) {
-  const [isPending, startTransition] = useTransition()
-
-  function handleEditar() {
-    const nuevo = window.prompt('Nuevo nombre de la localidad:', nombre)
-    if (nuevo == null || nuevo.trim() === '' || nuevo.trim() === nombre) return
-    startTransition(async () => {
-      const res = await renombrarLocalidad(id, nuevo)
-      if (!res.success) window.alert(res.error)
-    })
-  }
-
-  function handleToggle() {
-    if (activo && !window.confirm('¿Desactivar esta localidad? Seguirá existiendo como baja lógica.')) return
-    startTransition(async () => {
-      if (activo) await desactivarLocalidad(id)
-      else await reactivarLocalidad(id)
-    })
-  }
-
   return (
-    <div className="flex justify-end gap-2">
-      <Button variant="ghost" size="sm" onClick={handleEditar} loading={isPending}>
-        Editar
-      </Button>
-      <Button variant={activo ? 'secondary' : 'tonal'} size="sm" onClick={handleToggle} loading={isPending}>
-        {activo ? 'Desactivar' : 'Reactivar'}
-      </Button>
-    </div>
+    <CatalogoAcciones
+      nombre={nombre}
+      activo={activo}
+      esta="esta localidad"
+      etiquetaNombre="Nombre de la localidad"
+      onRenombrar={(valor) => renombrarLocalidad(id, valor)}
+      onDesactivar={() => desactivarLocalidad(id)}
+      onReactivar={() => reactivarLocalidad(id)}
+      consecuencia={
+        <>
+          Es una baja lógica: no se borra nada y podés reactivarla cuando quieras. Deja de
+        ofrecerse al elegir ubicación; los perfiles y puestos que ya la tienen la conservan.
+        </>
+      }
+    />
   )
 }

@@ -1,31 +1,24 @@
 import { verifySession } from '@/lib/dal'
 import { getPerfilPostulante } from '@/modules/eneagrama/queries'
-import { getProvincias, getLocalidadesPorProvincia } from '@/modules/ubicacion/queries'
+import { getProvincias, getUbicacionInicial } from '@/modules/ubicacion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
 import { OnboardingForm } from './onboarding-form'
-import { SparklesIcon } from '@/components/icons'
+import { BrandLogo } from '@/components/shared/brand-logo'
 
-export const metadata = { title: 'Datos básicos — TalentID' }
+export const metadata = { title: 'Datos básicos — MiLiors' }
 
 export default async function OnboardingPage() {
   await verifySession()
   const perfil = await getPerfilPostulante()
   const provincias = await getProvincias()
   const carreras = await getCarreras()
-  const localidadesIniciales = perfil?.provincia_id
-    ? await getLocalidadesPorProvincia(perfil.provincia_id)
-    : []
+  const ubicacionInicial = await getUbicacionInicial(perfil?.localidad_id)
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-surface-page px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-[14px] shadow-primary"
-            style={{ background: 'var(--gradient-brand-soft)' }}
-          >
-            <SparklesIcon size={24} className="text-white" />
-          </div>
+          <BrandLogo size={48} />
           <div className="text-center">
             <h1 className="text-2xl font-extrabold tracking-tight text-ink">
               {perfil ? 'Actualizá tus datos' : 'Completá tu perfil'}
@@ -39,7 +32,7 @@ export default async function OnboardingPage() {
           perfil={perfil}
           provincias={provincias}
           carreras={carreras}
-          localidadesIniciales={localidadesIniciales}
+          ubicacionInicial={ubicacionInicial}
         />
       </div>
     </div>

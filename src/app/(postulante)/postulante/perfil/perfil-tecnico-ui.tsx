@@ -1,10 +1,21 @@
 'use client'
 
 import { useActionState, useTransition, useState, useRef } from 'react'
-import { Tabs, Field, Input, Textarea, Select, SearchableSelect, Alert, Chip, Button } from '@/components/ui'
+import {
+  Tabs,
+  Field,
+  Input,
+  Textarea,
+  Select,
+  SearchableSelect,
+  Alert,
+  Chip,
+  Button,
+  ConfirmDialog,
+} from '@/components/ui'
 import type { InputProps } from '@/components/ui/input'
 import { CalendarIcon } from '@/components/icons'
-import { NIVEL_IDIOMA_LABEL, UNIVERSIDADES_ARGENTINA, IDIOMAS_COMUNES } from '@/lib/constants/enums'
+import { NIVEL_IDIOMA_LABEL, UNIVERSIDADES_ARGENTINA, IDIOMAS_COMUNES, NIVEL_COMPETENCIA, NIVEL_COMPETENCIA_LABEL, type NivelCompetencia } from '@/lib/constants/enums'
 import {
   agregarFormacion,
   editarFormacion,
@@ -119,6 +130,11 @@ const idiomaOptions = IDIOMAS_COMUNES.map((i) => ({ value: i, label: i }))
 
 // ─── CONFIRM DELETE MODAL ─────────────────────────────────────────────────────
 
+/**
+ * Confirmación de borrado de una fila del perfil técnico. Envuelve al
+ * `ConfirmDialog` del kit conservando la firma que ya usan los cuatro puntos
+ * de llamada de este archivo (formación, cursos, experiencia e idiomas).
+ */
 function ConfirmDeleteModal({
   open,
   message,
@@ -132,27 +148,18 @@ function ConfirmDeleteModal({
   onClose: () => void
   isPending?: boolean
 }) {
-  if (!open) return null
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: 'rgba(28,32,48,.35)' }}
-      onClick={onClose}
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      tone="destructive"
+      title="¿Eliminar este elemento?"
+      confirmLabel="Eliminar"
+      loading={isPending}
     >
-      <div
-        className="w-full max-w-[400px] rounded-xl bg-surface p-6 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="mb-1 text-[16px] font-bold text-ink">¿Eliminar este elemento?</p>
-        <p className="mb-5 text-[13.5px] leading-relaxed text-muted">{message}</p>
-        <div className="flex justify-end gap-2.5">
-          <Button variant="secondary" size="sm" onClick={onClose} disabled={isPending}>Cancelar</Button>
-          <Button variant="destructive" size="sm" onClick={onConfirm} disabled={isPending}>
-            {isPending ? 'Eliminando…' : 'Eliminar'}
-          </Button>
-        </div>
-      </div>
-    </div>
+      {message}
+    </ConfirmDialog>
   )
 }
 
@@ -779,7 +786,37 @@ function SeccionIdiomas({ idiomas }: { idiomas: IdiomaItem[] }) {
  * (prefixed "custom:") until they are persisted — after saving, the server
  * returns the real IDs and the state is reconciled.
  */
-type SeleccionItem = { id: string; nombre: string; isCustom?: boolean }
+type SeleccionItem = { id: string; nombre: string; nivel: NivelCompetencia; isCustom?: boolean }
+
+/** Selector compacto de nivel (Básico / Intermedio / Avanzado). */
+function NivelSelector({
+  value,
+  onChange,
+}: {
+  value: NivelCompetencia
+  onChange: (nivel: NivelCompetencia) => void
+}) {
+  return (
+    <div className="inline-flex shrink-0 overflow-hidden rounded-md border border-neutral-300">
+      {NIVEL_COMPETENCIA.map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          aria-pressed={value === n}
+          className={
+            'cursor-pointer px-2.5 py-1 text-[12px] font-medium transition-colors ' +
+            (value === n
+              ? 'bg-primary-600 text-white'
+              : 'bg-surface text-muted hover:bg-primary-ghost-hover hover:text-primary-600')
+          }
+        >
+          {NIVEL_COMPETENCIA_LABEL[n]}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function SeccionCompetencias({
   catalogo,
@@ -789,7 +826,7 @@ function SeccionCompetencias({
   actuales: CompetenciaItem[]
 }) {
   const [seleccionadas, setSeleccionadas] = useState<SeleccionItem[]>(
-    actuales.map((c) => ({ id: c.id, nombre: c.nombre }))
+    actuales.map((c) => ({ id: c.id, nombre: c.nombre, nivel: c.nivel ?? 'BASICO' }))
   )
   const [query, setQuery] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -819,15 +856,22 @@ function SeccionCompetencias({
     !exactMatch &&
     !seleccionadas.some((s) => s.nombre.toLowerCase() === queryTrimmed.toLowerCase())
 
-  function addItem(item: SeleccionItem) {
+  function addItem(item: Omit<SeleccionItem, 'nivel'>) {
     if (total >= MAX) return
-    setSeleccionadas((prev) => [...prev, item])
+    // Todo item nuevo arranca en BASICO; el postulante lo ajusta en la lista de abajo.
+    setSeleccionadas((prev) => [...prev, { ...item, nivel: 'BASICO' }])
     setQuery('')
+    setFeedback(null)
     inputRef.current?.focus()
   }
 
   function removeItem(id: string) {
     setSeleccionadas((prev) => prev.filter((s) => s.id !== id))
+    setFeedback(null)
+  }
+
+  function setNivel(id: string, nivel: NivelCompetencia) {
+    setSeleccionadas((prev) => prev.map((s) => (s.id === id ? { ...s, nivel } : s)))
     setFeedback(null)
   }
 
@@ -857,15 +901,19 @@ function SeccionCompetencias({
   }
 
   function handleGuardar() {
-    const existingIds = seleccionadas.filter((s) => !s.isCustom).map((s) => s.id)
-    const customNames = seleccionadas.filter((s) => s.isCustom).map((s) => s.nombre)
+    const existentes = seleccionadas
+      .filter((s) => !s.isCustom)
+      .map((s) => ({ id: s.id, nivel: s.nivel }))
+    const customs = seleccionadas
+      .filter((s) => s.isCustom)
+      .map((s) => ({ nombre: s.nombre, nivel: s.nivel }))
     setFeedback(null)
     startTransition(async () => {
-      const result = await guardarCompetenciasConCustom(existingIds, customNames)
+      const result = await guardarCompetenciasConCustom(existentes, customs)
       if (result.success) {
         // Reconcile custom temp-keys with real IDs returned by the server
         if (result.items && result.items.length > 0) {
-          setSeleccionadas(result.items.map((i) => ({ id: i.id, nombre: i.nombre })))
+          setSeleccionadas(result.items.map((i) => ({ id: i.id, nombre: i.nombre, nivel: i.nivel })))
         }
         setFeedback({ ok: true, msg: 'Competencias guardadas.' })
       } else {
@@ -882,7 +930,9 @@ function SeccionCompetencias({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-[15px] font-bold text-ink">Habilidades y tecnologías</h2>
-          <p className="text-[13px] text-muted">Seleccioná hasta {MAX} habilidades y tecnologías del catálogo, o agregá las tuyas.</p>
+          <p className="text-[13px] text-muted">
+            Seleccioná hasta {MAX} habilidades y tecnologías del catálogo, o agregá las tuyas. Después indicá tu nivel en cada una.
+          </p>
         </div>
         <span className="shrink-0 rounded-full bg-primary-ghost-hover px-3 py-1 text-[12px] font-semibold text-primary-600">
           {total}/{MAX} seleccionadas
@@ -895,39 +945,6 @@ function SeccionCompetencias({
           className="h-full rounded-full bg-primary-600 transition-all duration-300"
           style={{ width: `${progressPct}%` }}
         />
-      </div>
-
-      {/* Selection zone */}
-      <div className="rounded-xl border border-neutral-200 bg-surface p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Tu selección</span>
-          {seleccionadas.length > 0 && (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="text-[12px] font-medium text-primary-600 hover:underline"
-            >
-              Limpiar todo
-            </button>
-          )}
-        </div>
-        {seleccionadas.length === 0 ? (
-          <p className="text-[13px] text-neutral-400">Todavía no seleccionaste ninguna habilidad o tecnología.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {seleccionadas.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => removeItem(s.id)}
-                className="flex items-center gap-1.5 rounded-full bg-primary-600 px-3 py-1 text-[13px] font-medium text-white transition-opacity hover:opacity-80"
-              >
-                {s.nombre}
-                <span className="text-[11px] leading-none opacity-80">×</span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Search + custom input */}
@@ -961,7 +978,7 @@ function SeccionCompetencias({
         )}
       </div>
 
-      {/* Catalog dropdown / empty state */}
+      {/* Acceso rápido: catálogo */}
       {queryTrimmed ? (
         filtradas.length > 0 ? (
           <div className="rounded-xl border border-neutral-200 bg-surface p-2">
@@ -1006,6 +1023,44 @@ function SeccionCompetencias({
           })}
         </div>
       )}
+
+      {/* Listado seleccionado con su nivel */}
+      <div className="rounded-xl border border-neutral-200 bg-surface p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Tu selección</span>
+          {seleccionadas.length > 0 && (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="text-[12px] font-medium text-primary-600 hover:underline"
+            >
+              Limpiar todo
+            </button>
+          )}
+        </div>
+        {seleccionadas.length === 0 ? (
+          <p className="text-[13px] text-neutral-400">Todavía no seleccionaste ninguna habilidad o tecnología.</p>
+        ) : (
+          <ul className="divide-y divide-neutral-200">
+            {seleccionadas.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0">
+                <span className="text-[14px] font-medium text-ink">{s.nombre}</span>
+                <div className="flex items-center gap-2">
+                  <NivelSelector value={s.nivel} onChange={(nivel) => setNivel(s.id, nivel)} />
+                  <button
+                    type="button"
+                    onClick={() => removeItem(s.id)}
+                    aria-label={`Quitar ${s.nombre}`}
+                    className="cursor-pointer rounded-md px-1.5 text-[16px] leading-none text-neutral-400 transition-colors hover:text-error-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* Feedback */}
       {feedback && (

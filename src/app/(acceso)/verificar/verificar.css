@@ -1,0 +1,572 @@
+/*
+ * MiLiors · Verificación pública de certificados.
+ * Compartido por /verificar (buscador) y /verificar/[id] (resultado).
+ * Reusa el lenguaje visual del panel "documento" del login (mismo navy de la
+ * barra de navegación, acento azul aclarado, Newsreader/IBM Plex) para que
+ * verificar un certificado se sienta parte del mismo sistema.
+ *
+ * Tema fijo (no depende de `.dark` en <html>, que sólo controla el resto de
+ * la app): así el contraste nunca se rompe sin importar el modo de color
+ * que tenga activo el resto de MiLiors o el sistema operativo del visitante.
+ */
+
+.vf-page {
+  --serif: var(--font-newsreader), Georgia, serif;
+  --sans: var(--font-plex-sans), system-ui, sans-serif;
+  --mono: var(--font-plex-mono), ui-monospace, monospace;
+  --bg: #16213a;
+  --bg-2: #131a28;
+  --ink: #ffffff;
+  --muted: #8ea0bd;
+  --line: #24304a;
+  /* Sobre el navy manda el azul aclarado, nunca el #2f6fed del modo claro. */
+  --accent: #6fa3ff;
+  --accent-soft: #8fb6f7;
+  --verified: #4ade80;
+  --verified-bg: rgba(74, 222, 128, .14);
+  --danger: #e8756e;
+  --danger-bg: rgba(232, 117, 110, .14);
+
+  color-scheme: dark;
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.vf-page * {
+  box-sizing: border-box;
+}
+
+.vf-texture {
+  position: absolute;
+  inset: 0;
+  opacity: .5;
+  pointer-events: none;
+  background-image:
+    repeating-radial-gradient(circle at 18% 22%, transparent 0 15px, color-mix(in oklab, var(--line) 42%, transparent) 15px 16px),
+    repeating-radial-gradient(circle at 86% 78%, transparent 0 19px, color-mix(in oklab, var(--line) 30%, transparent) 19px 20px),
+    repeating-linear-gradient(46deg, transparent 0 24px, color-mix(in oklab, var(--line) 24%, transparent) 24px 25px);
+}
+
+.vf-watermark {
+  position: absolute;
+  left: -2%;
+  bottom: -10%;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 30vw;
+  line-height: .78;
+  letter-spacing: -.04em;
+  color: color-mix(in oklab, var(--ink) 5%, transparent);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ---- Header ------------------------------------------------------- */
+.vf-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.vf-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  appearance: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 4px;
+  transition: color .15s;
+}
+.vf-back:hover {
+  color: var(--ink);
+}
+
+/* Lockup de marca: isotipo dorado (imagen) + wordmark en texto, para que el
+   nombre no se pierda sobre el azul marino del documento. */
+.vf-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.vf-logo-mark {
+  height: 26px;
+  width: auto;
+  flex: none;
+  object-fit: contain;
+}
+
+/* ---- Contenido ------------------------------------------------------ */
+.vf-main {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  /* En columna porque bajo la tarjeta puede ir el informe del titular. */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  padding: 40px 20px;
+}
+
+/* La tarjeta va siempre en oscuro, como el fondo "documento" de la página:
+   es el estándar de la verificación y no depende del modo que tenga activo
+   quien la mira. Por eso los valores son fijos y no hay variante `.dark`. */
+.vf-card-wrap {
+  --card-bg: #1b2331; /* superficie opaca: botón de copiar */
+  --card-bg-2: rgba(28, 37, 54, .62); /* vidrio: la tarjeta */
+  --card-ink: #ffffff;
+  --card-muted: #8b95a6;
+  --card-line: rgba(255, 255, 255, .09);
+  --card-accent: #6fa3ff;
+  --card-accent-soft: #8fb6f7;
+  --card-verified: #4ade80;
+  --card-verified-bg: rgba(74, 222, 128, .14);
+  --card-danger: #e8756e;
+  --card-danger-bg: rgba(232, 117, 110, .14);
+
+  width: 100%;
+  max-width: 440px;
+}
+
+.vf-card {
+  position: relative;
+  border: 1px solid var(--card-line);
+  border-radius: 14px;
+  background: var(--card-bg-2);
+  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  padding: 40px 32px 30px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,.28);
+}
+.vf-card[data-state="verificado"] {
+  border-top: 2px solid var(--card-verified);
+}
+.vf-card[data-state="invalido"] {
+  border-top: 2px solid var(--card-danger);
+}
+
+.vf-status-icon {
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+}
+.vf-status-icon[data-state="verificado"] {
+  background: var(--card-verified-bg);
+  color: var(--card-verified);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--card-verified) 12%, transparent);
+}
+.vf-status-icon[data-state="invalido"] {
+  background: var(--card-danger-bg);
+  color: var(--card-danger);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--card-danger) 12%, transparent);
+}
+
+.vf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 20px;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.vf-badge[data-state="verificado"] {
+  background: var(--card-verified-bg);
+  color: var(--card-verified);
+}
+.vf-badge[data-state="invalido"] {
+  background: var(--card-danger-bg);
+  color: var(--card-danger);
+}
+.vf-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.vf-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--card-muted);
+}
+
+.vf-name {
+  margin: 6px 0 0;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+  color: var(--card-ink);
+  text-wrap: balance;
+}
+
+.vf-title {
+  margin: 6px 0 0;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--card-ink);
+}
+
+.vf-desc {
+  margin: 10px 0 0;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--card-muted);
+}
+
+.vf-divider {
+  border-top: 1px solid var(--card-line);
+  margin: 26px 0 22px;
+}
+
+.vf-signed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+}
+.vf-signed-label {
+  font-weight: 600;
+  color: var(--card-ink);
+}
+.vf-signed-date {
+  color: var(--card-muted);
+}
+
+.vf-id-block {
+  margin-top: 22px;
+  text-align: left;
+}
+.vf-id-label {
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--card-muted);
+}
+
+.vf-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--card-line);
+  border-radius: 7px;
+  background: var(--card-bg);
+  padding: 11px 13px;
+  text-align: left;
+  transition: border-color .15s;
+}
+.vf-copy:hover {
+  border-color: var(--card-accent);
+}
+.vf-copy-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--card-ink);
+}
+.vf-copy-action {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--card-muted);
+}
+.vf-copy-action[data-copied="true"] {
+  color: var(--card-verified);
+}
+
+.vf-footer {
+  position: relative;
+  z-index: 2;
+  margin-top: 22px;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.vf-footer a {
+  font-weight: 600;
+  color: var(--accent-soft);
+  text-decoration: none;
+}
+.vf-footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .vf-card {
+    padding: 32px 22px 24px;
+  }
+}
+
+/* =====================================================================
+   Buscador de certificados (/verificar)
+   Vive sobre el mismo fondo "documento" que el resultado; el bloque entero
+   es un sello dorado sobre azul marino, sin la tarjeta clara de /[id].
+   ===================================================================== */
+.vf-search {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+}
+
+.vf-search-kicker {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.vf-search-title {
+  margin: 16px 0 0;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(30px, 4.4vw, 44px);
+  line-height: 1.06;
+  letter-spacing: -.022em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.vf-search-title em {
+  font-style: italic;
+  color: var(--accent-soft);
+}
+
+.vf-search-desc {
+  margin: 16px auto 0;
+  max-width: 46ch;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.vf-search-form {
+  margin-top: 30px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--bg-2) 72%, transparent);
+  backdrop-filter: blur(3px);
+  padding: 24px 24px 22px;
+  text-align: left;
+}
+
+.vf-search-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.vf-search-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.vf-search-input {
+  flex: 1;
+  min-width: 220px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--bg) 55%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 13px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.vf-search-input::placeholder {
+  color: color-mix(in oklab, var(--muted) 78%, transparent);
+}
+.vf-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(111, 163, 255, .26);
+}
+.vf-search-input[data-error="true"] {
+  border-color: var(--danger);
+}
+
+.vf-search-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 13.5px;
+  color: #ffffff;
+  background: var(--gradient-brand);
+  border: none;
+  border-radius: 6px;
+  padding: 13px 26px;
+  transition: transform .1s, opacity .2s, filter .2s;
+}
+.vf-search-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.vf-search-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.vf-search-btn:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+.vf-search-btn:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.vf-search-error {
+  margin-top: 11px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--danger);
+}
+
+.vf-search-hint {
+  margin-top: 14px;
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.vf-search-hint code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent-soft);
+}
+
+@media (max-width: 480px) {
+  .vf-search-form {
+    padding: 20px 18px 18px;
+  }
+}
+
+
+/* ---- Informe público del titular ------------------------------------
+   Va sobre el navy como una hoja: el papel trae su propio tema claro
+   (`documento-papel`), acá sólo se le da ancho, sombra y el llamado a
+   crear una cuenta que justifica mostrarlo. */
+.vf-informe {
+  width: 100%;
+  max-width: 760px;
+}
+
+.vf-informe > :first-child {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+}
+
+.vf-cta {
+  margin-top: 18px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.vf-cta-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.vf-cta-desc {
+  margin: 6px 0 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.vf-cta-btn {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border-bottom: 2px solid #c79a3f;
+  background: #16213a;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0d089;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.vf-cta-btn:hover {
+  opacity: 0.88;
+  color: #f0d089;
+}
+
+.vf-informe-oculto {
+  max-width: 460px;
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--muted);
+}

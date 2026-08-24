@@ -6,7 +6,7 @@ export const onboardingPostulanteSchema = z.object({
     .min(2, { message: 'Ingresá tu nombre completo.' })
     .max(120, { message: 'El nombre es demasiado largo.' })
     .trim(),
-  provincia_id: z.string().uuid({ message: 'Seleccioná tu provincia.' }),
+  // La localidad implica departamento y provincia por FK: es lo único que se guarda.
   localidad_id: z.string().uuid({ message: 'Seleccioná tu localidad.' }),
   telefono: z.string().optional(),
   carrera_id: z.string().uuid().optional().or(z.literal('')),

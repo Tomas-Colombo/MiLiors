@@ -8,7 +8,7 @@ import { PostulacionesLineChart, type ChartPoint } from './postulaciones-line-ch
 // Colores propios del bloque de métricas (fijados por la identidad visual).
 const LABEL = '#8B86A8'
 const HINT = '#b3aec2'
-const OVER = '#7c5cfc'
+const OVER = '#2f6fed'
 const UNDER = '#E24B4A'
 
 type Range = 'mes' | '3meses' | '6meses' | 'anio'
@@ -89,14 +89,14 @@ export function MetricasCliente({ metrics }: { metrics: DashboardMetrics }) {
     [metrics.postulaciones, range, puestoId],
   )
 
-  // Tasa de revisión del puesto seleccionado (reacciona sólo al selector de puesto).
+  // Tasa de evaluación del puesto seleccionado (reacciona sólo al selector de puesto).
   const tasa = useMemo(() => {
     if (!puestoId) return null
     const delPuesto = metrics.postulaciones.filter((p) => p.puesto_id === puestoId)
     const total = delPuesto.length
-    const revisadas = delPuesto.filter((p) => p.estado !== 'ENVIADA').length
-    const pct = total === 0 ? 0 : Math.round((revisadas / total) * 1000) / 10
-    return { pct, total, revisadas, pendientes: total - revisadas }
+    const evaluadas = delPuesto.filter((p) => p.estado !== 'ENVIADA').length
+    const pct = total === 0 ? 0 : Math.round((evaluadas / total) * 1000) / 10
+    return { pct, total, evaluadas, pendientes: total - evaluadas }
   }, [metrics.postulaciones, puestoId])
 
   // Tiempo promedio de contratación del alcance seleccionado (todos / un puesto).
@@ -158,12 +158,12 @@ export function MetricasCliente({ metrics }: { metrics: DashboardMetrics }) {
           <PostulacionesLineChart points={points} />
         </Card>
 
-        {/* Tasa de revisión + Tiempo promedio de contratación */}
+        {/* Tasa de evaluación + Tiempo promedio de contratación */}
         <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
-          {/* Tasa de revisión */}
+          {/* Tasa de evaluación */}
           <Card padding="lg">
             <p className="text-[13px] font-medium" style={{ color: LABEL }}>
-              Tasa de revisión
+              Tasa de evaluación
             </p>
 
             {tasa === null ? (
@@ -183,10 +183,10 @@ export function MetricasCliente({ metrics }: { metrics: DashboardMetrics }) {
                 <ProgressBar value={tasa.pct} showValue={false} className="mt-4" />
                 <div className="mt-3 flex items-center justify-between text-[12px]">
                   <span style={{ color: OVER }}>
-                    <span className="font-semibold tabular-nums">{tasa.revisadas}</span> revisadas
+                    <span className="font-semibold tabular-nums">{tasa.evaluadas}</span> evaluadas
                   </span>
                   <span style={{ color: tasa.pendientes > 0 ? UNDER : HINT }}>
-                    <span className="font-semibold tabular-nums">{tasa.pendientes}</span> sin revisar
+                    <span className="font-semibold tabular-nums">{tasa.pendientes}</span> sin evaluar
                   </span>
                   <span style={{ color: HINT }}>
                     <span className="font-semibold tabular-nums">{tasa.total}</span> en total
@@ -196,7 +196,7 @@ export function MetricasCliente({ metrics }: { metrics: DashboardMetrics }) {
             )}
 
             <p className="mt-4 border-t border-neutral-100 pt-4 text-[12px] leading-relaxed" style={{ color: HINT }}>
-              Mide qué porcentaje de los candidatos que se postularon ya fueron revisados. Un número bajo
+              Mide qué porcentaje de los candidatos que se postularon ya fueron evaluados. Un número bajo
               puede indicar que el puesto recibe más postulaciones de las que podés atender.
             </p>
           </Card>
@@ -211,7 +211,7 @@ export function MetricasCliente({ metrics }: { metrics: DashboardMetrics }) {
               <p className="mt-4 text-[13px]" style={{ color: HINT }}>
                 {puestoId
                   ? 'Este puesto todavía no registró contrataciones.'
-                  : 'Todavía no registraste contrataciones. Cuando cierres o elimines una búsqueda e indiques a quién contrataste, vas a ver acá cuánto tardaste.'}
+                  : 'Todavía no registraste contrataciones. Cuando pauses o elimines una búsqueda e indiques a quién contrataste, vas a ver acá cuánto tardaste.'}
               </p>
             ) : (
               <>
@@ -230,7 +230,7 @@ export function MetricasCliente({ metrics }: { metrics: DashboardMetrics }) {
 
             <p className="mt-4 border-t border-neutral-100 pt-4 text-[12px] leading-relaxed" style={{ color: HINT }}>
               Días desde que se abrió la búsqueda hasta que registraste la contratación. Incluye
-              búsquedas cerradas y eliminadas, con candidatos de la plataforma o externos.
+              búsquedas pausadas y eliminadas, con candidatos de la plataforma o externos.
             </p>
           </Card>
         </div>

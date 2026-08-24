@@ -1,10 +1,20 @@
 'use client'
 
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react'
-import { Button, Card, Badge, ProgressBar, Alert } from '@/components/ui'
+import { Button, Card, Badge, ProgressBar, Alert, Modal, ConfirmDialog } from '@/components/ui'
 import { iniciarTest, guardarRespuesta, calcularEneatipo } from '@/modules/eneagrama/actions'
+import { formatearFecha, MESES_ESPERA_REHACER } from '@/modules/eneagrama/rehacer-policy'
 import { useRouter } from 'next/navigation'
-import { SparklesIcon, CheckIcon, ArrowRightIcon, ChevronLeftIcon } from '@/components/icons'
+import { BrandLogo } from '@/components/shared/brand-logo'
+import {
+  CheckIcon,
+  ArrowRightIcon,
+  ChevronLeftIcon,
+  CalendarIcon,
+  ShieldIcon,
+  InfoIcon,
+  HelpCircleIcon,
+} from '@/components/icons'
 
 const PREGUNTAS_POR_PAGINA = 15
 
@@ -21,6 +31,14 @@ type Opcion = {
   texto_opcion: string
 }
 
+type EstadoRehacer = {
+  puedeRehacer: boolean
+  primeraVez: boolean
+  esAjusteInicial: boolean
+  /** ISO de la fecha desde la que podrá rehacerlo (null si ya puede). */
+  disponibleDesde: string | null
+}
+
 type Props = {
   preguntas: Pregunta[]
   opciones: Opcion[]
@@ -29,6 +47,7 @@ type Props = {
   respuestasIniciales: Record<string, number>
   yaCompleto: boolean
   humanDesignCompleto: boolean
+  estadoRehacer: EstadoRehacer
 }
 
 export function EneagramaWizard({
@@ -39,6 +58,7 @@ export function EneagramaWizard({
   respuestasIniciales,
   yaCompleto,
   humanDesignCompleto,
+  estadoRehacer,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -59,7 +79,12 @@ export function EneagramaWizard({
   const [iniciando, setIniciando] = useState(!testIdInicial)
   const [resultadoInvalido, setResultadoInvalido] = useState(false)
   const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false)
+  // Modal de preparación previo a responder. 'inicio' = primera vez / retomar,
+  // 'rehacer' = sobrescribir un resultado existente.
+  const [preparacionPara, setPreparacionPara] = useState<'inicio' | 'rehacer' | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const disponibleDesde = estadoRehacer.disponibleDesde ? new Date(estadoRehacer.disponibleDesde) : null
 
   const totalPaginas = Math.ceil(preguntas.length / PREGUNTAS_POR_PAGINA)
   const preguntasPagina = preguntas.slice(
@@ -179,6 +204,77 @@ export function EneagramaWizard({
     router.push('/postulante')
   }
 
+  // ── Modal de preparación (previo a responder o a rehacer) ──────────────────
+  const textoVigencia = estadoRehacer.primeraVez
+    ? `El resultado refleja tu momento actual. Como es tu primer test, vas a poder repetirlo una vez sin esperar; a partir de ahí, cada ${MESES_ESPERA_REHACER} meses.`
+    : estadoRehacer.esAjusteInicial
+      ? `Esta repetición no tiene espera por ser el ajuste de tu primer resultado. Después vas a poder rehacer el test cada ${MESES_ESPERA_REHACER} meses.`
+      : `El resultado refleja tu momento actual. Vas a poder rehacerlo nuevamente dentro de ${MESES_ESPERA_REHACER} meses.`
+
+  const puntosPreparacion = [
+    {
+      icon: <CalendarIcon size={16} />,
+      titulo: 'Tiempo estimado',
+      texto: 'Alrededor de 20 minutos. Podés guardar el progreso y retomarlo cuando quieras.',
+    },
+    {
+      icon: <HelpCircleIcon size={16} />,
+      titulo: 'Sin apuro',
+      texto: 'Buscá un momento tranquilo y elegí la primera opción que te represente.',
+    },
+    {
+      icon: <ShieldIcon size={16} />,
+      titulo: 'Respondé con honestidad',
+      texto: 'Contestá desde cómo trabajás hoy, no desde cómo creés que deberías ser. No hay respuestas correctas ni incorrectas.',
+    },
+    {
+      icon: <InfoIcon size={16} />,
+      titulo: 'Vigencia del resultado',
+      texto: textoVigencia,
+    },
+  ]
+
+  const modalPreparacion = (
+    <Modal
+      open={preparacionPara !== null}
+      onClose={() => setPreparacionPara(null)}
+      icon={<BrandLogo size={44} />}
+      title="Antes de empezar"
+      footer={
+        <>
+          <Button variant="ghost" size="sm" className="flex-1" onClick={() => setPreparacionPara(null)}>
+            Ahora no
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1"
+            loading={isPending}
+            rightIcon={<ArrowRightIcon size={15} />}
+            onClick={() => {
+              const reiniciar = preparacionPara === 'rehacer'
+              setPreparacionPara(null)
+              handleIniciar(reiniciar)
+            }}
+          >
+            {preparacionPara === 'rehacer' ? 'Entendido, rehacer' : 'Entendido, comenzar'}
+          </Button>
+        </>
+      }
+    >
+      <ul className="space-y-3.5">
+        {puntosPreparacion.map((p) => (
+          <li key={p.titulo} className="flex gap-3">
+            <span className="mt-0.5 flex-none text-primary-600">{p.icon}</span>
+            <span>
+              <span className="block text-[13.5px] font-semibold text-ink">{p.titulo}</span>
+              <span className="block text-[13px] leading-snug text-muted">{p.texto}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Modal>
+  )
+
   // ── Pantalla de test inválido (respuestas sin variación suficiente) ────────
   if (resultadoInvalido) {
     return (
@@ -198,7 +294,7 @@ export function EneagramaWizard({
             <div className="mt-4 space-y-3 text-left text-sm leading-relaxed text-muted">
               <p>
                 El Eneagrama puede ser uno de los activos más valiosos de tu perfil: las
-                empresas que usan TalentID lo tienen muy en cuenta a la hora de evaluar
+                empresas que usan MiLiors lo tienen muy en cuenta a la hora de evaluar
                 candidatos, porque revela fortalezas, estilos de trabajo y patrones de
                 comportamiento reales.
               </p>
@@ -309,9 +405,22 @@ export function EneagramaWizard({
             Ya completaste el Eneagrama
           </h1>
           <p className="mt-3 text-sm text-muted">
-            Podés rehacer el test si querés actualizar tu perfil de personalidad.
-            Esto sobrescribirá el resultado anterior.
+            {estadoRehacer.esAjusteInicial
+              ? 'Podés rehacerlo una vez sin esperar para ajustar tu primer resultado. Esto sobrescribirá el resultado anterior.'
+              : estadoRehacer.puedeRehacer
+                ? 'Podés rehacer el test si querés actualizar tu perfil de personalidad. Esto sobrescribirá el resultado anterior.'
+                : `El Eneagrama se puede rehacer cada ${MESES_ESPERA_REHACER} meses para que el resultado refleje un cambio real y no el momento del día.`}
           </p>
+
+          {!estadoRehacer.puedeRehacer && disponibleDesde && (
+            <div className="mt-4 rounded-lg border border-neutral-200 bg-primary-tint px-4 py-3 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Próxima repetición disponible</p>
+              <p className="mt-0.5 text-sm font-semibold text-ink">{formatearFecha(disponibleDesde)}</p>
+            </div>
+          )}
+
+          {error && <Alert tone="error" title={error} className="mt-4" />}
+
           <div className="mt-6 flex flex-col gap-3">
             <Button
               size="lg"
@@ -321,17 +430,20 @@ export function EneagramaWizard({
             >
               Ir a mi perfil
             </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              className="w-full"
-              onClick={() => handleIniciar(true)}
-              loading={isPending}
-            >
-              Rehacer el test
-            </Button>
+            {estadoRehacer.puedeRehacer && (
+              <Button
+                variant="ghost"
+                size="lg"
+                className="w-full"
+                onClick={() => setPreparacionPara('rehacer')}
+                loading={isPending}
+              >
+                Rehacer el test
+              </Button>
+            )}
           </div>
         </div>
+        {modalPreparacion}
       </div>
     )
   }
@@ -341,12 +453,7 @@ export function EneagramaWizard({
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-10">
         <div className="w-full max-w-md text-center">
-          <div
-            className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl shadow-primary"
-            style={{ background: 'var(--gradient-brand-soft)' }}
-          >
-            <SparklesIcon size={32} className="text-white" />
-          </div>
+          <BrandLogo size={64} className="mx-auto mb-6" />
           <h1 className="text-2xl font-extrabold tracking-tight text-ink">
             Test de Eneagrama
           </h1>
@@ -373,12 +480,13 @@ export function EneagramaWizard({
             size="lg"
             className="w-full"
             loading={isPending}
-            onClick={() => handleIniciar(false)}
+            onClick={() => setPreparacionPara('inicio')}
             rightIcon={<ArrowRightIcon size={16} />}
           >
             Comenzar el test
           </Button>
         </div>
+        {modalPreparacion}
       </div>
     )
   }
@@ -389,38 +497,20 @@ export function EneagramaWizard({
 
   return (
     <div ref={containerRef} className="mx-auto max-w-2xl px-4 py-8">
-      {/* Modal de confirmación al cancelar */}
-      {mostrarConfirmCancelar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
-            <h3 className="text-base font-bold text-ink">¿Cancelar el test?</h3>
-            <div className="mt-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-3">
-              <p className="text-sm text-warning">
-                Tus respuestas no se guardan como historial: si salís ahora perdés lo
-                respondido en esta sección y vas a tener que empezar de nuevo.
-              </p>
-            </div>
-            <div className="mt-4 flex gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-1"
-                onClick={() => setMostrarConfirmCancelar(false)}
-              >
-                Seguir respondiendo
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="flex-1"
-                onClick={handleConfirmarCancelar}
-              >
-                Sí, cancelar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={mostrarConfirmCancelar}
+        onClose={() => setMostrarConfirmCancelar(false)}
+        onConfirm={handleConfirmarCancelar}
+        tone="destructive"
+        title="¿Cancelar el test?"
+        cancelLabel="Seguir respondiendo"
+        confirmLabel="Sí, cancelar"
+      >
+        <Alert tone="warning">
+          Tus respuestas no se guardan como historial: si salís ahora perdés lo respondido en esta
+          sección y vas a tener que empezar de nuevo.
+        </Alert>
+      </ConfirmDialog>
 
       {/* Cancelar */}
       <button

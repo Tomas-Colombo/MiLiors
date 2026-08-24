@@ -2,7 +2,7 @@
 
 import { MoonIcon, SunIcon } from '@/components/icons'
 
-const STORAGE_KEY = 'talentid-theme'
+const STORAGE_KEY = 'miliors-theme'
 
 type Props = {
   /** Si es true, sólo muestra el ícono (sidebar colapsado). */

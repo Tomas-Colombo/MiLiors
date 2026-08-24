@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { formacionSchema, experienciaSchema, idiomaSchema, cursoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
+import { NIVEL_COMPETENCIA, type NivelCompetencia } from '@/lib/constants/enums'
 
 // Converts YYYY-MM → YYYY-MM-01 for Postgres DATE columns
 function toDate(mesAnio: string | undefined): string | null {
@@ -26,8 +27,7 @@ async function getOrCreatePerfilTecnico(postulanteId: string): Promise<string> {
 
   if (existing) return (existing as { id: string }).id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: created } = await (admin.from('perfil_tecnico') as any)
+  const { data: created } = await admin.from('perfil_tecnico')
     .insert({ postulante_id: postulanteId })
     .select('id')
     .single()
@@ -77,8 +77,7 @@ export async function agregarFormacion(
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('formacion_academica') as any).insert({
+  const { error } = await admin.from('formacion_academica').insert({
     perfil_tecnico_id: perfilTecnicoId,
     institucion: parsed.data.institucion,
     titulo: parsed.data.titulo,
@@ -108,8 +107,7 @@ export async function editarFormacion(
   if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('formacion_academica') as any)
+  const { error } = await supabase.from('formacion_academica')
     .update({
       institucion: parsed.data.institucion,
       titulo: parsed.data.titulo,
@@ -125,8 +123,7 @@ export async function editarFormacion(
 export async function eliminarFormacion(id: string): Promise<ActionResult> {
   await verifySession()
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('formacion_academica') as any).delete().eq('id', id)
+  const { error } = await supabase.from('formacion_academica').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
   revalidatePath('/postulante/perfil')
   return { success: true, data: undefined }
@@ -161,8 +158,7 @@ export async function agregarCurso(
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('curso') as any).insert({
+  const { error } = await admin.from('curso').insert({
     perfil_tecnico_id: perfilTecnicoId,
     nombre: parsed.data.nombre,
     institucion: parsed.data.institucion,
@@ -188,8 +184,7 @@ export async function editarCurso(
 
   await verifySession()
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('curso') as any)
+  const { error } = await supabase.from('curso')
     .update({
       nombre: parsed.data.nombre,
       institucion: parsed.data.institucion,
@@ -207,8 +202,7 @@ export async function editarCurso(
 export async function eliminarCurso(id: string): Promise<ActionResult> {
   await verifySession()
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('curso') as any).delete().eq('id', id)
+  const { error } = await supabase.from('curso').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
   revalidatePath('/postulante/perfil')
   return { success: true, data: undefined }
@@ -237,8 +231,7 @@ export async function agregarExperiencia(
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('experiencia_laboral') as any).insert({
+  const { error } = await admin.from('experiencia_laboral').insert({
     perfil_tecnico_id: perfilTecnicoId,
     empresa: parsed.data.empresa,
     puesto: parsed.data.puesto,
@@ -270,8 +263,7 @@ export async function editarExperiencia(
 
   await verifySession()
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('experiencia_laboral') as any)
+  const { error } = await supabase.from('experiencia_laboral')
     .update({
       empresa: parsed.data.empresa,
       puesto: parsed.data.puesto,
@@ -289,8 +281,7 @@ export async function editarExperiencia(
 export async function eliminarExperiencia(id: string): Promise<ActionResult> {
   await verifySession()
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('experiencia_laboral') as any).delete().eq('id', id)
+  const { error } = await supabase.from('experiencia_laboral').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
   revalidatePath('/postulante/perfil')
   return { success: true, data: undefined }
@@ -320,8 +311,7 @@ export async function agregarIdioma(
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('idioma') as any).insert({
+  const { error } = await admin.from('idioma').insert({
     perfil_tecnico_id: perfilTecnicoId,
     nombre: parsed.data.nombre,
     nivel_idioma: parsed.data.nivel_idioma,
@@ -335,8 +325,7 @@ export async function agregarIdioma(
 export async function eliminarIdioma(id: string): Promise<ActionResult> {
   await verifySession()
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('idioma') as any).delete().eq('id', id)
+  const { error } = await supabase.from('idioma').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
   revalidatePath('/postulante/perfil')
   return { success: true, data: undefined }
@@ -352,8 +341,7 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
   const admin = createAdminClient()
 
   // Delete all current competencies
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('postulante_competencia') as any)
+  await admin.from('postulante_competencia')
     .delete()
     .eq('perfil_tecnico_id', perfilTecnicoId)
 
@@ -368,25 +356,27 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
     competencia_id: cid,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('postulante_competencia') as any).insert(rows)
+  const { error } = await admin.from('postulante_competencia').insert(rows)
   if (error) return { success: false, error: 'No se pudieron guardar las competencias.' }
 
   revalidatePath('/postulante/perfil')
   return { success: true, data: undefined }
 }
 
+export type CompetenciaExistenteInput = { id: string; nivel: NivelCompetencia }
+export type CompetenciaCustomInput = { nombre: string; nivel: NivelCompetencia }
+
 /**
  * Saves competencies for the current applicant.
- * `existingIds` — UUIDs already in the catalog.
- * `customNames` — free-text names to upsert into the catalog first.
- * Returns the final list of saved CompetenciaItem so the UI can update optimistically.
+ * `existentes` — items already in the catalog, with their level.
+ * `customs` — free-text names to upsert into the catalog first, with their level.
+ * Returns the final list of saved items so the UI can update optimistically.
  */
 export async function guardarCompetenciasConCustom(
-  existingIds: string[],
-  customNames: string[]
-): Promise<ActionResult & { items?: { id: string; nombre: string }[] }> {
-  if (existingIds.length + customNames.length > 15) {
+  existentes: CompetenciaExistenteInput[],
+  customs: CompetenciaCustomInput[]
+): Promise<ActionResult & { items?: { id: string; nombre: string; nivel: NivelCompetencia }[] }> {
+  if (existentes.length + customs.length > 15) {
     return { success: false, error: 'Podés seleccionar hasta 15 competencias.' }
   }
 
@@ -396,60 +386,64 @@ export async function guardarCompetenciasConCustom(
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
   const admin = createAdminClient()
 
+  // id → nivel (dedupes; el último gana)
+  const niveles = new Map<string, NivelCompetencia>()
+  for (const e of existentes) {
+    niveles.set(e.id, NIVEL_COMPETENCIA.includes(e.nivel) ? e.nivel : 'BASICO')
+  }
+
   // Resolve custom names → IDs (upsert by nombre, which is UNIQUE)
-  const customIds: string[] = []
-  for (const nombre of customNames) {
-    const trimmed = nombre.trim()
+  for (const c of customs) {
+    const trimmed = c.nombre.trim()
     if (!trimmed) continue
+    const nivel: NivelCompetencia = NIVEL_COMPETENCIA.includes(c.nivel) ? c.nivel : 'BASICO'
 
     // Try insert; if the nombre already exists the conflict returns nothing
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: inserted } = await (admin.from('competencia') as any)
+    const { data: inserted } = await admin.from('competencia')
       .insert({ nombre: trimmed })
       .select('id')
       .single()
 
     if (inserted) {
-      customIds.push((inserted as { id: string }).id)
+      niveles.set((inserted as { id: string }).id, nivel)
     } else {
       // nombre already exists — fetch the existing id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existing } = await (admin.from('competencia') as any)
+      const { data: existing } = await admin.from('competencia')
         .select('id')
         .eq('nombre', trimmed)
         .single()
-      if (existing) customIds.push((existing as { id: string }).id)
+      if (existing) niveles.set((existing as { id: string }).id, nivel)
     }
   }
 
-  const allIds = [...new Set([...existingIds, ...customIds])]
-
   // Replace all competencies for this profile
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from('postulante_competencia') as any)
+  await admin.from('postulante_competencia')
     .delete()
     .eq('perfil_tecnico_id', perfilTecnicoId)
 
-  if (allIds.length === 0) {
+  if (niveles.size === 0) {
     revalidatePath('/postulante/perfil')
     return { success: true, data: undefined, items: [] }
   }
 
-  const rows = allIds.map((cid) => ({
+  const rows = [...niveles].map(([cid, nivel]) => ({
     perfil_tecnico_id: perfilTecnicoId,
     competencia_id: cid,
+    nivel,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from('postulante_competencia') as any).insert(rows)
+  const { error } = await admin.from('postulante_competencia').insert(rows)
   if (error) return { success: false, error: 'No se pudieron guardar las competencias.' }
 
   // Fetch the saved items to return updated state to the UI
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: saved } = await (admin.from('competencia') as any)
+  const { data: saved } = await admin.from('competencia')
     .select('id, nombre')
-    .in('id', allIds)
+    .in('id', [...niveles.keys()])
 
   revalidatePath('/postulante/perfil')
-  return { success: true, data: undefined, items: (saved ?? []) as { id: string; nombre: string }[] }
+  const items = ((saved ?? []) as { id: string; nombre: string }[]).map((c) => ({
+    ...c,
+    nivel: niveles.get(c.id) ?? ('BASICO' as NivelCompetencia),
+  }))
+  return { success: true, data: undefined, items }
 }

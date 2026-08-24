@@ -8,7 +8,7 @@ import { InlineScript } from './inline-script'
 // El modo oscuro solo se activa si el usuario lo eligió explícitamente
 // (localStorage === 'dark'). La preferencia del sistema operativo se ignora
 // para garantizar consistencia entre sesiones.
-const BOOT_HTML = `(function(){try{if(localStorage.getItem('talentid-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}try{if(localStorage.getItem('talentid-sidebar-collapsed')==='true')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})();`
+const BOOT_HTML = `(function(){try{if(localStorage.getItem('miliors-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}try{if(localStorage.getItem('miliors-sidebar-collapsed')==='true')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})();`
 
 export function ThemeScript() {
   return <InlineScript html={BOOT_HTML} />
