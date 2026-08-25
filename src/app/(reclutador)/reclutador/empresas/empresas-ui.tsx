@@ -170,7 +170,7 @@ export function EmpresaAcciones({ empresa }: { empresa: EmpresaDelReclutador }) 
             setErrorBaja(null)
             setModo('baja')
           }}
-          className="inline-flex h-7 items-center rounded-[6px] bg-error-solid px-2.5 text-[11.5px] font-semibold text-white hover:bg-error"
+          className="inline-flex h-7 items-center rounded-[6px] bg-error-solid px-2.5 text-[11.5px] font-semibold text-white hover:bg-error-strong"
         >
           Dar de baja
         </button>

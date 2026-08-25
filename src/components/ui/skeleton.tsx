@@ -42,6 +42,20 @@ export interface SkeletonProps {
   height?: string | number;
   /** Radio del borde. Default: el `rounded-md` del sistema. */
   borderRadius?: string | number;
+  /**
+   * Renderiza un `<span>` en lugar de un `<div>`, para usarlo dentro de una
+   * línea de texto.
+   *
+   * No es cosmético: un `<div>` dentro de un `<p>` hace que el parser cierre el
+   * `<p>` antes de tiempo, con lo cual el DOM del browser deja de coincidir con
+   * el HTML del server y React falla la hidratación. Con `<span>` el árbol es
+   * válido y coincide.
+   *
+   * Lleva `display: inline-block` para que respete `width`/`height`; dentro de
+   * un contenedor flex el navegador lo blockifica igual, así que no cambia nada
+   * visualmente en los usos actuales.
+   */
+  inline?: boolean;
   className?: string;
   "data-testid"?: string;
 }
@@ -53,19 +67,22 @@ export function Skeleton({
   width,
   height,
   borderRadius,
+  inline = false,
   className,
   "data-testid": testId,
 }: SkeletonProps) {
   const reducedMotion = usePrefersReducedMotion();
+  const Tag = inline ? "span" : "div";
 
   return (
-    <div
+    <Tag
       role="status"
       aria-busy="true"
       aria-hidden="false"
       data-testid={testId}
       className={cn("rounded-md", className)}
       style={{
+        display: inline ? "inline-block" : undefined,
         width: size(width),
         height: size(height),
         borderRadius: size(borderRadius),

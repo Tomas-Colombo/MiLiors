@@ -149,7 +149,9 @@ export function Switch({
       <span
         className={cn(
           "relative inline-block h-[22px] w-[38px] rounded-full transition-colors",
-          disabled ? "bg-[#eaebef]" : on ? "bg-primary-600" : "bg-[#d2d5dc]",
+          // Los dos grises salen de tokens y no de hex fijos: así el riel del
+          // switch acompaña al tema en vez de quedar gris claro sobre oscuro.
+          disabled ? "bg-neutral-100" : on ? "bg-primary-600" : "bg-neutral-300",
           "peer-focus-visible:ring-[3px] peer-focus-visible:ring-primary-50",
         )}
       >

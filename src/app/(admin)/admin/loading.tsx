@@ -51,7 +51,7 @@ export default function LoadingAdminDashboard() {
 
       <div className="mt-10 flex items-center gap-6 text-[12px] text-neutral-400">
         <span className="flex items-center gap-2">
-          Puestos pausados: <Skeleton className="h-3 w-8" />
+          Puestos pausados: <Skeleton inline className="h-3 w-8" />
         </span>
       </div>
     </div>

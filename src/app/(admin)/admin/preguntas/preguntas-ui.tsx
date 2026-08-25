@@ -82,7 +82,7 @@ export function EliminarPreguntaBtn({ id, enunciado }: { id: string; enunciado: 
               size="md"
               onClick={handleConfirmar}
               loading={isPending}
-              className="flex-1 bg-error text-white hover:bg-red-700"
+              className="flex-1 bg-error-solid text-white hover:bg-error-strong"
             >
               Eliminar
             </Button>

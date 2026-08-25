@@ -148,7 +148,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
             type="button"
             onClick={() => abrirModal('cerrar')}
             disabled={isPending}
-            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-[6px] bg-error-solid px-2.5 text-[11.5px] font-semibold text-white hover:bg-error disabled:bg-neutral-disabled disabled:cursor-not-allowed"
+            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-[6px] bg-error-solid px-2.5 text-[11.5px] font-semibold text-white hover:bg-error-strong disabled:bg-neutral-disabled disabled:cursor-not-allowed"
           >
             {isPending && modo === 'cerrar' ? <Spinner size={13} /> : 'Pausar'}
           </button>

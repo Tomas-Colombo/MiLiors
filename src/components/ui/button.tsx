@@ -33,7 +33,10 @@ const variants: Record<Variant, string> = {
     "bg-transparent text-primary-600 border-0 hover:bg-primary-ghost-hover " +
     "disabled:text-neutral-400",
   destructive:
-    "bg-error-solid text-white border-0 hover:bg-error active:brightness-95 " +
+    // El hover va a `error-strong` y no a `error`: este último es el color de
+    // TEXTO del tono, y en modo oscuro se aclara para leerse sobre `error-bg`.
+    // Usarlo de relleno dejaría el texto blanco del botón en 2.77:1.
+    "bg-error-solid text-white border-0 hover:bg-error-strong active:brightness-95 " +
     "disabled:bg-neutral-disabled",
 };
 

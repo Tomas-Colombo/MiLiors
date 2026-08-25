@@ -28,7 +28,7 @@ export default function LoadingAsistentePuesto() {
         <div>
           <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
           <p className="flex items-center gap-1.5 text-[13px] text-muted">
-            Candidatos marcados para avanzar en <Skeleton className="h-3 w-40" />
+            Candidatos marcados para avanzar en <Skeleton inline className="h-3 w-40" />
           </p>
         </div>
       </div>

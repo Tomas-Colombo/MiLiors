@@ -55,7 +55,7 @@ export function FilaPerfil({
           type="button"
           size="sm"
           variant="ghost"
-          className="text-error hover:bg-[#fceeed]"
+          className="text-error hover:bg-error-bg"
           onClick={onEliminar}
         >
           Eliminar

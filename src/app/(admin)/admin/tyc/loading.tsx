@@ -23,7 +23,7 @@ export default function LoadingTyC() {
           Publicar nueva versión
         </span>
         <span className="-mb-px flex items-center gap-1.5 border-b-2 border-transparent px-4 py-2.5 text-[13.5px] font-semibold text-muted">
-          Historial <Skeleton className="h-3 w-6" />
+          Historial <Skeleton inline className="h-3 w-6" />
         </span>
       </div>
 

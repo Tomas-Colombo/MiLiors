@@ -306,13 +306,22 @@
   --color-accent-amber-bg: #3a2a0d;
   --color-accent-blue-bg: #122a4a;
 
+  /* Los cuatro tonos semánticos aclaran su color de texto acá. Los valores de
+     claro (#b7791f, #c8312b, #2563c9) están pensados para leerse sobre fondos
+     casi blancos; sobre los `-bg` oscuros de abajo el contraste se derrumba:
+     warning 3.80:1, error 3.01:1, info 2.55:1, todos por debajo del 4.5:1 de
+     WCAG AA. Sólo `success` estaba aclarado; los otros tres se habían pasado
+     por alto. Con estos valores quedan en 8.29:1, 5.82:1 y 6.22:1. */
   --color-success: #4ade80;
   --color-success-bg: #123524;
   --color-success-border: #1d5c3d;
+  --color-warning: #fbbf24;
   --color-warning-bg: #3a2a0d;
   --color-warning-border: #6b4d17;
+  --color-error: #f87171;
   --color-error-bg: #3a1614;
   --color-error-border: #6b2622;
+  --color-info: #7dabf8;
   --color-info-bg: #122a4a;
   --color-info-border: #1d4f8f;
 

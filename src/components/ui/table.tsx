@@ -53,7 +53,10 @@ export function Table<T>({ columns, rows, rowKey, highlightKey, footer, classNam
             key={key}
             className={cn(
               "grid items-center border-b border-neutral-150 px-[22px] py-[13px] transition-colors",
-              key === highlightKey ? "bg-[#f8f7fe]" : "hover:bg-neutral-50",
+              // `bg-primary-50` en vez del `#f8f7fe` fijo: el hex no se
+              // invertía y en modo oscuro pintaba la fila resaltada de casi
+              // blanco, con el texto claro encima.
+              key === highlightKey ? "bg-primary-50" : "hover:bg-neutral-50",
             )}
             style={{ gridTemplateColumns: template }}
           >

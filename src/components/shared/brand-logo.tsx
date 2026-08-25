@@ -41,17 +41,34 @@ type BrandLogoProps = {
 
 /** Sólo el isotipo dorado. Sirve igual sobre fondo claro y oscuro. */
 export function BrandLogo({ size = 44, alt = '', lazy = false, className }: BrandLogoProps) {
+  const ancho = Math.round(size * RATIO)
+
   return (
     <Image
       src="/brand/miliors-isotipo.png"
       alt={alt}
-      width={Math.round(size * RATIO)}
+      width={ancho}
       height={size}
       loading={lazy ? 'lazy' : 'eager'}
-      // `size` manda: alto en px y ancho por proporción. Van como estilo y no
-      // sólo como atributos porque el atributo lo pisa cualquier clase, y ahí
-      // Next avisa en consola que se modificó una sola de las dos dimensiones.
-      style={{ height: size, width: 'auto' }}
+      // Las dos dimensiones van explícitas en el estilo, con el mismo entero que
+      // va en los atributos. Van como estilo y no sólo como atributos porque el
+      // atributo lo pisa cualquier clase.
+      //
+      // `width: 'auto'` —que es lo que recomienda el warning de next/image— acá
+      // no alcanza, y conviene saber por qué antes de "simplificarlo" de vuelta:
+      // el optimizador redondea el alto de cada variante a entero, así que
+      // ninguna conserva exactamente 512/441. w=32 sirve 32x28 (1.14286),
+      // w=48 sirve 48x41 (1.17073), w=96 sirve 96x83 (1.15663). Con `auto` el
+      // ancho renderizado sale del ratio de la variante que cargó, mientras que
+      // el atributo `width` sale del ratio exacto: cuando los dos redondeos caen
+      // en enteros distintos, next/image avisa que se modificó una sola de las
+      // dos dimensiones. Y como qué variante carga depende del DPR y del
+      // viewport, el aviso aparecía de forma intermitente.
+      //
+      // Fijando el ancho, lo renderizado y el atributo coinciden siempre.
+      // `object-contain` se queda para absorber la fracción de píxel entre ese
+      // entero y la proporción real, sin deformar el isotipo.
+      style={{ height: size, width: ancho }}
       className={['flex-none object-contain', className].filter(Boolean).join(' ')}
     />
   )

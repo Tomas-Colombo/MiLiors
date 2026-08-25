@@ -63,7 +63,7 @@ export function MenuItem({ icon, children, onSelect, active, destructive }: Menu
       className={cn(
         "flex w-full items-center gap-2.5 rounded-lg px-[11px] py-[9px] text-left text-[13.5px] transition-colors",
         destructive
-          ? "text-error hover:bg-[#fceeed]"
+          ? "text-error hover:bg-error-bg"
           : active
             ? "bg-primary-ghost-hover font-medium text-primary-600"
             : "text-ink hover:bg-neutral-50",
@@ -180,7 +180,15 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
         aria-modal="true"
         aria-labelledby={tituloId}
         tabIndex={-1}
-        className="overflow-hidden rounded-xl bg-surface shadow-lg outline-none"
+        // `bg-neutral-0` y no `bg-surface`: el token `surface` es translúcido a
+        // propósito (rgba(...,.72) en claro, .62 en oscuro) porque las tarjetas
+        // apoyan sobre el degradado de la página y ese vidrio es parte del
+        // diseño. Un diálogo, en cambio, flota POR ENCIMA del contenido: con un
+        // fondo translúcido se lee el texto de la página a través del texto del
+        // diálogo y no se entiende ninguno de los dos. Todas las demás capas
+        // flotantes del sistema (Menu, los desplegables de Select, DatePicker)
+        // ya usan `bg-neutral-0` por el mismo motivo.
+        className="overflow-hidden rounded-xl bg-neutral-0 shadow-lg outline-none"
         style={{ width, maxWidth: "100%" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -202,7 +210,10 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
           {children && <div className="mb-6 text-sm leading-[1.55] text-muted">{children}</div>}
         </div>
         {footer && (
-          <div className="flex gap-3 border-t border-neutral-100 bg-[#fafbfc] px-6 py-4">{footer}</div>
+          // `bg-neutral-50` en vez del `#fafbfc` que estaba fijo: en claro es
+          // prácticamente el mismo gris, pero el hex no se invertía y en modo
+          // oscuro dejaba una franja casi blanca al pie del diálogo.
+          <div className="flex gap-3 border-t border-neutral-100 bg-neutral-50 px-6 py-4">{footer}</div>
         )}
       </div>
     </div>
