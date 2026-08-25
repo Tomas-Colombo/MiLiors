@@ -108,7 +108,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
       {/* Brand + colapsar */}
       <div className={['mb-6 flex items-center px-1', collapsed ? 'flex-col gap-3' : 'justify-between gap-2'].join(' ')}>
         <div className="flex min-w-0 items-center gap-2.5 px-2">
-          <BrandLogo size={40} className="h-10 w-11" />
+          <BrandLogo size={40} />
           {!collapsed && (
             <div className="min-w-0">
               <div

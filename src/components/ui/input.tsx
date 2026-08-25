@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import type { ComponentPropsWithRef, ReactNode, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { AlertCircleIcon } from "@/components/icons";
 
@@ -14,7 +14,9 @@ const statusRing: Record<FieldStatus, string> = {
   success: "border-[1.5px] border-success-solid ring-[3px] ring-success-bg",
 };
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+// ComponentPropsWithRef y no InputHTMLAttributes: en React 19 `ref` es una
+// prop más de un componente función, pero hay que declararla en el tipo.
+export interface InputProps extends ComponentPropsWithRef<"input"> {
   status?: FieldStatus;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;

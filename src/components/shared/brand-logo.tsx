@@ -48,6 +48,10 @@ export function BrandLogo({ size = 44, alt = '', lazy = false, className }: Bran
       width={Math.round(size * RATIO)}
       height={size}
       loading={lazy ? 'lazy' : 'eager'}
+      // `size` manda: alto en px y ancho por proporción. Van como estilo y no
+      // sólo como atributos porque el atributo lo pisa cualquier clase, y ahí
+      // Next avisa en consola que se modificó una sola de las dos dimensiones.
+      style={{ height: size, width: 'auto' }}
       className={['flex-none object-contain', className].filter(Boolean).join(' ')}
     />
   )

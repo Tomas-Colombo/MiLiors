@@ -7,6 +7,8 @@ export * from "./button";
 export * from "./input";
 export * from "./select";
 export * from "./date-picker";
+export * from "./month-year-input";
+export * from "./segmented";
 export * from "./choice";
 export * from "./badge";
 export * from "./card";
