@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, Chip, EmptyState, Tooltip } from '@/components/ui'
 import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon, WhatsAppIcon } from '@/components/icons'
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
@@ -155,253 +154,251 @@ export default async function PostulacionesRecibidasPage({
   )
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">Postulaciones recibidas</h1>
-          <p className="mt-1 text-muted">
-            {totalPuesto} postulación{totalPuesto !== 1 ? 'es' : ''}{' '}
-            {tituloPuestoFiltrado ? `para ${tituloPuestoFiltrado}` : 'en total'}
-          </p>
-          {puestoFiltrado?.cerrado && (
-            <div className="mt-2">
-              <Badge tone="warning" dot>Este puesto está pausado</Badge>
-            </div>
-          )}
-        </div>
-
-        {(postulaciones.length > 0 || puestoSinPostulaciones || !!filtroEmpresa) && (
-          <Suspense>
-            <FiltrosPostulaciones
-              puestos={puestosOpts}
-              empresas={empresasOpts}
-              carreras={carrerasOpts}
-              habilidades={habilidadesOpts}
-              provincias={provincias}
-              departamentos={departamentos}
-              totalVisible={filtered.length}
-              totalTotal={postulaciones.length}
-              hayCiclosAnteriores={hayCiclosAnteriores}
-            />
-          </Suspense>
+    <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold text-ink">Postulaciones recibidas</h1>
+        <p className="mt-1 text-muted">
+          {totalPuesto} postulación{totalPuesto !== 1 ? 'es' : ''}{' '}
+          {tituloPuestoFiltrado ? `para ${tituloPuestoFiltrado}` : 'en total'}
+        </p>
+        {puestoFiltrado?.cerrado && (
+          <div className="mt-2">
+            <Badge tone="warning" dot>Este puesto está pausado</Badge>
+          </div>
         )}
+      </div>
 
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={<UsersIcon size={24} />}
-            title={
-              puestoSinPostulaciones
-                ? 'Este puesto todavía no tiene postulaciones'
-                : empresaSinPostulaciones
-                  ? `${empresaFiltrada!.nombre_empresa} todavía no tiene postulaciones`
-                  : postulaciones.length === 0
-                  ? 'Todavía no recibiste postulaciones'
-                  : 'Ninguna postulación coincide con los filtros'
-            }
-            description={
-              puestoSinPostulaciones
-                ? 'Cuando un candidato se postule a este puesto, vas a verlo acá.'
-                : empresaSinPostulaciones
-                  ? 'Cuando alguien se postule a un puesto de esta empresa, vas a verlo acá.'
-                : postulaciones.length === 0
-                  ? 'Publicá puestos para que los candidatos puedan postularse.'
-                  : 'Probá cambiando o limpiando los filtros.'
-            }
+      {(postulaciones.length > 0 || puestoSinPostulaciones || !!filtroEmpresa) && (
+        <Suspense>
+          <FiltrosPostulaciones
+            puestos={puestosOpts}
+            empresas={empresasOpts}
+            carreras={carrerasOpts}
+            habilidades={habilidadesOpts}
+            provincias={provincias}
+            departamentos={departamentos}
+            totalVisible={filtered.length}
+            totalTotal={postulaciones.length}
+            hayCiclosAnteriores={hayCiclosAnteriores}
           />
-        ) : (
-          <div className="space-y-4">
-            {slice.map((p) => {
-              // Motivo a mostrar sobre el badge "No avanza": la nota del descarte manual
-              // o, si lo descartó el preselector, el motivo automático.
-              const motivoManual =
-                motivosNoAvanzar.get(`${p.postulante_id}:${p.puesto_id ?? ''}`) ??
-                motivosNoAvanzar.get(`${p.postulante_id}:`)
-              const detalleNoAvanza =
-                p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO
-                  ? (motivoManual ?? p.motivo_descarte)
-                  : null
+        </Suspense>
+      )}
 
-              return (
-              <Card key={p.id} padding="md">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[14px] font-semibold text-ink">
-                        {p.nombre_completo ?? 'Candidato'}
-                      </p>
-                      {detalleNoAvanza ? (
-                        <Tooltip
-                          content={
-                            <span className="block w-56 whitespace-normal leading-snug">
-                              {detalleNoAvanza}
-                            </span>
-                          }
-                        >
-                          <Badge tone="error" dot className="cursor-help">
-                            {estadoLabel[p.estado] ?? p.estado}
-                          </Badge>
-                        </Tooltip>
-                      ) : (
-                        <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
-                          {estadoLabel[p.estado] ?? p.estado}
-                        </Badge>
-                      )}
-                      {/* Auto-discard indicator — motivo_descarte is only set by the
-                          preselector's automatic evaluation, never by a manual "No avanzar" */}
-                      {p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO && p.motivo_descarte && (
-                        <Tooltip content={p.motivo_descarte}>
-                          <Badge tone="error" className="cursor-help">
-                            No avanza automáticamente
-                          </Badge>
-                        </Tooltip>
-                      )}
-                      {/* Deshacer un descarte manual o un click accidental */}
-                      {p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO && (
-                        <RevertirDescarteBtn postulacionId={p.id} />
-                      )}
-                      {/* Note indicator */}
-                      {p.tiene_nota && (
-                        <Tooltip content="Tiene notas privadas cargadas">
-                          <span className="inline-flex items-center text-warning-solid">
-                            <FileTextIcon size={14} />
-                          </span>
-                        </Tooltip>
-                      )}
-                      {/* Marca del reclutador: "Duda" avanza igual que "Avanza",
-                          pero se distingue visualmente */}
-                      {p.marca === MARCA_POSTULACION.AVANZA && (
-                        <Badge tone="success" dot>Avanza</Badge>
-                      )}
-                      {p.marca === MARCA_POSTULACION.DUDA && (
-                        <Badge tone="warning" dot>En duda</Badge>
-                      )}
-                    </div>
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<UsersIcon size={24} />}
+          title={
+            puestoSinPostulaciones
+              ? 'Este puesto todavía no tiene postulaciones'
+              : empresaSinPostulaciones
+                ? `${empresaFiltrada!.nombre_empresa} todavía no tiene postulaciones`
+                : postulaciones.length === 0
+                ? 'Todavía no recibiste postulaciones'
+                : 'Ninguna postulación coincide con los filtros'
+          }
+          description={
+            puestoSinPostulaciones
+              ? 'Cuando un candidato se postule a este puesto, vas a verlo acá.'
+              : empresaSinPostulaciones
+                ? 'Cuando alguien se postule a un puesto de esta empresa, vas a verlo acá.'
+              : postulaciones.length === 0
+                ? 'Publicá puestos para que los candidatos puedan postularse.'
+                : 'Probá cambiando o limpiando los filtros.'
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          {slice.map((p) => {
+            // Motivo a mostrar sobre el badge "No avanza": la nota del descarte manual
+            // o, si lo descartó el preselector, el motivo automático.
+            const motivoManual =
+              motivosNoAvanzar.get(`${p.postulante_id}:${p.puesto_id ?? ''}`) ??
+              motivosNoAvanzar.get(`${p.postulante_id}:`)
+            const detalleNoAvanza =
+              p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO
+                ? (motivoManual ?? p.motivo_descarte)
+                : null
 
-                    <p className="text-[13px] text-muted truncate">
-                      Puesto:{' '}
-                      <span className="font-medium text-ink-soft">{p.titulo_puesto ?? '—'}</span>
-                      {p.nombre_empresa && (
-                        <span className="text-neutral-400"> · {p.nombre_empresa}</span>
-                      )}
-                      {p.puesto_cerrado && (
-                        <Badge tone="warning" className="ml-2 align-middle">Puesto pausado</Badge>
-                      )}
+            return (
+            <Card key={p.id} padding="md">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[14px] font-semibold text-ink">
+                      {p.nombre_completo ?? 'Candidato'}
                     </p>
-
-                    {p.carrera && (
-                      <p className="text-[12px] text-neutral-400">
-                        Carrera:{' '}
-                        <span className="text-neutral-500">{p.carrera}</span>
-                      </p>
-                    )}
-
-                    {/* Contact info — always visible because applicant applied to this recruiter's post */}
-                    <div className="flex flex-wrap gap-4 mt-2">
-                      {p.contacto.email && (
-                        <a
-                          href={`mailto:${p.contacto.email}`}
-                          className="inline-flex items-center gap-1.5 text-[12.5px] text-primary-600 hover:underline"
-                        >
-                          <MailIcon size={13} />
-                          {p.contacto.email}
-                        </a>
-                      )}
-                      {p.contacto.telefono && (
-                        <span className="inline-flex items-center gap-1.5 text-[12.5px]">
-                          <a
-                            href={`tel:${p.contacto.telefono}`}
-                            className="text-primary-600 hover:underline"
-                          >
-                            {p.contacto.telefono}
-                          </a>
-                          <a
-                            href={`https://wa.me/${p.contacto.telefono.replace(/\D/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Abrir chat de WhatsApp"
-                            title="Enviar mensaje por WhatsApp"
-                            className="text-[#25D366] hover:opacity-80 transition-opacity"
-                          >
-                            <WhatsAppIcon size={15} />
-                          </a>
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-neutral-400">
-                      Postulado el{' '}
-                      {new Date(p.fecha_postulacion).toLocaleDateString('es-AR', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </p>
-                  </div>
-
-                  {p.habilidades.length > 0 && (
-                    <div className="hidden sm:flex sm:w-48 flex-none flex-wrap content-start justify-start gap-1.5 overflow-hidden max-h-36 sm:ml-2">
-                      {p.habilidades.slice(0, 5).map((h) => (
-                        <Chip key={h} className="!px-2.5 !py-1 !text-[11.5px] whitespace-nowrap">
-                          {h.length > 20 ? `${h.slice(0, 20)}…` : h}
-                        </Chip>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="w-full sm:w-60 flex-none flex flex-col items-stretch gap-2">
-                    <VerPerfilBtn
-                      postulacionId={p.id}
-                      postulanteId={p.postulante_id}
-                      estadoActual={p.estado}
-                    />
-                    {/* Avanzar / Duda / No avanzar: elegir Avanzar o Duda cancela un
-                        "No avanzar" previo (las notas del descarte quedan igual). */}
-                    {p.estado !== ESTADO_POSTULACION.CERRADA && (
-                      <MarcaPostulacionBtns
-                        postulacionId={p.id}
-                        postulanteId={p.postulante_id}
-                        puestoId={p.puesto_id}
-                        tituloPuesto={p.titulo_puesto}
-                        marca={p.marca}
-                        estadoActual={p.estado}
-                      />
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
+                    {detalleNoAvanza ? (
                       <Tooltip
-                        className="w-full"
                         content={
-                          <span className="block w-44 whitespace-normal leading-snug">
-                            Consultá a la IA sobre este candidato para este puesto.
+                          <span className="block w-56 whitespace-normal leading-snug">
+                            {detalleNoAvanza}
                           </span>
                         }
                       >
-                        <Link
-                          href={`/reclutador/asistente?postulante=${p.postulante_id}&puesto=${p.puesto_id ?? ''}&postulacion=${p.id}`}
-                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-2 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
-                        >
-                          <SparklesIcon size={14} />
-                          Asistente IA
-                        </Link>
+                        <Badge tone="error" dot className="cursor-help">
+                          {estadoLabel[p.estado] ?? p.estado}
+                        </Badge>
                       </Tooltip>
-                      <NotasModalBtn
-                        postulanteId={p.postulante_id}
-                        puestoId={p.puesto_id}
-                        nombrePostulante={p.nombre_completo}
-                      />
-                    </div>
-                    {conRespuestas.has(p.id) && (
-                      <VerRespuestasBtn postulacionId={p.id} nombrePostulante={p.nombre_completo} />
+                    ) : (
+                      <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
+                        {estadoLabel[p.estado] ?? p.estado}
+                      </Badge>
+                    )}
+                    {/* Auto-discard indicator — motivo_descarte is only set by the
+                        preselector's automatic evaluation, never by a manual "No avanzar" */}
+                    {p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO && p.motivo_descarte && (
+                      <Tooltip content={p.motivo_descarte}>
+                        <Badge tone="error" className="cursor-help">
+                          No avanza automáticamente
+                        </Badge>
+                      </Tooltip>
+                    )}
+                    {/* Deshacer un descarte manual o un click accidental */}
+                    {p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO && (
+                      <RevertirDescarteBtn postulacionId={p.id} />
+                    )}
+                    {/* Note indicator */}
+                    {p.tiene_nota && (
+                      <Tooltip content="Tiene notas privadas cargadas">
+                        <span className="inline-flex items-center text-warning-solid">
+                          <FileTextIcon size={14} />
+                        </span>
+                      </Tooltip>
+                    )}
+                    {/* Marca del reclutador: "Duda" avanza igual que "Avanza",
+                        pero se distingue visualmente */}
+                    {p.marca === MARCA_POSTULACION.AVANZA && (
+                      <Badge tone="success" dot>Avanza</Badge>
+                    )}
+                    {p.marca === MARCA_POSTULACION.DUDA && (
+                      <Badge tone="warning" dot>En duda</Badge>
                     )}
                   </div>
-                </div>
-              </Card>
-              )
-            })}
-          </div>
-        )}
 
-        {filtered.length > 0 && <Paginador page={page} pageCount={pageCount} />}
-      </div>
-    </TyCGate>
+                  <p className="text-[13px] text-muted truncate">
+                    Puesto:{' '}
+                    <span className="font-medium text-ink-soft">{p.titulo_puesto ?? '—'}</span>
+                    {p.nombre_empresa && (
+                      <span className="text-neutral-400"> · {p.nombre_empresa}</span>
+                    )}
+                    {p.puesto_cerrado && (
+                      <Badge tone="warning" className="ml-2 align-middle">Puesto pausado</Badge>
+                    )}
+                  </p>
+
+                  {p.carrera && (
+                    <p className="text-[12px] text-neutral-400">
+                      Carrera:{' '}
+                      <span className="text-neutral-500">{p.carrera}</span>
+                    </p>
+                  )}
+
+                  {/* Contact info — always visible because applicant applied to this recruiter's post */}
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    {p.contacto.email && (
+                      <a
+                        href={`mailto:${p.contacto.email}`}
+                        className="inline-flex items-center gap-1.5 text-[12.5px] text-primary-600 hover:underline"
+                      >
+                        <MailIcon size={13} />
+                        {p.contacto.email}
+                      </a>
+                    )}
+                    {p.contacto.telefono && (
+                      <span className="inline-flex items-center gap-1.5 text-[12.5px]">
+                        <a
+                          href={`tel:${p.contacto.telefono}`}
+                          className="text-primary-600 hover:underline"
+                        >
+                          {p.contacto.telefono}
+                        </a>
+                        <a
+                          href={`https://wa.me/${p.contacto.telefono.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Abrir chat de WhatsApp"
+                          title="Enviar mensaje por WhatsApp"
+                          className="text-[#25D366] hover:opacity-80 transition-opacity"
+                        >
+                          <WhatsAppIcon size={15} />
+                        </a>
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-neutral-400">
+                    Postulado el{' '}
+                    {new Date(p.fecha_postulacion).toLocaleDateString('es-AR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+
+                {p.habilidades.length > 0 && (
+                  <div className="hidden sm:flex sm:w-48 flex-none flex-wrap content-start justify-start gap-1.5 overflow-hidden max-h-36 sm:ml-2">
+                    {p.habilidades.slice(0, 5).map((h) => (
+                      <Chip key={h} className="!px-2.5 !py-1 !text-[11.5px] whitespace-nowrap">
+                        {h.length > 20 ? `${h.slice(0, 20)}…` : h}
+                      </Chip>
+                    ))}
+                  </div>
+                )}
+
+                <div className="w-full sm:w-60 flex-none flex flex-col items-stretch gap-2">
+                  <VerPerfilBtn
+                    postulacionId={p.id}
+                    postulanteId={p.postulante_id}
+                    estadoActual={p.estado}
+                  />
+                  {/* Avanzar / Duda / No avanzar: elegir Avanzar o Duda cancela un
+                      "No avanzar" previo (las notas del descarte quedan igual). */}
+                  {p.estado !== ESTADO_POSTULACION.CERRADA && (
+                    <MarcaPostulacionBtns
+                      postulacionId={p.id}
+                      postulanteId={p.postulante_id}
+                      puestoId={p.puesto_id}
+                      tituloPuesto={p.titulo_puesto}
+                      marca={p.marca}
+                      estadoActual={p.estado}
+                    />
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Tooltip
+                      className="w-full"
+                      content={
+                        <span className="block w-44 whitespace-normal leading-snug">
+                          Consultá a la IA sobre este candidato para este puesto.
+                        </span>
+                      }
+                    >
+                      <Link
+                        href={`/reclutador/asistente?postulante=${p.postulante_id}&puesto=${p.puesto_id ?? ''}&postulacion=${p.id}`}
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-2 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+                      >
+                        <SparklesIcon size={14} />
+                        Asistente IA
+                      </Link>
+                    </Tooltip>
+                    <NotasModalBtn
+                      postulanteId={p.postulante_id}
+                      puestoId={p.puesto_id}
+                      nombrePostulante={p.nombre_completo}
+                    />
+                  </div>
+                  {conRespuestas.has(p.id) && (
+                    <VerRespuestasBtn postulacionId={p.id} nombrePostulante={p.nombre_completo} />
+                  )}
+                </div>
+              </div>
+            </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {filtered.length > 0 && <Paginador page={page} pageCount={pageCount} />}
+    </div>
   )
 }

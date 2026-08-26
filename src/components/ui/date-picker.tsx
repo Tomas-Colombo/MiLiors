@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import {
+  PickerPanel,
+  PickerNavBtn,
+  PickerHeader,
+  PickerFooter,
+  PickerAction,
+  useCerrarAlSalir,
+} from "./picker-shell";
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -77,21 +85,7 @@ export function DateInput({
     setOpen((v) => !v);
   }
 
-  useEffect(() => {
-    if (!open) return;
-    function handleOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open]);
+  useCerrarAlSalir(open, containerRef, () => setOpen(false));
 
   const celdas = useMemo(() => {
     const anio = view.getFullYear();
@@ -145,30 +139,33 @@ export function DateInput({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-2 w-[268px] rounded-lg border border-neutral-300 bg-neutral-0 p-2 shadow-md">
-          <div className="flex items-center justify-between px-0.5 pb-1.5">
-            <div className="flex items-center gap-0.5">
-              <NavBtn label="Año anterior" onClick={() => setView((v) => new Date(v.getFullYear() - 1, v.getMonth(), 1))}>
-                <ChevronLeftIcon size={13} />
-                <ChevronLeftIcon size={13} className="-ml-[7px]" />
-              </NavBtn>
-              <NavBtn label="Mes anterior" onClick={() => moverMes(-1)}>
-                <ChevronLeftIcon size={15} />
-              </NavBtn>
-            </div>
-            <span className="text-[13px] font-semibold text-ink">
-              {MESES[view.getMonth()]} {view.getFullYear()}
-            </span>
-            <div className="flex items-center gap-0.5">
-              <NavBtn label="Mes siguiente" onClick={() => moverMes(1)}>
-                <ChevronRightIcon size={15} />
-              </NavBtn>
-              <NavBtn label="Año siguiente" onClick={() => setView((v) => new Date(v.getFullYear() + 1, v.getMonth(), 1))}>
-                <ChevronRightIcon size={13} />
-                <ChevronRightIcon size={13} className="-ml-[7px]" />
-              </NavBtn>
-            </div>
-          </div>
+        <PickerPanel className="w-[268px]">
+          <PickerHeader
+            izquierda={
+              <>
+                <PickerNavBtn label="Año anterior" onClick={() => setView((v) => new Date(v.getFullYear() - 1, v.getMonth(), 1))}>
+                  <ChevronLeftIcon size={13} />
+                  <ChevronLeftIcon size={13} className="-ml-[7px]" />
+                </PickerNavBtn>
+                <PickerNavBtn label="Mes anterior" onClick={() => moverMes(-1)}>
+                  <ChevronLeftIcon size={15} />
+                </PickerNavBtn>
+              </>
+            }
+            derecha={
+              <>
+                <PickerNavBtn label="Mes siguiente" onClick={() => moverMes(1)}>
+                  <ChevronRightIcon size={15} />
+                </PickerNavBtn>
+                <PickerNavBtn label="Año siguiente" onClick={() => setView((v) => new Date(v.getFullYear() + 1, v.getMonth(), 1))}>
+                  <ChevronRightIcon size={13} />
+                  <ChevronRightIcon size={13} className="-ml-[7px]" />
+                </PickerNavBtn>
+              </>
+            }
+          >
+            {MESES[view.getMonth()]} {view.getFullYear()}
+          </PickerHeader>
 
           <div className="grid grid-cols-7 gap-0.5 pb-1">
             {DIAS.map((d, i) => (
@@ -204,50 +201,22 @@ export function DateInput({
             })}
           </div>
 
-          <div className="mt-1.5 flex items-center justify-between border-t border-neutral-100 pt-1.5">
-            <button
-              type="button"
-              onClick={() => elegir(new Date())}
-              className="rounded-[7px] px-2 py-1 text-[12px] font-medium text-primary-600 hover:bg-primary-ghost-hover"
-            >
-              Hoy
-            </button>
+          <PickerFooter>
+            <PickerAction onClick={() => elegir(new Date())}>Hoy</PickerAction>
             {value && (
-              <button
-                type="button"
+              <PickerAction
+                tone="muted"
                 onClick={() => {
                   onChange("");
                   setOpen(false);
                 }}
-                className="rounded-[7px] px-2 py-1 text-[12px] font-medium text-muted hover:bg-neutral-50 hover:text-ink"
               >
                 Limpiar
-              </button>
+              </PickerAction>
             )}
-          </div>
-        </div>
+          </PickerFooter>
+        </PickerPanel>
       )}
     </div>
-  );
-}
-
-function NavBtn({
-  label,
-  onClick,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="flex h-7 w-7 items-center justify-center rounded-[7px] text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-ink"
-    >
-      {children}
-    </button>
   );
 }

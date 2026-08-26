@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { Alert } from '@/components/ui'
 import { SparklesIcon } from '@/components/icons'
 import { getMisPuestos } from '@/modules/puestos/queries'
@@ -86,35 +85,33 @@ export default async function AsistentePage({
   const nombrePostulante = (postulante as { nombre_completo: string }).nombre_completo
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
-            <SparklesIcon size={22} />
-          </span>
-          <div>
-            <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
-            <p className="text-[13px] text-muted">
-              Consultá la compatibilidad candidato-puesto usando Eneagrama y Human Design.
-            </p>
-          </div>
+    <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+          <SparklesIcon size={22} />
+        </span>
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
+          <p className="text-[13px] text-muted">
+            Consultá la compatibilidad candidato-puesto usando Eneagrama y Human Design.
+          </p>
         </div>
-
-        {puestosOptions.length === 0 && (
-          <Alert tone="warning" title="Sin puestos publicados">
-            Publicá al menos un puesto para poder usar el asistente.
-          </Alert>
-        )}
-
-        <AsistenteChat
-          postulanteId={postulanteId}
-          nombrePostulante={nombrePostulante}
-          puestos={puestosOptions}
-          puestoIdInicial={sp.puesto}
-          postulacionId={postulacionId}
-        />
       </div>
-    </TyCGate>
+
+      {puestosOptions.length === 0 && (
+        <Alert tone="warning" title="Sin puestos publicados">
+          Publicá al menos un puesto para poder usar el asistente.
+        </Alert>
+      )}
+
+      <AsistenteChat
+        postulanteId={postulanteId}
+        nombrePostulante={nombrePostulante}
+        puestos={puestosOptions}
+        puestoIdInicial={sp.puesto}
+        postulacionId={postulacionId}
+      />
+    </div>
   )
 }

@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { VolverLink } from '@/components/shared/volver-link'
 import { ChevronLeftIcon, SparklesIcon } from '@/components/icons'
 import { getPuestoById, getPostulacionesRecibidas } from '@/modules/puestos/queries'
@@ -35,33 +34,31 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
     }))
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
-        {/* Back */}
-        <VolverLink
-          href="/reclutador/puestos"
-          className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
-        >
-          <ChevronLeftIcon size={16} />
-          Volver a mis puestos
-        </VolverLink>
+    <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
+      {/* Back */}
+      <VolverLink
+        href="/reclutador/puestos"
+        className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
+      >
+        <ChevronLeftIcon size={16} />
+        Volver a mis puestos
+      </VolverLink>
 
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
-            <SparklesIcon size={22} />
-          </span>
-          <div>
-            <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
-            <p className="text-[13px] text-muted">
-              Candidatos marcados para avanzar en{' '}
-              <span className="font-medium text-ink-soft">{puesto.titulo_puesto}</span>.
-            </p>
-          </div>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+          <SparklesIcon size={22} />
+        </span>
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
+          <p className="text-[13px] text-muted">
+            Candidatos marcados para avanzar en{' '}
+            <span className="font-medium text-ink-soft">{puesto.titulo_puesto}</span>.
+          </p>
         </div>
-
-        <AsistenteCandidatos puestoId={id} candidatos={candidatos} />
       </div>
-    </TyCGate>
+
+      <AsistenteCandidatos puestoId={id} candidatos={candidatos} />
+    </div>
   )
 }

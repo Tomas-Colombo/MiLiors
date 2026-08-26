@@ -632,23 +632,45 @@ export function EneagramaWizard({
         )}
 
         {!esUltimaPagina ? (
-          <Button
-            onClick={handleSiguiente}
-            disabled={!paginaCompleta}
-            className="flex-1"
-            rightIcon={<ArrowRightIcon size={16} />}
-          >
-            Siguiente
-          </Button>
+          <div className="group relative flex-1">
+            <Button
+              onClick={handleSiguiente}
+              disabled={!paginaCompleta}
+              className="w-full"
+              rightIcon={<ArrowRightIcon size={16} />}
+            >
+              Siguiente
+            </Button>
+            {!paginaCompleta && (
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-max max-w-[16rem] -translate-x-1/2 rounded-md bg-neutral-900 px-3 py-2 text-center text-xs font-medium text-white shadow-lg group-hover:block"
+              >
+                Respondé todas las preguntas de esta secci&oacute;n para continuar
+                <span className="absolute left-1/2 top-full -ml-1 border-4 border-transparent border-t-neutral-900" />
+              </div>
+            )}
+          </div>
         ) : (
-          <Button
-            onClick={handleFinalizar}
-            disabled={!todasRespondidas || isPending}
-            loading={isPending}
-            className="flex-1"
-          >
-            {isPending ? 'Calculando tu Eneatipo...' : 'Finalizar y ver mi resultado'}
-          </Button>
+          <div className="group relative flex-1">
+            <Button
+              onClick={handleFinalizar}
+              disabled={!todasRespondidas || isPending}
+              loading={isPending}
+              className="w-full"
+            >
+              {isPending ? 'Calculando tu Eneatipo...' : 'Finalizar y ver mi resultado'}
+            </Button>
+            {!todasRespondidas && !isPending && (
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-max max-w-[16rem] -translate-x-1/2 rounded-md bg-neutral-900 px-3 py-2 text-center text-xs font-medium text-white shadow-lg group-hover:block"
+              >
+                Respond&eacute; todas las preguntas de esta secci&oacute;n para continuar
+                <span className="absolute left-1/2 top-full -ml-1 border-4 border-transparent border-t-neutral-900" />
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

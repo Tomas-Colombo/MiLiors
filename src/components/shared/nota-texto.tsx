@@ -47,7 +47,7 @@ export function NotaTexto({
       )}
 
       <Modal open={abierto} onClose={() => setAbierto(false)} title={titulo} width={560}>
-        <p className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink">
+        <p className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed text-ink">
           {contenido}
         </p>
       </Modal>

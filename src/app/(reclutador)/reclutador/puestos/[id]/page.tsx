@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge, Alert } from '@/components/ui'
 import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon, UsersIcon } from '@/components/icons'
@@ -37,196 +36,194 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
       : null
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-        {/* Back */}
-        <VolverLink
-          href="/reclutador/puestos"
-          className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
+    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
+      {/* Back */}
+      <VolverLink
+        href="/reclutador/puestos"
+        className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
+      >
+        <ChevronLeftIcon size={16} />
+        Volver a mis puestos
+      </VolverLink>
+
+      {/* Advertencia de pausa automática por inactividad */}
+      {alerta && (
+        <Alert
+          tone={alerta.tone}
+          title={
+            alerta.tone === 'error'
+              ? 'Este puesto se cierra mañana por inactividad'
+              : `Este puesto está inactivo hace ${alerta.diasInactivo} días`
+          }
         >
-          <ChevronLeftIcon size={16} />
-          Volver a mis puestos
-        </VolverLink>
+          Si no registramos actividad tuya durante {diasInactividadCierre} días —revisar
+          postulaciones, cambiar el estado de una postulación o editar el puesto—, lo
+          pausaremos automáticamente para no mantener búsquedas sin atención activa. Realizá
+          alguna de esas acciones para mantenerlo activo.
+        </Alert>
+      )}
 
-        {/* Advertencia de pausa automática por inactividad */}
-        {alerta && (
-          <Alert
-            tone={alerta.tone}
-            title={
-              alerta.tone === 'error'
-                ? 'Este puesto se cierra mañana por inactividad'
-                : `Este puesto está inactivo hace ${alerta.diasInactivo} días`
-            }
-          >
-            Si no registramos actividad tuya durante {diasInactividadCierre} días —revisar
-            postulaciones, cambiar el estado de una postulación o editar el puesto—, lo
-            pausaremos automáticamente para no mantener búsquedas sin atención activa. Realizá
-            alguna de esas acciones para mantenerlo activo.
-          </Alert>
-        )}
-
-        {/* Header card */}
-        <Card>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-[11px] bg-primary-tint text-primary-600">
-                  <BuildingIcon size={22} />
-                </span>
-                <div>
-                  <h1 className="text-xl font-extrabold text-ink">{puesto.titulo_puesto}</h1>
-                  <p className="text-[13px] text-muted">
-                    {puesto.nombre_empresa ?? '—'}
-                    {puesto.nombre_sector ? ` · ${puesto.nombre_sector}` : ''}
-                  </p>
-                </div>
+      {/* Header card */}
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-[11px] bg-primary-tint text-primary-600">
+                <BuildingIcon size={22} />
+              </span>
+              <div>
+                <h1 className="text-xl font-extrabold text-ink">{puesto.titulo_puesto}</h1>
+                <p className="text-[13px] text-muted">
+                  {puesto.nombre_empresa ?? '—'}
+                  {puesto.nombre_sector ? ` · ${puesto.nombre_sector}` : ''}
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                {alerta ? (
-                  // El cartel de arriba ya comunica el estado; acá el puntito
-                  // verde basta como señal de que sigue activo.
-                  <span
-                    className="h-2 w-2 rounded-full bg-success-solid"
-                    title="Activo"
-                    aria-label="Activo"
-                  />
-                ) : (
-                  <Badge tone={puesto.activo ? 'success' : 'neutral'} dot>
-                    {puesto.activo ? 'Activo' : 'Pausado'}
-                  </Badge>
-                )}
-                <span className="text-[12px] text-neutral-400">
-                  Publicado el{' '}
-                  {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
+            </div>
+            <div className="flex items-center gap-2">
+              {alerta ? (
+                // El cartel de arriba ya comunica el estado; acá el puntito
+                // verde basta como señal de que sigue activo.
+                <span
+                  className="h-2 w-2 rounded-full bg-success-solid"
+                  title="Activo"
+                  aria-label="Activo"
+                />
+              ) : (
+                <Badge tone={puesto.activo ? 'success' : 'neutral'} dot>
+                  {puesto.activo ? 'Activo' : 'Pausado'}
+                </Badge>
+              )}
+              <span className="text-[12px] text-neutral-400">
+                Publicado el{' '}
+                {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+            </div>
+          </div>
+
+          <Link
+            href={`/reclutador/puestos/${id}/editar`}
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-neutral-300 bg-surface px-[18px] text-sm font-semibold text-ink-soft hover:bg-neutral-50"
+          >
+            <EditIcon size={16} />
+            Editar
+          </Link>
+        </div>
+      </Card>
+
+      {/* Postulaciones recibidas — total histórico del puesto (todos los ciclos) */}
+      <Card padding="md">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+            <UsersIcon size={20} />
+          </span>
+          <div>
+            <p className="text-xl font-extrabold leading-tight text-ink">{totalPostulaciones}</p>
+            <p className="text-[12.5px] text-muted">
+              Postulación{totalPostulaciones !== 1 ? 'es' : ''} recibida
+              {totalPostulaciones !== 1 ? 's' : ''} en total
+            </p>
+          </div>
+          {totalPostulaciones > 0 && (
+            <Link
+              href={`/reclutador/postulaciones?puesto=${id}`}
+              className="ml-auto inline-flex h-8 items-center rounded-md bg-primary-tint px-3 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors"
+            >
+              Ver postulaciones
+            </Link>
+          )}
+        </div>
+      </Card>
+
+      {/* Description */}
+      {puesto.descripcion_texto && (
+        <Card>
+          <h2 className="text-[14px] font-bold text-ink mb-3">Descripción</h2>
+          <p className="text-[13px] leading-relaxed text-ink-soft whitespace-pre-wrap">
+            {puesto.descripcion_texto}
+          </p>
+        </Card>
+      )}
+
+      {/* Details */}
+      <Card>
+        <h2 className="text-[14px] font-bold text-ink mb-3">Detalles</h2>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
+          <div>
+            <dt className="text-muted">Carga horaria</dt>
+            <dd className="font-medium text-ink">
+              {CARGA_HORARIA_LABEL[puesto.carga_horaria] ?? puesto.carga_horaria}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted">Modalidad</dt>
+            <dd className="font-medium text-ink">
+              {UBICACION_LABEL[puesto.ubicacion] ?? puesto.ubicacion}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted">Ubicación</dt>
+            <dd className="font-medium text-ink">
+              {puesto.nombre_localidad
+                ? [puesto.nombre_localidad, puesto.nombre_provincia].filter(Boolean).join(', ')
+                : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted">Idioma</dt>
+            <dd className="font-medium text-ink">{puesto.idioma || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">Nivel de experiencia</dt>
+            <dd className="font-medium text-ink">{puesto.nivel_experiencia ?? '—'}</dd>
+          </div>
+        </dl>
+      </Card>
+
+      {/* Notas privadas del puesto — only visible to the recruiter */}
+      {puesto.perfil_psicologico_deseado && (
+        <Card>
+          <h2 className="text-[14px] font-bold text-ink mb-1">Notas privadas sobre el puesto</h2>
+          <p className="text-[12px] text-neutral-400 mb-3">
+            Solo visible para vos. Los postulantes nunca verán este campo.
+          </p>
+          <p className="text-[13px] leading-relaxed text-ink-soft whitespace-pre-wrap">
+            {puesto.perfil_psicologico_deseado}
+          </p>
+        </Card>
+      )}
+
+      {/* Historial de contrataciones */}
+      {contrataciones.length > 0 && (
+        <Card>
+          <h2 className="text-[14px] font-bold text-ink mb-3">Historial de contrataciones</h2>
+          <ul className="divide-y divide-neutral-100">
+            {contrataciones.map((c) => (
+              <li key={c.id} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-tint text-primary-600">
+                    <CheckCircleIcon size={16} />
+                  </span>
+                  <span className="truncate text-[13px] font-medium text-ink">{c.nombre}</span>
+                  {c.externo && (
+                    <Badge tone="neutral" className="shrink-0 px-2 py-0.5 text-[10.5px]">Externo</Badge>
+                  )}
+                </div>
+                <span className="shrink-0 text-[12px] text-neutral-400">
+                  {new Date(c.fecha_contratacion).toLocaleDateString('es-AR', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',
                   })}
                 </span>
-              </div>
-            </div>
-
-            <Link
-              href={`/reclutador/puestos/${id}/editar`}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-neutral-300 bg-surface px-[18px] text-sm font-semibold text-ink-soft hover:bg-neutral-50"
-            >
-              <EditIcon size={16} />
-              Editar
-            </Link>
-          </div>
+              </li>
+            ))}
+          </ul>
         </Card>
-
-        {/* Postulaciones recibidas — total histórico del puesto (todos los ciclos) */}
-        <Card padding="md">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
-              <UsersIcon size={20} />
-            </span>
-            <div>
-              <p className="text-xl font-extrabold leading-tight text-ink">{totalPostulaciones}</p>
-              <p className="text-[12.5px] text-muted">
-                Postulación{totalPostulaciones !== 1 ? 'es' : ''} recibida
-                {totalPostulaciones !== 1 ? 's' : ''} en total
-              </p>
-            </div>
-            {totalPostulaciones > 0 && (
-              <Link
-                href={`/reclutador/postulaciones?puesto=${id}`}
-                className="ml-auto inline-flex h-8 items-center rounded-md bg-primary-tint px-3 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors"
-              >
-                Ver postulaciones
-              </Link>
-            )}
-          </div>
-        </Card>
-
-        {/* Description */}
-        {puesto.descripcion_texto && (
-          <Card>
-            <h2 className="text-[14px] font-bold text-ink mb-3">Descripción</h2>
-            <p className="text-[13px] leading-relaxed text-ink-soft whitespace-pre-wrap">
-              {puesto.descripcion_texto}
-            </p>
-          </Card>
-        )}
-
-        {/* Details */}
-        <Card>
-          <h2 className="text-[14px] font-bold text-ink mb-3">Detalles</h2>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
-            <div>
-              <dt className="text-muted">Carga horaria</dt>
-              <dd className="font-medium text-ink">
-                {CARGA_HORARIA_LABEL[puesto.carga_horaria] ?? puesto.carga_horaria}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Modalidad</dt>
-              <dd className="font-medium text-ink">
-                {UBICACION_LABEL[puesto.ubicacion] ?? puesto.ubicacion}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Ubicación</dt>
-              <dd className="font-medium text-ink">
-                {puesto.nombre_localidad
-                  ? [puesto.nombre_localidad, puesto.nombre_provincia].filter(Boolean).join(', ')
-                  : '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Idioma</dt>
-              <dd className="font-medium text-ink">{puesto.idioma || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Nivel de experiencia</dt>
-              <dd className="font-medium text-ink">{puesto.nivel_experiencia ?? '—'}</dd>
-            </div>
-          </dl>
-        </Card>
-
-        {/* Notas privadas del puesto — only visible to the recruiter */}
-        {puesto.perfil_psicologico_deseado && (
-          <Card>
-            <h2 className="text-[14px] font-bold text-ink mb-1">Notas privadas sobre el puesto</h2>
-            <p className="text-[12px] text-neutral-400 mb-3">
-              Solo visible para vos. Los postulantes nunca verán este campo.
-            </p>
-            <p className="text-[13px] leading-relaxed text-ink-soft whitespace-pre-wrap">
-              {puesto.perfil_psicologico_deseado}
-            </p>
-          </Card>
-        )}
-
-        {/* Historial de contrataciones */}
-        {contrataciones.length > 0 && (
-          <Card>
-            <h2 className="text-[14px] font-bold text-ink mb-3">Historial de contrataciones</h2>
-            <ul className="divide-y divide-neutral-100">
-              {contrataciones.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-tint text-primary-600">
-                      <CheckCircleIcon size={16} />
-                    </span>
-                    <span className="truncate text-[13px] font-medium text-ink">{c.nombre}</span>
-                    {c.externo && (
-                      <Badge tone="neutral" className="shrink-0 px-2 py-0.5 text-[10.5px]">Externo</Badge>
-                    )}
-                  </div>
-                  <span className="shrink-0 text-[12px] text-neutral-400">
-                    {new Date(c.fecha_contratacion).toLocaleDateString('es-AR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
-      </div>
-    </TyCGate>
+      )}
+    </div>
   )
 }

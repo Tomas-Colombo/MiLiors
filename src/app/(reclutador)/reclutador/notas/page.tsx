@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card, Badge, EmptyState } from '@/components/ui'
 import { NotebookIcon } from '@/components/icons'
 import { getTodasLasNotasReclutador } from '@/modules/postulantes/queries'
@@ -110,62 +109,60 @@ export default async function MisNotasPage({
   const { page, pageCount, slice } = paginar(notas, sp.page)
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">Mis notas</h1>
-          <p className="mt-1 text-muted text-sm">
-            {todasLasNotas.length} nota{todasLasNotas.length !== 1 ? 's' : ''} en total
-          </p>
-        </div>
-
-        {todasLasNotas.length > 0 && (
-          <Suspense>
-            <FiltrosNotas
-              candidatos={candidatosConNotas}
-              totalVisible={notas.length}
-              totalTotal={todasLasNotas.length}
-            />
-          </Suspense>
-        )}
-
-        {/* Results */}
-        {notas.length === 0 ? (
-          <EmptyState
-            icon={<NotebookIcon size={24} />}
-            title={todasLasNotas.length === 0 ? 'Sin notas aún' : 'Ninguna nota coincide con los filtros'}
-            description={
-              todasLasNotas.length === 0
-                ? 'No hay notas privadas para mostrar. Visitá el perfil de un candidato para agregar una.'
-                : 'Probá cambiando o limpiando los filtros.'
-            }
-            action={
-              todasLasNotas.length === 0 ? (
-                <Link
-                  href="/reclutador/postulantes"
-                  className="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:brightness-105"
-                >
-                  Buscar candidatos
-                </Link>
-              ) : undefined
-            }
-          />
-        ) : (
-          <div className="space-y-4">
-            {slice.map((nota) => (
-              <NotaCard
-                key={nota.id}
-                nota={nota}
-                postulaciones={postulacionesDeNota(nota, postulacionesPorPostulante)}
-              />
-            ))}
-          </div>
-        )}
-
-        {notas.length > 0 && <Paginador page={page} pageCount={pageCount} />}
+    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-extrabold text-ink">Mis notas</h1>
+        <p className="mt-1 text-muted text-sm">
+          {todasLasNotas.length} nota{todasLasNotas.length !== 1 ? 's' : ''} en total
+        </p>
       </div>
-    </TyCGate>
+
+      {todasLasNotas.length > 0 && (
+        <Suspense>
+          <FiltrosNotas
+            candidatos={candidatosConNotas}
+            totalVisible={notas.length}
+            totalTotal={todasLasNotas.length}
+          />
+        </Suspense>
+      )}
+
+      {/* Results */}
+      {notas.length === 0 ? (
+        <EmptyState
+          icon={<NotebookIcon size={24} />}
+          title={todasLasNotas.length === 0 ? 'Sin notas aún' : 'Ninguna nota coincide con los filtros'}
+          description={
+            todasLasNotas.length === 0
+              ? 'No hay notas privadas para mostrar. Visitá el perfil de un candidato para agregar una.'
+              : 'Probá cambiando o limpiando los filtros.'
+          }
+          action={
+            todasLasNotas.length === 0 ? (
+              <Link
+                href="/reclutador/postulantes"
+                className="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:brightness-105"
+              >
+                Buscar candidatos
+              </Link>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          {slice.map((nota) => (
+            <NotaCard
+              key={nota.id}
+              nota={nota}
+              postulaciones={postulacionesDeNota(nota, postulacionesPorPostulante)}
+            />
+          ))}
+        </div>
+      )}
+
+      {notas.length > 0 && <Paginador page={page} pageCount={pageCount} />}
+    </div>
   )
 }
 

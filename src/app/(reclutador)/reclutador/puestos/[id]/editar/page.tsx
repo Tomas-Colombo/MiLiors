@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { Card } from '@/components/ui'
 import { ChevronLeftIcon } from '@/components/icons'
 import { getPuestoById, getSectores } from '@/modules/puestos/queries'
@@ -32,35 +31,33 @@ export default async function EditarPuestoPage({ params }: { params: Params }) {
   const ubicacionInicial = await getUbicacionInicial(puesto.localidad_id)
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
-        <Link
-          href={`/reclutador/puestos/${id}`}
-          className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
-        >
-          <ChevronLeftIcon size={16} />
-          Volver al detalle
-        </Link>
+    <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
+      <Link
+        href={`/reclutador/puestos/${id}`}
+        className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
+      >
+        <ChevronLeftIcon size={16} />
+        Volver al detalle
+      </Link>
 
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">Editar puesto</h1>
-          <p className="mt-1 text-muted">Actualizá la información del puesto.</p>
-        </div>
-
-        <Card>
-          <EditarPuestoForm
-            puestoId={id}
-            puesto={puesto}
-            empresas={empresas}
-            sectores={sectores}
-            carreras={carreras}
-            formularioPreselector={formularioPreselector}
-            formularioBloqueado={formularioBloqueado}
-            provincias={provincias}
-            ubicacionInicial={ubicacionInicial}
-          />
-        </Card>
+      <div>
+        <h1 className="text-2xl font-extrabold text-ink">Editar puesto</h1>
+        <p className="mt-1 text-muted">Actualizá la información del puesto.</p>
       </div>
-    </TyCGate>
+
+      <Card>
+        <EditarPuestoForm
+          puestoId={id}
+          puesto={puesto}
+          empresas={empresas}
+          sectores={sectores}
+          carreras={carreras}
+          formularioPreselector={formularioPreselector}
+          formularioBloqueado={formularioBloqueado}
+          provincias={provincias}
+          ubicacionInicial={ubicacionInicial}
+        />
+      </Card>
+    </div>
   )
 }

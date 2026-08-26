@@ -1,5 +1,6 @@
 import { Field, Input, MonthYearInput } from '@/components/ui'
 import { errorDe } from './form-estado'
+import { mesActual } from './opciones'
 import type { CursoItem } from '@/modules/perfil-tecnico/queries'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -25,8 +26,17 @@ export function CursoCampos({ item, state }: { item?: CursoItem; state: ActionRe
             status={errorDe(state, 'institucion') ? 'error' : 'default'}
           />
         </Field>
-        <Field label="Fecha de finalización" hint="Opcional">
-          <MonthYearInput name="fecha_fin" defaultValue={item?.fecha_fin ?? ''} />
+        <Field
+          label="Fecha de finalización"
+          hint="Opcional"
+          error={errorDe(state, 'fecha_fin')}
+        >
+          <MonthYearInput
+            name="fecha_fin"
+            defaultValue={item?.fecha_fin ?? ''}
+            max={mesActual()}
+            status={errorDe(state, 'fecha_fin') ? 'error' : 'default'}
+          />
         </Field>
       </div>
 

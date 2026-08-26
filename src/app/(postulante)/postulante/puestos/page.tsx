@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import { requireEneagramaCompleto } from '@/lib/guards'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { Alert, Card, EmptyState } from '@/components/ui'
 import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 import {
@@ -90,115 +89,113 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
   const totalPages = Math.ceil(total / PUESTOS_PER_PAGE)
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-        {/* Encabezado */}
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">Buscar puestos</h1>
-          <p className="mt-1 text-sm text-muted">
-            {total} resultado{total !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        {/* Filtros */}
-        <Card padding="lg">
-          <Suspense fallback={<div className="h-36 animate-pulse rounded-lg bg-neutral-100" />}>
-            <FiltrosPuestos
-              sectores={sectores}
-              provincias={provincias}
-              departamentos={departamentosFiltro}
-              carreras={carrerasOrdenadas}
-            />
-          </Suspense>
-        </Card>
-
-        {bloqueado && <AvisoCertificado sinCertificado={sinCertificado} />}
-
-        {/* Resultados */}
-        {puestos.length === 0 && carreraFiltro ? (
-          <Alert
-            tone="warning"
-            title={`No encontramos puestos para ${carreras.find((c) => c.value === carreraFiltro)?.label ?? 'esta carrera'}.`}
-          >
-            Esto no significa que no existan: puede haber puestos que apliquen a tu perfil sin una
-            carrera asignada. Probá buscando sin este filtro, o ajustando los demás.
-          </Alert>
-        ) : puestos.length === 0 ? (
-          <EmptyState
-            icon={<BuildingIcon size={24} />}
-            title="No encontramos puestos"
-            description="Probá ajustando los filtros de búsqueda."
-          />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {puestos.map((puesto) => (
-                <PuestoCard
-                  key={puesto.id}
-                  puesto={puesto}
-                  tieneFormulario={puestosConFormulario.has(puesto.id)}
-                  actions={
-                    <PostularButton
-                      puestoId={puesto.id}
-                      yaPostulo={yaPostuladosSet.has(puesto.id)}
-                      disabled={bloqueado}
-                      tieneFormulario={puestosConFormulario.has(puesto.id)}
-                    />
-                  }
-                />
-              ))}
-            </div>
-
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-3 pt-2">
-                {page > 0 ? (
-                  <Link
-                    href={buildUrl(sp, { page: String(page - 1) })}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
-                  >
-                    <ChevronLeftIcon size={16} />
-                  </Link>
-                ) : (
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-100 text-neutral-300 cursor-not-allowed">
-                    <ChevronLeftIcon size={16} />
-                  </span>
-                )}
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <Link
-                      key={i}
-                      href={buildUrl(sp, { page: String(i) })}
-                      className={[
-                        'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
-                        i === page
-                          ? 'bg-primary-600 text-white'
-                          : 'border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
-                      ].join(' ')}
-                    >
-                      {i + 1}
-                    </Link>
-                  ))}
-                </div>
-
-                {page < totalPages - 1 ? (
-                  <Link
-                    href={buildUrl(sp, { page: String(page + 1) })}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
-                  >
-                    <ChevronRightIcon size={16} />
-                  </Link>
-                ) : (
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-100 text-neutral-300 cursor-not-allowed">
-                    <ChevronRightIcon size={16} />
-                  </span>
-                )}
-              </div>
-            )}
-          </>
-        )}
+    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
+      {/* Encabezado */}
+      <div>
+        <h1 className="text-2xl font-extrabold text-ink">Buscar puestos</h1>
+        <p className="mt-1 text-sm text-muted">
+          {total} resultado{total !== 1 ? 's' : ''}
+        </p>
       </div>
-    </TyCGate>
+
+      {/* Filtros */}
+      <Card padding="lg">
+        <Suspense fallback={<div className="h-36 animate-pulse rounded-lg bg-neutral-100" />}>
+          <FiltrosPuestos
+            sectores={sectores}
+            provincias={provincias}
+            departamentos={departamentosFiltro}
+            carreras={carrerasOrdenadas}
+          />
+        </Suspense>
+      </Card>
+
+      {bloqueado && <AvisoCertificado sinCertificado={sinCertificado} />}
+
+      {/* Resultados */}
+      {puestos.length === 0 && carreraFiltro ? (
+        <Alert
+          tone="warning"
+          title={`No encontramos puestos para ${carreras.find((c) => c.value === carreraFiltro)?.label ?? 'esta carrera'}.`}
+        >
+          Esto no significa que no existan: puede haber puestos que apliquen a tu perfil sin una
+          carrera asignada. Probá buscando sin este filtro, o ajustando los demás.
+        </Alert>
+      ) : puestos.length === 0 ? (
+        <EmptyState
+          icon={<BuildingIcon size={24} />}
+          title="No encontramos puestos"
+          description="Probá ajustando los filtros de búsqueda."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {puestos.map((puesto) => (
+              <PuestoCard
+                key={puesto.id}
+                puesto={puesto}
+                tieneFormulario={puestosConFormulario.has(puesto.id)}
+                actions={
+                  <PostularButton
+                    puestoId={puesto.id}
+                    yaPostulo={yaPostuladosSet.has(puesto.id)}
+                    disabled={bloqueado}
+                    tieneFormulario={puestosConFormulario.has(puesto.id)}
+                  />
+                }
+              />
+            ))}
+          </div>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              {page > 0 ? (
+                <Link
+                  href={buildUrl(sp, { page: String(page - 1) })}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                >
+                  <ChevronLeftIcon size={16} />
+                </Link>
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-100 text-neutral-300 cursor-not-allowed">
+                  <ChevronLeftIcon size={16} />
+                </span>
+              )}
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <Link
+                    key={i}
+                    href={buildUrl(sp, { page: String(i) })}
+                    className={[
+                      'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
+                      i === page
+                        ? 'bg-primary-600 text-white'
+                        : 'border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
+                    ].join(' ')}
+                  >
+                    {i + 1}
+                  </Link>
+                ))}
+              </div>
+
+              {page < totalPages - 1 ? (
+                <Link
+                  href={buildUrl(sp, { page: String(page + 1) })}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                >
+                  <ChevronRightIcon size={16} />
+                </Link>
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-100 text-neutral-300 cursor-not-allowed">
+                  <ChevronRightIcon size={16} />
+                </span>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }

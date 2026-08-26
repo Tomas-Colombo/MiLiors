@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
@@ -415,12 +416,24 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
         estado_informe: 'PENDIENTE',
       })
     }
-    // Auto-generación inicial. Errores no-fatales — se reintenta desde la sección.
-    try {
-      await generarInforme()
-    } catch (e) {
-      console.error('[eneagrama] Error auto-generando informe:', e)
-    }
+    // Auto-generación inicial FUERA del camino de la respuesta.
+    //
+    // `generarInforme` hace una llamada al LLM de hasta 6000 tokens: decenas de
+    // segundos. Tenerla en el await hacía que el postulante mirara un spinner
+    // todo ese rato para ver un eneatipo que ya estaba calculado y guardado —
+    // el cálculo es determinístico y tarda milisegundos; lo lento era esto.
+    //
+    // `after` corre el trabajo una vez enviada la respuesta, dentro de la misma
+    // invocación (no es un fire-and-forget: la plataforma mantiene el proceso
+    // vivo hasta `maxDuration`). El postulante ve su resultado enseguida y el
+    // informe aparece solo. Errores no-fatales — se reintenta desde la sección.
+    after(async () => {
+      try {
+        await generarInforme()
+      } catch (e) {
+        console.error('[eneagrama] Error auto-generando informe:', e)
+      }
+    })
   }
 
   revalidatePath('/postulante')

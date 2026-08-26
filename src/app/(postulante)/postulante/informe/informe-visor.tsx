@@ -1,6 +1,7 @@
 'use client'
 
-import { useTransition, useState } from 'react'
+import { useTransition, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Alert, Skeleton, Card, Badge, Button } from '@/components/ui'
 import { generarInforme } from '@/modules/informe/actions'
 import type { InformeData, FeedbackInforme } from '@/modules/informe/queries'
@@ -16,6 +17,24 @@ type Props = {
   email?: string
 }
 
+/**
+ * Ventana en la que un informe PENDIENTE se considera "generándose ahora" y no
+ * "interrumpido".
+ *
+ * El enum de la base sólo tiene PENDIENTE / LISTO / ERROR, así que no hay un
+ * estado GENERANDO que distinguir. Pero sí hay una diferencia observable: la
+ * auto-generación que dispara el Eneagrama deja el registro en PENDIENTE y le
+ * toca `updated_at` justo antes de llamar al LLM. Un PENDIENTE recién tocado
+ * está corriendo; uno de hace horas se cortó a la mitad.
+ */
+const MINUTOS_GENERACION = 5
+
+function seEstaGenerando(informe: InformeData | null): boolean {
+  if (informe?.estado_informe !== 'PENDIENTE' || !informe.updated_at) return false
+  const transcurrido = Date.now() - new Date(informe.updated_at).getTime()
+  return transcurrido >= 0 && transcurrido < MINUTOS_GENERACION * 60_000
+}
+
 function formatFecha(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -27,6 +46,18 @@ function formatFecha(iso: string): string {
 export function InformeVisor({ informe, feedback, email }: Props) {
   const [isPending, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
+  const router = useRouter()
+
+  // La generación corre en el servidor, fuera de esta pestaña: nada nos avisa
+  // cuando termina. Mientras dure la ventana, se vuelve a pedir la página cada
+  // tanto; cuando el informe pasa a LISTO el componente sale por arriba y el
+  // efecto se limpia solo.
+  const generandoEnFondo = seEstaGenerando(informe)
+  useEffect(() => {
+    if (!generandoEnFondo) return
+    const id = setInterval(() => router.refresh(), 8000)
+    return () => clearInterval(id)
+  }, [generandoEnFondo, router])
 
   function handleGenerar() {
     setActionError(null)
@@ -121,7 +152,7 @@ export function InformeVisor({ informe, feedback, email }: Props) {
   }
 
   // ── Sin contenido visible: null / PENDIENTE / LISTO en formato viejo ─────────
-  const estaGenerando = isPending
+  const estaGenerando = isPending || generandoEnFondo
   // Informe LISTO pero sin contenido_json (heredado del formato anterior):
   // necesita generarse en el nuevo formato.
   const esFormatoViejo = !estaGenerando && informe?.estado_informe === 'LISTO'
@@ -146,7 +177,7 @@ export function InformeVisor({ informe, feedback, email }: Props) {
 
           <p className="text-sm text-muted">
             {estaGenerando
-              ? 'Generando tu informe de personalidad. Puede tardar unos segundos.'
+              ? 'Generando tu informe de personalidad. Puede tardar hasta un minuto; esta página se actualiza sola.'
               : esFormatoViejo
               ? 'Tenés un informe de una versión anterior. Generalo de nuevo para verlo con el formato actual.'
               : quedoAtascado

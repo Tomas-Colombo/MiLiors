@@ -5,6 +5,7 @@ import { Button, Input, Textarea, Field, Alert, Badge } from '@/components/ui'
 import { PlusIcon, FileIcon, ChevronDownIcon } from '@/components/icons'
 import { publicarTyC } from '@/modules/admin/actions'
 import { cn } from '@/lib/utils'
+import { TyCDocumento } from '@/components/shared/tyc-documento'
 import type { ActionResult } from '@/lib/types/domain'
 
 type Version = {
@@ -176,9 +177,7 @@ function HistorialTab({ versiones }: { versiones: Version[] }) {
 
             {abierta && (
               <div className="border-t border-neutral-100 px-5 py-4">
-                <div className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap text-[13px] leading-relaxed text-soft">
-                  {v.descripcion}
-                </div>
+                <TyCDocumento descripcion={v.descripcion} className="max-h-[40vh] overflow-y-auto" />
               </div>
             )}
           </div>

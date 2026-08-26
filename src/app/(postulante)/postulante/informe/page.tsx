@@ -1,6 +1,5 @@
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { getInformeActual, getFeedbackInforme } from '@/modules/informe/queries'
 import { InformeVisor } from './informe-visor'
 
@@ -20,18 +19,16 @@ export default async function InformePage() {
       : null
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">
-            Informe de Personalidad
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Generado a partir de tu Eneagrama y Human Design.
-          </p>
-        </div>
-        <InformeVisor informe={informe} feedback={feedback} email={session.email} />
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+          Informe de Personalidad
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          Generado a partir de tu Eneagrama y Human Design.
+        </p>
       </div>
-    </TyCGate>
+      <InformeVisor informe={informe} feedback={feedback} email={session.email} />
+    </div>
   )
 }

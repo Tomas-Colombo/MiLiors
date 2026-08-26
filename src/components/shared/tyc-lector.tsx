@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Modal, Button } from '@/components/ui'
 import { ShieldIcon } from '@/components/icons'
+import { TyCDocumento, TYC_MODAL_WIDTH } from './tyc-documento'
 
 type TyC = {
   id: string
@@ -43,16 +44,14 @@ export function TyCLector({ tyc }: { tyc: TyC }) {
         open={open}
         onClose={() => setOpen(false)}
         title={`Términos y Condiciones — v${tyc.version}`}
-        width={640}
+        width={TYC_MODAL_WIDTH}
         footer={
           <Button className="w-full" variant="secondary" onClick={() => setOpen(false)}>
             Cerrar
           </Button>
         }
       >
-        <div className="max-h-[55vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-soft">
-          {tyc.descripcion}
-        </div>
+        <TyCDocumento descripcion={tyc.descripcion} />
       </Modal>
     </>
   )

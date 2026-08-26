@@ -27,15 +27,22 @@ import {
   eliminarIdioma,
 } from '@/modules/perfil-tecnico/actions'
 import type { PerfilTecnicoCompleto, CompetenciaItem, FormacionItem, CursoItem, ExperienciaItem, IdiomaItem } from '@/modules/perfil-tecnico/queries'
+import type { CarreraOption } from '@/modules/carreras/queries'
 
 // ─── FORMACIÓN ────────────────────────────────────────────────────────────────
 
-function FormacionForm({ onSuccess }: { onSuccess: () => void }) {
+function FormacionForm({
+  onSuccess,
+  carreras,
+}: {
+  onSuccess: () => void
+  carreras: CarreraOption[]
+}) {
   const [state, action, pending] = useFormAccion(agregarFormacion, onSuccess)
 
   return (
     <PanelAlta titulo="Agregar formación" action={action} state={state} pending={pending}>
-      <FormacionCampos state={state} />
+      <FormacionCampos state={state} carreras={carreras} />
     </PanelAlta>
   )
 }
@@ -44,21 +51,29 @@ function FormacionEditForm({
   item,
   onSuccess,
   onCancel,
+  carreras,
 }: {
   item: FormacionItem
   onSuccess: () => void
   onCancel: () => void
+  carreras: CarreraOption[]
 }) {
   const [state, action, pending] = useFormAccion(editarFormacion.bind(null, item.id), onSuccess)
 
   return (
     <PanelEdicion action={action} state={state} pending={pending} onCancel={onCancel}>
-      <FormacionCampos item={item} state={state} />
+      <FormacionCampos item={item} state={state} carreras={carreras} />
     </PanelEdicion>
   )
 }
 
-function SeccionFormacion({ formaciones }: { formaciones: FormacionItem[] }) {
+function SeccionFormacion({
+  formaciones,
+  carreras,
+}: {
+  formaciones: FormacionItem[]
+  carreras: CarreraOption[]
+}) {
   return (
     <SeccionCrud
       items={formaciones}
@@ -75,8 +90,10 @@ function SeccionFormacion({ formaciones }: { formaciones: FormacionItem[] }) {
           {...acciones}
         />
       )}
-      renderEdicion={(f, acciones) => <FormacionEditForm item={f} {...acciones} />}
-      renderAlta={(acciones) => <FormacionForm {...acciones} />}
+      renderEdicion={(f, acciones) => (
+        <FormacionEditForm item={f} carreras={carreras} {...acciones} />
+      )}
+      renderAlta={(acciones) => <FormacionForm carreras={carreras} {...acciones} />}
     />
   )
 }
@@ -251,9 +268,11 @@ const TAB_ITEMS = [
 export function PerfilTecnicoUI({
   perfil,
   competenciasCatalogo,
+  carreras,
 }: {
   perfil: PerfilTecnicoCompleto | null
   competenciasCatalogo: CompetenciaItem[]
+  carreras: CarreraOption[]
 }) {
   const [tab, setTab] = useState('formacion')
 
@@ -267,7 +286,9 @@ export function PerfilTecnicoUI({
     <div>
       <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} className="mb-6" />
 
-      {tab === 'formacion' && <SeccionFormacion formaciones={formaciones} />}
+      {tab === 'formacion' && (
+        <SeccionFormacion formaciones={formaciones} carreras={carreras} />
+      )}
       {tab === 'cursos' && <SeccionCursos cursos={cursos} />}
       {tab === 'experiencia' && <SeccionExperiencia experiencias={experiencias} />}
       {tab === 'idiomas' && <SeccionIdiomas idiomas={idiomas} />}

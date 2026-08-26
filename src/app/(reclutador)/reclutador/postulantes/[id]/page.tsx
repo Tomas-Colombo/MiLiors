@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge, Chip, Alert } from '@/components/ui'
 import {
@@ -152,319 +151,317 @@ export default async function PostulanteDetallePage({
   const contactoDisponible = postulante.email !== null
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-        {/* Back */}
-        <VolverLink
-          href={volver.href}
-          className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
-        >
-          <ChevronLeftIcon size={16} />
-          {volver.label}
-        </VolverLink>
+    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
+      {/* Back */}
+      <VolverLink
+        href={volver.href}
+        className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
+      >
+        <ChevronLeftIcon size={16} />
+        {volver.label}
+      </VolverLink>
 
-        {/* Descarte automático por formulario preselector */}
-        {motivoDescarte && (
-          <Alert tone="error" title="No avanza automáticamente">
-            {motivoDescarte}
-          </Alert>
-        )}
+      {/* Descarte automático por formulario preselector */}
+      {motivoDescarte && (
+        <Alert tone="error" title="No avanza automáticamente">
+          {motivoDescarte}
+        </Alert>
+      )}
 
-        {/* Header card */}
-        <Card>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              {/* Avatar placeholder + name */}
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint text-primary-600">
-                  <UserIcon size={22} />
-                </span>
-                <div>
-                  <h1 className="text-xl font-extrabold text-ink">{postulante.nombre_completo}</h1>
-                  {postulante.carrera && (
-                    <p className="text-[13px] text-muted">{postulante.carrera}</p>
-                  )}
-                  {(postulante.nombre_localidad || postulante.nombre_provincia) && (
-                    <p className="text-[12px] text-neutral-400 mt-0.5">
-                      📍 {[postulante.nombre_localidad, postulante.nombre_provincia].filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                </div>
+      {/* Header card */}
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            {/* Avatar placeholder + name */}
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint text-primary-600">
+                <UserIcon size={22} />
+              </span>
+              <div>
+                <h1 className="text-xl font-extrabold text-ink">{postulante.nombre_completo}</h1>
+                {postulante.carrera && (
+                  <p className="text-[13px] text-muted">{postulante.carrera}</p>
+                )}
+                {(postulante.nombre_localidad || postulante.nombre_provincia) && (
+                  <p className="text-[12px] text-neutral-400 mt-0.5">
+                    📍 {[postulante.nombre_localidad, postulante.nombre_provincia].filter(Boolean).join(', ')}
+                  </p>
+                )}
               </div>
-
-              {/* Eneatipo */}
-              {postulante.eneatipo_numero != null && (
-                <div className="flex items-center gap-2">
-                  <Badge tone="primary">
-                    Eneatipo {postulante.eneatipo_numero}
-                    {postulante.eneatipo_nombre ? ` · ${postulante.eneatipo_nombre}` : ''}
-                  </Badge>
-                </div>
-              )}
-
-              {/* Competencias */}
-              {postulante.competencias.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {postulante.competencias.map((c) => (
-                    <Chip key={c.nombre}>{c.nombre}</Chip>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* AI assistant CTA */}
-            <Link
-              href={`/reclutador/asistente?postulante=${id}`}
-              className="inline-flex items-center gap-2 rounded-md bg-primary-tint px-4 h-10 text-[13px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors"
-            >
-              <SparklesIcon size={16} />
-              Consultar Asistente IA
-            </Link>
+            {/* Eneatipo */}
+            {postulante.eneatipo_numero != null && (
+              <div className="flex items-center gap-2">
+                <Badge tone="primary">
+                  Eneatipo {postulante.eneatipo_numero}
+                  {postulante.eneatipo_nombre ? ` · ${postulante.eneatipo_nombre}` : ''}
+                </Badge>
+              </div>
+            )}
+
+            {/* Competencias */}
+            {postulante.competencias.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {postulante.competencias.map((c) => (
+                  <Chip key={c.nombre}>{c.nombre}</Chip>
+                ))}
+              </div>
+            )}
           </div>
-        </Card>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left column — main info */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* AI assistant CTA */}
+          <Link
+            href={`/reclutador/asistente?postulante=${id}`}
+            className="inline-flex items-center gap-2 rounded-md bg-primary-tint px-4 h-10 text-[13px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors"
+          >
+            <SparklesIcon size={16} />
+            Consultar Asistente IA
+          </Link>
+        </div>
+      </Card>
 
-            {/* Human Design */}
-            {postulante.humanDesign && (
-              <Card>
-                <h2 className="text-[14px] font-bold text-ink mb-3">Human Design</h2>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
-                  <div>
-                    <dt className="text-muted">Tipo energético</dt>
-                    <dd className="font-medium text-ink">{postulante.humanDesign.tipo_energetico}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Autoridad</dt>
-                    <dd className="font-medium text-ink">{postulante.humanDesign.autoridad_hd}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Perfil</dt>
-                    <dd className="font-medium text-ink">{postulante.humanDesign.perfil_hd}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Estrategia</dt>
-                    <dd className="font-medium text-ink">{postulante.humanDesign.estrategia_hd}</dd>
-                  </div>
-                </dl>
-              </Card>
-            )}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left column — main info */}
+        <div className="lg:col-span-2 space-y-6">
 
-            {/* Respuestas del formulario preselector */}
-            {respuestasFormulario.length > 0 && (
-              <Card>
-                <h2 className="text-[14px] font-bold text-ink mb-3">Respuestas del formulario preselector</h2>
-                <ul className="space-y-3">
-                  {respuestasFormulario.map((r, i) => (
-                    <li key={i} className="text-[13px]">
-                      <p className="font-semibold text-ink">{r.preguntaTexto}</p>
-                      <p className={r.fallidaCritica ? 'text-error' : 'text-ink-soft'}>
-                        {r.respuestaTexto}
-                        {r.fallidaCritica && (
-                          <Badge tone="error" className="ml-2 align-middle">
-                            Crítica no aprobada
-                          </Badge>
-                        )}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
+          {/* Human Design */}
+          {postulante.humanDesign && (
+            <Card>
+              <h2 className="text-[14px] font-bold text-ink mb-3">Human Design</h2>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
+                <div>
+                  <dt className="text-muted">Tipo energético</dt>
+                  <dd className="font-medium text-ink">{postulante.humanDesign.tipo_energetico}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Autoridad</dt>
+                  <dd className="font-medium text-ink">{postulante.humanDesign.autoridad_hd}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Perfil</dt>
+                  <dd className="font-medium text-ink">{postulante.humanDesign.perfil_hd}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Estrategia</dt>
+                  <dd className="font-medium text-ink">{postulante.humanDesign.estrategia_hd}</dd>
+                </div>
+              </dl>
+            </Card>
+          )}
 
-            {/* Formación académica */}
-            {postulante.formaciones.length > 0 && (
-              <Card>
-                <h2 className="text-[14px] font-bold text-ink mb-3">Formación académica</h2>
-                <ul className="space-y-3">
-                  {postulante.formaciones.map((f, i) => (
-                    <li key={i} className="text-[13px]">
-                      <p className="font-semibold text-ink">{f.titulo}</p>
-                      <p className="text-muted">{f.institucion}</p>
-                      {f.fecha_graduacion && (
-                        <p className="text-neutral-400 text-xs">
-                          {new Date(f.fecha_graduacion).toLocaleDateString('es-AR', {
-                            month: 'long',
-                            year: 'numeric',
-                          })}
-                        </p>
+          {/* Respuestas del formulario preselector */}
+          {respuestasFormulario.length > 0 && (
+            <Card>
+              <h2 className="text-[14px] font-bold text-ink mb-3">Respuestas del formulario preselector</h2>
+              <ul className="space-y-3">
+                {respuestasFormulario.map((r, i) => (
+                  <li key={i} className="text-[13px]">
+                    <p className="font-semibold text-ink">{r.preguntaTexto}</p>
+                    <p className={r.fallidaCritica ? 'text-error' : 'text-ink-soft'}>
+                      {r.respuestaTexto}
+                      {r.fallidaCritica && (
+                        <Badge tone="error" className="ml-2 align-middle">
+                          Crítica no aprobada
+                        </Badge>
                       )}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
-            {/* Cursos */}
-            {postulante.cursos.length > 0 && (
-              <Card>
-                <h2 className="text-[14px] font-bold text-ink mb-3">Cursos</h2>
-                <ul className="space-y-3">
-                  {postulante.cursos.map((c, i) => (
-                    <li key={i} className="text-[13px]">
-                      <p className="font-semibold text-ink">{c.nombre}</p>
-                      <p className="text-muted">{c.institucion}</p>
+          {/* Formación académica */}
+          {postulante.formaciones.length > 0 && (
+            <Card>
+              <h2 className="text-[14px] font-bold text-ink mb-3">Formación académica</h2>
+              <ul className="space-y-3">
+                {postulante.formaciones.map((f, i) => (
+                  <li key={i} className="text-[13px]">
+                    <p className="font-semibold text-ink">{f.titulo}</p>
+                    <p className="text-muted">{f.institucion}</p>
+                    {f.fecha_graduacion && (
                       <p className="text-neutral-400 text-xs">
-                        {[
-                          c.fecha_fin
-                            ? new Date(c.fecha_fin).toLocaleDateString('es-AR', {
-                                month: 'long',
-                                year: 'numeric',
-                              })
-                            : null,
-                          c.duracion_horas ? `${c.duracion_horas} h` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                      {c.url_credencial && (
-                        <a
-                          href={c.url_credencial}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-medium text-primary-600 hover:underline"
-                        >
-                          Ver credencial
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-
-            {/* Experiencia laboral */}
-            {postulante.experiencias.length > 0 && (
-              <Card>
-                <h2 className="text-[14px] font-bold text-ink mb-3">Experiencia laboral</h2>
-                <ul className="space-y-3">
-                  {postulante.experiencias.map((e, i) => (
-                    <li key={i} className="text-[13px]">
-                      <p className="font-semibold text-ink">{e.puesto}</p>
-                      <p className="text-muted">{e.empresa}</p>
-                      <p className="text-neutral-400 text-xs">
-                        {new Date(e.fecha_inicio).toLocaleDateString('es-AR', {
-                          month: 'short',
+                        {new Date(f.fecha_graduacion).toLocaleDateString('es-AR', {
+                          month: 'long',
                           year: 'numeric',
                         })}
-                        {' — '}
-                        {e.fecha_fin
-                          ? new Date(e.fecha_fin).toLocaleDateString('es-AR', {
-                              month: 'short',
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Cursos */}
+          {postulante.cursos.length > 0 && (
+            <Card>
+              <h2 className="text-[14px] font-bold text-ink mb-3">Cursos</h2>
+              <ul className="space-y-3">
+                {postulante.cursos.map((c, i) => (
+                  <li key={i} className="text-[13px]">
+                    <p className="font-semibold text-ink">{c.nombre}</p>
+                    <p className="text-muted">{c.institucion}</p>
+                    <p className="text-neutral-400 text-xs">
+                      {[
+                        c.fecha_fin
+                          ? new Date(c.fecha_fin).toLocaleDateString('es-AR', {
+                              month: 'long',
                               year: 'numeric',
                             })
-                          : 'Actualidad'}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-
-            {/* Idiomas */}
-            {postulante.idiomas.length > 0 && (
-              <Card>
-                <h2 className="text-[14px] font-bold text-ink mb-3">Idiomas</h2>
-                <ul className="space-y-1.5">
-                  {postulante.idiomas.map((id, i) => (
-                    <li key={i} className="flex items-center justify-between text-[13px]">
-                      <span className="text-ink">{id.nombre}</span>
-                      <Badge tone="neutral">{id.nivel_idioma}</Badge>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-
-            {/* Informe de personalidad — colapsado por defecto via <details> (no JS) */}
-            {postulante.informe && (
-              <Card padding="none">
-                <details className="group">
-                  <summary className="cursor-pointer list-none px-[22px] py-4 flex items-center justify-between">
-                    <h2 className="text-[14px] font-bold text-ink">Informe de personalidad</h2>
-                    <span className="text-[12px] text-primary-600 font-medium group-open:hidden">
-                      Ver informe ▾
-                    </span>
-                    <span className="text-[12px] text-primary-600 font-medium hidden group-open:inline">
-                      Ocultar ▴
-                    </span>
-                  </summary>
-                  <div className="px-[22px] pb-5 pt-1">
-                    <InformeDisplay data={postulante.informe!} variant="compact" />
-                  </div>
-                </details>
-              </Card>
-            )}
-          </div>
-
-          {/* Right column — contact + notes */}
-          <div className="space-y-6">
-            {/* Contact */}
-            <Card>
-              <h2 className="text-[14px] font-bold text-ink mb-3">Contacto</h2>
-              {contactoDisponible ? (
-                <ul className="space-y-2 text-[13px]">
-                  {postulante.email && (
-                    <li className="flex items-center gap-2">
-                      <MailIcon size={14} className="text-muted flex-none" />
+                          : null,
+                        c.duracion_horas ? `${c.duracion_horas} h` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                    {c.url_credencial && (
                       <a
-                        href={`mailto:${postulante.email}`}
-                        className="text-primary-600 hover:underline truncate"
-                      >
-                        {postulante.email}
-                      </a>
-                    </li>
-                  )}
-                  {postulante.telefono && (
-                    <li className="text-ink">{postulante.telefono}</li>
-                  )}
-                  {postulante.enlace_linkedin && (
-                    <li>
-                      <a
-                        href={postulante.enlace_linkedin}
+                        href={c.url_credencial}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary-600 hover:underline"
+                        className="text-xs font-medium text-primary-600 hover:underline"
                       >
-                        LinkedIn ↗
+                        Ver credencial
                       </a>
-                    </li>
-                  )}
-                  {postulante.portfolio && (
-                    <li>
-                      <a
-                        href={postulante.portfolio}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 hover:underline"
-                      >
-                        Portfolio ↗
-                      </a>
-                    </li>
-                  )}
-                </ul>
-              ) : (
-                <Alert tone="info">
-                  Contacto no disponible — este candidato no está en búsqueda activa.
-                </Alert>
-              )}
-              {tiempoRelativo(postulante.ultima_conexion) && (
-                <p className="mt-3 pt-3 border-t border-neutral-100 text-[12px] text-neutral-400">
-                  Último acceso:{' '}
-                  <span className="font-semibold text-ink">
-                    {tiempoRelativo(postulante.ultima_conexion)}
-                  </span>
-                </p>
-              )}
+                    )}
+                  </li>
+                ))}
+              </ul>
             </Card>
+          )}
 
-            {/* Private notes */}
-            <NotasPanel postulanteId={id} notasIniciales={notas} />
-          </div>
+          {/* Experiencia laboral */}
+          {postulante.experiencias.length > 0 && (
+            <Card>
+              <h2 className="text-[14px] font-bold text-ink mb-3">Experiencia laboral</h2>
+              <ul className="space-y-3">
+                {postulante.experiencias.map((e, i) => (
+                  <li key={i} className="text-[13px]">
+                    <p className="font-semibold text-ink">{e.puesto}</p>
+                    <p className="text-muted">{e.empresa}</p>
+                    <p className="text-neutral-400 text-xs">
+                      {new Date(e.fecha_inicio).toLocaleDateString('es-AR', {
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                      {' — '}
+                      {e.fecha_fin
+                        ? new Date(e.fecha_fin).toLocaleDateString('es-AR', {
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : 'Actualidad'}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Idiomas */}
+          {postulante.idiomas.length > 0 && (
+            <Card>
+              <h2 className="text-[14px] font-bold text-ink mb-3">Idiomas</h2>
+              <ul className="space-y-1.5">
+                {postulante.idiomas.map((id, i) => (
+                  <li key={i} className="flex items-center justify-between text-[13px]">
+                    <span className="text-ink">{id.nombre}</span>
+                    <Badge tone="neutral">{id.nivel_idioma}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Informe de personalidad — colapsado por defecto via <details> (no JS) */}
+          {postulante.informe && (
+            <Card padding="none">
+              <details className="group">
+                <summary className="cursor-pointer list-none px-[22px] py-4 flex items-center justify-between">
+                  <h2 className="text-[14px] font-bold text-ink">Informe de personalidad</h2>
+                  <span className="text-[12px] text-primary-600 font-medium group-open:hidden">
+                    Ver informe ▾
+                  </span>
+                  <span className="text-[12px] text-primary-600 font-medium hidden group-open:inline">
+                    Ocultar ▴
+                  </span>
+                </summary>
+                <div className="px-[22px] pb-5 pt-1">
+                  <InformeDisplay data={postulante.informe!} variant="compact" />
+                </div>
+              </details>
+            </Card>
+          )}
+        </div>
+
+        {/* Right column — contact + notes */}
+        <div className="space-y-6">
+          {/* Contact */}
+          <Card>
+            <h2 className="text-[14px] font-bold text-ink mb-3">Contacto</h2>
+            {contactoDisponible ? (
+              <ul className="space-y-2 text-[13px]">
+                {postulante.email && (
+                  <li className="flex items-center gap-2">
+                    <MailIcon size={14} className="text-muted flex-none" />
+                    <a
+                      href={`mailto:${postulante.email}`}
+                      className="text-primary-600 hover:underline truncate"
+                    >
+                      {postulante.email}
+                    </a>
+                  </li>
+                )}
+                {postulante.telefono && (
+                  <li className="text-ink">{postulante.telefono}</li>
+                )}
+                {postulante.enlace_linkedin && (
+                  <li>
+                    <a
+                      href={postulante.enlace_linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:underline"
+                    >
+                      LinkedIn ↗
+                    </a>
+                  </li>
+                )}
+                {postulante.portfolio && (
+                  <li>
+                    <a
+                      href={postulante.portfolio}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:underline"
+                    >
+                      Portfolio ↗
+                    </a>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              <Alert tone="info">
+                Contacto no disponible — este candidato no está en búsqueda activa.
+              </Alert>
+            )}
+            {tiempoRelativo(postulante.ultima_conexion) && (
+              <p className="mt-3 pt-3 border-t border-neutral-100 text-[12px] text-neutral-400">
+                Último acceso:{' '}
+                <span className="font-semibold text-ink">
+                  {tiempoRelativo(postulante.ultima_conexion)}
+                </span>
+              </p>
+            )}
+          </Card>
+
+          {/* Private notes */}
+          <NotasPanel postulanteId={id} notasIniciales={notas} />
         </div>
       </div>
-    </TyCGate>
+    </div>
   )
 }

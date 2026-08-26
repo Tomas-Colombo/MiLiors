@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { Badge, EmptyState, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon } from '@/components/icons'
@@ -85,60 +84,58 @@ export default async function MisEmpresasPage({ searchParams }: { searchParams: 
   const postulacionesActivas = todas.reduce((acc, e) => acc + e.postulaciones_activas, 0)
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold text-ink">Mis empresas</h1>
-            <p className="mt-1 text-muted">
-              {todas.length} empresa{todas.length !== 1 ? 's' : ''} · {puestosActivos} puesto
-              {puestosActivos !== 1 ? 's' : ''} activo{puestosActivos !== 1 ? 's' : ''} ·{' '}
-              {postulacionesActivas} postulación{postulacionesActivas !== 1 ? 'es' : ''} activa
-              {postulacionesActivas !== 1 ? 's' : ''}
-            </p>
-          </div>
-          <NuevaEmpresaBtn />
+    <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink">Mis empresas</h1>
+          <p className="mt-1 text-muted">
+            {todas.length} empresa{todas.length !== 1 ? 's' : ''} · {puestosActivos} puesto
+            {puestosActivos !== 1 ? 's' : ''} activo{puestosActivos !== 1 ? 's' : ''} ·{' '}
+            {postulacionesActivas} postulación{postulacionesActivas !== 1 ? 'es' : ''} activa
+            {postulacionesActivas !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        {todas.length > 0 && (
-          <Suspense>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <SearchInput placeholder="Buscar empresa…" className="w-full sm:w-56" />
-              <FilterSelect
-                paramKey="estado"
-                options={ESTADO_OPTS}
-                ariaLabel="Filtrar por estado"
-                className="w-full sm:w-44"
-              />
-              <ClearFilters keys={['q', 'estado']} />
-              {filtradas.length !== todas.length && (
-                <span className="whitespace-nowrap text-xs text-muted sm:ml-auto">
-                  {filtradas.length} de {todas.length}
-                </span>
-              )}
-            </div>
-          </Suspense>
-        )}
-
-        {todas.length === 0 ? (
-          <EmptyState
-            icon={<BuildingIcon size={24} />}
-            title="Todavía no cargaste empresas"
-            description="Cargá la empresa para la que buscás candidatos y vas a poder publicar puestos a su nombre."
-            action={<NuevaEmpresaBtn />}
-          />
-        ) : filtradas.length === 0 ? (
-          <EmptyState
-            icon={<BuildingIcon size={24} />}
-            title="Ninguna empresa coincide con los filtros"
-            description="Probá cambiando o limpiando los filtros."
-          />
-        ) : (
-          <Table columns={columns} rows={slice} rowKey={(e) => e.id} />
-        )}
-
-        {filtradas.length > 0 && <Paginador page={page} pageCount={pageCount} />}
+        <NuevaEmpresaBtn />
       </div>
-    </TyCGate>
+
+      {todas.length > 0 && (
+        <Suspense>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <SearchInput placeholder="Buscar empresa…" className="w-full sm:w-56" />
+            <FilterSelect
+              paramKey="estado"
+              options={ESTADO_OPTS}
+              ariaLabel="Filtrar por estado"
+              className="w-full sm:w-44"
+            />
+            <ClearFilters keys={['q', 'estado']} />
+            {filtradas.length !== todas.length && (
+              <span className="whitespace-nowrap text-xs text-muted sm:ml-auto">
+                {filtradas.length} de {todas.length}
+              </span>
+            )}
+          </div>
+        </Suspense>
+      )}
+
+      {todas.length === 0 ? (
+        <EmptyState
+          icon={<BuildingIcon size={24} />}
+          title="Todavía no cargaste empresas"
+          description="Cargá la empresa para la que buscás candidatos y vas a poder publicar puestos a su nombre."
+          action={<NuevaEmpresaBtn />}
+        />
+      ) : filtradas.length === 0 ? (
+        <EmptyState
+          icon={<BuildingIcon size={24} />}
+          title="Ninguna empresa coincide con los filtros"
+          description="Probá cambiando o limpiando los filtros."
+        />
+      ) : (
+        <Table columns={columns} rows={slice} rowKey={(e) => e.id} />
+      )}
+
+      {filtradas.length > 0 && <Paginador page={page} pageCount={pageCount} />}
+    </div>
   )
 }

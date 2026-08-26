@@ -170,7 +170,11 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-12"
+      // `p-4` en celular y `p-12` de tablet para arriba: los 48px fijos de
+      // margen dejaban el diálogo en 279px de ancho útil en una pantalla de
+      // 375px. El padding además es lo que descuenta el `max-h-full` del
+      // diálogo, así que en mobile esto también le da más alto al cuerpo.
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-12"
       style={{ background: "rgba(28,32,48,.40)" }}
       onClick={onClose}
     >
@@ -188,11 +192,17 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
         // diálogo y no se entiende ninguno de los dos. Todas las demás capas
         // flotantes del sistema (Menu, los desplegables de Select, DatePicker)
         // ya usan `bg-neutral-0` por el mismo motivo.
-        className="overflow-hidden rounded-xl bg-neutral-0 shadow-lg outline-none"
+        // `max-h-full` + columna flex: el alto del diálogo lo acota el viewport
+        // (el padre es `inset-0` con padding, así que el 100% ya descuenta ese
+        // margen) y el cuerpo es la única parte que scrollea. Sin esto, un
+        // contenido largo estiraba el diálogo más allá de la pantalla y, como
+        // el contenedor recorta con `overflow-hidden`, el footer con los
+        // botones quedaba fuera de vista y el diálogo era imposible de cerrar.
+        className="flex max-h-full flex-col overflow-hidden rounded-xl bg-neutral-0 shadow-lg outline-none"
         style={{ width, maxWidth: "100%" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 pt-6">
+        <div className="flex-none px-6 pt-6">
           <div className="flex items-start justify-between">
             {icon}
             <button
@@ -207,13 +217,17 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
           <h3 id={tituloId} className="mb-1.5 mt-4 text-[18px] font-bold">
             {title}
           </h3>
-          {children && <div className="mb-6 text-sm leading-[1.55] text-muted">{children}</div>}
         </div>
+        {children && (
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 text-sm leading-[1.55] text-muted">
+            {children}
+          </div>
+        )}
         {footer && (
           // `bg-neutral-50` en vez del `#fafbfc` que estaba fijo: en claro es
           // prácticamente el mismo gris, pero el hex no se invertía y en modo
           // oscuro dejaba una franja casi blanca al pie del diálogo.
-          <div className="flex gap-3 border-t border-neutral-100 bg-neutral-50 px-6 py-4">{footer}</div>
+          <div className="flex flex-none gap-3 border-t border-neutral-100 bg-neutral-50 px-6 py-4">{footer}</div>
         )}
       </div>
     </div>

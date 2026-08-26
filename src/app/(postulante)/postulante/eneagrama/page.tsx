@@ -10,6 +10,11 @@ import { evaluarRehacer } from '@/modules/eneagrama/rehacer-policy'
 import { EneagramaWizard } from './eneagrama-wizard'
 import { redirect } from 'next/navigation'
 
+// El informe de personalidad se genera con `after` al cerrar el test: corre
+// después de la respuesta pero dentro de esta invocación, así que necesita el
+// mismo techo de tiempo que la ruta del informe.
+export const maxDuration = 300
+
 export const metadata = { title: 'Test de Eneagrama — MiLiors' }
 
 export default async function EneagramaPage() {

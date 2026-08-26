@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Checkbox, Field, Input, MonthYearInput, Textarea } from '@/components/ui'
 import { errorDe } from './form-estado'
+import { mesActual } from './opciones'
 import type { ExperienciaItem } from '@/modules/perfil-tecnico/queries'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -47,12 +48,18 @@ export function ExperienciaCampos({
           <MonthYearInput
             name="fecha_inicio"
             defaultValue={item?.fecha_inicio}
+            max={mesActual()}
             status={errorDe(state, 'fecha_inicio') ? 'error' : 'default'}
           />
         </Field>
         {!trabajoActual && (
           <Field label="Fin" error={errorDe(state, 'fecha_fin')}>
-            <MonthYearInput name="fecha_fin" defaultValue={item?.fecha_fin ?? ''} />
+            <MonthYearInput
+              name="fecha_fin"
+              defaultValue={item?.fecha_fin ?? ''}
+              max={mesActual()}
+              status={errorDe(state, 'fecha_fin') ? 'error' : 'default'}
+            />
           </Field>
         )}
       </div>

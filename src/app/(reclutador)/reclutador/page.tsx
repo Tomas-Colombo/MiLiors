@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { redirect } from 'next/navigation'
 import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { QuickLinksReclutador } from './quick-links'
@@ -34,30 +33,28 @@ export default async function ReclutadorDashboard() {
       : `${empresasActivas.length} empresas activas`
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">
-            ¡Hola, {rec.nombre_reclutador.split(' ')[0]}!
-          </h1>
-          <p className="mt-1 text-sm text-muted">{subtitulo}</p>
-        </div>
-
-        {/* Accesos rápidos */}
-        <div>
-          <h2 className="text-[13.5px] font-bold text-ink mb-3">Accesos rápidos</h2>
-          <QuickLinksReclutador />
-        </div>
-
-        {/* Métricas */}
-        <div>
-          <h2 className="text-[13.5px] font-bold text-ink mb-3">Métricas</h2>
-          <Suspense fallback={<MetricasSkeleton />}>
-            <MetricasSection />
-          </Suspense>
-        </div>
+    <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-extrabold text-ink">
+          ¡Hola, {rec.nombre_reclutador.split(' ')[0]}!
+        </h1>
+        <p className="mt-1 text-sm text-muted">{subtitulo}</p>
       </div>
-    </TyCGate>
+
+      {/* Accesos rápidos */}
+      <div>
+        <h2 className="text-[13.5px] font-bold text-ink mb-3">Accesos rápidos</h2>
+        <QuickLinksReclutador />
+      </div>
+
+      {/* Métricas */}
+      <div>
+        <h2 className="text-[13.5px] font-bold text-ink mb-3">Métricas</h2>
+        <Suspense fallback={<MetricasSkeleton />}>
+          <MetricasSection />
+        </Suspense>
+      </div>
+    </div>
   )
 }

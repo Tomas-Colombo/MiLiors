@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { requireRol } from '@/lib/guards'
 import { AppSidebar } from '@/components/shared/app-sidebar'
+import { TyCGate } from '@/components/shared/tyc-gate'
 import { FilterMemory } from '@/components/shared/filter-memory'
 import {
   HomeIcon,
@@ -32,7 +33,11 @@ export default async function ReclutadorLayout({ children }: { children: React.R
         settingsHref="/reclutador/mi-perfil"
       />
       <main className="flex-1 overflow-auto">
-        {children}
+        {/* El gate vive en el layout y no en cada page: así los Términos son lo
+            primero que ve la persona al entrar al área, antes del onboarding y
+            antes del Eneagrama, sin depender de que cada pantalla nueva se
+            acuerde de envolverse. */}
+        <TyCGate>{children}</TyCGate>
       </main>
       <Suspense fallback={null}>
         <FilterMemory />

@@ -7,6 +7,7 @@ export * from "./button";
 export * from "./input";
 export * from "./select";
 export * from "./date-picker";
+export * from "./picker-shell";
 export * from "./month-year-input";
 export * from "./segmented";
 export * from "./choice";

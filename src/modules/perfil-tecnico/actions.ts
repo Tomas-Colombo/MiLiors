@@ -58,13 +58,26 @@ function resolveInstitucion(formData: FormData): string | null {
   return institucion
 }
 
+/**
+ * El título llega del catálogo de carreras como texto, salvo que la persona
+ * haya elegido el escape `__OTRO__`, y entonces vale el campo libre.
+ */
+function resolveTitulo(formData: FormData): string | null {
+  const titulo = formData.get('titulo') as string | null
+  if (titulo === '__OTRO__') {
+    const personalizado = (formData.get('titulo_personalizado') as string | null)?.trim()
+    return personalizado || null
+  }
+  return titulo
+}
+
 export async function agregarFormacion(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
   const parsed = formacionSchema.safeParse({
     institucion: resolveInstitucion(formData),
-    titulo: formData.get('titulo'),
+    titulo: resolveTitulo(formData),
     fecha_graduacion: formData.get('fecha_graduacion') || undefined,
   })
   if (!parsed.success) {
@@ -96,7 +109,7 @@ export async function editarFormacion(
 ): Promise<ActionResult> {
   const parsed = formacionSchema.safeParse({
     institucion: resolveInstitucion(formData),
-    titulo: formData.get('titulo'),
+    titulo: resolveTitulo(formData),
     fecha_graduacion: formData.get('fecha_graduacion') || undefined,
   })
   if (!parsed.success) {

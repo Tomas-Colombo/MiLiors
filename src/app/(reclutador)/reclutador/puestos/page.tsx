@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { TyCGate } from '@/components/shared/tyc-gate'
 import { Badge, EmptyState, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, AlertCircleIcon } from '@/components/icons'
@@ -185,59 +184,57 @@ export default async function MisPuestosPage({
   ]
 
   return (
-    <TyCGate>
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold text-ink">Mis puestos</h1>
-            <p className="mt-1 text-muted">{puestos.length} puesto{puestos.length !== 1 ? 's' : ''}</p>
-          </div>
-          <Link
-            href="/reclutador/puestos/nuevo"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-[18px] text-sm font-semibold text-white hover:brightness-105"
-          >
-            <PlusIcon size={16} />
-            Nuevo puesto
-          </Link>
+    <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink">Mis puestos</h1>
+          <p className="mt-1 text-muted">{puestos.length} puesto{puestos.length !== 1 ? 's' : ''}</p>
         </div>
-
-        {puestos.length > 0 && (
-          <Suspense>
-            <FiltrosPuestos
-              empresas={empresaOpts}
-              totalVisible={visibles.length}
-              totalTotal={puestos.length}
-            />
-          </Suspense>
-        )}
-
-        {puestos.length === 0 ? (
-          <EmptyState
-            icon={<BuildingIcon size={24} />}
-            title="Todavía no publicaste puestos"
-            description="Creá tu primer puesto y empezá a recibir postulaciones."
-            action={
-              <Link
-                href="/reclutador/puestos/nuevo"
-                className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
-              >
-                <PlusIcon size={16} />
-                Publicar puesto
-              </Link>
-            }
-          />
-        ) : visibles.length === 0 ? (
-          <EmptyState
-            icon={<BuildingIcon size={24} />}
-            title="Ningún puesto coincide con los filtros"
-            description="Probá cambiando o limpiando los filtros."
-          />
-        ) : (
-          <Table columns={columns} rows={slice} rowKey={(p) => p.id} />
-        )}
-
-        {visibles.length > 0 && <Paginador page={page} pageCount={pageCount} />}
+        <Link
+          href="/reclutador/puestos/nuevo"
+          className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-[18px] text-sm font-semibold text-white hover:brightness-105"
+        >
+          <PlusIcon size={16} />
+          Nuevo puesto
+        </Link>
       </div>
-    </TyCGate>
+
+      {puestos.length > 0 && (
+        <Suspense>
+          <FiltrosPuestos
+            empresas={empresaOpts}
+            totalVisible={visibles.length}
+            totalTotal={puestos.length}
+          />
+        </Suspense>
+      )}
+
+      {puestos.length === 0 ? (
+        <EmptyState
+          icon={<BuildingIcon size={24} />}
+          title="Todavía no publicaste puestos"
+          description="Creá tu primer puesto y empezá a recibir postulaciones."
+          action={
+            <Link
+              href="/reclutador/puestos/nuevo"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
+            >
+              <PlusIcon size={16} />
+              Publicar puesto
+            </Link>
+          }
+        />
+      ) : visibles.length === 0 ? (
+        <EmptyState
+          icon={<BuildingIcon size={24} />}
+          title="Ningún puesto coincide con los filtros"
+          description="Probá cambiando o limpiando los filtros."
+        />
+      ) : (
+        <Table columns={columns} rows={slice} rowKey={(p) => p.id} />
+      )}
+
+      {visibles.length > 0 && <Paginador page={page} pageCount={pageCount} />}
+    </div>
   )
 }

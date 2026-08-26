@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Modal, Button, Alert } from '@/components/ui'
 import { aceptarTyC } from '@/modules/auth/actions'
+import { TyCDocumento, TYC_MODAL_WIDTH } from './tyc-documento'
 
 type TyC = {
   id: string
@@ -30,6 +31,7 @@ export function TyCModal({ tyc }: { tyc: TyC }) {
       open={true}
       onClose={() => {}} // No se puede cerrar — es bloqueante
       title={`Términos y Condiciones — v${tyc.version}`}
+      width={TYC_MODAL_WIDTH}
       footer={
         <Button
           className="w-full"
@@ -42,9 +44,9 @@ export function TyCModal({ tyc }: { tyc: TyC }) {
         </Button>
       }
     >
-      <div className="max-h-[50vh] overflow-y-auto text-sm leading-relaxed text-soft">
-        {tyc.descripcion}
-      </div>
+      {/* El scroll lo maneja el cuerpo del diálogo: por largo que sea el texto,
+          el botón de aceptar queda siempre visible al pie. */}
+      <TyCDocumento descripcion={tyc.descripcion} />
       {error && <Alert tone="error" title={error} className="mt-3" />}
     </Modal>
   )
