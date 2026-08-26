@@ -7,7 +7,7 @@ export const metadata = {
     'Comprueba que un certificado emitido por MiLiors es auténtico ingresando su ID de verificación.',
 }
 
-// Ruta pública: no requiere sesión. Comparte la pantalla de acceso con /login
+// Ruta pública: no requiere sesión. Comparte la pantalla de acceso con /iniciar-sesion
 // —es la tercera pestaña— para que verificar un certificado sea también una
 // puerta de entrada a la aplicación.
 export default function VerificarBuscadorPage() {

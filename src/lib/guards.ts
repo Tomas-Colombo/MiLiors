@@ -30,7 +30,7 @@ import type { RolUsuario, SessionUser } from '@/lib/types/domain'
 export async function requireRol(esperado: RolUsuario): Promise<SessionUser> {
   const session = await verifySession()
   if (session.rol !== esperado) {
-    redirect(rutaDeRol(session.rol) ?? '/login')
+    redirect(rutaDeRol(session.rol) ?? '/iniciar-sesion')
   }
   return session
 }

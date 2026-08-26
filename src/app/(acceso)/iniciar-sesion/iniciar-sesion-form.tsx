@@ -8,7 +8,7 @@ import type { ActionResult } from '@/lib/types/domain'
 
 const initialState: ActionResult = { success: false, error: '' }
 
-export function LoginForm() {
+export function IniciarSesionForm() {
   const [state, action, pending] = useActionState(iniciarSesion, initialState)
   const [showPass, setShowPass] = useState(false)
 
@@ -26,7 +26,7 @@ export function LoginForm() {
         <input
           name="email"
           type="email"
-          placeholder="nombre@empresa.com"
+          placeholder="tu@email.com"
           className="tid-input"
           data-error={emailError ? 'true' : undefined}
           defaultValue={state && !state.success ? (state.fieldErrors?._email?.[0] ?? '') : ''}

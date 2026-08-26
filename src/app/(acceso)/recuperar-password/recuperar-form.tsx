@@ -38,7 +38,7 @@ export function RecuperarPasswordForm() {
         <input
           name="email"
           type="email"
-          placeholder="nombre@empresa.com"
+          placeholder="tu@email.com"
           className="tid-input"
           data-error={emailError ? 'true' : undefined}
           defaultValue={state && !state.success ? (state.fieldErrors?._email?.[0] ?? '') : ''}

@@ -24,17 +24,21 @@ export function CambiarPasswordForm() {
         <Alert tone="error" title={state.error} />
       )}
 
+      {/* El hint repite las reglas de `passwordSchema`. Tienen que seguir a ese
+          schema: si el campo promete menos de lo que valida, el error aparece
+          recién al enviar y parece arbitrario. */}
       <Field
         label="Nueva contraseña"
         htmlFor="nueva_password"
         required
+        hint="Mínimo 8 caracteres, una mayúscula y un número."
         error={fieldErrors.nueva_password?.[0]}
       >
         <Input
           id="nueva_password"
           name="nueva_password"
           type={showNew ? 'text' : 'password'}
-          placeholder="Mínimo 8 caracteres"
+          placeholder="Elegí una contraseña nueva"
           leftIcon={<LockIcon size={17} />}
           rightIcon={
             <button

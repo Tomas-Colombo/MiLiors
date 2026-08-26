@@ -6,8 +6,8 @@ export default async function RootPage() {
   const user = await getSessionUser()
 
   if (user) {
-    redirect(RUTAS_POR_ROL[user.rol] ?? '/login')
+    redirect(RUTAS_POR_ROL[user.rol] ?? '/iniciar-sesion')
   }
 
-  redirect('/login')
+  redirect('/iniciar-sesion')
 }

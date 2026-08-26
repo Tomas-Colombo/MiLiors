@@ -25,18 +25,18 @@ export async function loginAs(page: Page, role: Role): Promise<void> {
   const user = USERS[role]
 
   // Navigate to login; if an active session redirects us away, log out first
-  await page.goto('/login')
+  await page.goto('/iniciar-sesion')
   const current = page.url()
-  if (!current.includes('/login')) {
+  if (!current.includes('/iniciar-sesion')) {
     // We were redirected — an active session exists, log it out
     const logoutBtn = page.getByRole('button', { name: /cerrar sesi/i })
     if (await logoutBtn.count() > 0) {
       await logoutBtn.click()
-      await page.waitForURL('**/login**')
+      await page.waitForURL('**/iniciar-sesion**')
     } else {
       // Fallback: clear cookies and navigate again
       await page.context().clearCookies()
-      await page.goto('/login')
+      await page.goto('/iniciar-sesion')
     }
   }
 
@@ -49,5 +49,5 @@ export async function loginAs(page: Page, role: Role): Promise<void> {
 /** Logs out from any authenticated page. */
 export async function logout(page: Page): Promise<void> {
   await page.getByRole('button', { name: /cerrar sesi/i }).click()
-  await page.waitForURL('**/login**')
+  await page.waitForURL('**/iniciar-sesion**')
 }

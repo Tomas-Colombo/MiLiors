@@ -2,10 +2,11 @@
 
 import { useActionState, useState } from 'react'
 import { registrarUsuario } from '@/modules/auth/actions'
+import type { RegistroPendiente } from '@/modules/auth/schema'
 import { UserIcon, BuildingIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
 import type { ActionResult } from '@/lib/types/domain'
 
-const initialState: ActionResult = { success: false, error: '' }
+const initialState: ActionResult<RegistroPendiente> = { success: false, error: '' }
 
 /**
  * Alta de cuenta dentro de la pantalla de acceso — mismos campos y estilos
@@ -26,6 +27,21 @@ export function RegistroForm() {
     state && !state.success && state.error && !emailError && !passwordError && !confirmError && !rolError
       ? state.error
       : undefined
+
+  // Cuenta creada pero sin sesión: Supabase ya mandó el mail de verificación.
+  // Antes acá había un redirect al onboarding del rol que el proxy rebotaba a
+  // la pantalla de acceso, sin explicar nada. Mismo tratamiento que
+  // `RecuperarPasswordForm`: el formulario se reemplaza por el aviso.
+  if (state?.success) {
+    return (
+      <div className="tid-alert tid-alert-info">
+        Creamos tu cuenta y te enviamos un mail de verificación a{' '}
+        <strong>{state.data.email}</strong>. Abrí el enlace del mail para activarla y después
+        ingresá con tu email y contraseña. Si no llega en unos minutos, revisá la carpeta de correo
+        no deseado.
+      </div>
+    )
+  }
 
   return (
     <form action={action} className="tid-panel">
@@ -63,7 +79,7 @@ export function RegistroForm() {
         <input
           name="email"
           type="email"
-          placeholder="nombre@empresa.com"
+          placeholder="tu@email.com"
           className="tid-input"
           data-error={emailError ? 'true' : undefined}
           defaultValue={errores?._email?.[0] ?? ''}

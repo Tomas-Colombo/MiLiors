@@ -6,7 +6,7 @@ export const metadata = {
   title: 'Crear cuenta — MiLiors',
 }
 
-// Comparte la pantalla de acceso con /login y /verificar: crear la cuenta es
+// Comparte la pantalla de acceso con /iniciar-sesion y /verificar: crear la cuenta es
 // la segunda pestaña, no un salto a otra pantalla.
 export default function RegistroPage() {
   return (
@@ -14,7 +14,7 @@ export default function RegistroPage() {
       <RegistroForm />
 
       <div className="tid-switch">
-        ¿Ya tienes cuenta? <Link href="/login">Inicia sesión</Link>
+        ¿Ya tienes cuenta? <Link href="/iniciar-sesion">Inicia sesión</Link>
       </div>
     </AccesoChrome>
   )

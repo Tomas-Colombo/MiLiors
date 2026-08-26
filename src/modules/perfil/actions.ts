@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
 import { onboardingPostulanteSchema } from '@/modules/eneagrama/schema'
+import { passwordSchema } from '@/modules/auth/schema'
+import { mensajeErrorPassword } from '@/modules/auth/password-error'
 import type { ActionResult } from '@/lib/types/domain'
 
 function normalizeUrl(val: FormDataEntryValue | null): string | undefined {
@@ -120,11 +122,14 @@ export async function actualizarPerfilReclutador(
 
 // ─── Cambiar contraseña ───────────────────────────────────────────────────────
 
+// Las reglas son las mismas del alta y del restablecimiento por mail
+// (`passwordSchema` en @/modules/auth/schema). Acá antes se pedía sólo el
+// mínimo de 8 caracteres: quien entraba por "mi perfil" podía bajarse la
+// contraseña por debajo de lo que la app exige en la puerta, y la barrera real
+// pasaba a ser la más floja de las tres.
 const cambiarPasswordSchema = z
   .object({
-    nueva_password: z
-      .string()
-      .min(8, { message: 'La contraseña debe tener al menos 8 caracteres.' }),
+    nueva_password: passwordSchema,
     confirmar_password: z.string(),
   })
   .refine((d) => d.nueva_password === d.confirmar_password, {
@@ -158,7 +163,8 @@ export async function cambiarPassword(
   })
 
   if (error) {
-    return { success: false, error: 'No se pudo cambiar la contraseña. Intentá de nuevo.' }
+    console.error('[cambiarPassword] updateUser error:', error.message)
+    return { success: false, error: mensajeErrorPassword(error.message) }
   }
 
   return { success: true, data: undefined }

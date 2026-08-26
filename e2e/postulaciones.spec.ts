@@ -86,7 +86,7 @@ test.describe('M06 — Postulaciones: flujo candidato', () => {
     await loginAs(page, 'postulante')
     await page.goto('/postulante/postulaciones')
     await page.waitForURL(/\/postulante\//, { timeout: 10000 })
-    await expect(page).not.toHaveURL(/\/login/)
+    await expect(page).not.toHaveURL(/\/iniciar-sesion/)
     if (page.url().includes('/postulante/postulaciones')) {
       await expect(page.getByRole('heading', { name: 'Mis postulaciones' })).toBeVisible()
     }
@@ -153,6 +153,6 @@ test.describe('M06 — Postulaciones: flujo reclutador', () => {
     await loginAs(page, 'reclutador')
     await page.goto('/reclutador/postulaciones')
     await page.getByRole('heading', { name: /postulaciones recibidas/i }).waitFor()
-    await expect(page).not.toHaveURL(/login/)
+    await expect(page).not.toHaveURL(/iniciar-sesion/)
   })
 })

@@ -1,18 +1,21 @@
 import Link from 'next/link'
 import { AccesoChrome } from '@/components/acceso/acceso-chrome'
-import { LoginForm } from './login-form'
+import { IniciarSesionForm } from './iniciar-sesion-form'
 
 export const metadata = {
   title: 'Iniciar sesión — MiLiors',
 }
 
-// Motivos por los que la política de sesión pudo haber cerrado la sesión.
+// Por qué la persona aterrizó acá con la sesión cerrada: los dos primeros son
+// cierres de la política de sesión; el tercero es el final feliz del flujo de
+// recuperación, que cierra la sesión de recovery a propósito.
 const MOTIVO_MENSAJE: Record<string, string> = {
   inactividad: 'Cerramos tu sesión por inactividad. Vuelve a ingresar.',
   revocada: 'Un administrador finalizó tu sesión. Vuelve a ingresar.',
+  'password-actualizada': 'Tu contraseña quedó actualizada. Ingresá con la nueva.',
 }
 
-export default async function LoginPage({
+export default async function IniciarSesionPage({
   searchParams,
 }: {
   searchParams: Promise<{ motivo?: string }>
@@ -24,7 +27,7 @@ export default async function LoginPage({
     <AccesoChrome tab="ingresar">
       {aviso && <div className="tid-alert tid-alert-info">{aviso}</div>}
 
-      <LoginForm />
+      <IniciarSesionForm />
 
       <div className="tid-switch">
         ¿No tienes cuenta? <Link href="/registro">Créala aquí</Link>

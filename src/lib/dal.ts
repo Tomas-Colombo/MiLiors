@@ -6,7 +6,7 @@ import type { SessionUser } from '@/lib/types/domain'
 import { rolDeUsuario } from './rol'
 
 /**
- * Verifica la sesión actual. Si no hay sesión, redirige a /login.
+ * Verifica la sesión actual. Si no hay sesión, redirige a /iniciar-sesion.
  * Memoizada por React cache() durante el render pass.
  */
 export const verifySession = cache(async (): Promise<SessionUser> => {
@@ -14,12 +14,12 @@ export const verifySession = cache(async (): Promise<SessionUser> => {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    redirect('/iniciar-sesion')
   }
 
   const rol = rolDeUsuario(user)
   if (!rol) {
-    redirect('/login')
+    redirect('/iniciar-sesion')
   }
 
   return {

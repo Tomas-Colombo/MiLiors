@@ -4,7 +4,9 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { registroSchema, loginSchema, recuperarPasswordSchema } from './schema'
+import { registroSchema, loginSchema, recuperarPasswordSchema, nuevaPasswordSchema } from './schema'
+import type { RegistroPendiente } from './schema'
+import { mensajeErrorPassword } from './password-error'
 import type { ActionResult } from '@/lib/types/domain'
 import { RUTAS_POR_ROL } from '@/lib/constants/enums'
 import { rolDeUsuario } from '@/lib/rol'
@@ -13,9 +15,9 @@ import type { TablesInsert } from '@/lib/types/database.types'
 
 // ─── Registro ────────────────────────────────────────────────────────────────
 export async function registrarUsuario(
-  _prevState: ActionResult,
+  _prevState: ActionResult<RegistroPendiente>,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<ActionResult<RegistroPendiente>> {
   const raw = {
     email: formData.get('email'),
     password: formData.get('password'),
@@ -77,7 +79,19 @@ export async function registrarUsuario(
     return { success: false, error: 'Error al crear el perfil. Contactá soporte.' }
   }
 
-  // 3. Redirigir al onboarding del rol
+  // 3. Sin sesión no se puede entrar al onboarding.
+  // Con la confirmación de email activada, signUp() no emite token: manda el
+  // mail y devuelve `session: null`. Redirigir igual al panel del rol hacía que
+  // el proxy no viera usuario y rebotara a la pantalla de acceso sin decir una
+  // palabra — la persona quedaba mirando el formulario de ingreso sin saber que
+  // su cuenta existe y que tiene un mail esperando. Se devuelve el aviso y lo
+  // muestra el formulario.
+  if (!authData.session) {
+    return { success: true, data: { email } }
+  }
+
+  // Confirmación desactivada en el proyecto de Supabase: ya hay sesión, así que
+  // se entra derecho al onboarding del rol.
   redirect(RUTAS_POR_ROL[rol] + '/onboarding')
 }
 
@@ -148,7 +162,7 @@ export async function cerrarSesion(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
-  redirect('/login')
+  redirect('/iniciar-sesion')
 }
 
 // Cierre disparado por el watcher de inactividad del cliente (sólo admin).
@@ -157,7 +171,7 @@ export async function cerrarSesionPorInactividad(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
-  redirect('/login?motivo=inactividad')
+  redirect('/iniciar-sesion?motivo=inactividad')
 }
 
 // ─── Recuperar contraseña ────────────────────────────────────────────────────
@@ -176,9 +190,14 @@ export async function recuperarPassword(
     }
   }
 
+  // El enlace del mail no puede apuntar directo a la pantalla del formulario:
+  // Supabase vuelve con un `code` que hay que canjear por sesión, y eso sólo se
+  // puede hacer donde se pueden escribir cookies — un route handler, nunca un
+  // Server Component. Por eso el destino es /recuperar-password/confirmar, que
+  // canjea y recién ahí manda a /recuperar-password/nueva.
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/recuperar-password/nueva`,
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/recuperar-password/confirmar`,
   })
 
   // No revelar si el email existe o no (seguridad)
@@ -190,6 +209,59 @@ export async function recuperarPassword(
     success: true,
     data: undefined,
   }
+}
+
+// ─── Contraseña nueva (última milla del flujo de recuperación) ───────────────
+/**
+ * Escribe la contraseña nueva y cierra la sesión de recovery.
+ *
+ * Lo que autoriza este cambio es la sesión que dejó el enlace del mail, no un
+ * campo del formulario: por eso no se pide la contraseña anterior. Si no hay
+ * sesión, el enlace venció o ya se usó.
+ *
+ * Termina con signOut() a propósito. La sesión de recovery entra por una puerta
+ * que no ejecuta nada de la contabilidad que sí hace `iniciarSesion`
+ * (ultima_conexion, y el upsert de sesion_actividad que limpia `revocada`).
+ * Dejarla pasar al panel sería entrar a la app a medio inicializar. Que vuelva
+ * a ingresar cuesta un paso más y estrena la contraseña nueva.
+ */
+export async function establecerPasswordNueva(
+  _prevState: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  const parsed = nuevaPasswordSchema.safeParse({
+    password: formData.get('password'),
+    confirmPassword: formData.get('confirmPassword'),
+  })
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Revisá los campos del formulario.',
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return {
+      success: false,
+      error: 'El enlace venció o ya se usó. Pedí uno nuevo desde "¿La olvidaste?".',
+    }
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password })
+
+  if (error) {
+    console.error('[establecerPasswordNueva] updateUser error:', error.message)
+    return { success: false, error: mensajeErrorPassword(error.message) }
+  }
+
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/iniciar-sesion?motivo=password-actualizada')
 }
 
 // ─── Aceptar TyC ─────────────────────────────────────────────────────────────

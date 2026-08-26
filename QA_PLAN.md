@@ -21,11 +21,11 @@
 | TC-AUTH-011 | Login ADMIN → redirige a /admin | 🔴 | ⬜ |
 | TC-AUTH-012 | Login con password incorrecto → error genérico (no revela si el email existe) | 🔴 | ✅ |
 | TC-AUTH-013 | Login con email no registrado → mismo mensaje que TC-AUTH-012 | 🔴 | ✅ |
-| TC-AUTH-014 | Logout → sesión destruida, redirige a /login | 🔴 | ⬜ |
+| TC-AUTH-014 | Logout → sesión destruida, redirige a /iniciar-sesion | 🔴 | ⬜ |
 | TC-AUTH-015 | Post-logout, botón atrás del browser → no accede a páginas protegidas | 🔴 | ⬜ |
 | TC-AUTH-016 | Recuperar password con email registrado → email enviado | 🟡 | ⬜ |
 | TC-AUTH-017 | Recuperar password con email no registrado → misma respuesta (no revela existencia) | 🔴 | ⬜ |
-| TC-AUTH-018 | Acceso directo a /reclutador sin sesión → redirige a /login | 🔴 | ⬜ |
+| TC-AUTH-018 | Acceso directo a /reclutador sin sesión → redirige a /iniciar-sesion | 🔴 | ⬜ |
 | TC-AUTH-019 | POSTULANTE intenta acceder a /reclutador → prohibido | 🔴 | ⬜ |
 | TC-AUTH-020 | RECLUTADOR intenta acceder a /admin → prohibido | 🔴 | ⬜ |
 | TC-AUTH-021 | TyC Gate — usuario sin TyC aceptado ve modal bloqueante | 🔴 | ✅ |

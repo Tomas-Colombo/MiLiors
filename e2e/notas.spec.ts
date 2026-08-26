@@ -120,6 +120,6 @@ test.describe('M08 — Notas Privadas: seguridad 🔒', () => {
     await expect(page.getByRole('heading', { name: 'Notas privadas' })).toBeVisible()
     // But the page should not show notes from other recruiters (RLS enforced at DB level)
     // We verify the page loads without error
-    await expect(page).not.toHaveURL(/login/)
+    await expect(page).not.toHaveURL(/iniciar-sesion/)
   })
 })

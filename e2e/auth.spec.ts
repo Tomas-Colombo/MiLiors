@@ -20,7 +20,7 @@ test.describe('M01 — Auth: Login', () => {
   })
 
   test('TC-AUTH-012 — Password incorrecta → error genérico', async ({ page }) => {
-    await page.goto('/login')
+    await page.goto('/iniciar-sesion')
     await page.locator('[name="email"]').fill(USERS.reclutador.email)
     await page.locator('[name="password"]').fill('WrongPass999!')
     await page.getByRole('button', { name: 'Ingresar' }).click()
@@ -28,7 +28,7 @@ test.describe('M01 — Auth: Login', () => {
   })
 
   test('TC-AUTH-013 — Email no registrado → mismo mensaje que contraseña incorrecta', async ({ page }) => {
-    await page.goto('/login')
+    await page.goto('/iniciar-sesion')
     await page.locator('[name="email"]').fill('noexiste@example.com')
     await page.locator('[name="password"]').fill('SomePass123!')
     await page.getByRole('button', { name: 'Ingresar' }).click()
@@ -38,7 +38,7 @@ test.describe('M01 — Auth: Login', () => {
 
 test.describe('M01 — Auth: Validaciones formulario login', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login')
+    await page.goto('/iniciar-sesion')
   })
 
   test('TC-AUTH-008 — Email inválido → error de validación', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('M01 — Auth: Validaciones formulario login', () => {
       .locator('[name="email"]')
       .evaluate((el: HTMLInputElement) => el.validity.valid)
     expect(emailValid).toBe(false)
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/iniciar-sesion/)
   })
 })
 
@@ -137,22 +137,22 @@ test.describe('M01 — Auth: Registro', () => {
 })
 
 test.describe('M01 — Auth: Logout y protección de rutas', () => {
-  test('TC-AUTH-014 — Logout → sesión destruida, redirige a /login', async ({ page }) => {
+  test('TC-AUTH-014 — Logout → sesión destruida, redirige a /iniciar-sesion', async ({ page }) => {
     await loginAs(page, 'postulante')
     await logout(page)
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/iniciar-sesion/)
   })
 
-  test('TC-AUTH-015 — Post-logout: ruta protegida → redirige a /login', async ({ page }) => {
+  test('TC-AUTH-015 — Post-logout: ruta protegida → redirige a /iniciar-sesion', async ({ page }) => {
     await loginAs(page, 'postulante')
     await logout(page)
     await page.goto('/postulante')
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/iniciar-sesion/)
   })
 
-  test('TC-AUTH-018 — Sin sesión: acceso directo a /reclutador → redirige a /login', async ({ page }) => {
+  test('TC-AUTH-018 — Sin sesión: acceso directo a /reclutador → redirige a /iniciar-sesion', async ({ page }) => {
     await page.goto('/reclutador')
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/iniciar-sesion/)
   })
 
   test('TC-AUTH-019 — POSTULANTE intenta acceder a /reclutador → prohibido', async ({ page }) => {

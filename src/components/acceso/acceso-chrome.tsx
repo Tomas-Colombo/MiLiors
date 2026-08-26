@@ -7,7 +7,7 @@ import { FloatingPaths } from './floating-paths'
  * Pantalla de entrada a MiLiors: panel izquierdo con la marca, el manifiesto y
  * las pestañas, y panel derecho con los trazos animados.
  *
- * La comparten /login y /verificar: verificar un certificado es una puerta de
+ * La comparten /iniciar-sesion y /verificar: verificar un certificado es una puerta de
  * entrada más, no una pantalla aparte. Lo que cambia entre una y otra es sólo
  * el contenido bajo las pestañas.
  *
@@ -17,7 +17,7 @@ import { FloatingPaths } from './floating-paths'
  */
 
 const TABS = [
-  { id: 'ingresar', label: 'Ingresar', href: '/login' },
+  { id: 'ingresar', label: 'Ingresar', href: '/iniciar-sesion' },
   { id: 'crear', label: 'Crear cuenta', href: '/registro' },
   { id: 'verificar', label: 'Verificar certificado', href: '/verificar' },
 ] as const

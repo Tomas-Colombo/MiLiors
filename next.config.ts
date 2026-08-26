@@ -27,7 +27,7 @@ const supabaseOrigen = (() => {
  * de evitarlo sin nonces: Next inyecta el payload RSC como <script> inline y su
  * contenido cambia en cada request, así que no se puede hashear. La alternativa
  * —generar un nonce por request desde proxy.ts— obliga a render dinámico en
- * TODA la app (adiós al prerender de /login, /registro y /verificar) y hay que
+ * TODA la app (adiós al prerender de /iniciar-sesion, /registro y /verificar) y hay que
  * pasarle el nonce a mano al script de tema del layout raíz.
  *
  * Con lo cual esta política NO frena un XSS por inyección de script. Lo que sí
@@ -96,6 +96,14 @@ const nextConfig: NextConfig = {
 
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
+  },
+
+  // La pantalla de acceso pasó de /login a /iniciar-sesion (el resto de las
+  // rutas públicas ya estaban en castellano). Se mantiene el destino viejo
+  // andando para los enlaces y favoritos que ya existen. Temporal (307): el día
+  // que no queden referencias, se borra.
+  async redirects() {
+    return [{ source: "/login", destination: "/iniciar-sesion", permanent: false }];
   },
 };
 
