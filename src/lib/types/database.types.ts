@@ -934,6 +934,7 @@ export type Database = {
           nombre_completo: string
           perfil_en_busqueda: boolean
           portfolio: string | null
+          provincia_id: string
           telefono: string | null
           ultima_conexion: string | null
           updated_at: string
@@ -951,6 +952,7 @@ export type Database = {
           nombre_completo: string
           perfil_en_busqueda?: boolean
           portfolio?: string | null
+          provincia_id: string
           telefono?: string | null
           ultima_conexion?: string | null
           updated_at?: string
@@ -968,6 +970,7 @@ export type Database = {
           nombre_completo?: string
           perfil_en_busqueda?: boolean
           portfolio?: string | null
+          provincia_id?: string
           telefono?: string | null
           ultima_conexion?: string | null
           updated_at?: string
@@ -986,6 +989,13 @@ export type Database = {
             columns: ["localidad_id"]
             isOneToOne: false
             referencedRelation: "localidad"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "perfil_postulante_provincia_id_fkey"
+            columns: ["provincia_id"]
+            isOneToOne: false
+            referencedRelation: "provincia"
             referencedColumns: ["id"]
           },
           {

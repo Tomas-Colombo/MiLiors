@@ -12,7 +12,7 @@ export default async function OnboardingPage() {
   const perfil = await getPerfilPostulante()
   const provincias = await getProvincias()
   const carreras = await getCarreras()
-  const ubicacionInicial = await getUbicacionInicial(perfil?.localidad_id)
+  const ubicacionInicial = await getUbicacionInicial(perfil?.localidad_id, perfil?.provincia_id)
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-surface-page px-4 py-10">

@@ -60,16 +60,34 @@ export const getLocalidadesPorDepartamento = cache(async (
  */
 export type UbicacionInicial = {
   provinciaId: string
+  /** Vacío si el perfil sólo guardó la provincia. */
   departamentoId: string
+  /** Vacío si el perfil sólo guardó la provincia. */
   localidadId: string
   departamentos: UbicacionOption[]
   localidades: UbicacionOption[]
 }
 
+/**
+ * `provinciaId` cubre los perfiles que sólo cargaron ese nivel: el formulario
+ * del postulante no exige bajar hasta la localidad, así que puede no haber una
+ * cadena completa desde la cual reconstruir el estado.
+ */
 export const getUbicacionInicial = cache(async (
   localidadId: string | null | undefined,
+  provinciaId?: string | null,
 ): Promise<UbicacionInicial | null> => {
-  if (!localidadId) return null
+  if (!localidadId) {
+    if (!provinciaId) return null
+    return {
+      provinciaId,
+      departamentoId: '',
+      localidadId: '',
+      departamentos: await getDepartamentosPorProvincia(provinciaId),
+      localidades: [],
+    }
+  }
+
   const supabase = await createClient()
   const { data } = await supabase
     .from('localidad')

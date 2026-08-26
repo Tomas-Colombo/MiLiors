@@ -96,7 +96,7 @@ export const getPerfilPostulante = cache(async () => {
 
   const { data } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id')
+    .select('id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, provincia_id')
     .eq('usuario_id', session.id)
     .single()
 
@@ -109,5 +109,6 @@ export const getPerfilPostulante = cache(async () => {
     enlace_linkedin: string | null
     portfolio: string | null
     localidad_id: string | null
+    provincia_id: string | null
   } | null
 })

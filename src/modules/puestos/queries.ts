@@ -376,13 +376,21 @@ export const getPuestosActivos = async (filtros?: {
     if (carreraPuestoIds.length === 0) return { items: [], total: 0 }
   }
 
-  // Filtrar por provincia o departamento exige que el embed sea un JOIN interno.
-  // Sin filtro geográfico se deja LEFT: los puestos remotos no tienen localidad
-  // y un !inner los borraría del listado.
-  const filtraUbicacion = !!(filtros?.provinciaId || filtros?.departamentoId)
-  const embedUbicacion = filtraUbicacion
-    ? 'localidad!inner(nombre, departamento!inner(nombre, provincia!inner(nombre)))'
-    : 'localidad(nombre, departamento(nombre, provincia(nombre)))'
+  // Filtro geográfico. Un puesto remoto no tiene localidad pero es relevante en
+  // cualquier provincia, así que no puede resolverse con un embed !inner sobre
+  // localidad: ese JOIN interno borraba del listado justamente a los remotos.
+  // Se resuelven aparte los puestos que caen en el área pedida y después se los
+  // une con los remotos, dejando el embed en LEFT.
+  let geoPuestoIds: string[] | null = null
+  if (filtros?.provinciaId || filtros?.departamentoId) {
+    let geo = supabase
+      .from('puesto')
+      .select('id, localidad!inner(departamento!inner(provincia_id))')
+    if (filtros.provinciaId) geo = geo.eq('localidad.departamento.provincia_id', filtros.provinciaId)
+    if (filtros.departamentoId) geo = geo.eq('localidad.departamento_id', filtros.departamentoId)
+    const { data: geoData } = await geo
+    geoPuestoIds = ((geoData ?? []) as { id: string }[]).map((r) => r.id)
+  }
 
   let query = supabase
     .from('puesto')
@@ -391,7 +399,7 @@ export const getPuestosActivos = async (filtros?: {
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
       empresa_id, sector_id, localidad_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      ${embedUbicacion}
+      localidad(nombre, departamento(nombre, provincia(nombre)))
     `, { count: 'exact' })
     .eq('activo', true)
     .is('fecha_baja_puesto', null)
@@ -404,10 +412,14 @@ export const getPuestosActivos = async (filtros?: {
   if (cargaHoraria) query = query.eq('carga_horaria', cargaHoraria)
   const ubicacion = valorEnum(UBICACION, filtros?.ubicacion)
   if (ubicacion) query = query.eq('ubicacion', ubicacion)
-  // Provincia y departamento se filtran sobre el embed: el puesto sólo guarda
-  // la localidad y el resto de la jerarquía cuelga de ella.
-  if (filtros?.provinciaId) query = query.eq('localidad.departamento.provincia_id', filtros.provinciaId)
-  if (filtros?.departamentoId) query = query.eq('localidad.departamento_id', filtros.departamentoId)
+  // Los remotos entran en cualquier área: no tienen provincia que contradiga el
+  // filtro. Si el postulante además eligió una modalidad, ese `.eq` de arriba
+  // manda y los vuelve a excluir cuando corresponde.
+  if (geoPuestoIds) {
+    query = geoPuestoIds.length > 0
+      ? query.or(`id.in.(${geoPuestoIds.join(',')}),ubicacion.eq.${UBICACION.REMOTO}`)
+      : query.eq('ubicacion', UBICACION.REMOTO)
+  }
   if (filtros?.busqueda) query = query.ilike('titulo_puesto', `%${filtros.busqueda}%`)
   if (filtros?.diasDesde) {
     const since = new Date()
@@ -680,8 +692,9 @@ export const getPostulacionesRecibidas = cache(async () => {
       historial_puesto_id, motivo_descarte,
       puesto(id, titulo_puesto, activo, empresa_id, empresa(nombre_empresa)),
       perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
-        carrera_otra, carrera:carrera_id(nombre), localidad_id,
-        localidad(nombre, departamento_id, departamento(nombre, provincia_id, provincia(nombre))),
+        carrera_otra, carrera:carrera_id(nombre), localidad_id, provincia_id,
+        provincia(nombre),
+        localidad(nombre, departamento_id, departamento(nombre)),
         usuario(email))
     `)
     .in('puesto_id', puestoIds)
@@ -756,16 +769,14 @@ export const getPostulacionesRecibidas = cache(async () => {
         carrera_otra: string | null
         carrera: { nombre: string } | null
         localidad_id: string | null
+        provincia_id: string | null
         // Con los ids de la cadena: el tablero filtra por provincia y
         // departamento en memoria, sin volver a la base.
+        provincia: { nombre: string } | null
         localidad: {
           nombre: string
           departamento_id: string
-          departamento: {
-            nombre: string
-            provincia_id: string
-            provincia: { nombre: string } | null
-          } | null
+          departamento: { nombre: string } | null
         } | null
         usuario: { email: string } | null
       } | null
@@ -795,8 +806,8 @@ export const getPostulacionesRecibidas = cache(async () => {
       carrera: r.perfil_postulante?.carrera?.nombre ?? r.perfil_postulante?.carrera_otra ?? null,
       localidad_id: r.perfil_postulante?.localidad_id ?? null,
       departamento_id: r.perfil_postulante?.localidad?.departamento_id ?? null,
-      provincia_id: r.perfil_postulante?.localidad?.departamento?.provincia_id ?? null,
-      nombre_provincia: r.perfil_postulante?.localidad?.departamento?.provincia?.nombre ?? null,
+      provincia_id: r.perfil_postulante?.provincia_id ?? null,
+      nombre_provincia: r.perfil_postulante?.provincia?.nombre ?? null,
       nombre_localidad: r.perfil_postulante?.localidad?.nombre ?? null,
       habilidades: habilidadesPorPostulante.get(r.postulante_id) ?? [],
       contacto,

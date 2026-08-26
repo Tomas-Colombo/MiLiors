@@ -259,6 +259,7 @@ export default async function PostulantesPage({
             paramKey="departamento"
             options={departamentos}
             placeholder="Todos los departamentos"
+            hint="Alcanza a quienes cargaron su localidad."
           />
         )}
         <FilterSelect paramKey="orden" options={ORDEN_OPTS} ariaLabel="Ordenar postulantes" className="w-full sm:w-48" />

@@ -35,7 +35,7 @@ export async function construirPropsCertificado({
   const { data: postulante } = await admin
     .from('perfil_postulante')
     .select(
-      'id, nombre_completo, telefono, enlace_linkedin, carrera_otra, carrera:carrera_id(nombre), localidad(nombre, departamento(nombre, provincia(nombre))), usuario(email)'
+      'id, nombre_completo, telefono, enlace_linkedin, carrera_otra, carrera:carrera_id(nombre), provincia(nombre), localidad(nombre), usuario(email)'
     )
     .eq('id', postulanteId)
     .single()
@@ -48,7 +48,8 @@ export async function construirPropsCertificado({
     enlace_linkedin: string | null
     carrera_otra: string | null
     carrera: { nombre: string } | null
-    localidad: { nombre: string; departamento: { nombre: string; provincia: { nombre: string } | null } | null } | null
+    provincia: { nombre: string } | null
+    localidad: { nombre: string } | null
     usuario: { email: string } | null
   }
 
@@ -164,7 +165,7 @@ export async function construirPropsCertificado({
       nombre: p.nombre_completo,
       email: p.usuario?.email ?? '',
       telefono: p.telefono,
-      ubicacion: [p.localidad?.nombre, p.localidad?.departamento?.provincia?.nombre].filter(Boolean).join(', ') || null,
+      ubicacion: [p.localidad?.nombre, p.provincia?.nombre].filter(Boolean).join(', ') || null,
       linkedin: p.enlace_linkedin,
       objetivo,
       eneatipoNumero: dominante.numero_eneatipo,

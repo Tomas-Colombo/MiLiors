@@ -15,7 +15,7 @@ async function getPerfilPostulante(userId: string) {
   const { data } = await supabase
     .from('perfil_postulante')
     .select(
-      'id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, mostrar_personalidad_publico'
+      'id, nombre_completo, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, provincia_id, mostrar_personalidad_publico'
     )
     .eq('usuario_id', userId)
     .single()
@@ -29,6 +29,7 @@ async function getPerfilPostulante(userId: string) {
     enlace_linkedin: string | null
     portfolio: string | null
     localidad_id: string | null
+    provincia_id: string | null
     mostrar_personalidad_publico: boolean
   } | null
 }
@@ -41,7 +42,7 @@ export default async function MiPerfilPostulantePage() {
     getProvincias(),
     getCarreras(),
   ])
-  const ubicacionInicial = await getUbicacionInicial(perfil?.localidad_id)
+  const ubicacionInicial = await getUbicacionInicial(perfil?.localidad_id, perfil?.provincia_id)
 
   return (
     <div className="mx-auto max-w-xl px-6 py-10 space-y-8">

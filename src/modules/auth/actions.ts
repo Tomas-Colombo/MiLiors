@@ -10,6 +10,7 @@ import { mensajeErrorPassword } from './password-error'
 import type { ActionResult } from '@/lib/types/domain'
 import { RUTAS_POR_ROL } from '@/lib/constants/enums'
 import { rolDeUsuario } from '@/lib/rol'
+import { appUrl } from '@/lib/app-url'
 import type { RolUsuario } from '@/lib/types/domain'
 import type { TablesInsert } from '@/lib/types/database.types'
 
@@ -197,7 +198,7 @@ export async function recuperarPassword(
   // canjea y recién ahí manda a /recuperar-password/nueva.
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/recuperar-password/confirmar`,
+    redirectTo: appUrl('/recuperar-password/confirmar'),
   })
 
   // No revelar si el email existe o no (seguridad)

@@ -201,6 +201,7 @@ export function FiltrosPostulaciones({
                   if (value) setParam('departamento', value)
                 }}
               />
+              <p className="mt-1 text-[11px] leading-tight text-neutral-400">Alcanza a quienes cargaron su localidad.</p>
             </div>
           )}
           {/* Marca del reclutador: excluyentes entre sí (una postulación tiene una sola marca) */}

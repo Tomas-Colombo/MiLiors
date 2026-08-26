@@ -21,6 +21,7 @@ type Perfil = {
   enlace_linkedin: string | null
   portfolio: string | null
   localidad_id: string | null
+  provincia_id: string | null
 } | null
 
 const initialState: ActionResult = { success: false, error: '' }
@@ -60,7 +61,8 @@ export function OnboardingForm({
             provincias={provincias}
             inicial={ubicacionInicial}
             required
-            error={state && !state.success ? state.fieldErrors?.localidad_id?.[0] : undefined}
+            nivelRequerido="provincia"
+            error={state && !state.success ? state.fieldErrors?.provincia_id?.[0] : undefined}
           />
 
           <Field

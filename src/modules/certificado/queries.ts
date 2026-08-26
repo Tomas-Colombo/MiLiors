@@ -95,7 +95,7 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   const { data: postulante } = await supabase
     .from('perfil_postulante')
     .select(
-      'id, nombre_completo, telefono, enlace_linkedin, carrera_otra, carrera:carrera_id(nombre), localidad(nombre, departamento(nombre, provincia(nombre)))'
+      'id, nombre_completo, telefono, enlace_linkedin, carrera_otra, carrera:carrera_id(nombre), provincia(nombre), localidad(nombre)'
     )
     .eq('usuario_id', session.id)
     .single()
@@ -108,7 +108,8 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     enlace_linkedin: string | null
     carrera_otra: string | null
     carrera: { nombre: string } | null
-    localidad: { nombre: string; departamento: { nombre: string; provincia: { nombre: string } | null } | null } | null
+    provincia: { nombre: string } | null
+    localidad: { nombre: string } | null
   }
   const objetivo = postulanteTyped.carrera?.nombre ?? postulanteTyped.carrera_otra ?? null
 
@@ -217,7 +218,7 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     email: session.email,
     telefono: postulanteTyped.telefono,
     ubicacion:
-      [postulanteTyped.localidad?.nombre, postulanteTyped.localidad?.departamento?.provincia?.nombre].filter(Boolean).join(', ') || null,
+      [postulanteTyped.localidad?.nombre, postulanteTyped.provincia?.nombre].filter(Boolean).join(', ') || null,
     linkedin: postulanteTyped.enlace_linkedin,
     objetivo,
     eneatipoNumero: dominante.numero_eneatipo,

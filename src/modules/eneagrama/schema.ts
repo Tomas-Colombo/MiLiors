@@ -6,8 +6,11 @@ export const onboardingPostulanteSchema = z.object({
     .min(2, { message: 'Ingresá tu nombre completo.' })
     .max(120, { message: 'El nombre es demasiado largo.' })
     .trim(),
-  // La localidad implica departamento y provincia por FK: es lo único que se guarda.
-  localidad_id: z.string().uuid({ message: 'Seleccioná tu localidad.' }),
+  // Sólo la provincia es obligatoria. Bajar hasta la localidad es opcional:
+  // sirve para afinar la búsqueda de los reclutadores, no para completar el
+  // registro. Cuando está, implica departamento y provincia por FK.
+  provincia_id: z.string().uuid({ message: 'Seleccioná tu provincia.' }),
+  localidad_id: z.string().uuid().optional().or(z.literal('')),
   telefono: z.string().optional(),
   carrera_id: z.string().uuid().optional().or(z.literal('')),
   carrera_otra: z.string().max(200, { message: 'El título es demasiado largo.' }).trim().optional().or(z.literal('')),

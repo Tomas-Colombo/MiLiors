@@ -69,6 +69,7 @@ export function FiltrosPostulantes({
           paramKey="departamento"
           options={departamentos}
           placeholder="Todos los departamentos"
+          hint="Alcanza a quienes cargaron su localidad."
           className="w-full sm:w-56"
         />
       )}

@@ -26,6 +26,7 @@ export async function actualizarPerfilPostulante(
 
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
+    provincia_id: formData.get('provincia_id') || '',
     localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
     carrera_id: formData.get('carrera_id') || undefined,
@@ -58,7 +59,10 @@ export async function actualizarPerfilPostulante(
   const { error } = await supabase.from('perfil_postulante')
     .update({
       nombre_completo: parsed.data.nombre_completo,
-      localidad_id: parsed.data.localidad_id,
+      // La localidad es opcional; si vino, el trigger de la base recalcula
+      // provincia_id a partir de ella y descarta lo que mande el formulario.
+      provincia_id: parsed.data.provincia_id,
+      localidad_id: parsed.data.localidad_id || null,
       telefono: parsed.data.telefono || null,
       carrera_id: parsed.data.carrera_id || null,
       carrera_otra: parsed.data.carrera_otra || null,

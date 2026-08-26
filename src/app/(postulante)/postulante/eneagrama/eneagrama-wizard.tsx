@@ -18,6 +18,27 @@ import {
 
 const PREGUNTAS_POR_PAGINA = 15
 
+/**
+ * Guarda una respuesta reintentando una vez. Ahora que la navegación no espera
+ * al guardado, una falla puntual pasaría desapercibida hasta el cálculo final;
+ * el upsert es idempotente, así que reintentar no tiene costo.
+ */
+async function persistirRespuesta(
+  testId: string,
+  preguntaId: string,
+  valor: number
+): Promise<boolean> {
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      const result = await guardarRespuesta(testId, preguntaId, valor)
+      if (result.success) return true
+    } catch {
+      // Error de red: cae al reintento.
+    }
+  }
+  return false
+}
+
 type Pregunta = {
   id: string
   numero_pregunta: number
@@ -83,6 +104,10 @@ export function EneagramaWizard({
   // 'rehacer' = sobrescribir un resultado existente.
   const [preparacionPara, setPreparacionPara] = useState<'inicio' | 'rehacer' | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Guardados de respuestas todavía en vuelo. Navegar entre secciones NO los
+  // espera (la validación es local); calcular el resultado o reiniciar el test
+  // sí, porque el servidor lee/borra las respuestas ya persistidas.
+  const guardadosEnVuelo = useRef<Set<Promise<unknown>>>(new Set())
 
   const disponibleDesde = estadoRehacer.disponibleDesde ? new Date(estadoRehacer.disponibleDesde) : null
 
@@ -106,6 +131,10 @@ export function EneagramaWizard({
         setEneatipoResultado(null)
       }
 
+      // iniciarTest() borra las respuestas del test: hay que dejar que aterricen
+      // los guardados en vuelo antes, o uno tardío las reviviría después.
+      await Promise.allSettled([...guardadosEnVuelo.current])
+
       const result = await iniciarTest(perfilId)
       if (!result.success) {
         setError(result.error)
@@ -124,13 +153,18 @@ export function EneagramaWizard({
       // Actualizar estado local inmediatamente (optimistic)
       setRespuestas((prev) => ({ ...prev, [preguntaId]: valor }))
 
-      // Persistir en background sin bloquear la UI
-      startTransition(async () => {
-        const result = await guardarRespuesta(testId, preguntaId, valor)
-        if (!result.success) {
-          setError('Error al guardar una respuesta. Verificá tu conexión.')
-        }
-      })
+      // Persistir fuera de cualquier transition: dentro de una, `isPending`
+      // queda en true hasta que vuelve el server action y deshabilita
+      // "Siguiente", que es lo que hacía sentir lento el paso de sección.
+      const guardado = persistirRespuesta(testId, preguntaId, valor)
+        .then((ok) => {
+          if (!ok) setError('Error al guardar una respuesta. Verificá tu conexión.')
+        })
+        .finally(() => {
+          guardadosEnVuelo.current.delete(guardado)
+        })
+
+      guardadosEnVuelo.current.add(guardado)
     },
     [testId]
   )
@@ -168,6 +202,10 @@ export function EneagramaWizard({
     setResultadoInvalido(false)
 
     startTransition(async () => {
+      // El cálculo lee las respuestas desde la base: acá sí hay que esperar a
+      // que terminen los guardados en vuelo, si no el test figura incompleto.
+      await Promise.allSettled([...guardadosEnVuelo.current])
+
       const result = await calcularEneatipo(testId)
       if (!result.success) {
         if (result.error === 'TEST_INVALIDO') {
@@ -596,7 +634,7 @@ export function EneagramaWizard({
         {!esUltimaPagina ? (
           <Button
             onClick={handleSiguiente}
-            disabled={!paginaCompleta || isPending}
+            disabled={!paginaCompleta}
             className="flex-1"
             rightIcon={<ArrowRightIcon size={16} />}
           >

@@ -209,9 +209,11 @@ export async function getPostulantesAdmin() {
     .from('perfil_postulante')
     .select(`
       id, nombre_completo, perfil_en_busqueda, created_at, carrera_id, carrera_otra,
+      provincia_id,
       usuario(email),
       carrera:carrera_id(nombre),
-      localidad(nombre, departamento_id, departamento(nombre, provincia_id, provincia(nombre))),
+      provincia(nombre),
+      localidad(nombre, departamento_id, departamento(nombre)),
       test_eneagrama(test_eneagrama_dominante(id)),
       informe_personalidad(estado_informe)
     `)
@@ -221,12 +223,14 @@ export async function getPostulantesAdmin() {
     const r = row as {
       id: string; nombre_completo: string; perfil_en_busqueda: boolean; created_at: string
       carrera_id: string | null; carrera_otra: string | null
+      provincia_id: string | null
       usuario: { email: string } | null
       carrera: { nombre: string } | null
+      provincia: { nombre: string } | null
       localidad: {
         nombre: string
         departamento_id: string
-        departamento: { nombre: string; provincia_id: string; provincia: { nombre: string } | null } | null
+        departamento: { nombre: string } | null
       } | null
       test_eneagrama: { test_eneagrama_dominante: { id: string }[] } | null
       informe_personalidad: { estado_informe: string } | null
@@ -241,11 +245,12 @@ export async function getPostulantesAdmin() {
       // La carrera puede venir del catálogo o cargada a mano ("otra").
       carrera: r.carrera?.nombre ?? r.carrera_otra ?? null,
       es_carrera_otra: !r.carrera_id && !!r.carrera_otra,
-      // Cadena de ubicación: el perfil sólo guarda la localidad.
+      // La provincia es el único nivel obligatorio y cuelga del perfil; el
+      // departamento sólo existe si además cargó la localidad.
       departamento_id: r.localidad?.departamento_id ?? null,
-      provincia_id: r.localidad?.departamento?.provincia_id ?? null,
+      provincia_id: r.provincia_id,
       nombre_localidad: r.localidad?.nombre ?? null,
-      nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
+      nombre_provincia: r.provincia?.nombre ?? null,
       eneagrama_completo: (r.test_eneagrama?.test_eneagrama_dominante.length ?? 0) > 0,
       estado_informe: r.informe_personalidad?.estado_informe ?? null,
     }

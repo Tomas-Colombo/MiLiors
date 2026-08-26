@@ -127,6 +127,9 @@ export function FilterSelect({
  *
  * `alsoClear` borra los filtros que dependen de éste — al cambiar de provincia,
  * el departamento elegido ya no pertenece a la nueva.
+ *
+ * `hint` es una nota al pie del control, para avisar de un recorte del universo
+ * filtrado sin robarle protagonismo a la barra.
  */
 export function FilterSearchableSelect({
   paramKey,
@@ -134,12 +137,14 @@ export function FilterSearchableSelect({
   placeholder,
   className,
   alsoClear,
+  hint,
 }: {
   paramKey: string
   options: SelectOption[]
   placeholder: string
   className?: string
   alsoClear?: string[]
+  hint?: string
 }) {
   const { searchParams, setParams } = useSetParam()
   const value = searchParams.get(paramKey) ?? ''
@@ -156,6 +161,7 @@ export function FilterSearchableSelect({
           setParams({ [paramKey]: next, ...Object.fromEntries((alsoClear ?? []).map((k) => [k, null])) })
         }}
       />
+      {hint && <p className="mt-1 text-[11px] leading-tight text-neutral-400">{hint}</p>}
     </div>
   )
 }
