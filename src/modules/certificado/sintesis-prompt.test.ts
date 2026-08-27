@@ -30,6 +30,7 @@ function ctx(overrides: Partial<SintesisPromptContext> = {}): SintesisPromptCont
     cursos: [],
     experiencias: [],
     idiomas: [],
+    personalidadPublica: true,
     ...overrides,
   }
 }
@@ -80,7 +81,7 @@ describe('buildSintesisPrompts — antigüedad total', () => {
         ],
       }),
     )
-    expect(userPrompt).toContain('citala, no la recalcules): 3 años')
+    expect(userPrompt).toContain('NUNCA la cites): 3 años')
   })
 
   it('cuenta los períodos solapados una sola vez', () => {
@@ -93,12 +94,12 @@ describe('buildSintesisPrompts — antigüedad total', () => {
         ],
       }),
     )
-    expect(userPrompt).toContain('citala, no la recalcules): 2 años\n')
+    expect(userPrompt).toContain('NUNCA la cites): 2 años\n')
   })
 
   it('sin experiencia cargada no inventa una cifra', () => {
     const { userPrompt } = buildSintesisPrompts(ctx({ experiencias: [] }))
-    expect(userPrompt).toContain('citala, no la recalcules): sin experiencia cargada')
+    expect(userPrompt).toContain('NUNCA la cites): sin experiencia cargada')
     expect(userPrompt).toContain('(sin experiencia cargada)')
   })
 })
@@ -117,9 +118,37 @@ describe('buildSintesisPrompts — material que antes no llegaba al prompt', () 
     )
     expect(userPrompt).toContain('Qué estudió / qué busca (EL EJE')
     expect(userPrompt).toContain('Ingeniería en Sistemas')
-    expect(userPrompt).toContain('Lic. en Sistemas — UBA · dic 2020')
-    expect(userPrompt).toContain('Posgrado en Datos — UTN · en curso o sin fecha')
+    // Fecha de graduación ya cumplida → título obtenido; sin fecha → en curso.
+    expect(userPrompt).toContain('Lic. en Sistemas — UBA · [TÍTULO OBTENIDO] · graduado en dic 2020')
+    expect(userPrompt).toContain('Posgrado en Datos — UTN · [EN CURSO] · sin fecha de graduación')
     expect(userPrompt).toContain('Inglés: Avanzado')
+  })
+
+  it('invita a escanear el QR solo si el informe es público', () => {
+    const publico = buildSintesisPrompts(ctx({ personalidadPublica: true })).systemPrompt
+    expect(publico).toContain('CIERRE: terminá el párrafo con')
+    expect(publico).toContain('código QR')
+
+    // Informe oculto: prometer un QR que no lo muestra sería falso en un documento firmado.
+    const privado = buildSintesisPrompts(ctx({ personalidadPublica: false })).systemPrompt
+    expect(privado).not.toContain('CIERRE: terminá el párrafo con')
+    expect(privado).not.toContain('código QR')
+  })
+
+  it('prohibe datos duros en el párrafo que se imprime', () => {
+    const { systemPrompt } = buildSintesisPrompts(ctx())
+    expect(systemPrompt).toContain('QUÉ ESCRIBÍS')
+    expect(systemPrompt).toContain('PROHIBIDO EN ESE PÁRRAFO')
+  })
+
+  it('pide un solo párrafo y ninguna clave extra', () => {
+    const { systemPrompt } = buildSintesisPrompts(ctx())
+    expect(systemPrompt).toContain('UN SOLO párrafo de 4 a 6 oraciones')
+    expect(systemPrompt).toContain('No agregues ninguna otra clave al JSON')
+    // Pausadas: no se piden más al LLM (ninguna vista las renderizaba).
+    expect(systemPrompt).not.toContain('"fortalezas"')
+    expect(systemPrompt).not.toContain('"contextoIdeal"')
+    expect(systemPrompt).not.toContain('"competenciasIntegradas"')
   })
 
   it('usa el primer nombre y exige tercera persona', () => {

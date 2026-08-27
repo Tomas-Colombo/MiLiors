@@ -123,7 +123,7 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
 
   const { data: postulante } = await supabase
     .from('perfil_postulante')
-    .select('id, nombre_completo, carrera_otra, carrera:carrera_id(nombre)')
+    .select('id, nombre_completo, carrera_otra, mostrar_personalidad_publico, carrera:carrera_id(nombre)')
     .eq('usuario_id', session.id)
     .single()
 
@@ -132,6 +132,7 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     id: string
     nombre_completo: string
     carrera_otra: string | null
+    mostrar_personalidad_publico: boolean | null
     carrera: { nombre: string } | null
   }
 
@@ -302,6 +303,10 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     cursos,
     experiencias,
     idiomas,
+    // Si el informe no es público, el QR no lo muestra: el certificado no puede
+    // invitar a leerlo. Se lee acá y queda congelado en la síntesis, como todo
+    // lo demás del documento firmado.
+    personalidadPublica: postulanteTyped.mostrar_personalidad_publico === true,
   })
 
   if (!resultado.ok) {
@@ -335,5 +340,24 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   }
 
   revalidatePath('/postulante/certificado')
+  return { success: true, data: undefined }
+}
+
+/**
+ * Actualiza el certificado de punta a punta: regenera la sintesis integrada
+ * (unica llamada al LLM) y vuelve a emitir el PDF firmado con los datos vivos.
+ *
+ * Es el reemplazo de la regeneracion automatica por cambio de perfil: cada
+ * edicion minima del perfil tecnico solo prende `certificado_pdf.desactualizado`
+ * (ver `marcarCambioPerfilTecnico`), y el gasto del LLM ocurre una sola vez,
+ * cuando el postulante aprieta el boton.
+ */
+export async function actualizarCertificado(): Promise<ActionResult> {
+  const sintesis = await regenerarSintesisCertificado()
+  if (!sintesis.success) return sintesis
+
+  const certificado = await crearCertificado()
+  if (!certificado.success) return { success: false, error: certificado.error }
+
   return { success: true, data: undefined }
 }

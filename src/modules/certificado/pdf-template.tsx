@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
 import { agruparPorNivel, type CompetenciaDestacada, type NivelCert } from './niveles'
+import { verificarLabel } from '@/lib/app-url'
 
 /**
  * Certificado de perfil MiLiors.
@@ -438,10 +439,10 @@ export function CertificadoPDF({
             </View>
             <View style={styles.verifLine}>
               <Text style={styles.verifLabel}>Verificá en</Text>
-              <Text style={styles.verifValue}>miliors.com/verificar</Text>
+              <Text style={styles.verifValue}>{verificarLabel()}</Text>
             </View>
             <Text style={styles.legal}>
-              Escaneá el código o ingresá el ID de verificación en miliors.com/verificar. La plataforma confirma que
+              Escaneá el código o ingresá el ID de verificación en {verificarLabel()}. La plataforma confirma que
               el documento fue emitido por MiLiors, que no fue alterado y que sigue vigente. Este certificado acredita
               la información validada por MiLiors; no constituye recomendación de contratación ni evaluación clínica.
               Las competencias reflejan un marco de autoconocimiento (Eneagrama), no un test psicométrico

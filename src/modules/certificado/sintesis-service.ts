@@ -220,6 +220,9 @@ export async function generarSintesisCertificado(ctx: SintesisContext): Promise<
       )
     : []
 
+  // PAUSADAS: el prompt ya no las pide (ninguna vista las renderizaba y costaban
+  // tokens de salida en cada generación). El parseo queda por si se reactivan y
+  // para no romper las síntesis viejas que sí las traen guardadas.
   const fortalezas = parseFortalezas(p.fortalezas)
   const contextoIdeal = str(p.contextoIdeal)
 

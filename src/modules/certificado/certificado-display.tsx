@@ -1,6 +1,7 @@
 import type { CertificadoContenido } from './queries'
 import { agruparPorNivel, type CompetenciaDestacada, type NivelCert } from './niveles'
 import { DOC } from '@/lib/constants/documento'
+import { verificarLabel } from '@/lib/app-url'
 import { Papel, PapelHeader, PapelIdentidad, PapelSectionHead } from '@/components/shared/documento-papel'
 
 /**
@@ -243,7 +244,7 @@ export function CertificadoDisplay({
                     className="font-bold underline"
                     style={{ color: GOLD_DARK }}
                   >
-                    miliors.com/verificar
+                    {verificarLabel()}
                   </a>
                 </dd>
               </div>

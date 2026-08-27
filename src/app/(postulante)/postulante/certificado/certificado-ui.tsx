@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { Alert, Badge, Button, Card } from '@/components/ui'
-import { crearCertificado, regenerarSintesisCertificado } from '@/modules/certificado/actions'
+import { actualizarCertificado, crearCertificado, regenerarSintesisCertificado } from '@/modules/certificado/actions'
 import type { CertificadoData, CertificadoContenido } from '@/modules/certificado/queries'
 import type { SintesisEstado } from '@/lib/types/certificado'
 import { CertificadoDisplay } from '@/modules/certificado/certificado-display'
-import { ArrowRightIcon, SparklesIcon } from '@/components/icons'
+import { CheckCircleIcon, InfoIcon, SparklesIcon } from '@/components/icons'
 
 type Props = {
   certificado: CertificadoData | null
@@ -20,6 +20,16 @@ type Props = {
   sintesisEstado: SintesisEstado
   sintesisDesactualizada: boolean
 }
+
+/**
+ * Las tres acciones del certificado comparten skin: mismo alto, mismo ancho y
+ * hover al azul de marca, para que se lean como accionables. El prefijo
+ * `enabled:` es lo que evita que un botón bloqueado se pinte de azul al pasar
+ * por encima — en CSS `:hover` matchea igual sobre un <button disabled>.
+ */
+const ACCION_CLASS =
+  'h-auto min-h-10 w-full py-2 text-center leading-tight ' +
+  'enabled:hover:border-primary-300 enabled:hover:bg-primary-tint enabled:hover:text-primary-600'
 
 function formatFecha(iso: string): string {
   try {
@@ -134,6 +144,19 @@ export function CertificadoUI({
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
 
+  function handleActualizar() {
+    setError(null)
+    setExito(false)
+    startTransition(async () => {
+      const result = await actualizarCertificado()
+      if (!result.success) {
+        setError(result.error)
+      } else {
+        setExito(true)
+      }
+    })
+  }
+
   function handleGenerar() {
     setError(null)
     setExito(false)
@@ -168,69 +191,101 @@ export function CertificadoUI({
     )
   }
 
-  // ── Certificado emitido: status + descarga + previsualización ────────────────
+  // ── Certificado emitido: estado + botonera + previsualización ───────────
   if (certificado) {
+    // La actualización es MANUAL y cuesta una llamada al LLM, así que el botón
+    // solo se habilita cuando hay algo real que reflejar: un cambio en el perfil
+    // técnico (prende `certificado_pdf.desactualizado`) o un informe regenerado
+    // después de la síntesis (`sintesisDesactualizada`).
+    const hayCambios = certificado.desactualizado || sintesisDesactualizada
+    const faltanDatos = !tieneCompetencia || !tieneObjetivo
+    const puedeActualizar = hayCambios && !faltanDatos
+
+    const motivoBloqueo = !hayCambios
+      ? 'Tu certificado ya está al día: no hay cambios en tu perfil ni en tu informe para reflejar.'
+      : !tieneObjetivo
+        ? 'Completá "¿Qué estudiaste / qué buscás?" en tu perfil para poder actualizarlo.'
+        : !tieneCompetencia
+          ? 'Necesitás al menos una habilidad o tecnología cargada para poder actualizarlo.'
+          : null
+
     return (
       <div className="space-y-5">
-        {/* Aviso de desactualización */}
         {certificado.desactualizado && (
           <Alert tone="warning" title="Tu certificado está desactualizado">
-            Modificaste tu perfil desde que lo emitiste. Generá uno nuevo para reflejar los cambios.
-            <div className="mt-3">
-              <Button
-                variant="primary"
-                size="sm"
-                loading={isPending}
-                onClick={handleGenerar}
-                disabled={isPending || !puedeGenerar}
-              >
-                Generar nuevo certificado
-              </Button>
-            </div>
+            Modificaste tu perfil o tu informe desde que lo emitiste. Usá “Actualizar certificado” para
+            regenerarlo con los datos más recientes.
           </Alert>
         )}
         {error && <Alert tone="error" title={error} />}
         {exito && (
-          <Alert tone="success" title="¡Certificado generado!">
-            Tu certificado se actualizó con los datos más recientes.
+          <Alert tone="success" title="¡Certificado actualizado!">
+            Tu certificado se regeneró con los datos más recientes.
           </Alert>
         )}
 
-        <SintesisPanel
-          sintesisEstado={sintesisEstado}
-          sintesisDesactualizada={sintesisDesactualizada}
-          tieneCompetencia={tieneCompetencia}
-          tieneObjetivo={tieneObjetivo}
-        />
+        {/* La síntesis desactualizada ya la resuelve el botón de la botonera:
+            acá queda solo el caso de una síntesis que nunca se generó o falló. */}
+        {sintesisEstado !== 'LISTO' && (
+          <SintesisPanel
+            sintesisEstado={sintesisEstado}
+            sintesisDesactualizada={sintesisDesactualizada}
+            tieneCompetencia={tieneCompetencia}
+            tieneObjetivo={tieneObjetivo}
+          />
+        )}
 
-        {/* Status + descarga */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Badge tone={certificado.desactualizado ? 'warning' : 'success'} dot>
-              {certificado.desactualizado ? 'Desactualizado' : 'Verificado'}
-            </Badge>
-            <span className="text-xs text-muted">Emitido el {formatFecha(certificado.timestamp_firma)}</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {certificado.url_archivo && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => window.open(`/api/certificado/descargar/${certificado.id}`, '_blank')}
-              >
-                Descargar certificado
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              rightIcon={<ArrowRightIcon size={14} />}
-              onClick={() => window.open(`/verificar/${certificado.id}`, '_blank')}
-            >
-              Ver verificación pública
-            </Button>
-          </div>
+        {/* Estado */}
+        <div className="flex items-center gap-2">
+          <Badge tone={certificado.desactualizado ? 'warning' : 'success'} dot>
+            {certificado.desactualizado ? 'Desactualizado' : 'Verificado'}
+          </Badge>
+          <span className="text-xs text-muted">Emitido el {formatFecha(certificado.timestamp_firma)}</span>
         </div>
+
+        {/* Botonera: tres acciones equivalentes, repartidas en partes iguales. */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Button
+            variant="secondary"
+            className={ACCION_CLASS}
+            disabled={!certificado.url_archivo}
+            onClick={() => window.open(`/api/certificado/descargar/${certificado.id}`, '_blank')}
+          >
+            Descargar certificado
+          </Button>
+          <Button
+            variant="secondary"
+            className={ACCION_CLASS}
+            onClick={() => window.open(`/verificar/${certificado.id}`, '_blank')}
+          >
+            Ver verificación pública
+          </Button>
+          <Button
+            variant="secondary"
+            className={ACCION_CLASS}
+            loading={isPending}
+            disabled={isPending || !puedeActualizar}
+            onClick={handleActualizar}
+          >
+            Actualizar certificado
+          </Button>
+        </div>
+
+        {motivoBloqueo && (
+          <div className="flex items-start gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5">
+            {hayCambios ? (
+              <InfoIcon size={14} className="mt-px shrink-0 text-muted" />
+            ) : (
+              <CheckCircleIcon size={14} className="mt-px shrink-0 text-success" />
+            )}
+            <p className="text-xs leading-relaxed text-muted">{motivoBloqueo}</p>
+          </div>
+        )}
+        {isPending && (
+          <p className="text-center text-xs text-muted">
+            Regenerando tu perfil integrado y volviendo a firmar el PDF… esto puede tardar unos segundos.
+          </p>
+        )}
 
         {/* Previsualización del contenido */}
         {contenido && (

@@ -18,3 +18,26 @@ export function appUrl(path = ''): string {
   if (!path) return base
   return `${base}${path.startsWith('/') ? path : `/${path}`}`
 }
+
+/**
+ * Dominio público oficial de la app.
+ *
+ * Es el fallback de todo lo que sale IMPRESO o CONGELADO: el QR queda grabado
+ * dentro de un PDF firmado que vive para siempre en Storage, así que si
+ * `NEXT_PUBLIC_APP_URL` no está cargada en el panel, el código no puede
+ * resolver a una ruta relativa ni a un dominio ajeno — el certificado ya se
+ * emitió y nadie se entera hasta que alguien lo escanea.
+ */
+export const APP_URL_OFICIAL = 'https://mi-liors.vercel.app'
+
+/** Base pública garantizada ABSOLUTA — para QR, PDFs y cualquier link que salga de la app. */
+export function appUrlPublico(path = ''): string {
+  const base = appUrl() || APP_URL_OFICIAL
+  if (!path) return base
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+/** Host legible para imprimir en el certificado: 'mi-liors.vercel.app/verificar'. */
+export function verificarLabel(): string {
+  return `${appUrlPublico().replace(/^https?:\/\//, '')}/verificar`
+}

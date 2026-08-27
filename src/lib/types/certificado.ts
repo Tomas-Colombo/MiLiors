@@ -42,17 +42,20 @@ export type SintesisDescarte = {
  * esquema anterior quedan marcadas como desactualizadas y el postulante ve el
  * botón para regenerarlas (mismo mecanismo que cuando el informe queda más nuevo).
  */
-export const SINTESIS_VERSION = 4
+export const SINTESIS_VERSION = 5
 
 /** Salida del LLM + metadata, persistida en `perfil_tecnico.sintesis_certificado`. */
 export type CertificadoSintesisJSON = {
-  /** 3 párrafos en 3ª persona: trayectoria técnica y forma de operar entrelazadas. */
+  /** Un párrafo en 3ª persona: la síntesis de personalidad que se imprime. */
   perfilIntegrado: string
-  /** 3-4 cruces personalidad × perfil técnico. Ausente en síntesis v1. */
+  /**
+   * PAUSADO desde v5: el prompt ya no las pide porque ninguna vista las
+   * renderizaba. Se sigue leyendo para no romper las síntesis v2-v4 guardadas.
+   */
   fortalezas?: SintesisFortaleza[]
-  /** Dónde despliega su potencial y qué necesita del entorno. Ausente en síntesis v1. */
+  /** PAUSADO desde v5, mismo motivo que [[fortalezas]]. */
   contextoIdeal?: string
-  /** Nombres EXACTOS de las competencias técnicas que la prosa ya menciona. */
+  /** PAUSADO desde v5: el párrafo ya no nombra competencias técnicas. */
   competenciasIntegradas: string[]
   /**
    * "¿Qué estudiaste / qué buscás?" del perfil, congelado al generar: es el eje

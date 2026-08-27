@@ -68,6 +68,13 @@ export type SintesisPromptContext = {
   experiencias: SintesisExperiencia[]
   /** Idiomas cargados. */
   idiomas: { nombre: string; nivel: string }[]
+  /**
+   * Si el titular expone su informe de personalidad en la página de verificación
+   * (`perfil_postulante.mostrar_personalidad_publico`). Solo si es `true` el
+   * certificado puede invitar a escanear el QR para leerlo: prometer un informe
+   * que el QR no va a mostrar es una promesa rota en un documento firmado.
+   */
+  personalidadPublica: boolean
 }
 
 /** Lo único que el triage necesita: la búsqueda y el material técnico a medir. */
@@ -87,6 +94,19 @@ function formatMes(iso: string): string {
   const [anio, mes] = iso.split('-')
   const m = parseInt(mes ?? '', 10)
   return m >= 1 && m <= 12 ? `${MESES[m]} ${anio}` : iso
+}
+
+/** 'YYYY-MM(-DD)' → índice comparable (año * 12 + mes). NaN si no parsea. */
+function indiceMes(iso: string): number {
+  const [a, m] = iso.split('-')
+  const anio = parseInt(a, 10)
+  return Number.isFinite(anio) ? anio * 12 + (parseInt(m ?? '1', 10) || 1) : NaN
+}
+
+/** Índice del mes en curso — la referencia contra la que se decide qué ya terminó. */
+function indiceHoy(): number {
+  const hoy = new Date()
+  return hoy.getFullYear() * 12 + (hoy.getMonth() + 1)
 }
 
 /** Meses transcurridos entre dos fechas 'YYYY-MM(-DD)'. `fin` null = hoy. */
@@ -244,6 +264,7 @@ export function buildSintesisPrompts(ctx: SintesisPromptContext): {
   userPrompt: string
 } {
   const nombre = primerNombre(ctx.nombre)
+  const hoy = indiceHoy()
 
   const systemPrompt = `Sos un consultor de talento. Redactás en español rioplatense, en TERCERA PERSONA (ej: "${nombre} combina...", "Su experiencia..."). Prohibido "tú" y "vos".
 
@@ -252,37 +273,39 @@ Tu tarea: escribir un PERFIL PROFESIONAL INTEGRADO para un certificado que un re
 LA BÚSQUEDA DECLARADA ES EL EJE:
 El candidato declaró qué estudió y qué busca. Todo lo que escribas tiene que servirle a un reclutador que lo evalúa PARA ESA BÚSQUEDA. El material técnico que recibís YA fue filtrado: lo que no aportaba se sacó antes de llegar a vos. Escribí sobre lo que está, no menciones ausencias ("no registra experiencia en...") ni te disculpes por lo que falta.
 
-LA REGLA CENTRAL — INTEGRAR, NO YUXTAPONER:
-El candidato ya tiene un informe de personalidad completo aparte. NO lo repitas ni lo resumas. Acá la personalidad es el "cómo" que explica el "qué" de la trayectoria: cada rasgo que menciones tiene que estar ANCLADO en evidencia concreta del perfil técnico (un puesto, una empresa, una tecnología, un título, un curso, un idioma, una duración). Un rasgo sin evidencia técnica que lo sostenga NO va.
-- MAL (yuxtapone): "Es analítico y detallista. Trabajó en Acme con SQL."
-- BIEN (integra): "Su lectura analítica encontró terreno fértil en los tres años en Acme, donde el trabajo con SQL exigía sostener la precisión bajo pedidos que cambiaban de semana a semana."
+QUÉ ESCRIBÍS:
+Un único párrafo, que se imprime tal cual en el certificado bajo el título "Síntesis de personalidad".
+Ese párrafo es una síntesis de PERSONALIDAD, no un curriculum: cómo piensa, cómo decide, cómo se mueve en un equipo, qué lo motiva. El certificado ya lista APARTE su formación, su experiencia con fechas, sus competencias y sus idiomas: repetir esos datos acá desperdicia el único párrafo que el reclutador lee primero.
+PROHIBIDO EN ESE PÁRRAFO: fechas, años, duraciones, antigüedad, nombres de empresas, nombres de instituciones y nombres de títulos académicos. Podés nombrar su campo en términos generales ("en el desarrollo de software"), nada más.
+Tiene que ser concreto y revelador, y dejar al lector con ganas de saber más. Nada de fórmulas genéricas que le sirvan a cualquiera.
+
+LA REGLA CENTRAL — DESTILAR, NO LISTAR:
+El candidato ya tiene un informe de personalidad completo detrás del QR. NO lo resumas sección por sección ni enumeres rasgos sueltos: elegí los dos o tres que más lo definen y contalos como se ven EN ACCIÓN dentro de su campo.
+- MAL (lista): "Es analítico, detallista, autónomo y orientado a resultados."
+- MAL (dato duro): "Con 2 años y 3 meses como desarrollador en Acme, su perfil se orienta al liderazgo."
+- BIEN (destila): "Necesita entender el porqué antes de escribir la primera línea, y esa insistencia en el fundamento es la que lo vuelve confiable cuando el problema no tiene manual: sostiene la precisión aun cuando el pedido cambia de semana a semana."
 
 PROHIBIDO:
 - Inventar experiencia, títulos, empresas, tecnologías o competencias que no estén en los datos provistos.
 - Recalcular o mencionar niveles, puntajes, porcentajes, barras o rankings del informe.
-- Calcular vos las duraciones o la antigüedad: YA vienen calculadas, citalas tal cual.
+- Deducir por tu cuenta si una formación o un curso terminó: cada ítem viene etiquetado [TÍTULO OBTENIDO], [FINALIZADO] o [EN CURSO]. Respetá la etiqueta al pie de la letra. Escribir "actualmente cursa" sobre un [TÍTULO OBTENIDO] es un error grave.
 - Adular, exagerar o usar relleno de consultoría ("es un profesional excepcional", "aporta un gran valor").
-- Copiar textual las frases del informe: reformulalas SIEMPRE ancladas en la trayectoria.
+- Copiar textual las frases del informe: reformulalas SIEMPRE con tus propias palabras.
 
-COMPETENCIAS TÉCNICAS: integrá SOLO las que encajen naturalmente con algún rasgo o experiencia. Las que no encajen NO las fuerces ni las enumeres: el sistema las agrega aparte al final como dato.
-
-SI FALTAN DATOS: escribí con lo que hay. Si no hay experiencia laboral, apoyate en la formación y las competencias, y hablá del potencial que muestra para la búsqueda declarada. Nunca rellenes con supuestos.
+SI FALTAN DATOS: el material técnico está ahí para que sepas en qué campo se mueve y puedas hacer concreto el retrato, no para citarlo. Si hay poco, escribí igual desde su personalidad y su búsqueda declarada. Nunca rellenes con supuestos.
 
 FORMATO DE SALIDA: respondé ÚNICAMENTE con un objeto JSON válido (sin markdown, sin texto extra) con esta forma EXACTA:
 {
-  "perfilIntegrado": "string — EXACTAMENTE 3 párrafos separados por \\n\\n, 10-12 oraciones en total. P1: quién es hoy profesionalmente y qué busca (formación + búsqueda declarada + antigüedad, citando la cifra provista). P2: su trayectoria, hilando los puestos concretos con la forma de operar que revelan. P3: cómo se traduce todo eso en su manera de trabajar hoy y qué puede aportar en la búsqueda que declaró.",
-  "fortalezas": [
-    {
-      "titulo": "string — 2-5 palabras, concreto y sin clichés (ej 'Traducción técnica al negocio')",
-      "texto": "string — 3-4 oraciones en 3ª persona: el rasgo de personalidad + la evidencia técnica REAL que lo respalda"
-    }
-  ],
-  "contextoIdeal": "string — 1 párrafo, 4-5 oraciones en 3ª persona: en qué tipo de entorno, equipo y problema despliega su potencial, y qué necesita para hacerlo. Derivalo de su personalidad PERO aterrizado en los contextos donde efectivamente trabajó y en la búsqueda declarada.",
-  "competenciasIntegradas": ["string — nombre EXACTO de cada competencia técnica que mencionaste en CUALQUIER parte del texto (perfilIntegrado, fortalezas o contextoIdeal)"]
+  "perfilIntegrado": "string — UN SOLO párrafo de 4 a 6 oraciones, sin saltos de línea. Es el texto completo que se imprime en el certificado."
 }
 
-CANTIDAD: "fortalezas" debe tener 3 o 4 entradas, cada una un cruce DISTINTO (no repitas el mismo rasgo ni la misma experiencia como eje). Si el material técnico da para menos, entregá 3.
-EXTENSIÓN TOTAL: apuntá a 700-800 palabras. Denso y concreto, sin relleno.`
+EXTENSIÓN: entre 110 y 160 palabras. Un solo párrafo, denso y sin relleno. No agregues ninguna otra clave al JSON.${
+    ctx.personalidadPublica
+      ? `
+
+CIERRE: terminá el párrafo con UNA sola oración breve, dicha al pasar, que invite a leer su informe de personalidad completo escaneando el código QR de este certificado. Sin signos de exclamación, sin tono publicitario: es un dato útil, no un aviso.`
+      : ''
+  }`
 
   const compTecStr = ctx.competenciasTecnicas.length
     ? ctx.competenciasTecnicas.map(c => `  - ${c}`).join('\n')
@@ -303,8 +326,17 @@ EXTENSIÓN TOTAL: apuntá a 700-800 palabras. Denso y concreto, sin relleno.`
   const formStr = ctx.formaciones.length
     ? ctx.formaciones
         .map(f => {
-          const fecha = f.fechaGraduacion ? ` · ${formatMes(f.fechaGraduacion)}` : ' · en curso o sin fecha'
-          return `  - ${f.titulo} — ${f.institucion}${fecha}`
+          // El estado lo resuelve el código, no el modelo. Una fecha suelta
+          // ('ene 2026') no dice si el título ya se obtuvo o si recién se cursa,
+          // y el modelo termina inventando ("actualmente cursa" sobre un título
+          // ya obtenido). Sin fecha de graduación = no concluyó; con fecha ya
+          // cumplida = obtenido; con fecha futura = en curso.
+          const base = `  - ${f.titulo} — ${f.institucion}`
+          if (!f.fechaGraduacion) return `${base} · [EN CURSO] · sin fecha de graduación`
+          const idx = indiceMes(f.fechaGraduacion)
+          return Number.isFinite(idx) && idx <= hoy
+            ? `${base} · [TÍTULO OBTENIDO] · graduado en ${formatMes(f.fechaGraduacion)}`
+            : `${base} · [EN CURSO] · graduación prevista ${formatMes(f.fechaGraduacion)}`
         })
         .join('\n')
     : '  (sin formación cargada)'
@@ -312,8 +344,14 @@ EXTENSIÓN TOTAL: apuntá a 700-800 palabras. Denso y concreto, sin relleno.`
   const cursosStr = ctx.cursos.length
     ? ctx.cursos
         .map(c => {
+          const idxFin = c.fechaFin ? indiceMes(c.fechaFin) : NaN
+          const estado = !c.fechaFin
+            ? '[EN CURSO] · sin fecha de finalización'
+            : Number.isFinite(idxFin) && idxFin <= hoy
+              ? `[FINALIZADO] · ${formatMes(c.fechaFin)}`
+              : `[EN CURSO] · finaliza ${formatMes(c.fechaFin)}`
           const detalle = [
-            c.fechaFin ? formatMes(c.fechaFin) : 'en curso o sin fecha',
+            estado,
             c.duracionHoras ? `${c.duracionHoras} h` : null,
           ]
             .filter(Boolean)
@@ -344,10 +382,11 @@ EXTENSIÓN TOTAL: apuntá a 700-800 palabras. Denso y concreto, sin relleno.`
   const userPrompt = `Redactá el perfil integrado para el siguiente candidato y devolvé SOLO el JSON.
 
 ═══ CANDIDATO ═══
+Fecha de hoy: ${formatMes(new Date().toISOString().slice(0, 7))}
 Nombre: ${nombre}
 Qué estudió / qué busca (EL EJE — todo lo que escribas tiene que servirle a un reclutador de esta búsqueda): ${ctx.objetivo}
 ${ctx.subtitulo ? `Posicionamiento: ${ctx.subtitulo}` : ''}
-Antigüedad laboral relevante (YA CALCULADA sobre la experiencia de abajo — citala, no la recalcules): ${antiguedad ?? 'sin experiencia cargada'}
+Antigüedad laboral relevante (YA CALCULADA sobre la experiencia de abajo — si la citás, copiala tal cual; NUNCA la cites): ${antiguedad ?? 'sin experiencia cargada'}
 
 ═══ MATERIAL DE PERSONALIDAD ═══
 Es el "cómo". NO lo copies ni lo resumas: usalo para explicar la trayectoria de abajo.
