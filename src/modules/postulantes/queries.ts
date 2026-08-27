@@ -30,8 +30,17 @@ export type PostulanteDetalle = PostulanteCard & {
   // Perfil técnico
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
   cursos: { nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null; url_credencial: string | null }[]
-  experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
+  /** `descripcion` son las tareas del puesto, tal como las carga el postulante. */
+  experiencias: {
+    puesto: string
+    empresa: string
+    fecha_inicio: string
+    fecha_fin: string | null
+    descripcion: string | null
+  }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
+  /** Departamento de la localidad, cuando el perfil bajó hasta ese nivel. */
+  nombre_departamento: string | null
   humanDesign: {
     tipo_energetico: string
     autoridad_hd: string
@@ -195,7 +204,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     .select(`
       id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda,
       telefono, enlace_linkedin, portfolio, ultima_conexion,
-      usuario(email), provincia(nombre), localidad(nombre),
+      usuario(email), provincia(nombre), localidad(nombre, departamento(nombre)),
       test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
     `)
     .eq('id', postulanteId)
@@ -214,7 +223,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     portfolio: string | null
     ultima_conexion: string | null
     usuario: { email: string } | null
-    localidad: LocalidadEmbed | null
+    localidad: (LocalidadEmbed & { departamento: { nombre: string } | null }) | null
     provincia: ProvinciaEmbed | null
     test_eneagrama: {
       tiene_empate_dominante: boolean
@@ -246,16 +255,20 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
       admin
         .from('formacion_academica')
         .select('titulo, institucion, fecha_graduacion')
-        .eq('perfil_tecnico_id', ptId),
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_graduacion', { ascending: false, nullsFirst: false }),
       admin
         .from('curso')
         .select('nombre, institucion, fecha_fin, duracion_horas, url_credencial')
         .eq('perfil_tecnico_id', ptId)
         .order('fecha_fin', { ascending: false }),
+      // `descripcion` son las tareas del puesto: es lo que deja ver qué hizo
+      // realmente el candidato, y el perfil propio del postulante ya la muestra.
       admin
         .from('experiencia_laboral')
-        .select('puesto, empresa, fecha_inicio, fecha_fin')
-        .eq('perfil_tecnico_id', ptId),
+        .select('puesto, empresa, fecha_inicio, fecha_fin, descripcion')
+        .eq('perfil_tecnico_id', ptId)
+        .order('fecha_inicio', { ascending: false }),
       admin
         .from('idioma')
         .select('nombre, nivel_idioma')
@@ -311,6 +324,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     competencias,
     nombre_provincia: p.provincia?.nombre ?? null,
     nombre_localidad: p.localidad?.nombre ?? null,
+    nombre_departamento: p.localidad?.departamento?.nombre ?? null,
     email: contactoLiberado ? (p.usuario?.email ?? null) : null,
     telefono: contactoLiberado ? p.telefono : null,
     enlace_linkedin: contactoLiberado ? p.enlace_linkedin : null,

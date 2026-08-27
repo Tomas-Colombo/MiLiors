@@ -30,6 +30,7 @@ import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { InformeDisplay } from '@/modules/informe/informe-display'
+import { ubicacionLabel } from '@/lib/ubicacion'
 import { verifySession } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { getFormularioDePuesto, getRespuestasDePostulacion } from '@/modules/preselector/queries'
@@ -190,23 +191,28 @@ export default async function PostulanteDetallePage({
                 {postulante.carrera && (
                   <p className="text-[13px] text-muted">{postulante.carrera}</p>
                 )}
-                {(postulante.nombre_localidad || postulante.nombre_provincia) && (
+                {ubicacionLabel(postulante) && (
                   <p className="text-[12px] text-neutral-400 mt-0.5">
-                    📍 {[postulante.nombre_localidad, postulante.nombre_provincia].filter(Boolean).join(', ')}
+                    📍 {ubicacionLabel(postulante)}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Eneatipo */}
-            {postulante.eneatipo_numero != null && (
-              <div className="flex items-center gap-2">
+            {/* Eneatipo y estado de búsqueda */}
+            <div className="flex flex-wrap items-center gap-2">
+              {postulante.eneatipo_numero != null && (
                 <Badge tone="primary">
                   Eneatipo {postulante.eneatipo_numero}
                   {postulante.eneatipo_nombre ? ` · ${postulante.eneatipo_nombre}` : ''}
                 </Badge>
-              </div>
-            )}
+              )}
+              {postulante.perfil_en_busqueda ? (
+                <Badge tone="success" dot>En búsqueda activa</Badge>
+              ) : (
+                <Badge tone="neutral" dot>No está en búsqueda</Badge>
+              )}
+            </div>
 
             {/* Competencias */}
             {postulante.competencias.length > 0 && (
@@ -363,6 +369,9 @@ export default async function PostulanteDetallePage({
                           })
                         : 'Actualidad'}
                     </p>
+                    {e.descripcion && (
+                      <p className="mt-1 whitespace-pre-line text-ink-soft">{e.descripcion}</p>
+                    )}
                   </li>
                 ))}
               </ul>

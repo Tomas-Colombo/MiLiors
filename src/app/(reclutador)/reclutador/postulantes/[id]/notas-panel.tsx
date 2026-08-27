@@ -95,7 +95,14 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
 
   return (
     <Card>
-      <h3 className="text-[15px] font-bold text-ink mb-4">Notas privadas</h3>
+      <div className="mb-4 flex items-baseline justify-between gap-2">
+        <h3 className="text-[15px] font-bold text-ink">Notas privadas</h3>
+        {notas.length > 0 && (
+          <span className="text-[12px] tabular-nums text-muted">
+            {notas.length} nota{notas.length !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
 
       {/* New note form */}
       <div className="space-y-2 mb-6">
@@ -126,7 +133,11 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
           Todavía no escribiste notas sobre este candidato.
         </p>
       ) : (
-        <ul className="space-y-3">
+        /* La columna vive al lado del perfil: sin tope, veinte notas estiraban
+           la tarjeta muy por debajo del contenido principal. Con altura acotada
+           la lista scrollea sola y la columna deja de crecer. El scroll aparece
+           recién cuando hace falta: con pocas notas la tarjeta se ve igual. */
+        <ul className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
           {notas.map((nota) => (
             <li key={nota.id} className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
               {editandoId === nota.id ? (
