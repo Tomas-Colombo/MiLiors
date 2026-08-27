@@ -27,6 +27,7 @@ export type PuestoItem = {
   fecha_ultima_actividad?: string
   empresa_id: string
   sector_id: string | null
+  departamento_id: string | null
   localidad_id: string | null
   reclutador_id?: string | null
   // perfil_psicologico_deseado is intentionally excluded from the public type
@@ -35,16 +36,20 @@ export type PuestoItem = {
   /** Carreras del catálogo asociadas al puesto (N–N vía puesto_carrera). */
   carreras: { id: string; nombre: string }[]
   nombre_provincia?: string | null
+  nombre_departamento?: string | null
   nombre_localidad?: string | null
 }
 
 /**
- * Embed de ubicación. El puesto sólo guarda `localidad_id`: el departamento y
- * la provincia se alcanzan subiendo por las FKs del catálogo.
+ * Embeds de ubicación. El puesto guarda `departamento_id` —su nivel mínimo— y,
+ * opcionalmente, `localidad_id`. La provincia se alcanza por las FKs del
+ * catálogo desde cualquiera de los dos.
  */
+type DepartamentoEmbed = { nombre: string; provincia: { nombre: string } | null }
+
 type LocalidadEmbed = {
   nombre: string
-  departamento: { nombre: string; provincia: { nombre: string } | null } | null
+  departamento: DepartamentoEmbed | null
 }
 
 /** Fila embebida de puesto_carrera con el nombre de la carrera resuelto. */
@@ -148,8 +153,9 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, localidad_id, perfil_psicologico_deseado,
+      empresa_id, sector_id, departamento_id, localidad_id, perfil_psicologico_deseado,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
+      departamento(nombre, provincia(nombre)),
       localidad(nombre, departamento(nombre, provincia(nombre)))
     `)
     .eq('reclutador_id', (reclutador as { id: string }).id)
@@ -164,11 +170,13 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       fecha_publicacion: string; fecha_baja_puesto: string | null
       fecha_ultima_actividad: string
       empresa_id: string; sector_id: string | null
+      departamento_id: string | null
       localidad_id: string | null
       perfil_psicologico_deseado: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
       puesto_carrera: PuestoCarreraRow[] | null
+      departamento: DepartamentoEmbed | null
       localidad: LocalidadEmbed | null
     }
     return {
@@ -185,12 +193,17 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
       fecha_ultima_actividad: r.fecha_ultima_actividad,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
+      departamento_id: r.departamento_id,
       localidad_id: r.localidad_id,
       perfil_psicologico_deseado: r.perfil_psicologico_deseado,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
       carreras: mapCarreras(r.puesto_carrera),
-      nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
+      // La cadena de la localidad manda cuando está cargada; si el puesto se
+      // detuvo en el departamento, sale de ahí.
+      nombre_provincia:
+        r.localidad?.departamento?.provincia?.nombre ?? r.departamento?.provincia?.nombre ?? null,
+      nombre_departamento: r.localidad?.departamento?.nombre ?? r.departamento?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
@@ -216,8 +229,9 @@ export const getPuestoById = cache(async (
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, localidad_id, perfil_psicologico_deseado,
+      empresa_id, sector_id, departamento_id, localidad_id, perfil_psicologico_deseado,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
+      departamento(nombre, provincia(nombre)),
       localidad(nombre, departamento(nombre, provincia(nombre)))
     `)
     .eq('id', puestoId)
@@ -234,11 +248,13 @@ export const getPuestoById = cache(async (
     fecha_publicacion: string; fecha_baja_puesto: string | null
     fecha_ultima_actividad: string
     empresa_id: string; sector_id: string | null
+    departamento_id: string | null
     localidad_id: string | null
     perfil_psicologico_deseado: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
     puesto_carrera: PuestoCarreraRow[] | null
+    departamento: DepartamentoEmbed | null
     localidad: LocalidadEmbed | null
   }
 
@@ -256,12 +272,17 @@ export const getPuestoById = cache(async (
     fecha_ultima_actividad: r.fecha_ultima_actividad,
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
+    departamento_id: r.departamento_id,
     localidad_id: r.localidad_id,
     perfil_psicologico_deseado: r.perfil_psicologico_deseado,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
     carreras: mapCarreras(r.puesto_carrera),
-    nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
+    // La cadena de la localidad manda cuando está cargada; si el puesto se
+    // detuvo en el departamento, sale de ahí.
+    nombre_provincia:
+      r.localidad?.departamento?.provincia?.nombre ?? r.departamento?.provincia?.nombre ?? null,
+    nombre_departamento: r.localidad?.departamento?.nombre ?? r.departamento?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }
 })
@@ -376,18 +397,22 @@ export const getPuestosActivos = async (filtros?: {
     if (carreraPuestoIds.length === 0) return { items: [], total: 0 }
   }
 
-  // Filtro geográfico. Un puesto remoto no tiene localidad pero es relevante en
-  // cualquier provincia, así que no puede resolverse con un embed !inner sobre
-  // localidad: ese JOIN interno borraba del listado justamente a los remotos.
-  // Se resuelven aparte los puestos que caen en el área pedida y después se los
-  // une con los remotos, dejando el embed en LEFT.
+  // Filtro geográfico. Un puesto remoto no tiene ubicación pero es relevante en
+  // cualquier provincia, así que no puede resolverse con un embed !inner: ese
+  // JOIN interno borraba del listado justamente a los remotos. Se resuelven
+  // aparte los puestos que caen en el área pedida y después se los une con los
+  // remotos, dejando el embed en LEFT.
+  //
+  // Se filtra por `departamento_id` y no por la cadena de la localidad: es el
+  // nivel mínimo del puesto, así que también alcanza a los que no bajaron hasta
+  // la localidad.
   let geoPuestoIds: string[] | null = null
   if (filtros?.provinciaId || filtros?.departamentoId) {
     let geo = supabase
       .from('puesto')
-      .select('id, localidad!inner(departamento!inner(provincia_id))')
-    if (filtros.provinciaId) geo = geo.eq('localidad.departamento.provincia_id', filtros.provinciaId)
-    if (filtros.departamentoId) geo = geo.eq('localidad.departamento_id', filtros.departamentoId)
+      .select('id, departamento!inner(provincia_id)')
+    if (filtros.provinciaId) geo = geo.eq('departamento.provincia_id', filtros.provinciaId)
+    if (filtros.departamentoId) geo = geo.eq('departamento_id', filtros.departamentoId)
     const { data: geoData } = await geo
     geoPuestoIds = ((geoData ?? []) as { id: string }[]).map((r) => r.id)
   }
@@ -397,8 +422,9 @@ export const getPuestosActivos = async (filtros?: {
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, localidad_id,
+      empresa_id, sector_id, departamento_id, localidad_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
+      departamento(nombre, provincia(nombre)),
       localidad(nombre, departamento(nombre, provincia(nombre)))
     `, { count: 'exact' })
     .eq('activo', true)
@@ -444,10 +470,12 @@ export const getPuestosActivos = async (filtros?: {
       nivel_experiencia: string | null; activo: boolean
       fecha_publicacion: string; fecha_baja_puesto: string | null
       empresa_id: string; sector_id: string | null
+      departamento_id: string | null
       localidad_id: string | null
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
       puesto_carrera: PuestoCarreraRow[] | null
+      departamento: DepartamentoEmbed | null
       localidad: LocalidadEmbed | null
     }
     return {
@@ -463,11 +491,16 @@ export const getPuestosActivos = async (filtros?: {
       fecha_baja_puesto: r.fecha_baja_puesto,
       empresa_id: r.empresa_id,
       sector_id: r.sector_id,
+      departamento_id: r.departamento_id,
       localidad_id: r.localidad_id,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
       carreras: mapCarreras(r.puesto_carrera),
-      nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
+      // La cadena de la localidad manda cuando está cargada; si el puesto se
+      // detuvo en el departamento, sale de ahí.
+      nombre_provincia:
+        r.localidad?.departamento?.provincia?.nombre ?? r.departamento?.provincia?.nombre ?? null,
+      nombre_departamento: r.localidad?.departamento?.nombre ?? r.departamento?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
@@ -484,8 +517,9 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, reclutador_id, localidad_id,
+      empresa_id, sector_id, reclutador_id, departamento_id, localidad_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
+      departamento(nombre, provincia(nombre)),
       localidad(nombre, departamento(nombre, provincia(nombre)))
     `)
     .eq('id', puestoId)
@@ -499,10 +533,12 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     nivel_experiencia: string | null; activo: boolean
     fecha_publicacion: string; fecha_baja_puesto: string | null
     empresa_id: string; sector_id: string | null; reclutador_id: string | null
+    departamento_id: string | null
     localidad_id: string | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
     puesto_carrera: PuestoCarreraRow[] | null
+    departamento: DepartamentoEmbed | null
     localidad: LocalidadEmbed | null
   }
 
@@ -520,11 +556,16 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
     empresa_id: r.empresa_id,
     sector_id: r.sector_id,
     reclutador_id: r.reclutador_id,
+    departamento_id: r.departamento_id,
     localidad_id: r.localidad_id,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
     carreras: mapCarreras(r.puesto_carrera),
-    nombre_provincia: r.localidad?.departamento?.provincia?.nombre ?? null,
+    // La cadena de la localidad manda cuando está cargada; si el puesto se
+    // detuvo en el departamento, sale de ahí.
+    nombre_provincia:
+      r.localidad?.departamento?.provincia?.nombre ?? r.departamento?.provincia?.nombre ?? null,
+    nombre_departamento: r.localidad?.departamento?.nombre ?? r.departamento?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
   }
 })

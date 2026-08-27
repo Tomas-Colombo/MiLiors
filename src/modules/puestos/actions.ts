@@ -235,6 +235,7 @@ export async function publicarPuesto(
     idioma: formData.get('idioma') || undefined,
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
+    departamento_id: formData.get('departamento_id') || undefined,
     localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
@@ -279,6 +280,7 @@ export async function publicarPuesto(
     ...parsed.data,
     idioma: parsed.data.idioma || '',
     sector_id: parsed.data.sector_id || null,
+    departamento_id: esRemoto ? null : parsed.data.departamento_id || null,
     localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     activo: true,
   })
@@ -320,6 +322,7 @@ export async function editarPuesto(
     idioma: formData.get('idioma') || undefined,
     carga_horaria: formData.get('carga_horaria'),
     ubicacion: formData.get('ubicacion'),
+    departamento_id: formData.get('departamento_id') || undefined,
     localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
@@ -360,7 +363,8 @@ export async function editarPuesto(
       ...parsed.data,
       idioma: parsed.data.idioma || '',
       sector_id: parsed.data.sector_id || null,
-        localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
+      departamento_id: esRemoto ? null : parsed.data.departamento_id || null,
+      localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
     })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)

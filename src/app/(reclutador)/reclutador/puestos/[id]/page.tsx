@@ -11,6 +11,7 @@ import {
 import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
+import { ubicacionLabel } from '@/lib/ubicacion'
 
 export const metadata = { title: 'Detalle del puesto — MiLiors' }
 
@@ -167,9 +168,7 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
           <div>
             <dt className="text-muted">Ubicación</dt>
             <dd className="font-medium text-ink">
-              {puesto.nombre_localidad
-                ? [puesto.nombre_localidad, puesto.nombre_provincia].filter(Boolean).join(', ')
-                : '—'}
+              {ubicacionLabel(puesto) || '—'}
             </dd>
           </div>
           <div>

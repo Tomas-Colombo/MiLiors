@@ -19,13 +19,25 @@ export type UbicacionInicial = {
 }
 
 /**
- * Nivel mínimo exigido por el formulario:
+ * Nivel mínimo exigido por el formulario. Los niveles por debajo del mínimo
+ * quedan como precisión opcional.
  * - `localidad`: hace falta la cadena completa y sólo se envía `localidad_id`
- *   (la provincia se infiere por FK). Es el caso de los puestos.
- * - `provincia`: alcanza con la provincia. Se envía `provincia_id` y, si el
- *   usuario siguió bajando, también `localidad_id`.
+ *   (departamento y provincia se infieren por FK).
+ * - `departamento`: alcanza con provincia + departamento. Es el caso de los
+ *   puestos.
+ * - `provincia`: alcanza con la provincia. Es el caso del postulante.
+ *
+ * El nivel mínimo viaja siempre en un input propio: si la cadena se corta ahí
+ * no hay una FK más abajo desde la cual inferirlo.
  */
-export type NivelUbicacion = 'provincia' | 'localidad'
+export type NivelUbicacion = 'provincia' | 'departamento' | 'localidad'
+
+/** Profundidad de cada nivel, para comparar cuál queda por encima del mínimo. */
+const PROFUNDIDAD: Record<NivelUbicacion, 1 | 2 | 3> = {
+  provincia: 1,
+  departamento: 2,
+  localidad: 3,
+}
 
 interface UbicacionSelectorProps {
   provincias: ProvinciaOption[]
@@ -60,9 +72,9 @@ export function UbicacionSelector({
 
   const provinciaOptions: SelectOption[] = provincias.map((p) => ({ value: p.id, label: p.nombre }))
 
-  // Con `provincia` sólo el primer nivel es obligatorio; los otros dos quedan
-  // como precisión opcional.
-  const soloProvincia = nivelRequerido === 'provincia'
+  const minimo = PROFUNDIDAD[nivelRequerido]
+  const depRequerido = minimo >= PROFUNDIDAD.departamento
+  const locRequerido = minimo >= PROFUNDIDAD.localidad
 
   function handleProvinciaChange(value: string) {
     setProvinciaId(value)
@@ -89,21 +101,25 @@ export function UbicacionSelector({
   const departamentoDefault = provinciaId === inicial?.provinciaId ? inicial.departamentoId : undefined
   const localidadDefault = departamentoId === inicial?.departamentoId ? inicial.localidadId : undefined
 
-  // El error se muestra bajo el campo que hay que corregir: con `provincia` es
-  // siempre el primero; con `localidad`, el último visible de la cadena.
-  const errorEn = soloProvincia
-    ? 'provincia'
-    : !provinciaId
+  // El error se muestra bajo el campo que hay que corregir: el primero de la
+  // cadena que falta, sin pasarse del nivel mínimo exigido.
+  const errorEn =
+    !provinciaId || !depRequerido
       ? 'provincia'
-      : !departamentoId
+      : !departamentoId || !locRequerido
         ? 'departamento'
         : 'localidad'
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      {/* La provincia viaja aparte porque puede ser el único dato cargado: sin
-          localidad no hay FK desde la cual inferirla. */}
-      {soloProvincia && <input type="hidden" name="provincia_id" value={provinciaId} />}
+      {/* El nivel mínimo viaja en su propio input: puede ser el último dato
+          cargado y entonces no hay FK más abajo desde la cual inferirlo. */}
+      {minimo === PROFUNDIDAD.provincia && (
+        <input type="hidden" name="provincia_id" value={provinciaId} />
+      )}
+      {minimo === PROFUNDIDAD.departamento && (
+        <input type="hidden" name="departamento_id" value={departamentoId} />
+      )}
 
       <Field label="Provincia" required={required} error={errorEn === 'provincia' ? error : undefined}>
         <SearchableSelect
@@ -118,8 +134,8 @@ export function UbicacionSelector({
       {provinciaId && (
         <Field
           label="Departamento"
-          required={required && !soloProvincia}
-          hint={soloProvincia ? 'Opcional' : undefined}
+          required={required && depRequerido}
+          hint={depRequerido ? undefined : 'Opcional'}
           error={errorEn === 'departamento' ? error : undefined}
         >
           {/* key=provinciaId → se remonta y resetea al cambiar de provincia */}
@@ -137,8 +153,8 @@ export function UbicacionSelector({
       {departamentoId && (
         <Field
           label="Localidad"
-          required={required && !soloProvincia}
-          hint={soloProvincia ? 'Opcional' : undefined}
+          required={required && locRequerido}
+          hint={locRequerido ? undefined : 'Opcional'}
           error={errorEn === 'localidad' ? error : undefined}
         >
           <SearchableSelect

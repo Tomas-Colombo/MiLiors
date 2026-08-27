@@ -9,6 +9,7 @@ import { getPuestoPublicoById, getMisPostulacionesPuestoIds } from '@/modules/pu
 import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getFormularioDePuesto } from '@/modules/preselector/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
+import { ubicacionLabel } from '@/lib/ubicacion'
 import { PostularButton } from '../postular-button'
 
 type Props = {
@@ -98,10 +99,8 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
           <Badge tone="neutral">
             {UBICACION_LABEL[puesto.ubicacion] ?? puesto.ubicacion}
           </Badge>
-          {puesto.nombre_localidad && (
-            <Badge tone="neutral">
-              📍 {[puesto.nombre_localidad, puesto.nombre_provincia].filter(Boolean).join(', ')}
-            </Badge>
+          {ubicacionLabel(puesto) && (
+            <Badge tone="neutral">📍 {ubicacionLabel(puesto)}</Badge>
           )}
           <Badge tone="neutral">
             {CARGA_HORARIA_LABEL[puesto.carga_horaria] ?? puesto.carga_horaria}

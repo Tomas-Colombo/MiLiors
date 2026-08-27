@@ -28,7 +28,12 @@ export default async function EditarPuestoPage({ params }: { params: Params }) {
   ])
   if (!puesto) notFound()
 
-  const ubicacionInicial = await getUbicacionInicial(puesto.localidad_id)
+  // Sin localidad, el departamento es el nivel más profundo que se guardó.
+  const ubicacionInicial = await getUbicacionInicial(
+    puesto.localidad_id,
+    null,
+    puesto.departamento_id,
+  )
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">

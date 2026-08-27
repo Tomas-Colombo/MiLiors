@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Card, Badge } from '@/components/ui'
 import { CalendarIcon, ArrowRightIcon } from '@/components/icons'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
+import { ubicacionLabel } from '@/lib/ubicacion'
 import type { PuestoItem } from '@/modules/puestos/queries'
 
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
 }
 
 export function PuestoCard({ puesto, actions, tieneFormulario }: Props) {
+  const ubicacion = ubicacionLabel(puesto)
+
   return (
     <Card padding="md" className="flex flex-col gap-3 h-full">
       {/* Cabecera */}
@@ -31,11 +34,7 @@ export function PuestoCard({ puesto, actions, tieneFormulario }: Props) {
         <Badge tone="neutral">
           {UBICACION_LABEL[puesto.ubicacion] ?? puesto.ubicacion}
         </Badge>
-        {puesto.nombre_localidad && (
-          <Badge tone="neutral">
-            📍 {[puesto.nombre_localidad, puesto.nombre_provincia].filter(Boolean).join(', ')}
-          </Badge>
-        )}
+        {ubicacion && <Badge tone="neutral">📍 {ubicacion}</Badge>}
         <Badge tone="neutral">
           {CARGA_HORARIA_LABEL[puesto.carga_horaria] ?? puesto.carga_horaria}
         </Badge>

@@ -1280,6 +1280,7 @@ export type Database = {
           activo: boolean
           carga_horaria: Database["public"]["Enums"]["carga_horaria"]
           created_at: string
+          departamento_id: string | null
           descripcion_texto: string | null
           empresa_id: string
           fecha_baja_puesto: string | null
@@ -1300,6 +1301,7 @@ export type Database = {
           activo?: boolean
           carga_horaria: Database["public"]["Enums"]["carga_horaria"]
           created_at?: string
+          departamento_id?: string | null
           descripcion_texto?: string | null
           empresa_id: string
           fecha_baja_puesto?: string | null
@@ -1320,6 +1322,7 @@ export type Database = {
           activo?: boolean
           carga_horaria?: Database["public"]["Enums"]["carga_horaria"]
           created_at?: string
+          departamento_id?: string | null
           descripcion_texto?: string | null
           empresa_id?: string
           fecha_baja_puesto?: string | null
@@ -1337,6 +1340,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "puesto_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "departamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "puesto_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "departamento"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "puesto_empresa_id_fkey"
             columns: ["empresa_id"]

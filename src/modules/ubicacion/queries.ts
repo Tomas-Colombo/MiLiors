@@ -60,24 +60,50 @@ export const getLocalidadesPorDepartamento = cache(async (
  */
 export type UbicacionInicial = {
   provinciaId: string
-  /** Vacío si el perfil sólo guardó la provincia. */
+  /** Vacío si sólo se guardó la provincia. */
   departamentoId: string
-  /** Vacío si el perfil sólo guardó la provincia. */
+  /** Vacío si la cadena se cortó antes de la localidad. */
   localidadId: string
   departamentos: UbicacionOption[]
   localidades: UbicacionOption[]
 }
 
 /**
- * `provinciaId` cubre los perfiles que sólo cargaron ese nivel: el formulario
- * del postulante no exige bajar hasta la localidad, así que puede no haber una
- * cadena completa desde la cual reconstruir el estado.
+ * Reconstruye el estado del selector desde el nivel más profundo que se haya
+ * guardado. `departamentoId` cubre a los puestos y `provinciaId` a los perfiles
+ * de postulante: ninguno de los dos formularios exige bajar hasta la localidad,
+ * así que puede no haber una cadena completa de la cual partir.
  */
 export const getUbicacionInicial = cache(async (
   localidadId: string | null | undefined,
   provinciaId?: string | null,
+  departamentoId?: string | null,
 ): Promise<UbicacionInicial | null> => {
   if (!localidadId) {
+    if (departamentoId) {
+      const supabase = await createClient()
+      const { data } = await supabase
+        .from('departamento')
+        .select('id, provincia_id')
+        .eq('id', departamentoId)
+        .maybeSingle()
+
+      const dep = data as { id: string; provincia_id: string } | null
+      if (!dep) return null
+
+      const [departamentos, localidades] = await Promise.all([
+        getDepartamentosPorProvincia(dep.provincia_id),
+        getLocalidadesPorDepartamento(dep.id),
+      ])
+      return {
+        provinciaId: dep.provincia_id,
+        departamentoId: dep.id,
+        localidadId: '',
+        departamentos,
+        localidades,
+      }
+    }
+
     if (!provinciaId) return null
     return {
       provinciaId,

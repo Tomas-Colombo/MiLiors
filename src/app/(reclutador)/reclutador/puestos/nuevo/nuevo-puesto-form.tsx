@@ -4,10 +4,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useActionState, useState } from 'react'
 import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert, Modal } from '@/components/ui'
-import { AlertTriangleIcon } from '@/components/icons'
+import { AlertTriangleIcon, PlusIcon } from '@/components/icons'
+import { NuevaEmpresaModal } from '@/components/shared/nueva-empresa-modal'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
 import { CarrerasMultiSelect } from '@/components/shared/carreras-multi-select'
 import { publicarPuesto } from '@/modules/puestos/actions'
+import { cn } from '@/lib/utils'
+import { DESCRIPCION_MAX } from '@/modules/puestos/schema'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import type { CarreraOption } from '@/modules/carreras/queries'
@@ -31,6 +34,10 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
   const router = useRouter()
   const [state, action, isPending] = useActionState(publicarPuesto, initialState)
   const [modalidad, setModalidad] = useState('')
+  const [empresaModalAbierto, setEmpresaModalAbierto] = useState(false)
+  // Empresas dadas de alta desde el modal. Se suman al select en el acto para
+  // no depender de que la revalidación del server llegue antes de elegirlas.
+  const [empresasNuevas, setEmpresasNuevas] = useState<EmpresaOption[]>([])
   // Campos controlados: al fallar la publicación, React 19 resetea los <input>
   // no controlados del form. Mantenerlos en estado preserva lo ya cargado para
   // que el reclutador solo corrija el campo con error. Los SearchableSelect
@@ -63,7 +70,18 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
   // La ubicación se pide siempre salvo que la modalidad sea remota.
   const ubicacionAplica = modalidad !== UBICACION.REMOTO
 
-  const empresaOptions = empresas.map((e) => ({ value: e.id, label: e.nombre_empresa }))
+  // La revalidación puede traer la recién creada también por props: se dedupe
+  // por id para no listarla dos veces.
+  const idsDePropo = new Set(empresas.map((e) => e.id))
+  const empresaOptions = [
+    ...empresas,
+    ...empresasNuevas.filter((e) => !idsDePropo.has(e.id)),
+  ].map((e) => ({ value: e.id, label: e.nombre_empresa }))
+
+  function handleEmpresaCreada(empresa: EmpresaOption) {
+    setEmpresasNuevas((lista) => [...lista, empresa])
+    setValues((v) => ({ ...v, empresa_id: empresa.id }))
+  }
 
   const sectorOptions = [
     { value: '', label: 'Sin sector' },
@@ -88,14 +106,29 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
         error={fieldErrors.empresa_id?.[0]}
         hint="Para qué empresa se publica este puesto."
       >
-        <FancySelect
-          id="empresa_id"
-          name="empresa_id"
-          options={empresaOptions}
-          value={values.empresa_id}
-          onChange={setValor('empresa_id')}
-          placeholder="Elegí la empresa"
-        />
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <FancySelect
+              id="empresa_id"
+              name="empresa_id"
+              options={empresaOptions}
+              value={values.empresa_id}
+              onChange={setValor('empresa_id')}
+              placeholder="Elegí la empresa"
+            />
+          </div>
+          {/* Alta en modal: registrar una empresa nueva no debería costar perder
+              lo ya cargado del puesto. */}
+          <Button
+            type="button"
+            variant="secondary"
+            leftIcon={<PlusIcon size={16} />}
+            className="shrink-0"
+            onClick={() => setEmpresaModalAbierto(true)}
+          >
+            Nueva
+          </Button>
+        </div>
       </Field>
 
       <Field
@@ -118,7 +151,19 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
         label="Descripción"
         htmlFor="descripcion_texto"
         error={fieldErrors.descripcion_texto?.[0]}
-        hint="Máximo 3000 caracteres. Describí las responsabilidades y requisitos."
+        hint={
+          <span className="flex items-baseline justify-between gap-3">
+            <span>Describí las responsabilidades y requisitos.</span>
+            <span
+              className={cn(
+                'shrink-0 tabular-nums',
+                values.descripcion_texto.length >= DESCRIPCION_MAX && 'text-error',
+              )}
+            >
+              {values.descripcion_texto.length} / {DESCRIPCION_MAX}
+            </span>
+          </span>
+        }
       >
         <Textarea
           id="descripcion_texto"
@@ -126,7 +171,9 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
           value={values.descripcion_texto}
           onChange={setField('descripcion_texto')}
           placeholder="Describí el puesto, responsabilidades y perfil buscado…"
-          rows={5}
+          rows={12}
+          maxLength={DESCRIPCION_MAX}
+          className="min-h-[180px] resize-y"
           status={fieldErrors.descripcion_texto ? 'error' : 'default'}
         />
       </Field>
@@ -221,7 +268,8 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
         <UbicacionSelector
           provincias={provincias}
           required
-          error={fieldErrors.localidad_id?.[0]}
+          nivelRequerido="departamento"
+          error={fieldErrors.departamento_id?.[0]}
         />
       )}
 
@@ -257,6 +305,12 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
         </Button>
       </div>
     </form>
+
+    <NuevaEmpresaModal
+      open={empresaModalAbierto}
+      onClose={() => setEmpresaModalAbierto(false)}
+      onCreada={handleEmpresaCreada}
+    />
 
     <Modal
       open={!!puestoId}

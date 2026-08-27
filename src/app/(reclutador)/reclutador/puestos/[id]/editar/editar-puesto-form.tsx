@@ -10,6 +10,8 @@ import {
 } from '@/components/shared/ubicacion-selector'
 import { CarrerasMultiSelect } from '@/components/shared/carreras-multi-select'
 import { editarPuesto } from '@/modules/puestos/actions'
+import { cn } from '@/lib/utils'
+import { DESCRIPCION_MAX } from '@/modules/puestos/schema'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
@@ -123,7 +125,19 @@ export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carrera
         label="Descripción"
         htmlFor="descripcion_texto"
         error={fieldErrors.descripcion_texto?.[0]}
-        hint="Máximo 3000 caracteres. Describí las responsabilidades y requisitos."
+        hint={
+          <span className="flex items-baseline justify-between gap-3">
+            <span>Describí las responsabilidades y requisitos.</span>
+            <span
+              className={cn(
+                'shrink-0 tabular-nums',
+                values.descripcion_texto.length >= DESCRIPCION_MAX && 'text-error',
+              )}
+            >
+              {values.descripcion_texto.length} / {DESCRIPCION_MAX}
+            </span>
+          </span>
+        }
       >
         <Textarea
           id="descripcion_texto"
@@ -131,7 +145,9 @@ export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carrera
           value={values.descripcion_texto}
           onChange={setField('descripcion_texto')}
           placeholder="Describí el puesto, responsabilidades y perfil buscado…"
-          rows={5}
+          rows={12}
+          maxLength={DESCRIPCION_MAX}
+          className="min-h-[180px] resize-y"
           status={fieldErrors.descripcion_texto ? 'error' : 'default'}
         />
       </Field>
@@ -223,7 +239,8 @@ export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carrera
           provincias={provincias}
           inicial={ubicacionInicial}
           required
-          error={fieldErrors.localidad_id?.[0]}
+          nivelRequerido="departamento"
+          error={fieldErrors.departamento_id?.[0]}
         />
       )}
 

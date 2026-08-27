@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
+import type { EmpresaOption } from './queries'
 
 const empresaSchema = z.object({
   nombre_empresa: z.string().min(2, { message: 'Ingresá el nombre de la empresa.' }).max(200).trim(),
@@ -68,7 +69,7 @@ async function empresaDelReclutador(admin: Admin, reclutadorId: string, empresaI
  * La primera empresa además queda como "empresa principal" del perfil (la que se
  * muestra en el perfil público del reclutador).
  */
-async function crear(formData: FormData): Promise<ActionResult<{ empresaId: string }>> {
+async function crear(formData: FormData): Promise<ActionResult<EmpresaOption>> {
   const session = await verifySession()
   const parsed = parseEmpresa(formData)
 
@@ -116,7 +117,12 @@ async function crear(formData: FormData): Promise<ActionResult<{ empresaId: stri
     await admin.from('perfil_reclutador').update({ empresa_id: empresaId }).eq('id', reclutadorId)
   }
 
-  return { success: true, data: { empresaId } }
+  // Se devuelve la empresa completa —y no sólo el id— para que quien la creó
+  // desde otro formulario pueda agregarla a su select sin recargar la página.
+  return {
+    success: true,
+    data: { id: empresaId, nombre_empresa: parsed.data.nombre_empresa, activa: true },
+  }
 }
 
 /** Onboarding: primera empresa del reclutador. Al terminar va a sus puestos. */
@@ -131,16 +137,19 @@ export async function crearEmpresaYAsociar(
   redirect('/reclutador/puestos')
 }
 
-/** Alta desde la sección "Mis empresas". */
+/** Alta desde "Mis empresas" y desde el modal del formulario de puesto. */
 export async function crearEmpresa(
-  _prevState: ActionResult,
+  _prevState: ActionResult<EmpresaOption>,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<ActionResult<EmpresaOption>> {
   const resultado = await crear(formData)
   if (!resultado.success) return resultado
 
   revalidatePath('/reclutador/empresas')
-  return { success: true, data: undefined }
+  // El alta también se ofrece dentro del formulario de puesto: el select de
+  // empresas de esa página tiene que ver la recién creada.
+  revalidatePath('/reclutador/puestos/nuevo')
+  return resultado
 }
 
 export async function actualizarEmpresa(
