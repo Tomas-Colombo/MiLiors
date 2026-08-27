@@ -4,6 +4,7 @@ import {
   SkeletonPageHeader,
   SkeletonTable,
 } from '@/components/shell/page-skeleton'
+import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
 
 /**
  * ABM de idiomas.
@@ -25,6 +26,10 @@ export default function LoadingIdiomas() {
       </div>
 
       <SkeletonFilters selects={2} className="mt-6" />
+
+      <div className="mt-4">
+        <ExportarExcelSkeleton />
+      </div>
 
       <SkeletonTable
         className="mt-4"

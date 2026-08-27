@@ -1,4 +1,6 @@
-import { getIdiomasAdmin } from '@/modules/admin/queries'
+import { getIdiomasAdmin, type IdiomaAdmin } from '@/modules/admin/queries'
+import { filtrarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
+import { ExportarExcel } from '@/components/shared/exportar-excel'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { GlobeIcon } from '@/components/icons'
@@ -7,13 +9,6 @@ import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components
 import { paginar } from '@/lib/pagination'
 
 export const metadata = { title: 'Idiomas — Admin MiLiors' }
-
-type Idioma = {
-  id: string
-  nombre: string
-  fecha_baja: string | null
-  created_at: string
-}
 
 const ESTADO_OPTS = [
   { value: '', label: 'Todos los estados' },
@@ -29,19 +24,17 @@ export default async function IdiomasPage({
   const sp = await searchParams
   const todos = await getIdiomasAdmin()
 
-  const q = sp.q?.trim().toLowerCase() ?? ''
-  const estado = sp.estado ?? ''
-
-  const filtrados = todos.filter(i => {
-    if (estado === 'activo' && i.fecha_baja) return false
-    if (estado === 'inactivo' && !i.fecha_baja) return false
-    if (q && !i.nombre.toLowerCase().includes(q)) return false
-    return true
+  // Mismo filtrado que usa la ruta del Excel: una sola implementación para que
+  // lo que se descarga sea exactamente lo que se ve.
+  const filtrados = filtrarCatalogo(todos, { q: sp.q, estado: sp.estado }, {
+    nombre: i => i.nombre,
+    activo: i => !i.fecha_baja,
+    createdAt: i => i.created_at,
   })
 
   const { page, pageCount, slice } = paginar(filtrados, sp.page)
 
-  const columns: Column<Idioma>[] = [
+  const columns: Column<IdiomaAdmin>[] = [
     {
       key: 'nombre',
       header: 'Nombre',
@@ -95,6 +88,15 @@ export default async function IdiomasPage({
             {filtrados.length} de {todos.length}
           </span>
         )}
+      </div>
+
+      <div className="mt-4">
+        <ExportarExcel
+          href={`/api/admin/catalogos/export?${qsExportCatalogo('idiomas', {
+            q: sp.q,
+            estado: sp.estado,
+          })}`}
+        />
       </div>
 
       <div className="mt-4">

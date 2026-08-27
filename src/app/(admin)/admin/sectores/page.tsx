@@ -1,4 +1,6 @@
-import { getSectoresAdmin } from '@/modules/admin/queries'
+import { getSectoresAdmin, type SectorAdmin } from '@/modules/admin/queries'
+import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
+import { ExportarExcel } from '@/components/shared/exportar-excel'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { GridIcon } from '@/components/icons'
@@ -7,13 +9,6 @@ import { SearchInput, FilterSelect, FiltroFechas, ClearFilters, Paginador } from
 import { paginar } from '@/lib/pagination'
 
 export const metadata = { title: 'Sectores — Admin MiLiors' }
-
-type Sector = {
-  id: string
-  nombre_sector: string
-  fecha_baja_s: string | null
-  created_at: string
-}
 
 const ESTADO_OPTS = [
   { value: '', label: 'Todos los estados' },
@@ -38,35 +33,19 @@ export default async function SectoresPage({
   const sp = await searchParams
   const todos = await getSectoresAdmin()
 
-  const q = sp.q?.trim().toLowerCase() ?? ''
-  const estado = sp.estado ?? ''
-  const desde = sp.desde ?? ''
-  // El rango es inclusive: `hasta` corta al final del día elegido.
-  const hasta = sp.hasta ? `${sp.hasta}T23:59:59.999Z` : ''
-
-  const filtrados = todos.filter(s => {
-    if (estado === 'activo' && s.fecha_baja_s) return false
-    if (estado === 'inactivo' && !s.fecha_baja_s) return false
-    if (desde && s.created_at < desde) return false
-    if (hasta && s.created_at > hasta) return false
-    if (q && !s.nombre_sector.toLowerCase().includes(q)) return false
-    return true
-  })
-
-  // La query ya viene alfabética; el resto de los órdenes se aplica acá.
-  const orden = sp.orden ?? ''
-  const visibles =
-    orden === ''
-      ? filtrados
-      : [...filtrados].sort((a, b) => {
-          if (orden === 'alta_desc') return b.created_at.localeCompare(a.created_at)
-          if (orden === 'alta_asc') return a.created_at.localeCompare(b.created_at)
-          return -a.nombre_sector.localeCompare(b.nombre_sector, 'es')
-        })
+  // Mismo filtrado y orden que usa la ruta del Excel: una sola implementación
+  // para que lo que se descarga sea exactamente lo que se ve.
+  const acc = {
+    nombre: (s: SectorAdmin) => s.nombre_sector,
+    activo: (s: SectorAdmin) => !s.fecha_baja_s,
+    createdAt: (s: SectorAdmin) => s.created_at,
+  }
+  const filtrados = filtrarCatalogo(todos, sp, acc)
+  const visibles = ordenarCatalogo(filtrados, sp.orden, acc)
 
   const { page, pageCount, slice } = paginar(visibles, sp.page)
 
-  const columns: Column<Sector>[] = [
+  const columns: Column<SectorAdmin>[] = [
     {
       key: 'nombre',
       header: 'Nombre',
@@ -127,6 +106,13 @@ export default async function SectoresPage({
             </span>
           )}
         </div>
+      </div>
+
+      <div className="mt-4">
+        <ExportarExcel
+          href={`/api/admin/catalogos/export?${qsExportCatalogo('sectores', sp)}`}
+          nota="Baja lo que dejan a la vista los filtros."
+        />
       </div>
 
       <div className="mt-4">

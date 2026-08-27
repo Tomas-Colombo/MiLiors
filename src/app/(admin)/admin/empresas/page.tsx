@@ -1,4 +1,6 @@
-import { getEmpresasAdmin } from '@/modules/admin/queries'
+import { getEmpresasAdmin, type EmpresaAdmin } from '@/modules/admin/queries'
+import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
+import { ExportarExcel } from '@/components/shared/exportar-excel'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
@@ -8,15 +10,6 @@ import { paginar } from '@/lib/pagination'
 import { ConfigInactividad } from './config-inactividad'
 
 export const metadata = { title: 'Empresas — Admin MiLiors' }
-
-type Empresa = {
-  id: string
-  nombre_empresa: string
-  descripcion: string | null
-  activa: boolean
-  created_at: string
-  reclutadores: { id: string; nombre: string; email: string | null }[]
-}
 
 const ESTADO_OPTS = [
   { value: '', label: 'Todos los estados' },
@@ -58,44 +51,24 @@ export default async function EmpresasPage({
     getConfiguracionSistema(),
   ])
 
-  const q = sp.q?.trim().toLowerCase() ?? ''
-  const estado = sp.estado ?? ''
+  // Mismo filtrado y orden que usa la ruta del Excel: una sola implementación
+  // para que lo que se descarga sea exactamente lo que se ve.
+  const acc = {
+    nombre: (e: EmpresaAdmin) => e.nombre_empresa,
+    activo: (e: EmpresaAdmin) => e.activa,
+    createdAt: (e: EmpresaAdmin) => e.created_at,
+    buscarTambienEn: (e: EmpresaAdmin) => e.reclutadores.flatMap(r => [r.nombre, r.email ?? '']),
+  }
   const reclutadores = sp.reclutadores ?? ''
-  const desde = sp.desde ?? ''
-  // El rango es inclusive: `hasta` corta al final del día elegido.
-  const hasta = sp.hasta ? `${sp.hasta}T23:59:59.999Z` : ''
+  let filtradas = filtrarCatalogo(todas, sp, acc)
+  if (reclutadores === 'con') filtradas = filtradas.filter(e => e.reclutadores.length > 0)
+  if (reclutadores === 'sin') filtradas = filtradas.filter(e => e.reclutadores.length === 0)
 
-  const filtradas = todas.filter(e => {
-    if (estado === 'activa' && !e.activa) return false
-    if (estado === 'baja' && e.activa) return false
-    if (reclutadores === 'con' && e.reclutadores.length === 0) return false
-    if (reclutadores === 'sin' && e.reclutadores.length > 0) return false
-    if (desde && e.created_at < desde) return false
-    if (hasta && e.created_at > hasta) return false
-    if (q) {
-      const enNombre = e.nombre_empresa.toLowerCase().includes(q)
-      const enReclutador = e.reclutadores.some(
-        r => r.nombre.toLowerCase().includes(q) || (r.email?.toLowerCase().includes(q) ?? false),
-      )
-      if (!enNombre && !enReclutador) return false
-    }
-    return true
-  })
-
-  // La query ya viene por created_at desc; el resto de los órdenes se aplica acá.
-  const orden = sp.orden ?? ''
-  const visibles =
-    orden === ''
-      ? filtradas
-      : [...filtradas].sort((a, b) => {
-          if (orden === 'antiguas') return a.created_at.localeCompare(b.created_at)
-          const cmp = a.nombre_empresa.localeCompare(b.nombre_empresa, 'es')
-          return orden === 'nombre_desc' ? -cmp : cmp
-        })
+  const visibles = ordenarCatalogo(filtradas, sp.orden, acc)
 
   const { page, pageCount, slice } = paginar(visibles, sp.page)
 
-  const columns: Column<Empresa>[] = [
+  const columns: Column<EmpresaAdmin>[] = [
     {
       key: 'nombre',
       header: 'Empresa',
@@ -178,6 +151,13 @@ export default async function EmpresasPage({
             </span>
           )}
         </div>
+      </div>
+
+      <div className="mt-4">
+        <ExportarExcel
+          href={`/api/admin/catalogos/export?${qsExportCatalogo('empresas', sp)}`}
+          nota="Incluye reclutadores y emails, con los filtros aplicados."
+        />
       </div>
 
       <div className="mt-4">

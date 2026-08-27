@@ -1,5 +1,4 @@
 import { Card } from '@/components/ui'
-import { DownloadIcon } from '@/components/icons'
 import {
   SkeletonFilters,
   SkeletonInlineForm,
@@ -7,6 +6,7 @@ import {
   SkeletonPageHeader,
   SkeletonTable,
 } from '@/components/shell/page-skeleton'
+import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
 
 /**
  * Feedback del informe.
@@ -44,18 +44,8 @@ export default function LoadingFeedback() {
 
       <SkeletonFilters selects={3} className="mt-8" />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted">
-          <DownloadIcon size={14} />
-          CSV por competencia
-        </span>
-        <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted">
-          <DownloadIcon size={14} />
-          CSV respuestas globales
-        </span>
-        <span className="text-[11px] text-muted">
-          Seudónimo: incluye el id del postulante, nunca nombre ni email.
-        </span>
+      <div className="mt-4">
+        <ExportarExcelSkeleton nota="Cuatro hojas con lo que estos filtros dejan a la vista." />
       </div>
 
       <SkeletonTable

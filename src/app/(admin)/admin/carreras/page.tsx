@@ -6,6 +6,8 @@ import { NotebookIcon } from '@/components/icons'
 import { CrearCarreraForm, CarreraAcciones, PromoverCarreraOtraBoton } from './carreras-ui'
 import { SearchInput, FilterSelect, ClearFilters, Paginador, FiltroFechas } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { filtrarCatalogo, finDelDia, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
+import { ExportarExcel } from '@/components/shared/exportar-excel'
 
 export const metadata = { title: 'Carreras — Admin MiLiors' }
 
@@ -25,6 +27,8 @@ export default async function CarrerasPage({
     qB?: string
     desde?: string
     hasta?: string
+    /** Paginador de la segunda tabla (cargadas por postulantes). */
+    pageB?: string
   }>
 }) {
   const sp = await searchParams
@@ -32,14 +36,12 @@ export default async function CarrerasPage({
   // ─── Sección A: carreras oficiales ─────────────────────────────────────
   const todas = await getCarrerasAdmin()
 
-  const qA = sp.qA?.trim().toLowerCase() ?? ''
-  const estadoA = sp.estadoA ?? ''
-
-  const filtradasA = todas.filter((c) => {
-    if (estadoA === 'activo' && c.fecha_baja) return false
-    if (estadoA === 'inactivo' && !c.fecha_baja) return false
-    if (qA && !c.nombre.toLowerCase().includes(qA)) return false
-    return true
+  // Mismo filtrado que usa la ruta del Excel: una sola implementación para que
+  // lo que se descarga sea exactamente lo que se ve.
+  const filtradasA = filtrarCatalogo(todas, { q: sp.qA, estado: sp.estadoA }, {
+    nombre: (c) => c.nombre,
+    activo: (c) => !c.fecha_baja,
+    createdAt: (c) => c.created_at,
   })
 
   const { page: pageA, pageCount: pageCountA, slice: sliceA } = paginar(filtradasA, sp.pageA)
@@ -86,8 +88,12 @@ export default async function CarrerasPage({
   const otras = await getCarrerasOtrasAdmin({
     q: qB || undefined,
     desde: desde || undefined,
-    hasta: hasta || undefined,
+    // Inclusive: sin extenderlo al final del día, "hasta el 12" dejaba afuera
+    // todo lo cargado ese mismo 12.
+    hasta: finDelDia(hasta) || undefined,
   })
+
+  const { page: pageB, pageCount: pageCountB, slice: sliceB } = paginar(otras, sp.pageB)
 
   const columnsB: Column<CarreraOtraAdmin>[] = [
     {
@@ -142,6 +148,18 @@ export default async function CarrerasPage({
       </div>
 
       <div className="mt-4">
+        <ExportarExcel
+          href={`/api/admin/catalogos/export?${qsExportCatalogo('carreras', {
+            qA: sp.qA,
+            estadoA: sp.estadoA,
+            qB: sp.qB,
+            desde: sp.desde,
+            hasta: sp.hasta,
+          })}`}
+        />
+      </div>
+
+      <div className="mt-4">
         {sliceA.length === 0 ? (
           <EmptyState
             icon={<NotebookIcon size={22} />}
@@ -168,16 +186,18 @@ export default async function CarrerasPage({
       </div>
 
       <div className="mt-4">
-        {otras.length === 0 ? (
+        {sliceB.length === 0 ? (
           <EmptyState
             icon={<NotebookIcon size={22} />}
             title="Sin resultados"
             description="No hay carreras cargadas por postulantes que coincidan con los filtros aplicados."
           />
         ) : (
-          <Table columns={columnsB} rows={otras} rowKey={(row) => row.nombre} />
+          <Table columns={columnsB} rows={sliceB} rowKey={(row) => row.nombre} />
         )}
       </div>
+
+      <Paginador page={pageB} pageCount={pageCountB} paramKey="pageB" />
     </div>
   )
 }

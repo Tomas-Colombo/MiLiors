@@ -1,4 +1,11 @@
-import { getCompetenciasAdmin } from '@/modules/admin/queries'
+import {
+  getCompetenciasAdmin,
+  getCompetenciasUsoAdmin,
+  type CompetenciaAdmin,
+  type CompetenciaUsoAdmin,
+} from '@/modules/admin/queries'
+import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
+import { ExportarExcel } from '@/components/shared/exportar-excel'
 import { Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon } from '@/components/icons'
@@ -7,13 +14,6 @@ import { SearchInput, FilterSelect, FiltroFechas, ClearFilters, Paginador } from
 import { paginar } from '@/lib/pagination'
 
 export const metadata = { title: 'Habilidades/Tecnologías — Admin MiLiors' }
-
-type Competencia = {
-  id: string
-  nombre: string
-  fecha_baja: string | null
-  created_at: string
-}
 
 const ESTADO_OPTS = [
   { value: '', label: 'Todos los estados' },
@@ -30,43 +30,54 @@ const ORDEN_OPTS = [
 
 const FILTRO_KEYS = ['q', 'estado', 'desde', 'hasta', 'orden']
 
+function pct(parte: number, total: number): number {
+  return total === 0 ? 0 : Math.round((parte / total) * 100)
+}
+
 export default async function CompetenciasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string; orden?: string; page?: string }>
+  searchParams: Promise<{
+    q?: string
+    estado?: string
+    desde?: string
+    hasta?: string
+    orden?: string
+    page?: string
+    /** Paginador de la segunda tabla (uso por postulantes). */
+    pageU?: string
+  }>
 }) {
   const sp = await searchParams
-  const todas = await getCompetenciasAdmin()
+  const [todas, uso] = await Promise.all([getCompetenciasAdmin(), getCompetenciasUsoAdmin()])
 
-  const q = sp.q?.trim().toLowerCase() ?? ''
-  const estado = sp.estado ?? ''
-  const desde = sp.desde ?? ''
-  // El rango es inclusive: `hasta` corta al final del día elegido.
-  const hasta = sp.hasta ? `${sp.hasta}T23:59:59.999Z` : ''
+  // Mismo filtrado y orden que usa la ruta del Excel: una sola implementación
+  // para que lo que se descarga sea exactamente lo que se ve.
+  const acc = {
+    nombre: (c: CompetenciaAdmin) => c.nombre,
+    activo: (c: CompetenciaAdmin) => !c.fecha_baja,
+    createdAt: (c: CompetenciaAdmin) => c.created_at,
+  }
+  const filtradas = filtrarCatalogo(todas, sp, acc)
+  const visibles = ordenarCatalogo(filtradas, sp.orden, acc)
 
-  const filtradas = todas.filter(c => {
-    if (estado === 'activa' && c.fecha_baja) return false
-    if (estado === 'inactiva' && !c.fecha_baja) return false
-    if (desde && c.created_at < desde) return false
-    if (hasta && c.created_at > hasta) return false
-    if (q && !c.nombre.toLowerCase().includes(q)) return false
-    return true
-  })
-
-  // La query ya viene alfabética; el resto de los órdenes se aplica acá.
-  const orden = sp.orden ?? ''
-  const visibles =
-    orden === ''
-      ? filtradas
-      : [...filtradas].sort((a, b) => {
-          if (orden === 'alta_desc') return b.created_at.localeCompare(a.created_at)
-          if (orden === 'alta_asc') return a.created_at.localeCompare(b.created_at)
-          return -a.nombre.localeCompare(b.nombre, 'es')
-        })
+  // El uso se filtra por nombre y estado, pero NO por fecha de alta del
+  // catálogo: recortar por ahí escondaría habilidades viejas que se siguen
+  // cargando, que es lo contrario de lo que esta tabla muestra.
+  const usoVisible = filtrarCatalogo(
+    uso,
+    { q: sp.q, estado: sp.estado },
+    {
+      nombre: (u: CompetenciaUsoAdmin) => u.nombre,
+      activo: (u: CompetenciaUsoAdmin) => u.activa,
+      createdAt: (u: CompetenciaUsoAdmin) => u.createdAt,
+    },
+  )
+  const { page: pageU, pageCount: pageCountU, slice: usoPagina } = paginar(usoVisible, sp.pageU)
 
   const { page, pageCount, slice } = paginar(visibles, sp.page)
 
-  const columns: Column<Competencia>[] = [
+  const columns: Column<CompetenciaAdmin>[] = [
     {
       key: 'nombre',
       header: 'Nombre',
@@ -100,6 +111,54 @@ export default async function CompetenciasPage({
     },
   ]
 
+  const usoColumns: Column<CompetenciaUsoAdmin>[] = [
+    {
+      key: 'nombre',
+      header: 'Habilidad / tecnología',
+      width: '2fr',
+      cell: row => (
+        <div>
+          <p className="font-medium text-ink leading-tight">{row.nombre}</p>
+          {!row.activa && <p className="text-[11px] text-warning">Dada de baja, todavía en uso</p>}
+        </div>
+      ),
+    },
+    {
+      key: 'postulantes',
+      header: 'Postulantes',
+      align: 'right',
+      cell: row => (
+        <span className="text-[13px] font-semibold tabular-nums text-ink-soft">{row.postulantes}</span>
+      ),
+    },
+    {
+      key: 'niveles',
+      header: 'Nivel declarado',
+      width: '1.5fr',
+      cell: row => (
+        <div className="w-full space-y-1">
+          <span className="flex h-2 w-full overflow-hidden rounded-full bg-neutral-100" aria-hidden>
+            <span className="bg-neutral-300" style={{ width: `${pct(row.basico, row.postulantes)}%` }} />
+            <span className="bg-primary-500" style={{ width: `${pct(row.intermedio, row.postulantes)}%` }} />
+            <span className="bg-emerald-500" style={{ width: `${pct(row.avanzado, row.postulantes)}%` }} />
+          </span>
+          <p className="text-[11px] text-muted">
+            {row.basico} básico · {row.intermedio} intermedio · {row.avanzado} avanzado
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: 'alta',
+      header: 'Alta en catálogo',
+      cell: row => (
+        <span className="text-muted">
+          {new Date(row.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <div className="mx-auto max-w-4xl px-8 py-10">
       <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Habilidades y tecnologías</h1>
@@ -130,6 +189,13 @@ export default async function CompetenciasPage({
       </div>
 
       <div className="mt-4">
+        <ExportarExcel
+          href={`/api/admin/catalogos/export?${qsExportCatalogo('competencias', sp)}`}
+          nota="Dos hojas: catálogo y uso por postulantes, con los filtros aplicados."
+        />
+      </div>
+
+      <div className="mt-4">
         {slice.length === 0 ? (
           <EmptyState
             icon={<BarChartIcon size={22} />}
@@ -142,6 +208,29 @@ export default async function CompetenciasPage({
       </div>
 
       <Paginador page={page} pageCount={pageCount} />
+
+      {/* ─── Uso real por postulantes ─────────────────────────────── */}
+      <h2 className="mt-10 text-[15px] font-bold text-ink">Cargadas por postulantes</h2>
+      <p className="mt-1 text-[13px] text-muted">
+        Qué habilidades cargan efectivamente los postulantes y con qué nivel. No hay forma de saber
+        si una habilidad la creó un admin o un postulante — el texto libre se da de alta en este
+        mismo catálogo —, pero una con mucho uso y alta reciente casi siempre la trajo alguien
+        escribiéndola a mano. La búsqueda y el filtro de estado también la alcanzan.
+      </p>
+
+      <div className="mt-4">
+        {usoPagina.length === 0 ? (
+          <EmptyState
+            icon={<BarChartIcon size={22} />}
+            title="Sin resultados"
+            description="Ningún postulante cargó habilidades que coincidan con los filtros aplicados."
+          />
+        ) : (
+          <Table columns={usoColumns} rows={usoPagina} rowKey={row => row.id} />
+        )}
+      </div>
+
+      <Paginador page={pageU} pageCount={pageCountU} paramKey="pageU" />
     </div>
   )
 }

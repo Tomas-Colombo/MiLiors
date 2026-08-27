@@ -6,6 +6,7 @@ import {
   SkeletonPageHeader,
   SkeletonTable,
 } from '@/components/shell/page-skeleton'
+import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
 
 /**
  * Listado de empresas del panel de admin.
@@ -34,6 +35,10 @@ export default function LoadingAdminEmpresas() {
       <SkeletonFilters selects={3} className="mt-6" />
 
       <SkeletonFiltroFechas className="mt-3" />
+
+      <div className="mt-4">
+        <ExportarExcelSkeleton nota="Incluye reclutadores y emails, con los filtros aplicados." />
+      </div>
 
       <SkeletonTable
         className="mt-4"

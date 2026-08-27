@@ -6,8 +6,12 @@
  * pathname en sessionStorage: la memoria dura lo que dura la pestaña, y una pestaña nueva
  * siempre abre el listado sin filtrar.
  *
- * Escribe <FilterMemory>, montado en el layout de cada rol. Leen los enlaces que vuelven a
- * un listado: <AppSidebar> y <VolverLink>.
+ * Escribe <FilterMemory>, montado en el layout de cada rol. Lee un solo consumidor:
+ * <VolverLink>, el enlace que vuelve a un listado desde el detalle.
+ *
+ * A propósito NO la lee la navegación del menú: entrar a una sección desde el sidebar
+ * significa "lleváme al listado", no "restaurá lo que había filtrado". Restaurar ahí
+ * devolvía una lista ya filtrada sin que nadie lo pidiera.
  */
 
 const PREFIJO = 'miliors-filters:'
@@ -31,14 +35,6 @@ export function leerFiltros(pathname: string): string {
     return sessionStorage.getItem(clave(pathname)) ?? ''
   } catch {
     return ''
-  }
-}
-
-export function borrarFiltros(pathname: string) {
-  try {
-    sessionStorage.removeItem(clave(pathname))
-  } catch {
-    // no-op
   }
 }
 

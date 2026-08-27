@@ -5,6 +5,7 @@ import {
   SkeletonPageHeader,
   SkeletonTable,
 } from '@/components/shell/page-skeleton'
+import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
 
 /**
  * ABM de habilidades y tecnologías.
@@ -29,11 +30,24 @@ export default function LoadingCompetencias() {
 
       <SkeletonFiltroFechas className="mt-3" />
 
+      <div className="mt-4">
+        <ExportarExcelSkeleton nota="Dos hojas: catálogo y uso por postulantes, con los filtros aplicados." />
+      </div>
+
       <SkeletonTable
         className="mt-4"
         headers={['Nombre', 'Estado', 'Creada', '']}
         widths={['2fr']}
         rows={8}
+      />
+
+      <h2 className="mt-10 text-[15px] font-bold text-ink">Cargadas por postulantes</h2>
+
+      <SkeletonTable
+        className="mt-4"
+        headers={['Habilidad / tecnología', 'Postulantes', 'Nivel declarado', 'Alta en catálogo']}
+        widths={['2fr']}
+        rows={6}
       />
     </div>
   )

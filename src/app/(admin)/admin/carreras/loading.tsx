@@ -4,6 +4,7 @@ import {
   SkeletonPageHeader,
   SkeletonTable,
 } from '@/components/shell/page-skeleton'
+import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
 
 /**
  * Carreras: dos bloques (catálogo oficial + valores libres cargados por
@@ -29,6 +30,10 @@ export default function LoadingCarreras() {
       </div>
 
       <SkeletonFilters selects={2} className="mt-6" />
+
+      <div className="mt-4">
+        <ExportarExcelSkeleton />
+      </div>
 
       <SkeletonTable
         className="mt-4"

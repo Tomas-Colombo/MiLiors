@@ -5,36 +5,60 @@ import {
   getFeedbackGlobalAdmin,
   type FeedbackFiltros,
 } from '@/modules/admin/queries'
+import { LIMITE_FILAS_CONSULTA } from '@/modules/admin/queries'
+import { construirFeedbackWorkbook } from '@/modules/admin/feedback-workbook'
+import { COMPETENCIAS, ENEATIPO_NOMBRES } from '@/modules/informe/competencias'
 
 /**
- * Exporta el feedback del informe como CSV para analizarlo fuera de la app
- * (Excel, pandas, R). Respeta exactamente los mismos filtros que la pantalla:
- * lo que se descarga es lo que se está viendo.
+ * Exporta el feedback del informe como un .xlsx de cuatro hojas. Respeta
+ * exactamente los mismos filtros que la pantalla: lo que se descarga es lo que
+ * se está viendo.
  *
- * Dos granos distintos, no mezclados en un archivo: `competencias` es una fila
- * por valoración (el grano que sirve para mover los pesos del motor) y `global`
- * una fila por informe. Cruzarlos duplicaría el comentario 13 veces y arruinaría
- * cualquier promedio hecho sobre el archivo.
+ * Antes eran dos CSV con el grano crudo, uno por tabla. Volcaban 13 filas por
+ * postulante con UUIDs, timestamps ISO y los nombres del enum (SUBESTIMA…), y
+ * dejaban al lector la tarea de armarse la tabla dinámica para llegar a la
+ * única pregunta que le hace a este archivo: qué competencia recalibrar. Ahora
+ * eso ya viene resuelto y el crudo queda en la última hoja.
  *
  * El export es SEUDÓNIMO: `postulante_id` permite agrupar sin exponer identidad.
  */
 
-/**
- * Escapa un valor para CSV. El prefijo `'` en celdas que arrancan con =, +, - o @
- * neutraliza la inyección de fórmulas: `comentario` es texto libre del usuario y
- * este archivo se abre en Excel.
- */
-function csvCell(value: string | number | null): string {
-  if (value === null || value === undefined) return ''
-  const s = String(value)
-  const seguro = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
-  return `"${seguro.replace(/"/g, '""')}"`
+const VALORACION_LABEL: Record<string, string> = {
+  SUBESTIMA: 'subestimado',
+  JUSTO: 'correcto',
+  SOBRESTIMA: 'sobrestimado',
 }
 
-function toCSV(headers: string[], rows: (string | number | null)[][]): string {
-  const lineas = [headers.join(','), ...rows.map(r => r.map(csvCell).join(','))]
-  // BOM: sin esto Excel abre el archivo en ANSI y rompe los acentos.
-  return '﻿' + lineas.join('\r\n') + '\r\n'
+/**
+ * Los filtros vigentes en castellano, para estampar en cada hoja. Un archivo
+ * descargado se reenvía y se archiva: sin esto, dentro de dos meses nadie sabe
+ * si esos números son de todo el histórico o de una semana suelta.
+ */
+function describirFiltros(f: FeedbackFiltros, busqueda: string): string {
+  const partes: string[] = []
+  if (busqueda) partes.push(`comentarios que dicen “${busqueda}”`)
+
+  const eneatipo = parseInt(f.eneatipo ?? '', 10)
+  if (Number.isFinite(eneatipo)) {
+    partes.push(`eneatipo ${eneatipo} (${ENEATIPO_NOMBRES[eneatipo] ?? '—'})`)
+  }
+  if (f.competencia) {
+    partes.push(COMPETENCIAS.find(c => c.key === f.competencia)?.nombre ?? f.competencia)
+  }
+  if (f.nivel) partes.push(`nivel mostrado ${f.nivel}`)
+  if (f.valoracion) partes.push(`nivel ${VALORACION_LABEL[f.valoracion] ?? f.valoracion}`)
+
+  if (f.desde || f.hasta) {
+    if (f.desde && f.hasta) partes.push(`del ${f.desde} al ${f.hasta}`)
+    else if (f.desde) partes.push(`desde el ${f.desde}`)
+    else partes.push(`hasta el ${f.hasta}`)
+  } else if (f.dias) {
+    partes.push(`últimos ${f.dias} días`)
+  }
+
+  return partes.length === 0
+    ? 'Incluye todo el histórico, sin filtros.'
+    : `Filtrado por: ${partes.join(' · ')}.`
 }
 
 export async function GET(req: NextRequest) {
@@ -53,50 +77,43 @@ export async function GET(req: NextRequest) {
     hasta: sp.get('hasta') ?? undefined,
   }
 
-  const tipo = sp.get('tipo') === 'global' ? 'global' : 'competencias'
-  const hoy = new Date().toISOString().slice(0, 10)
+  // El buscador de comentarios vive aparte de `filtros` porque sólo alcanza a
+  // ese listado, pero tiene que viajar igual: si la pantalla muestra 3
+  // comentarios, el archivo no puede traer 300.
+  const busqueda = (sp.get('qC') ?? '').trim()
 
-  let csv: string
-  let nombreArchivo: string
+  const [valoraciones, todosLosGlobales] = await Promise.all([
+    getFeedbackCompetenciasAdmin(filtros),
+    getFeedbackGlobalAdmin(filtros),
+  ])
 
-  if (tipo === 'global') {
-    const rows = await getFeedbackGlobalAdmin(filtros)
-    csv = toCSV(
-      ['respondido_at', 'postulante_id', 'eneatipo', 'representatividad_pct', 'comentario'],
-      rows.map(r => [r.respondidoAt, r.postulanteId, r.eneatipo, r.representatividad, r.comentario]),
-    )
-    nombreArchivo = `feedback-informe-global-${hoy}.csv`
-  } else {
-    const rows = await getFeedbackCompetenciasAdmin(filtros)
-    csv = toCSV(
-      [
-        'respondido_at',
-        'informe_generado_at',
-        'postulante_id',
-        'eneatipo',
-        'competencia_key',
-        'competencia',
-        'nivel_mostrado',
-        'valoracion',
-      ],
-      rows.map(r => [
-        r.respondidoAt,
-        r.informeGeneradoAt,
-        r.postulanteId,
-        r.eneatipo,
-        r.competenciaKey,
-        r.competenciaNombre,
-        r.nivelMostrado,
-        r.valoracion,
-      ]),
-    )
-    nombreArchivo = `feedback-informe-competencias-${hoy}.csv`
+  const globales = busqueda
+    ? todosLosGlobales.filter(g => g.comentario?.toLowerCase().includes(busqueda.toLowerCase()))
+    : todosLosGlobales
+
+  const truncado =
+    valoraciones.length >= LIMITE_FILAS_CONSULTA || todosLosGlobales.length >= LIMITE_FILAS_CONSULTA
+
+  let xlsx: Buffer
+  try {
+    xlsx = await construirFeedbackWorkbook({
+      valoraciones,
+      globales,
+      filtrosDescripcion: describirFiltros(filtros, busqueda),
+      truncado,
+    })
+  } catch (err) {
+    console.error('[admin/feedback/export] No se pudo generar el .xlsx:', err)
+    return new Response('No se pudo generar el archivo.', { status: 500 })
   }
 
-  return new Response(csv, {
+  const hoy = new Date().toISOString().slice(0, 10)
+  const nombreArchivo = `feedback-informe-${hoy}.xlsx`
+
+  return new Response(new Uint8Array(xlsx), {
     status: 200,
     headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${nombreArchivo}"`,
       'Cache-Control': 'no-store',
     },

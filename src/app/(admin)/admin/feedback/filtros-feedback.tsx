@@ -34,9 +34,9 @@ const NIVEL_OPTS = [
 
 const VALORACION_OPTS = [
   { value: '', label: 'Todas las respuestas' },
-  { value: 'SUBESTIMA', label: 'Les queda bajo' },
-  { value: 'JUSTO', label: 'Está bien' },
-  { value: 'SOBRESTIMA', label: 'Les queda alto' },
+  { value: 'SUBESTIMA', label: 'Subestimado' },
+  { value: 'JUSTO', label: 'Correcto' },
+  { value: 'SOBRESTIMA', label: 'Sobrestimado' },
 ]
 
 const ENEATIPO_OPTS = [

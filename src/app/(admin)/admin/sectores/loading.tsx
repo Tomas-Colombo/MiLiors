@@ -5,6 +5,7 @@ import {
   SkeletonPageHeader,
   SkeletonTable,
 } from '@/components/shell/page-skeleton'
+import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
 
 /**
  * ABM de sectores.
@@ -32,6 +33,10 @@ export default function LoadingSectores() {
       <SkeletonFilters selects={2} className="mt-6" />
 
       <SkeletonFiltroFechas className="mt-3" />
+
+      <div className="mt-4">
+        <ExportarExcelSkeleton nota="Baja lo que dejan a la vista los filtros." />
+      </div>
 
       <SkeletonTable
         className="mt-4"

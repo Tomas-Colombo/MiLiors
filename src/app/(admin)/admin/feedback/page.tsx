@@ -1,6 +1,7 @@
 import {
   getFeedbackCompetenciasAdmin,
   getFeedbackGlobalAdmin,
+  LIMITE_FILAS_CONSULTA,
   contarFeedbackCompetencias,
   contarFeedbackGlobal,
   agregarPorCompetencia,
@@ -8,11 +9,12 @@ import {
   type AgregadoCompetencia,
   type FeedbackGlobalRow,
 } from '@/modules/admin/queries'
-import { KpiCard, Table, EmptyState } from '@/components/ui'
+import { Alert, KpiCard, Table, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon, CheckCircleIcon, StarIcon, MessageIcon, DownloadIcon } from '@/components/icons'
 import { FiltrosFeedback } from './filtros-feedback'
 import { ConfigReactivacion } from './config-reactivacion'
+import { ComoLeer } from './como-leer'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
@@ -51,12 +53,18 @@ function ordenarComentarios(rows: FeedbackGlobalRow[], orden: string): FeedbackG
   })
 }
 
-/** Query string de los filtros vigentes, para que el CSV baje lo mismo que se ve. */
-function filtrosQS(filtros: FeedbackFiltros, tipo: 'competencias' | 'global'): string {
-  const params = new URLSearchParams({ tipo })
+/**
+ * Query string de los filtros vigentes, para que el Excel baje lo mismo que se ve.
+ * `qC` va aparte de `filtros` porque sólo alcanza al listado de comentarios,
+ * pero tiene que viajar igual: si la pantalla muestra 3, el archivo no puede
+ * traer 300.
+ */
+function filtrosQS(filtros: FeedbackFiltros, busquedaComentario?: string): string {
+  const params = new URLSearchParams()
   for (const [key, value] of Object.entries(filtros)) {
     if (value) params.set(key, value)
   }
+  if (busquedaComentario) params.set('qC', busquedaComentario)
   return params.toString()
 }
 
@@ -101,6 +109,11 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
     getConfiguracionSistema(),
   ])
 
+  // Se tocó el techo de filas: los porcentajes salen de una muestra recortada
+  // por fecha de carga. Callarlo sería peor que no mostrarlos.
+  const truncado =
+    valoraciones.length >= LIMITE_FILAS_CONSULTA || globales.length >= LIMITE_FILAS_CONSULTA
+
   const agregados = agregarPorCompetencia(valoraciones)
   const totalJusto = valoraciones.filter(v => v.valoracion === 'JUSTO').length
 
@@ -110,7 +123,10 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
   const sinFeedbackAlguno = totalHistorico === 0 && totalGlobalHistorico === 0
 
   const comentarios = globales.filter(g => g.comentario)
-  const qC = sp.qC?.trim().toLowerCase() ?? ''
+  // Cruda para el link del Excel (que la muestra en el subtítulo del archivo) y
+  // en minúsculas para comparar acá.
+  const busquedaComentario = sp.qC?.trim() ?? ''
+  const qC = busquedaComentario.toLowerCase()
   const comentariosFiltrados = qC
     ? comentarios.filter(c => c.comentario!.toLowerCase().includes(qC))
     : comentarios
@@ -189,8 +205,8 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
         <div className="w-full space-y-1">
           <BarraDistribucion a={row} />
           <p className="text-[11px] text-muted">
-            {pct(row.subestima, row.total)}% bajo · {pct(row.justo, row.total)}% ok ·{' '}
-            {pct(row.sobrestima, row.total)}% alto
+            {pct(row.subestima, row.total)}% subestimado · {pct(row.justo, row.total)}% correcto ·{' '}
+            {pct(row.sobrestima, row.total)}% sobrestimado
           </p>
         </div>
       ),
@@ -238,7 +254,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
         <KpiCard
           icon={<CheckCircleIcon size={20} />}
           tone="green"
-          label="Dicen &ldquo;está bien&rdquo;"
+          label="Nivel correcto"
           value={`${pct(totalJusto, valoraciones.length)}%`}
         />
         <KpiCard
@@ -259,25 +275,33 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
         <FiltrosFeedback totalVisible={valoraciones.length} totalTotal={totalHistorico} />
       </div>
 
-      {/* Export: baja exactamente lo filtrado, en dos granos separados. */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      {truncado && (
+        <div className="mt-4">
+          <Alert tone="warning" title="Estos números son parciales">
+            La consulta alcanzó el máximo de {LIMITE_FILAS_CONSULTA.toLocaleString('es-AR')}{' '}
+            respuestas, así que los porcentajes salen de una muestra recortada y no del total.
+            Achicá el rango de fechas para que la lectura sea confiable.
+          </Alert>
+        </div>
+      )}
+
+      {/* Export: un solo archivo con los cuatro granos, ya agregados. */}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <a
-          href={`/api/admin/feedback/export?${filtrosQS(filtros, 'competencias')}`}
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 h-9 text-[12.5px] font-medium text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300 transition-colors"
+          href={`/api/admin/feedback/export?${filtrosQS(filtros, busquedaComentario)}`}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted transition-colors hover:border-primary-300 hover:bg-primary-tint hover:text-primary-600"
         >
           <DownloadIcon size={14} />
-          CSV por competencia
-        </a>
-        <a
-          href={`/api/admin/feedback/export?${filtrosQS(filtros, 'global')}`}
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 h-9 text-[12.5px] font-medium text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300 transition-colors"
-        >
-          <DownloadIcon size={14} />
-          CSV respuestas globales
+          Descargar Excel
         </a>
         <span className="text-[11px] text-muted">
-          Seudónimo: incluye el id del postulante, nunca nombre ni email.
+          Cuatro hojas con lo que estos filtros dejan a la vista. Seudónimo: incluye el id del
+          postulante, nunca nombre ni email.
         </span>
+      </div>
+
+      <div className="mt-6">
+        <ComoLeer />
       </div>
 
       <div className="mt-6">
