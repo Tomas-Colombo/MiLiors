@@ -3,17 +3,12 @@ import { Badge, EmptyState, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon } from '@/components/icons'
 import { getMisEmpresas, type EmpresaDelReclutador } from '@/modules/empresas/queries'
-import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
+import { Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { FiltrosEmpresas } from './filtros-empresas'
 import { NuevaEmpresaBtn, EmpresaAcciones } from './empresas-ui'
 
 export const metadata = { title: 'Mis empresas — MiLiors' }
-
-const ESTADO_OPTS = [
-  { value: '', label: 'Todos los estados' },
-  { value: 'activa', label: 'Activas' },
-  { value: 'baja', label: 'De baja' },
-]
 
 type SearchParams = Promise<{ q?: string; estado?: string; page?: string }>
 
@@ -74,7 +69,9 @@ export default async function MisEmpresasPage({ searchParams }: { searchParams: 
       key: 'acciones',
       header: 'Acciones',
       align: 'center',
-      width: '320px',
+      // Tres slots parejos para los botones de EmpresaAcciones. La tabla es
+      // overflow-hidden: si la columna queda corta, los botones se recortan.
+      width: '400px',
       cell: (e) => <EmpresaAcciones empresa={e} />,
     },
   ]
@@ -100,21 +97,7 @@ export default async function MisEmpresasPage({ searchParams }: { searchParams: 
 
       {todas.length > 0 && (
         <Suspense>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <SearchInput placeholder="Buscar empresa…" className="w-full sm:w-56" />
-            <FilterSelect
-              paramKey="estado"
-              options={ESTADO_OPTS}
-              ariaLabel="Filtrar por estado"
-              className="w-full sm:w-44"
-            />
-            <ClearFilters keys={['q', 'estado']} />
-            {filtradas.length !== todas.length && (
-              <span className="whitespace-nowrap text-xs text-muted sm:ml-auto">
-                {filtradas.length} de {todas.length}
-              </span>
-            )}
-          </div>
+          <FiltrosEmpresas totalVisible={filtradas.length} totalTotal={todas.length} />
         </Suspense>
       )}
 
