@@ -17,10 +17,15 @@ import type { ActionResult } from '@/lib/types/domain'
  *    que es donde la gente abandona.
  */
 
+/**
+ * Las etiquetas hablan del NIVEL REAL de la persona, no de cómo "le queda" el
+ * que calculamos: "me queda alto" obligaba a resolver mentalmente si lo alto
+ * era el nivel o la molestia. Acá el sujeto es él y la dirección es explícita.
+ */
 const OPCIONES: { valor: ValoracionCompetencia; label: string }[] = [
-  { valor: 'SUBESTIMA', label: 'Me queda bajo' },
-  { valor: 'JUSTO', label: 'Está bien' },
-  { valor: 'SOBRESTIMA', label: 'Me queda alto' },
+  { valor: 'SUBESTIMA', label: 'Mi nivel es mayor' },
+  { valor: 'JUSTO', label: 'Es correcto' },
+  { valor: 'SOBRESTIMA', label: 'Mi nivel es menor' },
 ]
 
 export function ValoracionCompetenciaControl({
@@ -51,7 +56,7 @@ export function ValoracionCompetenciaControl({
 
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] text-neutral-400">¿Te representa?</span>
+      <span className="text-[11px] text-neutral-400">¿Refleja tu nivel real?</span>
       {OPCIONES.map(o => {
         const seleccionada = valor === o.valor
         return (

@@ -47,6 +47,27 @@ async function getPostulanteId(): Promise<string | null> {
   return data ? (data as { id: string }).id : null
 }
 
+/**
+ * El certificado emitido es una foto firmada del perfil tecnico: cualquier
+ * cambio de formacion, cursos, experiencia, idiomas o competencias lo deja
+ * viejo. Aca solo prendemos el flag (una escritura, sin LLM); regenerar la
+ * sintesis y re-emitir el PDF queda a cargo del boton "Actualizar certificado"
+ * en /postulante/certificado. Mismo patron que eneagrama y human-design.
+ */
+async function marcarCambioPerfilTecnico(postulanteId: string | null): Promise<void> {
+  if (postulanteId) {
+    const admin = createAdminClient()
+    const { error } = await admin.from('certificado_pdf')
+      .update({ desactualizado: true })
+      .eq('postulante_id', postulanteId)
+    if (error) {
+      console.error('[perfil-tecnico] No se pudo marcar el certificado desactualizado:', error.message)
+    }
+  }
+  revalidatePath('/postulante/perfil')
+  revalidatePath('/postulante/certificado')
+}
+
 // ─── FORMACIÓN ────────────────────────────────────────────────────────────────
 
 function resolveInstitucion(formData: FormData): string | null {
@@ -98,7 +119,7 @@ export async function agregarFormacion(
   })
 
   if (error) return { success: false, error: 'No se pudo guardar la formación.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -129,16 +150,16 @@ export async function editarFormacion(
     .eq('id', id)
 
   if (error) return { success: false, error: 'No se pudo actualizar la formación.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
 export async function eliminarFormacion(id: string): Promise<ActionResult> {
-  await verifySession()
+  const postulanteId = await getPostulanteId()
   const supabase = await createClient()
   const { error } = await supabase.from('formacion_academica').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -181,7 +202,7 @@ export async function agregarCurso(
   })
 
   if (error) return { success: false, error: 'No se pudo guardar el curso.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -195,7 +216,7 @@ export async function editarCurso(
     return { success: false, error: 'Revisá los campos.', fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  await verifySession()
+  const postulanteId = await getPostulanteId()
   const supabase = await createClient()
   const { error } = await supabase.from('curso')
     .update({
@@ -208,16 +229,16 @@ export async function editarCurso(
     .eq('id', id)
 
   if (error) return { success: false, error: 'No se pudo actualizar el curso.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
 export async function eliminarCurso(id: string): Promise<ActionResult> {
-  await verifySession()
+  const postulanteId = await getPostulanteId()
   const supabase = await createClient()
   const { error } = await supabase.from('curso').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -254,7 +275,7 @@ export async function agregarExperiencia(
   })
 
   if (error) return { success: false, error: 'No se pudo guardar la experiencia.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -274,7 +295,7 @@ export async function editarExperiencia(
     return { success: false, error: 'Revisá los campos.', fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  await verifySession()
+  const postulanteId = await getPostulanteId()
   const supabase = await createClient()
   const { error } = await supabase.from('experiencia_laboral')
     .update({
@@ -287,16 +308,16 @@ export async function editarExperiencia(
     .eq('id', id)
 
   if (error) return { success: false, error: 'No se pudo actualizar.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
 export async function eliminarExperiencia(id: string): Promise<ActionResult> {
-  await verifySession()
+  const postulanteId = await getPostulanteId()
   const supabase = await createClient()
   const { error } = await supabase.from('experiencia_laboral').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -331,16 +352,16 @@ export async function agregarIdioma(
   })
 
   if (error) return { success: false, error: 'No se pudo guardar el idioma.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
 export async function eliminarIdioma(id: string): Promise<ActionResult> {
-  await verifySession()
+  const postulanteId = await getPostulanteId()
   const supabase = await createClient()
   const { error } = await supabase.from('idioma').delete().eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar.' }
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -359,7 +380,7 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
     .eq('perfil_tecnico_id', perfilTecnicoId)
 
   if (competenciaIds.length === 0) {
-    revalidatePath('/postulante/perfil')
+    await marcarCambioPerfilTecnico(postulanteId)
     return { success: true, data: undefined }
   }
 
@@ -372,7 +393,7 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
   const { error } = await admin.from('postulante_competencia').insert(rows)
   if (error) return { success: false, error: 'No se pudieron guardar las competencias.' }
 
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   return { success: true, data: undefined }
 }
 
@@ -435,7 +456,7 @@ export async function guardarCompetenciasConCustom(
     .eq('perfil_tecnico_id', perfilTecnicoId)
 
   if (niveles.size === 0) {
-    revalidatePath('/postulante/perfil')
+    await marcarCambioPerfilTecnico(postulanteId)
     return { success: true, data: undefined, items: [] }
   }
 
@@ -453,7 +474,7 @@ export async function guardarCompetenciasConCustom(
     .select('id, nombre')
     .in('id', [...niveles.keys()])
 
-  revalidatePath('/postulante/perfil')
+  await marcarCambioPerfilTecnico(postulanteId)
   const items = ((saved ?? []) as { id: string; nombre: string }[]).map((c) => ({
     ...c,
     nivel: niveles.get(c.id) ?? ('BASICO' as NivelCompetencia),

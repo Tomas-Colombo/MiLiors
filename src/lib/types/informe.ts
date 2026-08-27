@@ -10,7 +10,17 @@
  * `informe_personalidad.contenido_json` (jsonb) y alimenta el visor y el PDF.
  */
 
-export type NivelCompetencia = 'Alto' | 'Medio-Alto' | 'Medio' | 'Medio-Bajo' | 'Bajo'
+/**
+ * Los 5 niveles del informe, de mayor a menor. Es una lista en runtime y no
+ * solo un tipo porque el filtro de admin y los reportes necesitan iterarlos y
+ * validarlos: cuando esto era únicamente un tipo, el filtro "Nivel mostrado"
+ * validaba contra NIVEL_COMPETENCIA de constants/enums (BASICO/INTERMEDIO/
+ * AVANZADO, que son los de las habilidades técnicas del perfil) y descartaba
+ * en silencio cualquier valor. Dos enums distintos con el mismo nombre.
+ */
+export const NIVELES_INFORME = ['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'] as const
+
+export type NivelCompetencia = (typeof NIVELES_INFORME)[number]
 
 /** Los 4 bloques en los que se agrupan las 13 competencias para el render. */
 export type BloqueCompetencia =

@@ -11,7 +11,6 @@ import {
 } from '@/components/icons'
 import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { BrandLogo } from '@/components/shared/brand-logo'
-import { borrarFiltros, hrefConFiltros } from '@/lib/filter-memory'
 import { cerrarSesion } from '@/modules/auth/actions'
 
 export type NavLinkItem = {
@@ -72,25 +71,6 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
     return pathname === item.href || pathname.startsWith(item.href + '/')
   }
 
-  // Vuelve al listado con los filtros que el usuario dejó puestos (ver lib/filter-memory.ts).
-  function handleNavClick(e: React.MouseEvent<HTMLAnchorElement>, item: NavLinkItem) {
-    // Con modificadores el navegador abre otra pestaña o ventana: que llegue sin filtrar.
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-
-    // Clickear la vista en la que ya estamos significa "empezar de nuevo". El match tiene que
-    // ser exacto, no isActive(): parados en un detalle (/reclutador/postulantes/:id) el ítem
-    // del listado figura activo por prefijo, y ahí el click tiene que restaurar, no borrar.
-    if (pathname === item.href) {
-      borrarFiltros(item.href)
-      return
-    }
-
-    const destino = hrefConFiltros(item.href)
-    if (destino === item.href) return
-    e.preventDefault()
-    window.location.assign(destino)
-  }
-
   function handleLogout() {
     startTransition(async () => {
       await cerrarSesion()
@@ -148,10 +128,9 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
         {items.map((item) => {
           const active = isActive(item)
           return (
-            <a
+            <Link
               key={item.href}
               href={item.href}
-              onClick={(e) => handleNavClick(e, item)}
               aria-current={active ? 'page' : undefined}
               title={collapsed ? item.label : undefined}
               className={[
@@ -199,7 +178,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
                   )}
                 </>
               )}
-            </a>
+            </Link>
           )
         })}
       </nav>
