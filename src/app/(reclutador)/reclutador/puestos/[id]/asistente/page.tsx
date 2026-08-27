@@ -3,7 +3,7 @@ import { VolverLink } from '@/components/shared/volver-link'
 import { ChevronLeftIcon, SparklesIcon } from '@/components/icons'
 import { getPuestoById, getPostulacionesRecibidas } from '@/modules/puestos/queries'
 import { AsistenteCandidatos, type CandidatoItem } from './asistente-candidatos'
-import { MARCA_POSTULACION } from '@/lib/constants/enums'
+import { ComoFunciona } from './como-funciona'
 
 export const metadata = { title: 'Asistente IA del puesto — MiLiors' }
 
@@ -30,7 +30,8 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
       nombre: p.nombre_completo ?? 'Candidato',
       email: p.contacto.email,
       fechaPostulacion: p.fecha_postulacion,
-      enDuda: p.marca === MARCA_POSTULACION.DUDA,
+      marca: p.marca,
+      estadoActual: p.estado,
     }))
 
   return (
@@ -58,7 +59,13 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
         </div>
       </div>
 
-      <AsistenteCandidatos puestoId={id} candidatos={candidatos} />
+      <ComoFunciona />
+
+      <AsistenteCandidatos
+        puestoId={id}
+        tituloPuesto={puesto.titulo_puesto}
+        candidatos={candidatos}
+      />
     </div>
   )
 }

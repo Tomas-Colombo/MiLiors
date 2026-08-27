@@ -23,6 +23,13 @@ type Props = {
   tituloPuesto?: string | null
   marca: MarcaPostulacion | null
   estadoActual: string
+  /**
+   * Avisan del cambio ya confirmado por el server, para que el contenedor
+   * pueda reaccionar (el Asistente IA, por ejemplo, saca de su lista a quien
+   * deja de estar marcado). No se disparan si la action falla.
+   */
+  onMarcaChange?: (marca: MarcaPostulacion | null) => void
+  onNoAvanza?: () => void
 }
 
 // Sin selección los tres botones se muestran en su color suave. Cuando hay una
@@ -52,6 +59,8 @@ export function MarcaPostulacionBtns({
   tituloPuesto,
   marca: marcaInicial,
   estadoActual,
+  onMarcaChange,
+  onNoAvanza,
 }: Props) {
   const [isPending, startTransition] = useTransition()
   const [marca, setMarca] = useState<MarcaPostulacion | null>(marcaInicial)
@@ -94,7 +103,9 @@ export function MarcaPostulacionBtns({
         setMarca(marcaAnterior)
         setDescartado(descarteAnterior)
         setError(result.error)
+        return
       }
+      onMarcaChange?.(next)
     })
   }
 
@@ -127,6 +138,7 @@ export function MarcaPostulacionBtns({
       setDescartado(true)
       setConfirmando(false)
       setMotivo('')
+      onNoAvanza?.()
     })
   }
 

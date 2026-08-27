@@ -40,9 +40,11 @@ export const metadata = { title: 'Detalle de postulante — MiLiors' }
 
 // params in Next.js App Router dynamic routes is a Promise
 type Params = Promise<{ id: string }>
-type SearchParams = Promise<{ postulacion?: string; from?: string }>
+type SearchParams = Promise<{ postulacion?: string; from?: string; puesto?: string }>
 
-// Destino del enlace "Volver" según de dónde se abrió el perfil
+// Destino del enlace "Volver" según de dónde se abrió el perfil. El asistente
+// no entra acá: vive bajo un puesto concreto, así que su destino se arma con el
+// id que viaja en la URL y no puede salir de un mapa de rutas fijas.
 const ORIGENES: Record<string, { href: string; label: string }> = {
   notas: { href: '/reclutador/notas', label: 'Volver a mis notas' },
   postulaciones: { href: '/reclutador/postulaciones', label: 'Volver a las postulaciones' },
@@ -56,11 +58,17 @@ export default async function PostulanteDetallePage({
   searchParams: SearchParams
 }) {
   const { id } = await params
-  const { postulacion: postulacionId, from } = await searchParams
-  const volver = (from ? ORIGENES[from] : undefined) ?? {
-    href: '/reclutador/postulantes',
-    label: 'Volver a la búsqueda',
-  }
+  const { postulacion: postulacionId, from, puesto: puestoOrigenId } = await searchParams
+  const volver =
+    from === 'puesto-asistente' && puestoOrigenId
+      ? {
+          href: `/reclutador/puestos/${puestoOrigenId}/asistente`,
+          label: 'Volver al asistente',
+        }
+      : ((from ? ORIGENES[from] : undefined) ?? {
+          href: '/reclutador/postulantes',
+          label: 'Volver a la búsqueda',
+        })
 
   const [postulante, notas] = await Promise.all([
     getPostulanteDetalle(id),

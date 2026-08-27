@@ -5,14 +5,13 @@ import { verifySession } from '@/lib/dal'
 import { aiProvider } from '@/lib/ai'
 import { informeToPlainText } from '@/modules/informe/format'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { MAX_CANDIDATOS_SELECCION } from './constants'
 import {
   buildSeleccionPrompts,
   type CandidatoContexto,
   type InformeSeleccionJSON,
 } from './prompts'
 
-/** Límite de candidatos por consulta para controlar el costo en tokens. */
-export const MAX_CANDIDATOS_SELECCION = 10
 
 type ResultadoSeleccion =
   | { success: true; informe: InformeSeleccionJSON; tituloPuesto: string }
