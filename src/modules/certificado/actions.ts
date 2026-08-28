@@ -28,7 +28,7 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
   // El informe desactualizado bloquea la EMISIÓN (no la descarga de uno ya emitido).
   const { data: informe } = await supabase
     .from('informe_personalidad')
-    .select('estado_informe, desactualizado, contenido_json')
+    .select('estado_informe, desactualizado')
     .eq('postulante_id', postulanteTyped.id)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -37,7 +37,6 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
   const informeTyped = informe as {
     estado_informe: string
     desactualizado: boolean
-    contenido_json: InformePersonalidadJSON | null
   } | null
 
   if (!informeTyped || informeTyped.estado_informe !== 'LISTO') {
@@ -65,42 +64,29 @@ export async function crearCertificado(): Promise<ActionResult<{ certificadoId: 
   })
   if (!contenido.success) return { success: false, error: contenido.error }
 
-  let pdfBuffer: Buffer
+  // El PDF no se guarda: cada descarga lo vuelve a renderizar desde el perfil
+  // vigente. Igual se renderiza una vez acá y se descarta el buffer, como
+  // verificación de que el documento es producible: emitir un certificado que
+  // después no se puede bajar sería prometer algo que no existe.
   try {
-    pdfBuffer = await generarPDFBuffer(contenido.props)
+    await generarPDFBuffer(contenido.props)
   } catch (err) {
     console.error('[certificado] Error generando PDF:', err)
     return { success: false, error: 'No se pudo generar el PDF. Intentá de nuevo.' }
   }
 
-  // 7. Upload to Supabase Storage
-  const storagePath = `${postulanteTyped.id}/${certificadoId}.pdf`
-  const { error: uploadError } = await admin.storage
-    .from('certificados')
-    .upload(storagePath, pdfBuffer, {
-      contentType: 'application/pdf',
-      upsert: false,
-    })
-
-  if (uploadError) {
-    console.error('[certificado] Error subiendo a Storage:', uploadError.message)
-    return { success: false, error: 'No se pudo almacenar el certificado.' }
-  }
-
-  // Persist record in DB (upsert by postulante_id — unique constraint in schema)
+  // Lo que hace verificable al certificado es esta fila —el id que viaja en el
+  // QR y la fecha de firma—, no un archivo. Una fila por postulante: el UNIQUE
+  // de postulante_id es contra lo que resuelve el upsert.
   const { error: dbError } = await admin.from('certificado_pdf').upsert({
     id: certificadoId,
     postulante_id: postulanteTyped.id,
-    url_archivo: storagePath,
     timestamp_firma: timestampFirma,
-    contenido_json: informeTyped.contenido_json ?? null,
     desactualizado: false,
   }, { onConflict: 'postulante_id' })
 
   if (dbError) {
     console.error('[certificado] Error guardando en DB:', dbError.message)
-    // Attempt to clean up the uploaded file
-    await admin.storage.from('certificados').remove([storagePath])
     return { success: false, error: 'Error al registrar el certificado.' }
   }
 

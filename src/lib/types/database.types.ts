@@ -72,34 +72,25 @@ export type Database = {
       }
       certificado_pdf: {
         Row: {
-          codigo_qr_url: string | null
-          contenido_json: Json | null
           created_at: string
           desactualizado: boolean
           id: string
           postulante_id: string
           timestamp_firma: string
-          url_archivo: string | null
         }
         Insert: {
-          codigo_qr_url?: string | null
-          contenido_json?: Json | null
           created_at?: string
           desactualizado?: boolean
           id?: string
           postulante_id: string
           timestamp_firma?: string
-          url_archivo?: string | null
         }
         Update: {
-          codigo_qr_url?: string | null
-          contenido_json?: Json | null
           created_at?: string
           desactualizado?: boolean
           id?: string
           postulante_id?: string
           timestamp_firma?: string
-          url_archivo?: string | null
         }
         Relationships: [
           {
@@ -1340,13 +1331,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "puesto_departamento_id_fkey"
-            columns: ["departamento_id"]
-            isOneToOne: false
-            referencedRelation: "departamento"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "puesto_departamento_id_fkey"
             columns: ["departamento_id"]

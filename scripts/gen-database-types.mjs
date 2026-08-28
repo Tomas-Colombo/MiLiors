@@ -50,6 +50,15 @@ const ESCALARES = {
   uuid: 'string',
   text: 'string',
   'character varying': 'string',
+  // PostgREST publica los enteros con los nombres de OpenAPI (int32 cubre int2
+  // e int4), pero para los ARRAYS usa el nombre de Postgres ('integer[]'). Por
+  // eso conviven las dos familias de claves: sacar 'integer' rompe
+  // test_eneagrama.dominantes_empate, y sacar 'int32' devuelve todo a unknown.
+  int16: 'number',
+  int32: 'number',
+  int64: 'number',
+  float: 'number',
+  double: 'number',
   'timestamp with time zone': 'string',
   'timestamp without time zone': 'string',
   date: 'string',

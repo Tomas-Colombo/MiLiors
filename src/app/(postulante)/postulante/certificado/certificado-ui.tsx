@@ -248,7 +248,6 @@ export function CertificadoUI({
           <Button
             variant="secondary"
             className={ACCION_CLASS}
-            disabled={!certificado.url_archivo}
             onClick={() => window.open(`/api/certificado/descargar/${certificado.id}`, '_blank')}
           >
             Descargar certificado

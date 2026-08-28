@@ -18,9 +18,7 @@ import type { NivelCompetencia } from '@/lib/constants/enums'
 export type CertificadoData = {
   id: string
   postulante_id: string
-  url_archivo: string | null
   timestamp_firma: string
-  codigo_qr_url: string | null
   created_at: string
   desactualizado: boolean
 }
@@ -40,7 +38,7 @@ export const getUltimoCertificado = cache(async (): Promise<CertificadoData | nu
 
   const { data } = await supabase
     .from('certificado_pdf')
-    .select('id, postulante_id, url_archivo, timestamp_firma, codigo_qr_url, created_at, desactualizado')
+    .select('id, postulante_id, timestamp_firma, created_at, desactualizado')
     .eq('postulante_id', (postulante as { id: string }).id)
     .order('created_at', { ascending: false })
     .limit(1)
