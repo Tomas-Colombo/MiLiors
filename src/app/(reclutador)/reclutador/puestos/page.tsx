@@ -13,6 +13,7 @@ import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
+import { normalizarTexto } from '@/lib/texto'
 import { PuestoAcciones } from './puesto-acciones'
 import { FiltrosPuestos } from './filtros-puestos'
 
@@ -28,7 +29,7 @@ export default async function MisPuestosPage({
   searchParams: SearchParams
 }) {
   const { orden, estado, empresa: filtroEmpresa, q: qRaw, page: pageParam } = await searchParams
-  const q = qRaw?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(qRaw ?? '')
   const [puestos, { diasInactividadCierre }, empresas] = await Promise.all([
     getMisPuestos(),
     getConfiguracionSistema(),
@@ -46,7 +47,7 @@ export default async function MisPuestosPage({
     if (estado === 'activo' && !p.activo) return false
     if (estado === 'cerrado' && p.activo) return false
     if (filtroEmpresa && p.empresa_id !== filtroEmpresa) return false
-    if (q && !p.titulo_puesto.toLowerCase().includes(q)) return false
+    if (q && !normalizarTexto(p.titulo_puesto).includes(q)) return false
     return true
   })
 

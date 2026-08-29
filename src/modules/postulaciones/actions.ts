@@ -15,6 +15,23 @@ import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/pr
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { getCicloAbierto } from '@/modules/puestos/ciclos'
 
+/**
+ * Interruptor de los avisos por mail de las postulaciones.
+ *
+ * Hoy está APAGADO a propósito. El único mail que MiLiors manda por ahora es el
+ * de recuperación de cuenta, y ese lo emite Supabase Auth por su cuenta —no
+ * pasa por acá.
+ *
+ * El código de abajo queda escrito y entero, en estado provisorio, porque la
+ * decisión es "todavía no", no "nunca": cuando el remitente y las plantillas
+ * estén definidos se prende con la variable de entorno y no hay que reescribir
+ * nada. Mientras tanto el remitente que figura más abajo es ficticio.
+ *
+ * Apagado, la acción sigue su curso normal: cambiar el estado de una
+ * postulación no depende del mail ni falla si no sale.
+ */
+const EMAIL_POSTULACIONES_HABILITADO = process.env.EMAIL_POSTULACIONES_HABILITADO === 'true'
+
 // Helper: send email via Resend (no SDK — native fetch)
 async function enviarEmailCambioEstado(
   emailDestino: string,
@@ -304,10 +321,15 @@ export async function avanzarEstadoPostulacion(
     .single()
   if (post) await marcarActividadPuesto((post as { puesto_id: string }).puesto_id)
 
-  // Send email (non-blocking: failure is logged but doesn't halt)
-  const datos = await getDatosEmail(postulacionId)
-  if (datos?.email) {
-    await enviarEmailCambioEstado(datos.email, datos.nombre, datos.titulo, datos.empresa, nuevoEstado)
+  // Aviso por mail al postulante: apagado por ahora (ver
+  // EMAIL_POSTULACIONES_HABILITADO). La guarda envuelve también a la consulta
+  // de datos, que si no sería una ida a la base para no mandar nada.
+  // Cuando esté prendido sigue sin bloquear: los errores se loguean adentro.
+  if (EMAIL_POSTULACIONES_HABILITADO) {
+    const datos = await getDatosEmail(postulacionId)
+    if (datos?.email) {
+      await enviarEmailCambioEstado(datos.email, datos.nombre, datos.titulo, datos.empresa, nuevoEstado)
+    }
   }
 
   revalidatePath('/reclutador/postulaciones')

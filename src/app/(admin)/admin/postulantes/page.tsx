@@ -14,6 +14,7 @@ import {
   Paginador,
 } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { normalizarTexto } from '@/lib/texto'
 
 export const metadata = { title: 'Postulantes — Admin MiLiors' }
 
@@ -108,7 +109,7 @@ export default async function PostulantesPage({
     getCarreras(),
   ])
 
-  const q = sp.q?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(sp.q ?? '')
   const informe = sp.informe ?? ''
   const busqueda = sp.busqueda ?? ''
   const eneagrama = sp.eneagrama ?? ''
@@ -133,8 +134,8 @@ export default async function PostulantesPage({
     if (desde && p.created_at < desde) return false
     if (hasta && p.created_at > hasta) return false
     if (q) {
-      const enNombre = p.nombre_completo.toLowerCase().includes(q)
-      const enEmail = p.email?.toLowerCase().includes(q) ?? false
+      const enNombre = normalizarTexto(p.nombre_completo).includes(q)
+      const enEmail = p.email ? normalizarTexto(p.email).includes(q) : false
       if (!enNombre && !enEmail) return false
     }
     return true

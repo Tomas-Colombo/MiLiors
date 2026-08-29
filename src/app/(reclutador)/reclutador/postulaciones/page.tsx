@@ -15,6 +15,7 @@ import { MarcaPostulacionBtns } from '@/components/shared/marca-postulacion'
 import { RevertirDescarteBtn } from './revertir-descarte-btn'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
 import { paginar } from '@/lib/pagination'
+import { normalizarTexto } from '@/lib/texto'
 import { Paginador } from '@/components/shared/list-controls'
 import type { BadgeProps } from '@/components/ui/badge'
 
@@ -52,7 +53,7 @@ export default async function PostulacionesRecibidasPage({
     ciclos: filtroCiclos, carrera: filtroCarrera, habilidad: filtroHabilidad,
     provincia: filtroProvincia, departamento: filtroDepartamento,
   } = await searchParams
-  const q = qRaw?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(qRaw ?? '')
   const [todas, empresas, provincias, departamentos] = await Promise.all([
     getPostulacionesRecibidas(),
     getMisEmpresasBase(),
@@ -129,7 +130,7 @@ export default async function PostulacionesRecibidasPage({
     if (filtroHabilidad && !p.habilidades.includes(filtroHabilidad)) return false
     if (filtroProvincia && p.provincia_id !== filtroProvincia) return false
     if (filtroDepartamento && p.departamento_id !== filtroDepartamento) return false
-    if (q && !(p.nombre_completo?.toLowerCase().includes(q) ?? false)) return false
+    if (q && !(p.nombre_completo ? normalizarTexto(p.nombre_completo).includes(q) : false)) return false
     return true
   })
 

@@ -7,6 +7,7 @@ import {
   type ValoracionCompetencia,
 } from '@/lib/constants/enums'
 import { NIVELES_INFORME, type NivelCompetencia } from '@/lib/types/informe'
+import { patronSinTildes } from '@/lib/texto'
 
 // ─── Métricas del dashboard ──────────────────────────────────────────────────
 
@@ -168,7 +169,7 @@ export async function getCarrerasOtrasAdmin(params?: {
       .select('carrera_otra, created_at')
       .not('carrera_otra', 'is', null)
 
-    if (params?.q) query = query.ilike('carrera_otra', `%${params.q}%`)
+    if (params?.q) query = query.regexIMatch('carrera_otra', patronSinTildes(params.q))
     if (params?.desde) query = query.gte('created_at', params.desde)
     if (params?.hasta) query = query.lte('created_at', params.hasta)
 

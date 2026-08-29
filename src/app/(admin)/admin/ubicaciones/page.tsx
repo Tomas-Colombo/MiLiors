@@ -19,6 +19,7 @@ import {
   Paginador,
 } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { normalizarTexto } from '@/lib/texto'
 
 export const metadata = { title: 'Ubicaciones — Admin MiLiors' }
 
@@ -42,7 +43,7 @@ function filtrar<T extends FilaCatalogo>(rows: T[], q: string, estado: string): 
   return rows.filter((row) => {
     if (estado === 'activo' && row.fecha_baja) return false
     if (estado === 'inactivo' && !row.fecha_baja) return false
-    if (q && !row.nombre.toLowerCase().includes(q)) return false
+    if (q && !normalizarTexto(row.nombre).includes(q)) return false
     return true
   })
 }
@@ -100,7 +101,7 @@ export default async function UbicacionesPage({
   // ─── Provincias ──────────────────────────────────────────────────────────
   const provincias = await getProvinciasAdmin()
   const provFiltradas = ordenar(
-    filtrar(provincias, sp.qP?.trim().toLowerCase() ?? '', sp.estadoP ?? ''),
+    filtrar(provincias, normalizarTexto(sp.qP ?? ''), sp.estadoP ?? ''),
     sp.ordenP ?? '',
   )
   const { page: pageP, pageCount: pageCountP, slice: sliceP } = paginar(provFiltradas, sp.pageP)
@@ -109,7 +110,7 @@ export default async function UbicacionesPage({
   const provSeleccionada = sp.prov ?? ''
   const departamentos = provSeleccionada ? await getDepartamentosAdmin(provSeleccionada) : []
   const depFiltrados = ordenar(
-    filtrar(departamentos, sp.qD?.trim().toLowerCase() ?? '', sp.estadoD ?? ''),
+    filtrar(departamentos, normalizarTexto(sp.qD ?? ''), sp.estadoD ?? ''),
     sp.ordenD ?? '',
   )
   const { page: pageD, pageCount: pageCountD, slice: sliceD } = paginar(depFiltrados, sp.pageD)
@@ -120,7 +121,7 @@ export default async function UbicacionesPage({
   const depSeleccionado = departamentos.some((d) => d.id === sp.dep) ? (sp.dep as string) : ''
   const localidades = depSeleccionado ? await getLocalidadesAdmin(depSeleccionado) : []
   const locFiltradas = ordenar(
-    filtrar(localidades, sp.qL?.trim().toLowerCase() ?? '', sp.estadoL ?? ''),
+    filtrar(localidades, normalizarTexto(sp.qL ?? ''), sp.estadoL ?? ''),
     sp.ordenL ?? '',
   )
   const { page: pageL, pageCount: pageCountL, slice: sliceL } = paginar(locFiltradas, sp.pageL)

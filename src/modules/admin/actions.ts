@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
+import { patronTextoCompleto } from '@/lib/texto'
 
 // Guard ADMIN
 async function requireAdmin() {
@@ -138,6 +139,36 @@ export async function reactivarIdioma(id: string): Promise<ActionResult> {
 
 // ─── Carreras ────────────────────────────────────────────────────────────────
 
+/**
+ * La carrera activa que ya ocupa ese nombre, ignorando tildes y mayúsculas.
+ *
+ * El índice único de la tabla es `lower(nombre)`: para Postgres "Ingenieria" e
+ * "Ingeniería" son dos nombres distintos y las dos filas entrarían al catálogo.
+ * El catálogo tiene que ofrecer UNA sola opción por carrera —si no, el
+ * postulante elige una y el reclutador filtra por la otra—, así que el chequeo
+ * vive acá, en las tres puertas de entrada: alta, renombrado y promoción.
+ *
+ * Sólo mira las activas, igual que el índice: un nombre liberado por una baja
+ * se puede volver a usar.
+ */
+async function carreraConMismoNombre(
+  admin: ReturnType<typeof createAdminClient>,
+  nombre: string,
+  excluirId?: string,
+): Promise<{ id: string; nombre: string } | null> {
+  let query = admin
+    .from('carrera')
+    .select('id, nombre')
+    .is('fecha_baja', null)
+    .regexIMatch('nombre', patronTextoCompleto(nombre))
+  if (excluirId) query = query.neq('id', excluirId)
+
+  const { data } = await query.limit(1)
+  const filas = (data ?? []) as { id: string; nombre: string }[]
+  return filas[0] ?? null
+}
+
+
 export async function crearCarrera(
   _prev: ActionResult,
   formData: FormData
@@ -147,6 +178,11 @@ export async function crearCarrera(
   if (!nombre) return { success: false, error: 'Ingresá el nombre de la carrera.' }
 
   const admin = createAdminClient()
+  const duplicada = await carreraConMismoNombre(admin, nombre)
+  if (duplicada) {
+    return { success: false, error: `Ya existe “${duplicada.nombre}” en el catálogo.` }
+  }
+
   const { error } = await admin.from('carrera').insert({ nombre })
   if (error?.code === '23505') return { success: false, error: 'Ya existe una carrera con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo crear la carrera.' }
@@ -161,6 +197,11 @@ export async function renombrarCarrera(id: string, nuevoNombre: string): Promise
   if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
 
   const admin = createAdminClient()
+  const duplicada = await carreraConMismoNombre(admin, limpio, id)
+  if (duplicada) {
+    return { success: false, error: `Ya existe “${duplicada.nombre}” en el catálogo.` }
+  }
+
   const { error } = await admin.from('carrera').update({ nombre: limpio }).eq('id', id)
   if (error?.code === '23505') return { success: false, error: 'Ya existe una carrera con ese nombre.' }
   if (error) return { success: false, error: 'No se pudo actualizar la carrera.' }
@@ -190,41 +231,40 @@ export async function reactivarCarrera(id: string): Promise<ActionResult> {
 }
 
 /**
- * Promueve un valor libre de `carrera_otra` a una carrera del catálogo:
- * crea la carrera si no existe (o reusa la activa con ese nombre) y
- * re-vincula todos los perfiles que tenían ese texto libre.
+ * Promueve un valor libre de `carrera_otra` a una carrera del catálogo.
+ *
+ * Recibe DOS nombres porque no siempre son el mismo: `textoLibre` es lo que el
+ * postulante escribió a mano y es la clave para encontrar sus perfiles;
+ * `nombreOficial` es lo que el admin confirmó en el diálogo, ya corregido de
+ * ortografía. Si se usara uno solo, corregir "Ingenieria" a "Ingeniería"
+ * dejaría al postulante original sin re-vincular.
+ *
+ * La búsqueda y el re-vinculado ignoran tildes: promover "Ingenieria" absorbe
+ * también a quienes habían escrito "Ingeniería", que es el punto —el catálogo
+ * tiene que quedar con UNA sola opción por carrera.
  */
-export async function promoverCarreraOtra(nombre: string): Promise<ActionResult> {
+export async function promoverCarreraOtra(
+  textoLibre: string,
+  nombreOficial?: string,
+): Promise<ActionResult> {
   await requireAdmin()
-  const limpio = nombre.trim()
-  if (!limpio) return { success: false, error: 'Nombre inválido.' }
+  const original = textoLibre.trim()
+  const oficial = (nombreOficial ?? textoLibre).trim()
+  if (!original || !oficial) return { success: false, error: 'Nombre inválido.' }
 
   const admin = createAdminClient()
 
-  // 1. Buscar una carrera activa existente con ese nombre (case-insensitive).
-  const { data: existente } = await admin
-    .from('carrera')
-    .select('id')
-    .is('fecha_baja', null)
-    .ilike('nombre', limpio)
-    .maybeSingle()
-
-  let carreraId = (existente as { id: string } | null)?.id ?? null
+  // 1. Reusar la carrera activa que ya ocupe ese nombre, con o sin tildes.
+  let carreraId = (await carreraConMismoNombre(admin, oficial))?.id ?? null
 
   if (!carreraId) {
     const { data: creada, error } = await admin.from('carrera')
-      .insert({ nombre: limpio })
+      .insert({ nombre: oficial })
       .select('id')
       .single()
     if (error?.code === '23505') {
       // Carrera creada concurrentemente entre el select y el insert: reintentar el lookup.
-      const { data: recheck } = await admin
-        .from('carrera')
-        .select('id')
-        .is('fecha_baja', null)
-        .ilike('nombre', limpio)
-        .maybeSingle()
-      carreraId = (recheck as { id: string } | null)?.id ?? null
+      carreraId = (await carreraConMismoNombre(admin, oficial))?.id ?? null
       if (!carreraId) return { success: false, error: 'No se pudo promover la carrera.' }
     } else if (error || !creada) {
       return { success: false, error: 'No se pudo crear la carrera.' }
@@ -233,10 +273,12 @@ export async function promoverCarreraOtra(nombre: string): Promise<ActionResult>
     }
   }
 
-  // 2. Re-vincular perfiles que tenían ese texto libre.
+  // 2. Re-vincular los perfiles que tenían ese texto libre, escrito con tildes
+  //    o sin ellas. `regexIMatch` anclado: compara el nombre entero, así
+  //    promover "Derecho" no se lleva puesto a "Derecho del Trabajo".
   const { error: updateError } = await admin.from('perfil_postulante')
     .update({ carrera_id: carreraId, carrera_otra: null })
-    .ilike('carrera_otra', limpio)
+    .regexIMatch('carrera_otra', patronTextoCompleto(original))
 
   if (updateError) return { success: false, error: 'No se pudo re-vincular a los postulantes.' }
 

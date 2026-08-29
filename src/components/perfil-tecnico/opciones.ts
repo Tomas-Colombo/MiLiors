@@ -15,9 +15,23 @@ export const nivelIdiomaOptions = Object.entries(NIVEL_IDIOMA_LABEL).map(([value
   label,
 }))
 
-export const universidadOptions = UNIVERSIDADES_ARGENTINA.map((u) => ({ value: u, label: u }))
+/**
+ * `alwaysVisible` en el escape: "Otra"/"Otro" no se filtran con la búsqueda.
+ * Son las opciones que el usuario necesita justo cuando lo que tipeó no está en
+ * la lista — que es exactamente cuando el filtro las escondía y el panel
+ * quedaba en "Sin resultados", sin manera de cargar el valor libre.
+ */
+export const universidadOptions = UNIVERSIDADES_ARGENTINA.map((u) => ({
+  value: u,
+  label: u,
+  alwaysVisible: u === 'Otra',
+}))
 
-export const idiomaOptions = IDIOMAS_COMUNES.map((i) => ({ value: i, label: i }))
+export const idiomaOptions = IDIOMAS_COMUNES.map((i) => ({
+  value: i,
+  label: i,
+  alwaysVisible: i === 'Otro',
+}))
 
 export const nivelCompetenciaOptions: SegmentedOption<NivelCompetencia>[] = NIVEL_COMPETENCIA.map(
   (n) => ({ value: n, label: NIVEL_COMPETENCIA_LABEL[n] }),

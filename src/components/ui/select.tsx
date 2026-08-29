@@ -2,6 +2,7 @@
 
 import { useId, useState, useRef, useEffect, type SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { coincideBusqueda, mismoTexto } from "@/lib/texto";
 import { ChevronDownIcon } from "@/components/icons";
 import { Skeleton } from "./skeleton";
 
@@ -9,6 +10,14 @@ export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
+  /**
+   * La opción nunca se filtra por la búsqueda: sigue visible aunque el texto
+   * tipeado no la matchee. Es para los escapes del tipo "Otra (no está en la
+   * lista)": justo cuando el usuario escribe algo que el catálogo no tiene, es
+   * cuando más necesita esa opción — y es exactamente cuando el filtro la
+   * hacía desaparecer, dejando un "Sin resultados" sin salida.
+   */
+  alwaysVisible?: boolean;
 }
 
 export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "children"> {
@@ -63,6 +72,12 @@ export interface SearchableSelectProps {
   defaultValue?: string
   className?: string
   onValueChange?: (value: string) => void
+  /**
+   * Texto tipeado en el buscador, en cada tecla. Sirve para que quien usa el
+   * combobox pueda reaprovechar lo escrito cuando el usuario termina eligiendo
+   * una opción de escape ("Otra"): sin esto tendría que volver a tipearlo.
+   */
+  onQueryChange?: (query: string) => void
   /** Las opciones se están trayendo: el panel muestra filas de esqueleto. */
   loading?: boolean
 }
@@ -79,6 +94,7 @@ export function SearchableSelect({
   defaultValue,
   className,
   onValueChange,
+  onQueryChange,
   loading,
 }: SearchableSelectProps) {
   const initialLabel = options.find((o) => o.value === defaultValue)?.label ?? ""
@@ -91,7 +107,7 @@ export function SearchableSelect({
   const filtered =
     query === currentLabel
       ? options
-      : options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+      : options.filter((o) => o.alwaysVisible || coincideBusqueda(o.label, query))
 
   function handleSelect(opt: SelectOption) {
     setSelected(opt.value)
@@ -102,6 +118,7 @@ export function SearchableSelect({
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     setQuery(e.target.value)
+    onQueryChange?.(e.target.value)
     if (selected) {
       setSelected("")
       onValueChange?.("")
@@ -114,7 +131,7 @@ export function SearchableSelect({
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
         if (!selected) {
-          const exact = options.find((o) => o.label.toLowerCase() === query.toLowerCase())
+          const exact = options.find((o) => mismoTexto(o.label, query))
           if (exact) {
             setSelected(exact.value)
             setQuery(exact.label)

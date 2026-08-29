@@ -8,6 +8,7 @@ import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosNotas } from './filtros-notas'
 import { NotaTexto } from '@/components/shared/nota-texto'
+import { normalizarTexto } from '@/lib/texto'
 import { EliminarNotaBtn } from './eliminar-nota-btn'
 
 export const metadata = { title: 'Mis notas — MiLiors' }
@@ -61,7 +62,7 @@ export default async function MisNotasPage({
   const sp = await searchParams
   const candidatoFiltro = sp.candidato
   const dias = sp.dias ? parseInt(sp.dias, 10) : undefined
-  const q = sp.q?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(sp.q ?? '')
 
   // Fetch all notes (unfiltered) to populate the candidate dropdown.
   // También traemos las postulaciones recibidas para vincular cada nota con la
@@ -102,7 +103,7 @@ export default async function MisNotasPage({
   const notas = todasLasNotas.filter((n) => {
     if (candidatoFiltro && n.postulante_id !== candidatoFiltro) return false
     if (desde && new Date(n.fecha_creacion).getTime() < desde) return false
-    if (q && !n.contenido.toLowerCase().includes(q)) return false
+    if (q && !normalizarTexto(n.contenido).includes(q)) return false
     return true
   })
 

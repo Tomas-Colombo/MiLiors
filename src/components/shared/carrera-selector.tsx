@@ -5,7 +5,15 @@ import { Field, SearchableSelect, Alert } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
 
 const OTRA_VALUE = '__OTRA__'
-const OTRA_OPTION: SelectOption = { value: OTRA_VALUE, label: 'Otra (no está en la lista)' }
+// `alwaysVisible`: la salida de emergencia no se filtra con la búsqueda. Antes
+// era una opción más de la lista, así que tipear una carrera que el catálogo no
+// tiene la hacía desaparecer y el panel quedaba en "Sin resultados": el
+// postulante no tenía forma de cargar su título.
+const OTRA_OPTION: SelectOption = {
+  value: OTRA_VALUE,
+  label: 'Otra (no está en la lista)',
+  alwaysVisible: true,
+}
 
 export type CarreraOption = { value: string; label: string }
 
@@ -38,9 +46,20 @@ export function CarreraSelector({
     defaultCarreraOtra ? OTRA_VALUE : (defaultCarreraId ?? '')
   )
   const [carreraOtra, setCarreraOtra] = useState(defaultCarreraOtra ?? '')
+  // Lo último tipeado en el buscador. Si termina eligiendo "Otra", ese texto ya
+  // es el título que estaba intentando cargar: se usa como valor inicial del
+  // campo libre en vez de hacerlo escribir todo de nuevo.
+  const [busqueda, setBusqueda] = useState('')
 
   const options: SelectOption[] = [...carreras, OTRA_OPTION]
   const esOtra = seleccion === OTRA_VALUE
+
+  function handleSeleccion(valor: string) {
+    setSeleccion(valor)
+    if (valor === OTRA_VALUE && !carreraOtra && busqueda.trim()) {
+      setCarreraOtra(busqueda.trim())
+    }
+  }
 
   return (
     <Field
@@ -54,7 +73,8 @@ export function CarreraSelector({
           options={options}
           placeholder="Elegí tu carrera…"
           defaultValue={seleccion || undefined}
-          onValueChange={setSeleccion}
+          onValueChange={handleSeleccion}
+          onQueryChange={setBusqueda}
         />
 
         {esOtra && (

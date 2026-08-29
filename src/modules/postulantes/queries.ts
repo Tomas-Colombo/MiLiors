@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
@@ -86,8 +87,10 @@ export const buscarPostulantes = cache(async (filtros?: {
     `)
     .eq('perfil_en_busqueda', true)
 
+  // `regexIMatch` y no `ilike`: ilike distingue tildes, así que buscar "gonzalez"
+  // no encontraba a "González". El patrón acepta la vocal con y sin acento.
   if (filtros?.busqueda) {
-    query = query.ilike('nombre_completo', `%${filtros.busqueda}%`)
+    query = query.regexIMatch('nombre_completo', patronSinTildes(filtros.busqueda))
   }
   // La provincia se filtra por la columna del perfil; el departamento, sobre el
   // embed, porque cuelga de la localidad.
@@ -97,7 +100,7 @@ export const buscarPostulantes = cache(async (filtros?: {
     query = query.eq('carrera_id', filtros.carrera)
   }
   if (filtros?.carreraOtra) {
-    query = query.ilike('carrera_otra', `%${filtros.carreraOtra}%`)
+    query = query.regexIMatch('carrera_otra', patronSinTildes(filtros.carreraOtra))
   }
 
   const { data: postulantes } = await query

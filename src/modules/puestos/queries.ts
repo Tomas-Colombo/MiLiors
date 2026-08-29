@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import {
@@ -446,7 +447,9 @@ export const getPuestosActivos = async (filtros?: {
       ? query.or(`id.in.(${geoPuestoIds.join(',')}),ubicacion.eq.${UBICACION.REMOTO}`)
       : query.eq('ubicacion', UBICACION.REMOTO)
   }
-  if (filtros?.busqueda) query = query.ilike('titulo_puesto', `%${filtros.busqueda}%`)
+  // Sin tildes: ilike no las ignora y "diseno" no encontraba "Diseño"… ni
+  // "administracion" a "Administración". Ver `patronSinTildes`.
+  if (filtros?.busqueda) query = query.regexIMatch('titulo_puesto', patronSinTildes(filtros.busqueda))
   if (filtros?.diasDesde) {
     const since = new Date()
     since.setDate(since.getDate() - filtros.diasDesde)
@@ -622,7 +625,7 @@ export const getMisPostulaciones = async (filtros?: {
   const estado = valorEnum(ESTADO_POSTULACION, filtros?.estado)
   if (estado) query = query.eq('estado', estado)
   if (filtros?.busqueda) {
-    query = query.ilike('puesto.titulo_puesto', `%${filtros.busqueda}%`)
+    query = query.regexIMatch('puesto.titulo_puesto', patronSinTildes(filtros.busqueda))
   }
 
   const { data, count } = await query

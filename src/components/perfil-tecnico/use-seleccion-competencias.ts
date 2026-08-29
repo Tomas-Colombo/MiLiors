@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from 'react'
 import { guardarCompetenciasConCustom } from '@/modules/perfil-tecnico/actions'
 import type { CompetenciaItem } from '@/modules/perfil-tecnico/queries'
 import type { NivelCompetencia } from '@/lib/constants/enums'
+import { coincideBusqueda, mismoTexto } from '@/lib/texto'
 
 export const MAX_COMPETENCIAS = 15
 
@@ -45,18 +46,18 @@ export function useSeleccionCompetencias(catalogo: CompetenciaItem[], actuales: 
   const filtradas = catalogo.filter((c) => {
     if (seleccionadas.some((s) => s.id === c.id)) return false
     if (!queryTrimmed) return true
-    return c.nombre.toLowerCase().includes(queryTrimmed.toLowerCase())
+    return coincideBusqueda(c.nombre, queryTrimmed)
   })
 
   const coincidenciaExacta = queryTrimmed
-    ? catalogo.some((c) => c.nombre.toLowerCase() === queryTrimmed.toLowerCase())
+    ? catalogo.some((c) => mismoTexto(c.nombre, queryTrimmed))
     : false
 
   /** Sólo se ofrece crear una propia si no existe ya, en el catálogo o elegida. */
   const canAddCustom =
     queryTrimmed.length >= 2 &&
     !coincidenciaExacta &&
-    !seleccionadas.some((s) => s.nombre.toLowerCase() === queryTrimmed.toLowerCase())
+    !seleccionadas.some((s) => mismoTexto(s.nombre, queryTrimmed))
 
   function addItem(item: Omit<SeleccionItem, 'nivel'>) {
     if (lleno) return

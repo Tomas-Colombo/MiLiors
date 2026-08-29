@@ -8,6 +8,7 @@
  * archivo bajaría 300 — que es exactamente lo que pasaba con el buscador de
  * comentarios del feedback antes de unificarlo.
  */
+import { normalizarTexto } from '@/lib/texto'
 
 export type FiltrosCatalogo = {
   q?: string
@@ -54,7 +55,7 @@ export function filtrarCatalogo<T>(
   filtros: FiltrosCatalogo,
   acc: AccesoresCatalogo<T>,
 ): T[] {
-  const q = filtros.q?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(filtros.q ?? '')
   const estado = filtros.estado ?? ''
   const desde = filtros.desde ?? ''
   const hasta = finDelDia(filtros.hasta)
@@ -70,7 +71,7 @@ export function filtrarCatalogo<T>(
 
     if (q) {
       const campos = [acc.nombre(row), ...(acc.buscarTambienEn?.(row) ?? [])]
-      if (!campos.some(c => c.toLowerCase().includes(q))) return false
+      if (!campos.some(c => normalizarTexto(c).includes(q))) return false
     }
     return true
   })

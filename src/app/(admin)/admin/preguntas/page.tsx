@@ -12,6 +12,7 @@ import {
 } from './preguntas-ui'
 import { SearchInput, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { normalizarTexto } from '@/lib/texto'
 
 export const metadata = { title: 'Preguntas eneagrama — Admin MiLiors' }
 
@@ -75,7 +76,7 @@ export default async function PreguntasPage({
     : filtroParam === 'pausadas'   ? 'pausadas'
     : filtroParam === 'eliminadas' ? 'eliminadas'
     : 'todas'
-  const q = qParam?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(qParam ?? '')
 
   const preguntas = await getPreguntasAdmin()
 
@@ -96,7 +97,7 @@ export default async function PreguntasPage({
           const field = sortKey === 'eneatipo' ? 'eneatipo_asociado' : 'numero_pregunta'
           return sortDir === 'asc' ? a[field] - b[field] : b[field] - a[field]
         })
-  ).filter(p => !q || p.enunciado.toLowerCase().includes(q))
+  ).filter(p => !q || normalizarTexto(p.enunciado).includes(q))
 
   const { page, pageCount, slice: filas } = paginar(filasSinPaginar, pageParam)
 

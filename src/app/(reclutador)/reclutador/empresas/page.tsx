@@ -5,6 +5,7 @@ import { BuildingIcon } from '@/components/icons'
 import { getMisEmpresas, type EmpresaDelReclutador } from '@/modules/empresas/queries'
 import { Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { normalizarTexto } from '@/lib/texto'
 import { FiltrosEmpresas } from './filtros-empresas'
 import { NuevaEmpresaBtn, EmpresaAcciones } from './empresas-ui'
 
@@ -14,13 +15,13 @@ type SearchParams = Promise<{ q?: string; estado?: string; page?: string }>
 
 export default async function MisEmpresasPage({ searchParams }: { searchParams: SearchParams }) {
   const { q: qRaw, estado, page: pageParam } = await searchParams
-  const q = qRaw?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(qRaw ?? '')
   const todas = await getMisEmpresas()
 
   const filtradas = todas.filter((e) => {
     if (estado === 'activa' && !e.activa) return false
     if (estado === 'baja' && e.activa) return false
-    if (q && !e.nombre_empresa.toLowerCase().includes(q)) return false
+    if (q && !normalizarTexto(e.nombre_empresa).includes(q)) return false
     return true
   })
 

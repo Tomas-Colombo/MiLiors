@@ -18,6 +18,7 @@ import { ComoLeer } from './como-leer'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { normalizarTexto } from '@/lib/texto'
 
 export const metadata = { title: 'Feedback del informe — Admin MiLiors' }
 
@@ -126,9 +127,9 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
   // Cruda para el link del Excel (que la muestra en el subtítulo del archivo) y
   // en minúsculas para comparar acá.
   const busquedaComentario = sp.qC?.trim() ?? ''
-  const qC = busquedaComentario.toLowerCase()
+  const qC = normalizarTexto(busquedaComentario)
   const comentariosFiltrados = qC
-    ? comentarios.filter(c => c.comentario!.toLowerCase().includes(qC))
+    ? comentarios.filter(c => normalizarTexto(c.comentario!).includes(qC))
     : comentarios
   const comentariosVisibles = ordenarComentarios(comentariosFiltrados, sp.ordenC ?? '')
   const { page: pageC, pageCount: pageCountC, slice: comentariosPagina } = paginar(

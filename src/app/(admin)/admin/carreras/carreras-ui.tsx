@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useTransition, useEffect, useRef, useState } from 'react'
-import { Button, Input, Field, Alert, ConfirmDialog } from '@/components/ui'
+import { Button, Input, Field, Alert, PromptDialog } from '@/components/ui'
 import { CatalogoAcciones } from '@/components/admin/catalogo-acciones'
 import { PlusIcon } from '@/components/icons'
 import {
@@ -71,14 +71,18 @@ export function CarreraAcciones({ id, nombre, activo }: { id: string; nombre: st
 
 export function PromoverCarreraOtraBoton({ nombre }: { nombre: string }) {
   const [isPending, startTransition] = useTransition()
-  const [confirmando, setConfirmando] = useState(false)
+  const [promoviendo, setPromoviendo] = useState(false)
   const [error, setError] = useState('')
 
-  function handleConfirmar() {
+  // El diálogo llega con el texto tal cual lo escribió el postulante y se puede
+  // corregir antes de confirmar. Lo que se promueve entra al catálogo oficial y
+  // lo ve todo el mundo: una falta de ortografía acá queda a la vista de todos
+  // los postulantes, y sacarla después obliga a renombrar la carrera a mano.
+  function handlePromover(nombreOficial: string) {
     setError('')
     startTransition(async () => {
-      const res = await promoverCarreraOtra(nombre)
-      if (res.success) setConfirmando(false)
+      const res = await promoverCarreraOtra(nombre, nombreOficial)
+      if (res.success) setPromoviendo(false)
       else setError(res.error || 'No se pudo promover la carrera.')
     })
   }
@@ -90,25 +94,33 @@ export function PromoverCarreraOtraBoton({ nombre }: { nombre: string }) {
         size="sm"
         onClick={() => {
           setError('')
-          setConfirmando(true)
+          setPromoviendo(true)
         }}
         loading={isPending}
       >
         Promover a oficial
       </Button>
 
-      <ConfirmDialog
-        open={confirmando}
-        onClose={() => setConfirmando(false)}
-        onConfirm={handleConfirmar}
-        title={`¿Promover “${nombre}” a carrera oficial?`}
+      {/* `key` remonta el diálogo en cada apertura: el campo tiene que arrancar
+          con el nombre de esta fila, no con lo tipeado en la anterior. */}
+      <PromptDialog
+        key={`${nombre}-${promoviendo}`}
+        open={promoviendo}
+        onClose={() => setPromoviendo(false)}
+        onSubmit={handlePromover}
+        title="Promover a carrera oficial"
+        label="Nombre que entra al catálogo"
+        defaultValue={nombre}
         confirmLabel="Promover"
         loading={isPending}
         error={error}
       >
-        Pasa al catálogo oficial y queda disponible para todos. Los postulantes que la habían
-        escrito a mano quedan re-vinculados a la carrera del catálogo.
-      </ConfirmDialog>
+        <p className="text-[13.5px] leading-relaxed text-ink-soft">
+          Revisá la ortografía antes de confirmar: este nombre pasa al catálogo oficial y queda
+          disponible para todos. Los postulantes que lo habían escrito a mano —con tildes o sin
+          ellas— quedan re-vinculados a la carrera del catálogo.
+        </p>
+      </PromptDialog>
     </>
   )
 }

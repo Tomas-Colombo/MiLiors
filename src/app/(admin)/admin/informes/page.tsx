@@ -10,6 +10,7 @@ import {
   Paginador,
 } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { normalizarTexto } from '@/lib/texto'
 
 export const metadata = { title: 'Informes — Admin MiLiors' }
 
@@ -80,7 +81,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
   const sp = await searchParams
   const todos = await getInformesAdmin()
 
-  const q = sp.q?.trim().toLowerCase() ?? ''
+  const q = normalizarTexto(sp.q ?? '')
   const estado = sp.estado ?? ''
   const desde = sp.desde ?? ''
   // El rango es inclusive: `hasta` corta al final del día elegido. Se aplica
@@ -92,8 +93,8 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
     if (desde && (!row.fecha_generacion || row.fecha_generacion < desde)) return false
     if (hasta && (!row.fecha_generacion || row.fecha_generacion > hasta)) return false
     if (q) {
-      const enNombre = row.nombre_completo.toLowerCase().includes(q)
-      const enEmail = row.email?.toLowerCase().includes(q) ?? false
+      const enNombre = normalizarTexto(row.nombre_completo).includes(q)
+      const enEmail = row.email ? normalizarTexto(row.email).includes(q) : false
       if (!enNombre && !enEmail) return false
     }
     return true

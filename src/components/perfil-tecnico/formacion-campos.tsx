@@ -42,9 +42,11 @@ export function FormacionCampos({
   )
 
   // El nombre de la carrera es el valor: el catálogo lo tiene con nombre único.
+  // `alwaysVisible` en el escape: sin eso, escribir un título que el catálogo
+  // no tiene filtraba también la opción "Otro" y no quedaba forma de cargarlo.
   const tituloOptions = [
     ...carreras.map((c) => ({ value: c.label, label: c.label })),
-    { value: OTRO_TITULO, label: 'Otro (no está en la lista)' },
+    { value: OTRO_TITULO, label: 'Otro (no está en la lista)', alwaysVisible: true },
   ]
   const tituloEsLibre = item ? esTituloLibre(item.titulo, carreras) : false
   const [titulo, setTitulo] = useState(

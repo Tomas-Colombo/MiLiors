@@ -6,6 +6,7 @@ import {
   type FeedbackFiltros,
 } from '@/modules/admin/queries'
 import { LIMITE_FILAS_CONSULTA } from '@/modules/admin/queries'
+import { normalizarTexto } from '@/lib/texto'
 import { construirFeedbackWorkbook } from '@/modules/admin/feedback-workbook'
 import { COMPETENCIAS, ENEATIPO_NOMBRES } from '@/modules/informe/competencias'
 
@@ -88,7 +89,9 @@ export async function GET(req: NextRequest) {
   ])
 
   const globales = busqueda
-    ? todosLosGlobales.filter(g => g.comentario?.toLowerCase().includes(busqueda.toLowerCase()))
+    ? todosLosGlobales.filter(g => g.comentario
+        ? normalizarTexto(g.comentario).includes(normalizarTexto(busqueda))
+        : false)
     : todosLosGlobales
 
   const truncado =

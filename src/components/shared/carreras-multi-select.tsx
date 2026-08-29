@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { coincideBusqueda } from '@/lib/texto'
 import { ChevronDownIcon } from '@/components/icons'
 import type { SelectOption } from '@/components/ui/select'
 
@@ -36,7 +37,7 @@ export function CarrerasMultiSelect({
   const selectedSet = new Set(selected)
   const disponibles = options.filter((o) => !selectedSet.has(o.value))
   const filtradas = query
-    ? disponibles.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+    ? disponibles.filter((o) => coincideBusqueda(o.label, query))
     : disponibles
 
   const labelDe = (val: string) => options.find((o) => o.value === val)?.label ?? val
