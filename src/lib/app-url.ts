@@ -28,7 +28,7 @@ export function appUrl(path = ''): string {
  * resolver a una ruta relativa ni a un dominio ajeno — el certificado ya se
  * emitió y nadie se entera hasta que alguien lo escanea.
  */
-export const APP_URL_OFICIAL = 'https://mi-liors.vercel.app'
+export const APP_URL_OFICIAL = 'https://miliors.com'
 
 /** Base pública garantizada ABSOLUTA — para QR, PDFs y cualquier link que salga de la app. */
 export function appUrlPublico(path = ''): string {
@@ -37,7 +37,7 @@ export function appUrlPublico(path = ''): string {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-/** Host legible para imprimir en el certificado: 'mi-liors.vercel.app/verificar'. */
+/** Host legible para imprimir en el certificado: 'miliors.com/verificar'. */
 export function verificarLabel(): string {
   return `${appUrlPublico().replace(/^https?:\/\//, '')}/verificar`
 }
