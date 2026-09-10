@@ -1,4 +1,4 @@
-# PLANIFICACION_PROYECTO.txt
+#  PLANIFICACION_PROYECTO.txt
 ## MiLiors — Plataforma de Reclutamiento con Perfilado de Personalidad por IA
 
 **Versión del documento:** 1.0
