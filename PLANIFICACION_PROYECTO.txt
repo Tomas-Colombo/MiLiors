@@ -15,7 +15,7 @@ perfil técnico (experiencia, formación, competencias, idiomas) sino por un **p
 construido a partir de dos marcos: el **Eneagrama** (test obligatorio de 135 preguntas) y el **Human Design**
 (opcional, carga manual). A partir de esos datos, un **modelo LLM (Claude)** genera un **Informe de
 Personalidad** y la plataforma emite un **Certificado PDF firmado y verificable mediante QR** contra un
-endpoint propio de MiLiors.
+endpoint propio de MiLiors
 
 El sistema conecta tres actores: **Postulantes** (candidatos), **Reclutadores** (empresas que publican puestos
 y buscan talento) y **Administrador** (gestiona catálogos y modera). Incluye además un **Asistente IA** para
