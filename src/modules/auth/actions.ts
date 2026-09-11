@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { registroSchema, loginSchema, recuperarPasswordSchema, nuevaPasswordSchema } from './schema'
 import type { RegistroPendiente } from './schema'
 import { mensajeErrorPassword } from './password-error'
+import { resultadoAltaPerfil } from './alta-perfil'
 import type { ActionResult } from '@/lib/types/domain'
 import { RUTAS_POR_ROL } from '@/lib/constants/enums'
 import { rolDeUsuario } from '@/lib/rol'
@@ -74,7 +75,10 @@ export async function registrarUsuario(
   }
   const { error: dbError } = await adminClient.from('usuario').insert(usuarioRow)
 
-  if (dbError) {
+  // 'ya-existia' = reintento sobre una cuenta sin confirmar: se sigue de largo
+  // sin borrar nada (ver alta-perfil.ts). El rol queda el del primer registro.
+  if (resultadoAltaPerfil(dbError) === 'fallo') {
+    console.error('[registrarUsuario] usuario insert error:', dbError)
     // Limpiar usuario de auth si falla la inserción en DB
     await adminClient.auth.admin.deleteUser(authData.user.id)
     return { success: false, error: 'Error al crear el perfil. Contactá soporte.' }
