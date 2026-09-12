@@ -36,6 +36,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getFormularioDePuesto, getRespuestasDePostulacion } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas } from '@/modules/preselector/evaluador'
 import { NotasPanel } from './notas-panel'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Detalle de postulante — MiLiors' }
 
@@ -58,6 +59,7 @@ export default async function PostulanteDetallePage({
   params: Params
   searchParams: SearchParams
 }) {
+  await requireEmpresaCargada()
   const { id } = await params
   const { postulacion: postulacionId, from, puesto: puestoOrigenId } = await searchParams
   const volver =

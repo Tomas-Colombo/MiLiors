@@ -8,6 +8,7 @@ import { getCarreras, getCarrerasOtras } from '@/modules/carreras/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosPostulantes } from './filtros-postulantes'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Buscar postulantes — MiLiors' }
 
@@ -27,6 +28,7 @@ export default async function BuscarPostulantesPage({
 }: {
   searchParams: SearchParams
 }) {
+  await requireEmpresaCargada()
   const sp = await searchParams
   const [postulantes, competencias, provincias, departamentos, carreras, carrerasOtras] = await Promise.all([
     buscarPostulantes({

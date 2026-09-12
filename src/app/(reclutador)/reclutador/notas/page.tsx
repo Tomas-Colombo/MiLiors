@@ -10,6 +10,7 @@ import { FiltrosNotas } from './filtros-notas'
 import { NotaTexto } from '@/components/shared/nota-texto'
 import { normalizarTexto } from '@/lib/texto'
 import { EliminarNotaBtn } from './eliminar-nota-btn'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Mis notas — MiLiors' }
 
@@ -59,6 +60,7 @@ export default async function MisNotasPage({
 }: {
   searchParams: SearchParams
 }) {
+  await requireEmpresaCargada()
   const sp = await searchParams
   const candidatoFiltro = sp.candidato
   const dias = sp.dias ? parseInt(sp.dias, 10) : undefined

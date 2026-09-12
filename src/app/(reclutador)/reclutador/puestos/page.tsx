@@ -16,6 +16,7 @@ import { Paginador } from '@/components/shared/list-controls'
 import { normalizarTexto } from '@/lib/texto'
 import { PuestoAcciones } from './puesto-acciones'
 import { FiltrosPuestos } from './filtros-puestos'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Mis puestos — MiLiors' }
 
@@ -28,6 +29,7 @@ export default async function MisPuestosPage({
 }: {
   searchParams: SearchParams
 }) {
+  await requireEmpresaCargada()
   const { orden, estado, empresa: filtroEmpresa, q: qRaw, page: pageParam } = await searchParams
   const q = normalizarTexto(qRaw ?? '')
   const [puestos, { diasInactividadCierre }, empresas] = await Promise.all([

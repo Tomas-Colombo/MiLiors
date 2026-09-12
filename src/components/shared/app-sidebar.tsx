@@ -26,6 +26,8 @@ type Props = {
   userEmail: string
   rolLabel: string
   settingsHref?: string
+  /** Si viene, los ítems del nav no navegan y este texto explica por qué. */
+  navBloqueado?: string
 }
 
 const COLLAPSE_STORAGE_KEY = 'miliors-sidebar-collapsed'
@@ -51,7 +53,7 @@ function getCollapsedServerSnapshot() {
   return false
 }
 
-export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) {
+export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloqueado }: Props) {
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
   const collapsed = useSyncExternalStore(subscribeCollapsed, getCollapsedSnapshot, getCollapsedServerSnapshot)
@@ -125,8 +127,30 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref }: Props) 
 
       {/* Nav */}
       <nav className="flex flex-col gap-0.5 flex-1">
+        {navBloqueado && !collapsed && (
+          <p className="mb-2 px-3 text-[11px] leading-snug" style={{ color: 'var(--sidebar-item-text)' }}>
+            {navBloqueado}
+          </p>
+        )}
         {items.map((item) => {
           const active = isActive(item)
+          if (navBloqueado) {
+            return (
+              <span
+                key={item.href}
+                aria-disabled="true"
+                title={navBloqueado}
+                className={[
+                  'flex cursor-not-allowed items-center rounded-[9px] py-2.5 text-sm font-medium opacity-45',
+                  collapsed ? 'justify-center px-2' : 'gap-3 px-3',
+                ].join(' ')}
+                style={{ color: 'var(--sidebar-item-text)' }}
+              >
+                <span className="flex-none">{item.icon}</span>
+                {!collapsed && <span className="flex-1">{item.label}</span>}
+              </span>
+            )
+          }
           return (
             <Link
               key={item.href}

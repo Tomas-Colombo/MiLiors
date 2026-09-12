@@ -133,7 +133,8 @@ export async function crearEmpresaYAsociar(
   const resultado = await crear(formData)
   if (!resultado.success) return resultado
 
-  revalidatePath('/reclutador')
+  // 'layout' para que el layout del reclutador desbloquee el sidebar.
+  revalidatePath('/reclutador', 'layout')
   redirect('/reclutador/puestos')
 }
 
