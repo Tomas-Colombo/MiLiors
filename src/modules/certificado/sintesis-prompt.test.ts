@@ -2,9 +2,13 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { buildSintesisPrompts, buildTriagePrompts, type SintesisPromptContext, type TriageContext } from './sintesis-prompt'
 
 /**
- * Las duraciones y la antigüedad se calculan acá y el LLM tiene prohibido
- * recalcularlas: las cita textual en el certificado. Un error de cálculo se
- * convierte en una afirmación falsa firmada digitalmente, así que se testean.
+ * Las duraciones se calculan acá y el LLM tiene prohibido recalcularlas. No las
+ * cita —el párrafo del certificado no lleva fechas—, pero de ellas depende el
+ * tono: si deduce mal el recorrido, describe como junior a alguien con veinte
+ * años de oficio. Por eso se testean.
+ *
+ * Y se testea también que el user prompt no le pida lo que el system prompt le
+ * prohíbe: esa contradicción estuvo viva en tres líneas del prompt.
  */
 
 // 'Actualidad' y las duraciones de puestos vigentes dependen de hoy.
@@ -70,8 +74,8 @@ describe('buildSintesisPrompts — experiencia', () => {
   })
 })
 
-describe('buildSintesisPrompts — antigüedad total', () => {
-  it('suma períodos consecutivos', () => {
+describe('buildSintesisPrompts — el dato temporal es contexto, no material a citar', () => {
+  it('no manda una antigüedad total: era una cifra que sólo servía para citarla', () => {
     const { userPrompt } = buildSintesisPrompts(
       ctx({
         experiencias: [
@@ -80,26 +84,37 @@ describe('buildSintesisPrompts — antigüedad total', () => {
         ],
       }),
     )
-    expect(userPrompt).toContain('NUNCA la cites): 3 años')
+    expect(userPrompt).not.toContain('Antigüedad')
+    expect(userPrompt).not.toContain('NUNCA la cites')
   })
 
-  it('cuenta los períodos solapados una sola vez', () => {
-    // Dos puestos en paralelo entre 2020 y 2022 son 2 años de antigüedad, no 4.
-    const { userPrompt } = buildSintesisPrompts(
+  it('no le ordena citar las duraciones que el system prompt le prohíbe escribir', () => {
+    const { systemPrompt, userPrompt } = buildSintesisPrompts(
       ctx({
         experiencias: [
           { id: 'e1', puesto: 'A', empresa: 'X', fechaInicio: '2020-01-01', fechaFin: '2022-01-01', descripcion: null },
-          { id: 'e2', puesto: 'B', empresa: 'Y', fechaInicio: '2020-06-01', fechaFin: '2022-01-01', descripcion: null },
         ],
+        cursos: [{ id: 'c1', nombre: 'SQL', institucion: 'Coursera', fechaFin: '2024-03-01' }],
       }),
     )
-    expect(userPrompt).toContain('NUNCA la cites): 2 años\n')
+    // El system prompt prohíbe fechas y duraciones en el párrafo...
+    expect(systemPrompt).toContain('PROHIBIDO EN ESE PÁRRAFO: fechas, años, duraciones')
+    // ...así que el user prompt no puede pedir lo contrario.
+    expect(userPrompt).not.toContain('citalas tal cual')
+    expect(userPrompt).not.toContain('copiala tal cual')
+    expect(userPrompt).not.toContain('ya vienen calculadas')
+    // El período sí se manda: es lo único que ubica el recorrido.
+    expect(userPrompt).toContain('(2 años)')
+    expect(userPrompt).toContain('NO las escribas en el')
   })
 
-  it('sin experiencia cargada no inventa una cifra', () => {
-    const { userPrompt } = buildSintesisPrompts(ctx({ experiencias: [] }))
-    expect(userPrompt).toContain('NUNCA la cites): sin experiencia cargada')
-    expect(userPrompt).toContain('(sin experiencia cargada)')
+  it('no manda las horas de los cursos: no hay forma de usarlas sin citarlas', () => {
+    const { userPrompt } = buildSintesisPrompts(
+      ctx({ cursos: [{ id: 'c1', nombre: 'SQL', institucion: 'Coursera', fechaFin: '2024-03-01' }] }),
+    )
+    expect(userPrompt).toContain('SQL — Coursera · [FINALIZADO] · mar 2024')
+    // Sin "40 h" colgando del ítem.
+    expect(userPrompt).not.toMatch(/\d+\s*h\b/)
   })
 })
 
@@ -148,6 +163,17 @@ describe('buildSintesisPrompts — material que antes no llegaba al prompt', () 
     expect(systemPrompt).not.toContain('"fortalezas"')
     expect(systemPrompt).not.toContain('"contextoIdeal"')
     expect(systemPrompt).not.toContain('"competenciasIntegradas"')
+  })
+
+  it('no le pide integrar las competencias técnicas por nombre exacto', () => {
+    // El JSON de salida no tiene dónde reportar cuáles integró, y el párrafo no
+    // las enumera: pedirlo era un resto del esquema anterior.
+    const { userPrompt } = buildSintesisPrompts(ctx({ competenciasTecnicas: ['SQL', 'Python'] }))
+    expect(userPrompt).not.toContain('integrá por nombre EXACTO')
+    expect(userPrompt).toContain('no para enumerarlas')
+    // El listado sí llega: es lo que le dice en qué terreno se mueve.
+    expect(userPrompt).toContain('  - SQL')
+    expect(userPrompt).toContain('  - Python')
   })
 
   it('usa el primer nombre y exige tercera persona', () => {

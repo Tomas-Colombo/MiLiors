@@ -190,9 +190,11 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
       .select('id, titulo, institucion, fecha_graduacion')
       .eq('perfil_tecnico_id', ptTyped.id)
       .order('fecha_graduacion', { ascending: false }),
+    // Sin `duracion_horas`: el párrafo no puede citar las horas de un curso y
+    // el certificado ya las lista aparte (ver pdf-props).
     supabase
       .from('curso')
-      .select('id, nombre, institucion, fecha_fin, duracion_horas')
+      .select('id, nombre, institucion, fecha_fin')
       .eq('perfil_tecnico_id', ptTyped.id)
       .order('fecha_fin', { ascending: false }),
     supabase
@@ -228,13 +230,12 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   ).map(f => ({ id: f.id, titulo: f.titulo, institucion: f.institucion, fechaGraduacion: f.fecha_graduacion }))
 
   const cursos = (
-    (cur ?? []) as { id: string; nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[]
+    (cur ?? []) as { id: string; nombre: string; institucion: string; fecha_fin: string | null }[]
   ).map(c => ({
     id: c.id,
     nombre: c.nombre,
     institucion: c.institucion,
     fechaFin: c.fecha_fin,
-    duracionHoras: c.duracion_horas,
   }))
 
   const idiomas = ((idi ?? []) as { nombre: string; nivel_idioma: string }[]).map(i => ({

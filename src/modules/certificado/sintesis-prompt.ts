@@ -7,14 +7,22 @@
  *    experiencia volando aviones de quien busca programar le hace perder tiempo
  *    y diluye lo que sí importa.
  * 2. REDACCIÓN (`buildSintesisPrompts`) — recibe la personalidad YA REDACTADA
- *    (condensada del informe) + el material técnico YA FILTRADO (con duraciones
- *    calculadas acá) y teje un "perfil profesional integrado" en 3ª persona,
- *    declarando qué competencias técnicas logró integrar. NO calcula nada; NO
- *    inventa datos; las competencias que no integre las agrega el sistema al
- *    final (no debe forzarlas).
+ *    (condensada del informe) + el material técnico YA FILTRADO y teje un
+ *    "perfil profesional integrado" en 3ª persona. NO calcula nada; NO inventa
+ *    datos.
  *
  * El objetivo NO es replicar el informe de personalidad —que ya tiene su propia
  * sección— sino usarlo como el "cómo" que explica el "qué" de la trayectoria.
+ *
+ * QUÉ HACE ACÁ EL DATO TEMPORAL. El párrafo que se imprime no puede llevar
+ * fechas, duraciones ni antigüedad: eso ya está listado aparte en el
+ * certificado. Pero los períodos sí se le pasan al modelo, porque son lo único
+ * que le dice si la persona recién arranca o tiene recorrido, si sigue en un
+ * puesto o si cambió de rubro — y eso cambia el retrato. Son contexto para
+ * decidir el tono, no material para citar, y el prompt lo dice así.
+ *
+ * Por eso se fue la antigüedad total: era una cifra agregada cuyo único uso
+ * posible era citarla, y citarla está prohibido.
  */
 
 export type SintesisFormacion = {
@@ -29,7 +37,6 @@ export type SintesisCurso = {
   nombre: string
   institucion: string
   fechaFin: string | null
-  duracionHoras: number | null
 }
 
 export type SintesisExperiencia = {
@@ -124,7 +131,10 @@ function mesesEntre(inicio: string, fin: string | null): number {
   return Math.max(0, (f.anio - i.anio) * 12 + (f.mes - i.mes))
 }
 
-/** 16 → '1 año 4 meses'. El LLM tiene prohibido calcular esto. */
+/**
+ * 16 → '1 año 4 meses'. Se calcula acá para que el modelo no haga aritmética de
+ * fechas: si dedujera mal el recorrido, el tono del párrafo saldría mal.
+ */
 function formatDuracion(meses: number): string {
   const anios = Math.floor(meses / 12)
   const resto = meses % 12
@@ -132,49 +142,6 @@ function formatDuracion(meses: number): string {
   if (anios > 0) partes.push(`${anios} ${anios === 1 ? 'año' : 'años'}`)
   if (resto > 0) partes.push(`${resto} ${resto === 1 ? 'mes' : 'meses'}`)
   return partes.length ? partes.join(' ') : 'menos de un mes'
-}
-
-/**
- * Antigüedad total, sumando los meses de cada experiencia. Los períodos
- * solapados se cuentan una sola vez para no inflar la cifra.
- *
- * Se calcula sobre la experiencia YA FILTRADA por el triage: la cifra que cita
- * el certificado es la antigüedad RELEVANTE para la búsqueda, no la de toda la
- * vida laboral. Contar los años volando aviones de quien busca programar sería
- * exactamente el ruido que el triage vino a sacar.
- */
-function antiguedadTotal(experiencias: SintesisExperiencia[]): string | null {
-  if (experiencias.length === 0) return null
-
-  const hoy = new Date()
-  const finPorDefecto = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
-  const aIndice = (iso: string) => {
-    const [a, m] = iso.split('-')
-    const anio = parseInt(a, 10)
-    return Number.isFinite(anio) ? anio * 12 + (parseInt(m ?? '1', 10) || 1) : NaN
-  }
-
-  const rangos = experiencias
-    .map(e => ({ desde: aIndice(e.fechaInicio), hasta: aIndice(e.fechaFin ?? finPorDefecto) }))
-    .filter(r => Number.isFinite(r.desde) && Number.isFinite(r.hasta) && r.hasta > r.desde)
-    .sort((a, b) => a.desde - b.desde)
-
-  if (rangos.length === 0) return null
-
-  // Unir solapamientos antes de sumar.
-  let meses = 0
-  let actual = { ...rangos[0] }
-  for (const r of rangos.slice(1)) {
-    if (r.desde <= actual.hasta) {
-      actual.hasta = Math.max(actual.hasta, r.hasta)
-    } else {
-      meses += actual.hasta - actual.desde
-      actual = { ...r }
-    }
-  }
-  meses += actual.hasta - actual.desde
-
-  return formatDuracion(meses)
 }
 
 /**
@@ -352,13 +319,7 @@ CIERRE: terminá el párrafo con UNA sola oración breve, dicha al pasar, que in
             : Number.isFinite(idxFin) && idxFin <= hoy
               ? `[FINALIZADO] · ${formatMes(c.fechaFin)}`
               : `[EN CURSO] · finaliza ${formatMes(c.fechaFin)}`
-          const detalle = [
-            estado,
-            c.duracionHoras ? `${c.duracionHoras} h` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')
-          return `  - ${c.nombre} — ${c.institucion} · ${detalle}`
+          return `  - ${c.nombre} — ${c.institucion} · ${estado}`
         })
         .join('\n')
     : '  (sin cursos cargados)'
@@ -377,8 +338,6 @@ CIERRE: terminá el párrafo con UNA sola oración breve, dicha al pasar, que in
     ? ctx.comoTrabaja.map(i => `  - ${i.titulo}: ${i.texto}`).join('\n')
     : '  (no especificado)'
 
-  const antiguedad = antiguedadTotal(ctx.experiencias)
-
   const userPrompt = `Redactá el perfil integrado para el siguiente candidato y devolvé SOLO el JSON.
 
 ═══ CANDIDATO ═══
@@ -386,7 +345,6 @@ Fecha de hoy: ${formatMes(new Date().toISOString().slice(0, 7))}
 Nombre: ${nombre}
 Qué estudió / qué busca (EL EJE — todo lo que escribas tiene que servirle a un reclutador de esta búsqueda): ${ctx.objetivo}
 ${ctx.subtitulo ? `Posicionamiento: ${ctx.subtitulo}` : ''}
-Antigüedad laboral relevante (YA CALCULADA sobre la experiencia de abajo — si la citás, copiala tal cual; NUNCA la cites): ${antiguedad ?? 'sin experiencia cargada'}
 
 ═══ MATERIAL DE PERSONALIDAD ═══
 Es el "cómo". NO lo copies ni lo resumas: usalo para explicar la trayectoria de abajo.
@@ -407,13 +365,18 @@ Ya está filtrado por relevancia para la búsqueda declarada: esto es TODO lo qu
 Formación académica:
 ${formStr}
 
-Cursos y capacitaciones (complementan la formación; las horas ya vienen calculadas):
+Cursos y capacitaciones (complementan la formación):
 ${cursosStr}
 
-Experiencia laboral (duraciones YA CALCULADAS — citalas tal cual):
+Experiencia laboral. Los períodos y las duraciones están acá para que ubiques
+su trayectoria —si recién arranca o ya tiene recorrido, si sigue en un puesto,
+si cambió de rubro— y con eso hagas concreto el retrato. NO las escribas en el
+párrafo: el certificado ya lista la experiencia con sus fechas aparte.
 ${expStr}
 
-Competencias técnicas (integrá por nombre EXACTO las que encajen; no fuerces las que no):
+Competencias técnicas. Igual que los períodos: están para que sepas con qué
+trabaja y en qué terreno se mueve, no para enumerarlas. El certificado ya las
+lista aparte con su nivel.
 ${compTecStr}
 
 Idiomas:
