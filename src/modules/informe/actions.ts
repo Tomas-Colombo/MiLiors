@@ -336,7 +336,29 @@ export async function generarInforme(): Promise<ActionResult> {
     return fallarGeneracion('El informe se generó pero no se pudo guardar. Intentá de nuevo.')
   }
 
+  // El certificado imprime contenido del informe —las competencias destacadas y,
+  // sin síntesis, el párrafo de personalidad (ver `pdf-props`)— y lo lee vivo en
+  // cada descarga. Un informe nuevo cambia entonces un documento que ya se firmó
+  // con otra fecha y que declara no haber sido alterado: hay que re-emitirlo.
+  //
+  // Casi siempre el Eneagrama ya lo marcó (rehacer el test es lo que habilita
+  // regenerar). La vía que no pasa por ahí es el botón de "formato anterior",
+  // que regenera con el test intacto y dejaba el certificado en "Verificado".
+  const { error: marcarCertError } = await admin.from('certificado_pdf')
+    .update({ desactualizado: true })
+    .eq('postulante_id', postulanteId)
+
+  if (marcarCertError) {
+    // No es fatal: el informe ya se guardó bien. Pero sin esto el postulante
+    // sigue postulándose con un certificado alterado, así que queda en el log.
+    console.error(
+      '[informe/actions] No se pudo marcar el certificado como desactualizado:',
+      marcarCertError.message,
+    )
+  }
+
   revalidatePath('/postulante/informe')
   revalidatePath('/postulante')
+  revalidatePath('/postulante/certificado')
   return { success: true, data: undefined }
 }
