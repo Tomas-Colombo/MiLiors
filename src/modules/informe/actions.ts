@@ -315,7 +315,10 @@ export async function generarInforme(): Promise<ActionResult> {
 
   const resultado = await generarInformePersonalidad(ctx)
   if (!resultado.ok) {
-    return fallarGeneracion(`No se pudo generar el informe: ${resultado.motivo}`)
+    // `motivo` ya es una frase cerrada y en castellano, y `fallarGeneracion`
+    // le pone su propio encabezado: envolverlo acá duplicaba el prefijo
+    // ("No se pudo regenerar el informe: No se pudo generar el informe: ...").
+    return fallarGeneracion(resultado.motivo)
   }
 
   const { error: saveError } = await admin.from('informe_personalidad')
