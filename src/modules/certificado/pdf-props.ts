@@ -9,11 +9,16 @@ import type { CertificadoInput } from './generate-pdf'
 /**
  * Arma el contenido del PDF del certificado a partir del perfil vigente.
  *
- * Lo usan la emisión (`crearCertificado`) y la descarga: el archivo guardado en
- * Storage es la copia de la emisión, pero al descargar se vuelve a renderizar
- * con esta misma función para que el diseño y los datos que ve el postulante
- * sean los actuales. Lo que queda fijo del certificado es su identidad —el ID de
- * verificación y la fecha de firma—, no el archivo.
+ * Lo usan la emisión (`crearCertificado`) y la descarga. No hay archivo: el PDF
+ * no se guarda en ningún lado, cada descarga lo vuelve a armar con esta función
+ * desde el perfil vigente, así el diseño y los datos son siempre los actuales.
+ * Lo que queda fijo del certificado es su identidad —el ID de verificación y la
+ * fecha de firma—, que le llegan acá por parámetro.
+ *
+ * El precio de renderizar vivo: si el perfil cambia después de la firma, el
+ * documento dice "Emitido el <fecha vieja>" con contenido nuevo, y su bloque
+ * legal declara que no fue alterado. Por eso cada fuente de contenido prende
+ * `certificado_pdf.desactualizado` al cambiar, para forzar la re-emisión.
  *
  * Usa el cliente admin: quien llama ya verificó sesión y propiedad.
  */

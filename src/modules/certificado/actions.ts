@@ -311,17 +311,19 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     return fallar('La síntesis se generó pero no se pudo guardar.')
   }
 
-  // El PDF emitido lleva la síntesis adentro y vive congelado en Storage: al
-  // cambiarla, el archivo descargable queda viejo aunque la previsualización
-  // (que lee datos vivos) ya muestre la nueva. Marcarlo desactualizado es lo que
-  // le ofrece al postulante re-emitirlo. Mismo patrón que eneagrama/human-design.
+  // El PDF se re-renderiza en cada descarga, así que la síntesis nueva ya viaja
+  // en el archivo. El problema es el otro: el documento sigue diciendo "Emitido
+  // el <fecha de la firma anterior>" y su bloque legal declara que no fue
+  // alterado, cuando el párrafo que lleva no existía ese día. Marcarlo
+  // desactualizado fuerza la re-emisión, que es la que firma de nuevo con un ID
+  // y una fecha nuevos. Mismo patrón que eneagrama/human-design/informe.
   const { error: marcarCertError } = await admin.from('certificado_pdf')
     .update({ desactualizado: true })
     .eq('postulante_id', postulanteTyped.id)
 
   if (marcarCertError) {
-    // No es fatal: la síntesis ya se guardó bien. Pero sin esto el postulante se
-    // descarga un PDF viejo creyendo que está al día, así que queda en el log.
+    // No es fatal: la síntesis ya se guardó bien. Pero sin esto el postulante
+    // sigue postulándose con un certificado alterado, así que queda en el log.
     console.error(
       '[certificado/sintesis] No se pudo marcar el certificado como desactualizado:',
       marcarCertError.message,

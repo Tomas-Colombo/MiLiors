@@ -63,11 +63,13 @@ export default async function CertificadoPage() {
 
         sintesisDesactualizada = informeMasNuevo || esquemaViejo
 
-        // El PDF vive congelado en Storage: si se firmó ANTES de la síntesis que
-        // debería contener, lo que se descarga no es lo que se previsualiza. Es un
+        // El PDF se re-renderiza vivo, así que lo que se descarga siempre trae la
+        // síntesis actual. Lo que no cuadra es la firma: si el certificado se firmó
+        // ANTES de la síntesis que ahora lleva impresa, el documento está fechado
+        // antes de su propio contenido y declara no haber sido alterado. Es un
         // hecho derivable del dato, así que no depende de que alguien se acuerde de
         // prender `certificado_pdf.desactualizado` — ese flag sigue cubriendo los
-        // casos que NO se pueden derivar (cambios de eneagrama, HD, perfil técnico).
+        // casos que NO se pueden derivar (eneagrama, HD, perfil técnico, informe).
         pdfPrevioALaSintesis =
           !!generadaAt &&
           !!certificado?.timestamp_firma &&

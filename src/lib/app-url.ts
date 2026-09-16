@@ -22,11 +22,11 @@ export function appUrl(path = ''): string {
 /**
  * Dominio público oficial de la app.
  *
- * Es el fallback de todo lo que sale IMPRESO o CONGELADO: el QR queda grabado
- * dentro de un PDF firmado que vive para siempre en Storage, así que si
- * `NEXT_PUBLIC_APP_URL` no está cargada en el panel, el código no puede
- * resolver a una ruta relativa ni a un dominio ajeno — el certificado ya se
- * emitió y nadie se entera hasta que alguien lo escanea.
+ * Es el fallback de todo lo que sale IMPRESO: el QR queda grabado dentro de un
+ * PDF que el postulante descarga y le manda a un reclutador, fuera de nuestro
+ * alcance para siempre. Si `NEXT_PUBLIC_APP_URL` no está cargada en el panel, el
+ * código no puede resolver a una ruta relativa ni a un dominio ajeno — el
+ * archivo ya circula y nadie se entera hasta que alguien lo escanea.
  */
 export const APP_URL_OFICIAL = 'https://miliors.com'
 
