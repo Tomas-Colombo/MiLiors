@@ -18,6 +18,7 @@ import { paginar } from '@/lib/pagination'
 import { normalizarTexto } from '@/lib/texto'
 import { Paginador } from '@/components/shared/list-controls'
 import type { BadgeProps } from '@/components/ui/badge'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Postulaciones recibidas — MiLiors' }
 
@@ -47,6 +48,7 @@ export default async function PostulacionesRecibidasPage({
 }: {
   searchParams: SearchParams
 }) {
+  await requireEmpresaCargada()
   const {
     puesto: filtroPuesto, empresa: filtroEmpresa, estado: filtroEstado, marca: filtroMarca,
     q: qRaw, page: pageParam,

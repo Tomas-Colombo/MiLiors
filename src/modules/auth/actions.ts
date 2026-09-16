@@ -66,6 +66,15 @@ export async function registrarUsuario(
     return { success: false, error: 'No se pudo crear la cuenta. Intentá de nuevo.', fieldErrors: { _email: [email] } }
   }
 
+  // Email ya registrado y CONFIRMADO: por la protección contra enumeración,
+  // Supabase no devuelve error ni manda mail, sino un usuario ficticio sin
+  // identidades. Sin este corte se mostraba "te enviamos un mail" que nunca llega.
+  // (Un email registrado SIN confirmar sí trae identidades: Supabase reenvía el
+  // mail y se sigue el flujo normal, ver alta-perfil.ts.)
+  if (authData.user.identities?.length === 0) {
+    return { success: false, error: 'Ya existe una cuenta con ese email.', fieldErrors: { _email: [email] } }
+  }
+
   // 2. Insertar en tabla usuario (usando admin client para saltear RLS en insert inicial)
   const adminClient = createAdminClient()
   const usuarioRow: TablesInsert<'usuario'> = {

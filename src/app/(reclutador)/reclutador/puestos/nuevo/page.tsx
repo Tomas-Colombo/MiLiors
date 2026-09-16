@@ -7,10 +7,12 @@ import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
 import { getMisEmpresasActivas } from '@/modules/empresas/queries'
 import { NuevoPuestoForm } from './nuevo-puesto-form'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Nuevo puesto — MiLiors' }
 
 export default async function NuevoPuestoPage() {
+  await requireEmpresaCargada()
   const [sectores, provincias, { diasInactividadCierre }, carreras, empresas] = await Promise.all([
     getSectores(),
     getProvincias(),

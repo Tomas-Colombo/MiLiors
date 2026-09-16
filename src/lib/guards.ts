@@ -2,6 +2,7 @@ import 'server-only'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from './dal'
+import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { rutaDeRol } from './rol'
 import type { RolUsuario, SessionUser } from '@/lib/types/domain'
 
@@ -33,6 +34,18 @@ export async function requireRol(esperado: RolUsuario): Promise<SessionUser> {
     redirect(rutaDeRol(session.rol) ?? '/iniciar-sesion')
   }
   return session
+}
+
+/**
+ * Guard del reclutador: sin ninguna empresa cargada no hay nada que gestionar
+ * ni candidatos que ver, así que toda sección (salvo onboarding y mi-perfil)
+ * manda al onboarding. Mismo criterio que el bloqueo del sidebar en el layout.
+ */
+export async function requireEmpresaCargada() {
+  const empresas = await getMisEmpresasBase()
+  if (empresas.length === 0) {
+    redirect('/reclutador/onboarding')
+  }
 }
 
 /**

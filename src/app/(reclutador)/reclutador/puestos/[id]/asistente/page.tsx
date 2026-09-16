@@ -4,6 +4,7 @@ import { ChevronLeftIcon, SparklesIcon } from '@/components/icons'
 import { getPuestoById, getPostulacionesRecibidas } from '@/modules/puestos/queries'
 import { AsistenteCandidatos, type CandidatoItem } from './asistente-candidatos'
 import { ComoFunciona } from './como-funciona'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Asistente IA del puesto — MiLiors' }
 
@@ -11,6 +12,7 @@ export const metadata = { title: 'Asistente IA del puesto — MiLiors' }
 type Params = Promise<{ id: string }>
 
 export default async function PuestoAsistentePage({ params }: { params: Params }) {
+  await requireEmpresaCargada()
   const { id } = await params
 
   // getPuestoById enforces ownership (recruiter must own the post) and returns

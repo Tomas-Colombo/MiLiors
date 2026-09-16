@@ -436,9 +436,9 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     })
   }
 
-  revalidatePath('/postulante')
-  revalidatePath('/postulante/eneagrama')
-  revalidatePath('/postulante/human-design')
+  // 'layout' para que el layout del postulante recalcule `onboardingPendiente`
+  // y desbloquee el sidebar recién completado el test.
+  revalidatePath('/postulante', 'layout')
 
   const primero = dominantesValidos[0]
   return { success: true, data: { eneatipoNumero: primero.numero, eneatipoNombre: primero.nombre } }

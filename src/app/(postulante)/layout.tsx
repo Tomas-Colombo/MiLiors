@@ -23,10 +23,10 @@ async function getDesactualizadoFlags(userId: string) {
     .eq('usuario_id', userId)
     .single()
 
-  if (!postulante) return { informeDesactualizado: false, certDesactualizado: false }
+  if (!postulante) return { informeDesactualizado: false, certDesactualizado: false, onboardingPendiente: true }
   const pid = (postulante as { id: string }).id
 
-  const [{ data: informe }, { data: cert }] = await Promise.all([
+  const [{ data: informe }, { data: cert }, { data: test }] = await Promise.all([
     supabase
       .from('informe_personalidad')
       .select('desactualizado')
@@ -39,17 +39,27 @@ async function getDesactualizadoFlags(userId: string) {
       .order('created_at', { ascending: false })
       .limit(1)
       .single(),
+    supabase
+      .from('test_eneagrama')
+      .select('id, test_eneagrama_dominante(id)')
+      .eq('postulante_id', pid)
+      .single(),
   ])
+
+  // Mismo criterio que requireEneagramaCompleto (guards.ts): sin al menos un
+  // dominante, todas las secciones del sidebar redirigen al onboarding/eneagrama.
+  const testTyped = test as { test_eneagrama_dominante: { id: string }[] } | null
 
   return {
     informeDesactualizado: informe ? !!(informe as { desactualizado: boolean }).desactualizado : false,
     certDesactualizado: cert ? !!(cert as { desactualizado: boolean }).desactualizado : false,
+    onboardingPendiente: !testTyped || testTyped.test_eneagrama_dominante.length === 0,
   }
 }
 
 export default async function PostulanteLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRol('POSTULANTE')
-  const { informeDesactualizado, certDesactualizado } = await getDesactualizadoFlags(session.id)
+  const { informeDesactualizado, certDesactualizado, onboardingPendiente } = await getDesactualizadoFlags(session.id)
 
   const NAV_POSTULANTE = [
     { href: '/postulante', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true },
@@ -68,6 +78,10 @@ export default async function PostulanteLayout({ children }: { children: React.R
         userEmail={session.email}
         rolLabel="Postulante"
         settingsHref="/postulante/mi-perfil"
+        // Mientras falte el perfil básico o el Eneagrama, cada sección del
+        // sidebar renderiza en el servidor solo para redirigir de vuelta (con
+        // su loading de por medio). Se bloquean los ítems en el cliente.
+        navBloqueado={onboardingPendiente ? 'Completá tu perfil y el Eneagrama para habilitar esta sección' : undefined}
       />
       <main className="flex-1 overflow-auto">
         {/* El gate vive en el layout y no en cada page: así los Términos son lo

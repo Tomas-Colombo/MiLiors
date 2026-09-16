@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { AsistenteChat } from './asistente-chat'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Asistente IA — MiLiors' }
 
@@ -17,6 +18,7 @@ export default async function AsistentePage({
 }: {
   searchParams: SearchParams
 }) {
+  await requireEmpresaCargada()
   const sp = await searchParams
 
   // postulanteId is required to use the assistant.

@@ -12,6 +12,7 @@ import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 import { ubicacionLabel } from '@/lib/ubicacion'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Detalle del puesto — MiLiors' }
 
@@ -19,6 +20,7 @@ export const metadata = { title: 'Detalle del puesto — MiLiors' }
 type Params = Promise<{ id: string }>
 
 export default async function PuestoDetallePage({ params }: { params: Params }) {
+  await requireEmpresaCargada()
   const { id } = await params
 
   const puesto = await getPuestoById(id)

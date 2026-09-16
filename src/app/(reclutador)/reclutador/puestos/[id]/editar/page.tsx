@@ -8,6 +8,7 @@ import { getProvincias, getUbicacionInicial } from '@/modules/ubicacion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
 import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { EditarPuestoForm } from './editar-puesto-form'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Editar puesto — MiLiors' }
 
@@ -15,6 +16,7 @@ export const metadata = { title: 'Editar puesto — MiLiors' }
 type Params = Promise<{ id: string }>
 
 export default async function EditarPuestoPage({ params }: { params: Params }) {
+  await requireEmpresaCargada()
   const { id } = await params
 
   const [puesto, sectores, formularioPreselector, formularioBloqueado, provincias, carreras, empresas] = await Promise.all([

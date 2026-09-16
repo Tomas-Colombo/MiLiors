@@ -8,12 +8,14 @@ import { paginar } from '@/lib/pagination'
 import { normalizarTexto } from '@/lib/texto'
 import { FiltrosEmpresas } from './filtros-empresas'
 import { NuevaEmpresaBtn, EmpresaAcciones } from './empresas-ui'
+import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Mis empresas — MiLiors' }
 
 type SearchParams = Promise<{ q?: string; estado?: string; page?: string }>
 
 export default async function MisEmpresasPage({ searchParams }: { searchParams: SearchParams }) {
+  await requireEmpresaCargada()
   const { q: qRaw, estado, page: pageParam } = await searchParams
   const q = normalizarTexto(qRaw ?? '')
   const todas = await getMisEmpresas()
