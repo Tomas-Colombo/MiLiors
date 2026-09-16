@@ -15,4 +15,5 @@ import type { AIProvider } from './port'
 export const aiProvider: AIProvider = geminiAdapter
 
 // Re-exportar tipos para que los consumidores no necesiten importar desde port.ts
-export type { AIProvider, GenerateOptions, GenerateResult } from './port'
+export type { AIProvider, GenerateOptions, GenerateResult, AIErrorKind } from './port'
+export { AIError } from './port'
