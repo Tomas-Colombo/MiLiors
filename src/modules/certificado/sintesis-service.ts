@@ -1,5 +1,6 @@
 import 'server-only'
-import { aiProvider } from '@/lib/ai'
+import { aiProvider, type GenerateResult } from '@/lib/ai'
+import { esperar, interpretarFallo } from '@/lib/ai/errores'
 import {
   buildTriagePrompts,
   buildSintesisPrompts,
@@ -11,7 +12,6 @@ import {
 import {
   SINTESIS_VERSION,
   type CertificadoSintesisJSON,
-  type SintesisFortaleza,
   type SintesisDescarte,
 } from '@/lib/types/certificado'
 
@@ -20,6 +20,12 @@ export type SintesisContext = SintesisPromptContext
 export type SintesisResult =
   | { ok: true; sintesis: CertificadoSintesisJSON; tokens: { input: number; output: number }; modelo: string }
   | { ok: false; motivo: string }
+
+/**
+ * Intentos por llamada al proveedor. Cubre tanto el fallo transitorio (un 503
+ * es un pico de demanda que se pasa) como la respuesta defectuosa del modelo.
+ */
+const INTENTOS = 2
 
 function extractJSON(raw: string): string {
   const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
@@ -37,20 +43,6 @@ function norm(s: string): string {
 /** Texto no vacío, o null. */
 function str(x: unknown): string | null {
   return typeof x === 'string' && x.trim().length > 0 ? x.trim() : null
-}
-
-/**
- * Fortalezas válidas: descartamos las entradas incompletas en vez de rechazar
- * toda la síntesis — el perfil en prosa sigue siendo utilizable sin ellas.
- */
-function parseFortalezas(x: unknown): SintesisFortaleza[] {
-  if (!Array.isArray(x)) return []
-  return x.flatMap(item => {
-    const f = item as { titulo?: unknown; texto?: unknown }
-    const titulo = str(f?.titulo)
-    const texto = str(f?.texto)
-    return titulo && texto ? [{ titulo, texto }] : []
-  })
 }
 
 /**
@@ -77,20 +69,36 @@ async function triageMaterialTecnico(ctx: {
 
   const { systemPrompt, userPrompt } = buildTriagePrompts(ctx)
 
-  let raw: string
-  try {
-    const result = await aiProvider.generate({
-      systemPrompt,
-      userPrompt,
-      responseFormat: 'json',
-      maxTokens: 800,
-      temperature: 0.3,
-    })
-    raw = result.content
-  } catch (err) {
-    console.error('[certificado/sintesis] Triage: error del proveedor, se conserva todo el material:', err)
-    return []
+  // Un 503 acá no debería costarle el filtro al certificado: se reintenta. Pero
+  // si el proveedor no afloja, el fail open sigue mandando — quedarse sin filtro
+  // muestra un ítem de más; quedarse sin síntesis no deja emitir el documento.
+  let raw: string | null = null
+  for (let intento = 1; intento <= INTENTOS; intento++) {
+    try {
+      const result = await aiProvider.generate({
+        systemPrompt,
+        userPrompt,
+        responseFormat: 'json',
+        maxTokens: 800,
+        temperature: 0.3,
+      })
+      raw = result.content
+      break
+    } catch (err) {
+      const fallo = interpretarFallo(err)
+      console.error(
+        `[certificado/sintesis] Triage intento ${intento}/${INTENTOS} — proveedor (${fallo.kind}):`,
+        fallo.crudo,
+      )
+      if (fallo.transitorio && intento < INTENTOS) {
+        await esperar()
+        continue
+      }
+      console.error('[certificado/sintesis] Triage: se conserva todo el material.')
+      return []
+    }
   }
+  if (raw === null) return []
 
   let parsed: unknown
   try {
@@ -145,10 +153,10 @@ async function triageMaterialTecnico(ctx: {
  * Genera la síntesis integrada del certificado en dos pasos (triage + redacción).
  * No escribe en la DB (responsabilidad del caller).
  *
- * Garantía anti-pérdida: filtramos `competenciasIntegradas` para quedarnos SOLO
- * con nombres que existen de verdad en las competencias técnicas provistas (por
- * si el LLM alucina). El caller calcula las NO integradas = provistas − estas
- * (usando `competenciasNoIntegradas` y descontando además las descartadas).
+ * De la respuesta del modelo se toma UNA sola cosa: el párrafo. Las competencias
+ * técnicas, la formación y los idiomas los lista el certificado por su propio
+ * camino (`pdf-props`), leyendo el perfil vigente — el párrafo no las enumera y
+ * el modelo no informa cuáles usó. Cualquier clave extra que devuelva se ignora.
  */
 export async function generarSintesisCertificado(ctx: SintesisContext): Promise<SintesisResult> {
   const descartados = await triageMaterialTecnico({
@@ -171,66 +179,69 @@ export async function generarSintesisCertificado(ctx: SintesisContext): Promise<
 
   const { systemPrompt, userPrompt } = buildSintesisPrompts(ctxFiltrado)
 
-  let result
-  try {
-    result = await aiProvider.generate({
-      systemPrompt,
-      userPrompt,
-      responseFormat: 'json',
-      // ~750 palabras de prosa + JSON de envoltura; el resto es margen para que
-      // el modelo no corte la respuesta a la mitad (JSON truncado = parseo roto).
-      maxTokens: 2600,
-      temperature: 0.6,
-    })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Error desconocido del proveedor de IA.'
-    console.error('[certificado/sintesis] Error al llamar al proveedor:', msg)
-    return { ok: false, motivo: msg }
-  }
+  // El prompt pide UNA sola clave. Lo que el modelo agregue de más se ignora.
+  type SintesisCruda = { perfilIntegrado?: unknown }
 
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(extractJSON(result.content))
-  } catch {
-    console.error('[certificado/sintesis] Respuesta no es JSON válido:', result.content.slice(0, 300))
-    return { ok: false, motivo: 'El modelo no respondió con JSON válido. Intentá de nuevo.' }
-  }
+  let ultimoMotivo = 'El servicio de IA no devolvió una síntesis utilizable.'
+  let exito: { result: GenerateResult; p: SintesisCruda; perfilIntegrado: string } | null = null
 
-  const p = parsed as {
-    perfilIntegrado?: unknown
-    fortalezas?: unknown
-    contextoIdeal?: unknown
-    competenciasIntegradas?: unknown
-  }
-  const perfilIntegrado = str(p.perfilIntegrado)
-  if (!perfilIntegrado) {
-    return { ok: false, motivo: 'El modelo no devolvió el perfil integrado. Intentá de nuevo.' }
-  }
-
-  // Solo aceptamos nombres de competencias que existen realmente en el input YA FILTRADO.
-  const catalogo = new Map(competenciasTecnicas.map(c => [norm(c), c]))
-  const integradas = Array.isArray(p.competenciasIntegradas)
-    ? Array.from(
-        new Set(
-          p.competenciasIntegradas
-            .filter((x): x is string => typeof x === 'string')
-            .map(x => catalogo.get(norm(x)))
-            .filter((x): x is string => x !== undefined),
-        ),
+  for (let intento = 1; intento <= INTENTOS; intento++) {
+    let result
+    try {
+      result = await aiProvider.generate({
+        systemPrompt,
+        userPrompt,
+        responseFormat: 'json',
+        // ~750 palabras de prosa + JSON de envoltura; el resto es margen para que
+        // el modelo no corte la respuesta a la mitad (JSON truncado = parseo roto).
+        maxTokens: 2600,
+        temperature: 0.6,
+      })
+    } catch (err) {
+      // Lo transitorio se reintenta; la credencial ausente o el truncado no.
+      const fallo = interpretarFallo(err)
+      ultimoMotivo = fallo.motivo
+      console.error(
+        `[certificado/sintesis] Intento ${intento}/${INTENTOS} — proveedor (${fallo.kind}):`,
+        fallo.crudo,
       )
-    : []
+      if (fallo.transitorio && intento < INTENTOS) {
+        await esperar()
+        continue
+      }
+      return { ok: false, motivo: fallo.motivo }
+    }
 
-  // PAUSADAS: el prompt ya no las pide (ninguna vista las renderizaba y costaban
-  // tokens de salida en cada generación). El parseo queda por si se reactivan y
-  // para no romper las síntesis viejas que sí las traen guardadas.
-  const fortalezas = parseFortalezas(p.fortalezas)
-  const contextoIdeal = str(p.contextoIdeal)
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(extractJSON(result.content))
+    } catch {
+      ultimoMotivo = 'El servicio de IA devolvió una respuesta inválida.'
+      console.error(
+        `[certificado/sintesis] Intento ${intento}/${INTENTOS} — JSON inválido:`,
+        result.content.slice(0, 300),
+      )
+      continue
+    }
+
+    const p = parsed as SintesisCruda
+    const perfilIntegrado = str(p.perfilIntegrado)
+    if (!perfilIntegrado) {
+      ultimoMotivo = 'El servicio de IA no devolvió el perfil integrado.'
+      console.error(`[certificado/sintesis] Intento ${intento}/${INTENTOS} — sin perfilIntegrado.`)
+      continue
+    }
+
+    exito = { result, p, perfilIntegrado }
+    break
+  }
+
+  if (!exito) return { ok: false, motivo: `${ultimoMotivo} Intentá de nuevo.` }
+
+  const { result, perfilIntegrado } = exito
 
   const sintesis: CertificadoSintesisJSON = {
     perfilIntegrado,
-    ...(fortalezas.length > 0 && { fortalezas }),
-    ...(contextoIdeal && { contextoIdeal }),
-    competenciasIntegradas: integradas,
     objetivo: ctx.objetivo,
     ...(descartados.length > 0 && { descartados }),
     generadaAt: new Date().toISOString(),
@@ -240,7 +251,7 @@ export async function generarSintesisCertificado(ctx: SintesisContext): Promise<
   console.info(
     `[certificado/sintesis] Generada con ${result.model}. ` +
       `Tokens: ${result.usage.inputTokens} in + ${result.usage.outputTokens} out. ` +
-      `Fortalezas: ${fortalezas.length}. Competencias integradas: ${integradas.length}/${competenciasTecnicas.length}. ` +
+      `Palabras del párrafo: ${perfilIntegrado.split(/\s+/).length}. ` +
       `Descartados por triage: ${descartados.length}.`,
   )
 
@@ -250,10 +261,4 @@ export async function generarSintesisCertificado(ctx: SintesisContext): Promise<
     tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
     modelo: result.model,
   }
-}
-
-/** Competencias técnicas provistas que el LLM NO integró en la prosa (van al final, textuales). */
-export function competenciasNoIntegradas(todas: string[], integradas: string[]): string[] {
-  const set = new Set(integradas.map(norm))
-  return todas.filter(c => !set.has(norm(c)))
 }

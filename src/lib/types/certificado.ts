@@ -41,22 +41,32 @@ export type SintesisDescarte = {
  * Versión del esquema de la síntesis. Al subirla, las síntesis generadas con el
  * esquema anterior quedan marcadas como desactualizadas y el postulante ve el
  * botón para regenerarlas (mismo mecanismo que cuando el informe queda más nuevo).
+ *
+ * Nada se regenera solo: subir la versión sólo habilita el botón.
+ *
+ * 6 — El párrafo ya no recibe la antigüedad total ni las horas de los cursos, y
+ *     el prompt dejó de ordenarle citar duraciones que tenía prohibido escribir.
+ *     La respuesta del modelo se reduce a `perfilIntegrado`.
  */
-export const SINTESIS_VERSION = 5
+export const SINTESIS_VERSION = 6
 
 /** Salida del LLM + metadata, persistida en `perfil_tecnico.sintesis_certificado`. */
 export type CertificadoSintesisJSON = {
   /** Un párrafo en 3ª persona: la síntesis de personalidad que se imprime. */
   perfilIntegrado: string
   /**
-   * PAUSADO desde v5: el prompt ya no las pide porque ninguna vista las
-   * renderizaba. Se sigue leyendo para no romper las síntesis v2-v4 guardadas.
+   * NO se generan más (el prompt dejó de pedirlas en v5; ninguna vista las
+   * renderizaba). Siguen declaradas y opcionales porque las filas v2-v4
+   * guardadas sí las traen y `certificado/queries.ts` las lee de ahí: sacarlas
+   * del tipo haría que esas síntesis dejaran de deserializar completas.
+   *
+   * Es lo único que sobrevive de aquel esquema. El parseo de la respuesta del
+   * modelo sí se eliminó, que es otra cosa: el prompt no las pide, así que
+   * parsearlas era buscar algo que nunca venía.
    */
   fortalezas?: SintesisFortaleza[]
-  /** PAUSADO desde v5, mismo motivo que [[fortalezas]]. */
+  /** Mismo caso que [[fortalezas]]: se lee de filas viejas, no se genera. */
   contextoIdeal?: string
-  /** PAUSADO desde v5: el párrafo ya no nombra competencias técnicas. */
-  competenciasIntegradas: string[]
   /**
    * "¿Qué estudiaste / qué buscás?" del perfil, congelado al generar: es el eje
    * contra el que se midió la relevancia de todo lo demás. Ausente antes de v3.
