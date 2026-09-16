@@ -39,11 +39,10 @@ describe('barrasAString', () => {
 })
 
 describe('calcularMotor', () => {
-  it('produce 9 filas de mapa, 13 competencias y 4 talentos', () => {
+  it('produce 9 filas de mapa y 13 competencias', () => {
     const r = calcularMotor(scores({ 8: 100, 3: 80, 2: 60 }))
     expect(r.mapaPersonalidad).toHaveLength(9)
     expect(r.competencias).toHaveLength(13)
-    expect(r.talentosTop).toHaveLength(4)
   })
 
   it('Liderazgo (8>3>2) llega al máximo cuando los tres tipos están al 100', () => {
@@ -76,7 +75,6 @@ describe('calcularMotor', () => {
   it('todo en cero no rompe (informe generable con scores nulos)', () => {
     const r = calcularMotor(scores())
     expect(r.competencias.every(c => c.score === 0)).toBe(true)
-    expect(r.talentosTop).toHaveLength(4)
   })
 
   it('HD refuerza Autonomía para Manifestor pero no invierte de forma brusca', () => {

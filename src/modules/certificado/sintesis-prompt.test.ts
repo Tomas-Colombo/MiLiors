@@ -22,7 +22,6 @@ function ctx(overrides: Partial<SintesisPromptContext> = {}): SintesisPromptCont
     objetivo: 'Analista de datos',
     subtitulo: null,
     descripcionPersonalidad: 'Perfil analítico.',
-    talentos: [],
     competenciasDestacadas: [],
     comoTrabaja: [],
     competenciasTecnicas: ['SQL'],

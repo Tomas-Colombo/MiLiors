@@ -4,7 +4,7 @@
  * Entrada: los 9 scores del Eneagrama (porcentaje 0-100 por eneatipo, tal como
  * se guardan en `resultado_puntaje_eneagrama`) + Human Design opcional.
  * Salida: mapa de personalidad (9), 13 competencias con nivel + barras agrupadas
- * en 4 bloques, top-4 talentos y estilos dominante/secundario.
+ * en 4 bloques y estilos dominante/secundario.
  *
  * La tabla de pesos y las reglas de refuerzo de HD son CONSTANTES EDITABLES
  * (la clienta las validará). No mover esta lógica al LLM.
@@ -108,26 +108,6 @@ export const BLOQUES_ORDEN: BloqueCompetencia[] = [
   'Cómo ejecuta y se sostiene',
 ]
 
-/**
- * Desempate del top-4: ante scores iguales, gana la competencia que aparezca
- * antes en esta lista. EDITABLE.
- */
-export const TALENTOS_PRIORIDAD: CompetenciaKey[] = [
-  'liderazgo',
-  'comercial',
-  'comunicacion',
-  'orientacion_resultados',
-  'innovacion',
-  'storytelling',
-  'mediacion',
-  'trabajo_equipo',
-  'autonomia',
-  'analitico',
-  'organizacion',
-  'adaptarse',
-  'atencion_detalle',
-]
-
 // ── Refuerzo suave de Human Design ──────────────────────────────────────────
 // Tope +15% sobre la competencia base, nunca invierte el Eneagrama. Si no hay
 // HD, se omite sin romper el cálculo.
@@ -205,20 +185,27 @@ export function barrasAString(barras: number): string {
 
 // ── Textos de marco ──────────────────────────────────────────────────────────
 
-export const TALENTOS_ACLARACION =
-  'Estos talentos salen de tus 4 competencias con mejor correlación; no es una lista cerrada.'
-
-/** Títulos exactos del bloque "Cómo trabajás" (9 ítems). */
+/**
+ * Títulos exactos del bloque "Cómo trabaja" (4 ítems).
+ *
+ * Van en 3ª persona igual que el resto del informe: el prompt prohíbe la 2ª
+ * persona, y darle títulos en voseo ("Ambiente donde rendís mejor") como
+ * ejemplos obligatorios contradecía esa misma regla.
+ *
+ * Quedaron los cuatro que MIRAN HACIA ADELANTE —entorno, desarrollo, entrevista
+ * y encaje laboral—. Los cinco que se sacaron (liderazgo, decisión, comercial,
+ * equipo y comunicación) describían rasgos que las 13 competencias ya cubren, y
+ * con más detalle desde que su descripción se extiende según el nivel: eran la
+ * misma información contada dos veces.
+ *
+ * Los informes ya generados guardan sus títulos dentro de `contenido_json`, así
+ * que cambiar esta lista no los rompe: siguen renderizando los que tenían.
+ */
 export const COMO_TRABAJAS_TITULOS = [
-  'Tu estilo de liderazgo',
-  'Tu estilo de decisión',
-  'Tu estilo comercial',
-  'En equipo',
-  'Tu estilo de comunicación',
-  'Ambiente donde rendís mejor',
+  'Ambiente donde rinde mejor',
   'Para seguir creciendo',
-  'Tip para tus entrevistas',
-  'Qué trabajos son los que más se va a destacar',
+  'Tip para sus entrevistas',
+  'En qué trabajos se va a destacar',
 ] as const
 
 // ── Motor ────────────────────────────────────────────────────────────────────
@@ -237,7 +224,6 @@ export type EstiloEneatipo = { numero: number; nombre: string; score: number }
 export type MotorResultado = {
   mapaPersonalidad: MapaPersonalidadItem[]
   competencias: CompetenciaCalculada[]
-  talentosTop: CompetenciaCalculada[]
   estiloDominante: EstiloEneatipo
   estiloSecundario: EstiloEneatipo
 }
@@ -269,15 +255,6 @@ export function calcularMotor(scores: Record<number, number>, hd: HumanDesignInp
     return { key: def.key, nombre: def.nombre, bloque: def.bloque, score, nivel, barras }
   })
 
-  // Top-4: score desc, desempate por TALENTOS_PRIORIDAD.
-  const prioridad = (k: CompetenciaKey) => {
-    const idx = TALENTOS_PRIORIDAD.indexOf(k)
-    return idx === -1 ? Number.MAX_SAFE_INTEGER : idx
-  }
-  const talentosTop = [...competencias]
-    .sort((a, b) => b.score - a.score || prioridad(a.key) - prioridad(b.key))
-    .slice(0, 4)
-
   // Mapa de personalidad (9 eneatipos con su score).
   const mapaPersonalidad: MapaPersonalidadItem[] = Array.from({ length: 9 }, (_, i) => {
     const numero = i + 1
@@ -297,7 +274,7 @@ export function calcularMotor(scores: Record<number, number>, hd: HumanDesignInp
     score: ranking[1].score,
   }
 
-  return { mapaPersonalidad, competencias, talentosTop, estiloDominante, estiloSecundario }
+  return { mapaPersonalidad, competencias, estiloDominante, estiloSecundario }
 }
 
 /** Reordena las competencias calculadas por bloque (orden de render). */

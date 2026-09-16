@@ -6,12 +6,12 @@ import {
   COMO_TRABAJAS_TITULOS,
   type HumanDesignInput,
 } from './competencias'
-import type {
-  ComoTrabajasItem,
-  CompetenciaItem,
-  InformePersonalidadJSON,
-  InformeProseLLM,
-  TalentoItem,
+import {
+  INFORME_VERSION,
+  type ComoTrabajasItem,
+  type CompetenciaItem,
+  type InformePersonalidadJSON,
+  type InformeProseLLM,
 } from '@/lib/types/informe'
 
 export type InformeContext = {
@@ -48,7 +48,6 @@ function parseProse(raw: string): InformeProseLLM | null {
       typeof p.descripcionPersonalidad !== 'string' ||
       p.descripcionPersonalidad.trim().length === 0 ||
       !Array.isArray(p.competenciasDesc) ||
-      !Array.isArray(p.talentosDesc) ||
       !Array.isArray(p.comoTrabajas)
     ) {
       return null
@@ -108,7 +107,6 @@ export async function generarInformePersonalidad(ctx: InformeContext): Promise<G
 
   // ── Fusión motor (números) + LLM (prosa) ──────────────────────────────────
   const descCompetencia = new Map(prose.competenciasDesc.map(d => [norm(d.nombre), d.descripcion]))
-  const descTalento = new Map(prose.talentosDesc.map(d => [norm(d.nombre), d.descripcion]))
   const textoComoTrabajas = new Map(prose.comoTrabajas.map(d => [norm(d.titulo), d.texto]))
 
   const competencias: CompetenciaItem[] = motor.competencias.map(c => ({
@@ -117,11 +115,6 @@ export async function generarInformePersonalidad(ctx: InformeContext): Promise<G
     nivel: c.nivel,
     barras: c.barras,
     descripcion: descCompetencia.get(norm(c.nombre)) ?? '',
-  }))
-
-  const talentosTop: TalentoItem[] = motor.talentosTop.map(t => ({
-    nombre: t.nombre,
-    descripcion: descTalento.get(norm(t.nombre)) ?? '',
   }))
 
   // Reconstruimos los ítems en el orden canónico de títulos (el LLM podría variar).
@@ -136,8 +129,8 @@ export async function generarInformePersonalidad(ctx: InformeContext): Promise<G
     descripcionPersonalidad: prose.descripcionPersonalidad.trim(),
     mapaPersonalidad: motor.mapaPersonalidad,
     competencias,
-    talentosTop,
     comoTrabajas,
+    version: INFORME_VERSION,
   }
 
   console.info(

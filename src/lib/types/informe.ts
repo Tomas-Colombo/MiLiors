@@ -3,7 +3,7 @@
  *
  * La salida se compone de dos partes:
  *   - Motor determinístico (src/modules/informe/competencias.ts): mapa de los 9
- *     eneatipos, las 13 competencias con nivel + barras, top-4 y estilos.
+ *     eneatipos, las 13 competencias con nivel + barras, y estilos.
  *   - Prosa del LLM (una sola llamada): descripciones en 3ª persona.
  *
  * `InformePersonalidadJSON` es la forma final que se guarda en
@@ -45,15 +45,25 @@ export type CompetenciaItem = {
   descripcion: string
 }
 
-export type TalentoItem = {
-  nombre: string
-  descripcion: string
-}
-
 export type ComoTrabajasItem = {
   titulo: string
   texto: string
 }
+
+/**
+ * Versión del esquema del informe. Al subirla, los informes generados con el
+ * esquema anterior se muestran como "formato anterior" y el postulante ve el
+ * botón para regenerarlos — igual que `SINTESIS_VERSION` en el certificado.
+ *
+ * Nada se regenera solo: subir la versión no dispara ninguna llamada al LLM,
+ * solo habilita el botón. La migración la marca el ritmo de cada usuario.
+ *
+ * 2 — Prosa con tono y extensión según el nivel de cada competencia; sin la
+ *     sección de talentos; títulos de "cómo trabaja" en 3ª persona.
+ * 3 — "Cómo trabaja" reducido de 9 a 4 ítems: se sacaron los que repetían lo
+ *     que ya dicen las descripciones de competencia.
+ */
+export const INFORME_VERSION = 3
 
 /** Forma final persistida en `informe_personalidad.contenido_json`. */
 export type InformePersonalidadJSON = {
@@ -64,10 +74,16 @@ export type InformePersonalidadJSON = {
   mapaPersonalidad: MapaPersonalidadItem[]
   /** 13 competencias, agrupadas por bloque — nivel/barras del motor, descripción del LLM. */
   competencias: CompetenciaItem[]
-  /** 4 talentos — del top-4 del motor. */
-  talentosTop: TalentoItem[]
-  /** 8-9 ítems de estilo — del LLM. */
+  /** 4 ítems de estilo — del LLM. Informes viejos pueden traer hasta 9. */
   comoTrabajas: ComoTrabajasItem[]
+  /** Esquema con el que se generó. Ausente = 1 (anterior a esta versión). */
+  version?: number
+}
+
+/** `true` si el informe se generó con un esquema anterior al vigente. */
+export function esFormatoAnterior(json: InformePersonalidadJSON | null | undefined): boolean {
+  if (!json) return false
+  return (json.version ?? 1) < INFORME_VERSION
 }
 
 /**
@@ -77,10 +93,11 @@ export type InformePersonalidadJSON = {
 export type InformeProseLLM = {
   subtitulo: string
   descripcionPersonalidad: string
-  /** Una línea por competencia (13), referida por `nombre`. */
+  /**
+   * Una descripción por competencia (13), referida por `nombre`. Su extensión
+   * depende del nivel que calculó el motor (ver el prompt).
+   */
   competenciasDesc: { nombre: string; descripcion: string }[]
-  /** Un párrafo por talento (4), referido por `nombre`. */
-  talentosDesc: { nombre: string; descripcion: string }[]
-  /** 8-9 ítems, en el orden de COMO_TRABAJAS_TITULOS. */
+  /** 4 ítems, en el orden de COMO_TRABAJAS_TITULOS. */
   comoTrabajas: ComoTrabajasItem[]
 }

@@ -9,7 +9,7 @@ import { generarInformePersonalidad, type InformeContext } from './service'
 import { competenciaKeyPorNombre } from './competencias'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import type { ActionResult } from '@/lib/types/domain'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 
 async function recopilarContexto(postulanteId: string): Promise<InformeContext | null> {
   const session = await verifySession()
@@ -267,8 +267,13 @@ export async function generarInforme(): Promise<ActionResult> {
 
   const teniaInformeValido = !!prev && prev.estado_informe === 'LISTO' && prev.contenido_json != null
 
+  // Un informe de un esquema anterior cuenta como pendiente de actualizar,
+  // aunque el Eneagrama no haya cambiado: es la única forma de que el botón de
+  // "formato anterior" pueda hacer algo.
+  const formatoAnterior = esFormatoAnterior(prev?.contenido_json as InformePersonalidadJSON | null)
+
   // Bloqueo: no permitir actualizar un informe que ya está al día.
-  if (teniaInformeValido && !prev!.desactualizado) {
+  if (teniaInformeValido && !prev!.desactualizado && !formatoAnterior) {
     return { success: false, error: 'El informe ya está actualizado.' }
   }
 

@@ -18,13 +18,6 @@ export function informeToPlainText(json: InformePersonalidadJSON | null): string
     }
   }
 
-  if (json.talentosTop?.length) {
-    lines.push('', 'Talentos más fuertes:')
-    for (const t of json.talentosTop) {
-      lines.push(`- ${t.nombre}${t.descripcion ? `: ${t.descripcion}` : ''}`)
-    }
-  }
-
   if (json.comoTrabajas?.length) {
     lines.push('', 'Cómo trabaja:')
     for (const item of json.comoTrabajas) {

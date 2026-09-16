@@ -13,7 +13,7 @@ import type { ActionResult } from '@/lib/types/domain'
  *    Es el único feedback que mapea a un número corregible del motor, y por eso
  *    es DIRECCIONAL: "no estoy de acuerdo" no diría para qué lado mover el peso.
  *  - `FeedbackGlobalForm` cierra el informe con una sola pregunta. Cubre la prosa
- *    del LLM (talentos, "cómo trabaja", descripción) sin pedir ~28 respuestas,
+ *    del LLM ("cómo trabaja", descripción) sin pedir ~22 respuestas,
  *    que es donde la gente abandona.
  */
 

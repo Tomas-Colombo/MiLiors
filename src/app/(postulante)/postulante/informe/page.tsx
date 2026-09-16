@@ -1,6 +1,7 @@
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { getInformeActual, getFeedbackInforme } from '@/modules/informe/queries'
+import { esFormatoAnterior } from '@/lib/types/informe'
 import { InformeVisor } from './informe-visor'
 
 export const maxDuration = 300
@@ -28,7 +29,12 @@ export default async function InformePage() {
           Generado a partir de tu Eneagrama y Human Design.
         </p>
       </div>
-      <InformeVisor informe={informe} feedback={feedback} email={session.email} />
+      <InformeVisor
+        informe={informe}
+        feedback={feedback}
+        email={session.email}
+        formatoAnterior={esFormatoAnterior(informe?.contenido_json)}
+      />
     </div>
   )
 }

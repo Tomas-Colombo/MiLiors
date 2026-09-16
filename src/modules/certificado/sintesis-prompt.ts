@@ -52,10 +52,12 @@ export type SintesisPromptContext = {
   subtitulo: string | null
   /** Párrafo de personalidad ya redactado por el informe. */
   descripcionPersonalidad: string
-  /** Talentos top del informe con su descripción — anclas para tejer. */
-  talentos: { nombre: string; descripcion: string }[]
-  /** Competencias del informe con nivel Alto/Medio-Alto — material de fondo, NO se listan. */
-  competenciasDestacadas: { nombre: string; nivel: string }[]
+  /**
+   * Competencias del informe con nivel Alto/Medio-Alto, con su descripción ya
+   * redactada: son las anclas para tejer el retrato. Antes este rol lo cumplía
+   * el top-4 de talentos, que el informe dejó de generar.
+   */
+  competenciasDestacadas: { nombre: string; nivel: string; descripcion: string }[]
   /** Ítems de estilo del informe ("cómo trabaja") — material de fondo, NO se copian. */
   comoTrabaja: { titulo: string; texto: string }[]
   /** Competencias técnicas vigentes del perfil (nombres). */
@@ -365,12 +367,10 @@ CIERRE: terminá el párrafo con UNA sola oración breve, dicha al pasar, que in
     ? ctx.idiomas.map(i => `  - ${i.nombre}: ${i.nivel}`).join('\n')
     : '  (sin idiomas cargados)'
 
-  const talentosStr = ctx.talentos.length
-    ? ctx.talentos.map(t => `  - ${t.nombre}: ${t.descripcion}`).join('\n')
-    : '  (no especificados)'
-
   const destacadasStr = ctx.competenciasDestacadas.length
-    ? ctx.competenciasDestacadas.map(c => `  - ${c.nombre} (${c.nivel})`).join('\n')
+    ? ctx.competenciasDestacadas
+        .map(c => (c.descripcion ? `  - ${c.nombre}: ${c.descripcion}` : `  - ${c.nombre}`))
+        .join('\n')
     : '  (no especificadas)'
 
   const comoTrabajaStr = ctx.comoTrabaja.length
@@ -394,13 +394,10 @@ Es el "cómo". NO lo copies ni lo resumas: usalo para explicar la trayectoria de
 Síntesis de personalidad:
 ${ctx.descripcionPersonalidad}
 
-Talentos destacados:
-${talentosStr}
-
-Competencias de personalidad más marcadas (contexto de fondo — NO las listes ni menciones sus niveles):
+Competencias de personalidad más marcadas, con su descripción (son las anclas para tejer — NO las listes ni menciones sus niveles):
 ${destacadasStr}
 
-Cómo trabaja (está en 2ª persona: pasalo a 3ª y anclalo en su experiencia real; NO lo transcribas):
+Cómo trabaja (anclalo en su experiencia real; NO lo transcribas):
 ${comoTrabajaStr}
 
 ═══ MATERIAL TÉCNICO ═══

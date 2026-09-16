@@ -15,6 +15,13 @@ type Props = {
   feedback?: FeedbackInforme | null
   /** Se muestra en la ficha del documento, igual que en el PDF. */
   email?: string
+  /**
+   * El informe se generó con un esquema anterior (ver `INFORME_VERSION`). No es
+   * un error ni un dato viejo del Eneagrama: el contenido es válido, pero le
+   * falta lo que agregó la versión nueva. Se ofrece regenerar, nunca se hace
+   * solo.
+   */
+  formatoAnterior?: boolean
 }
 
 /**
@@ -43,7 +50,7 @@ function formatFecha(iso: string): string {
   }
 }
 
-export function InformeVisor({ informe, feedback, email }: Props) {
+export function InformeVisor({ informe, feedback, email, formatoAnterior = false }: Props) {
   const [isPending, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
   const router = useRouter()
@@ -74,8 +81,9 @@ export function InformeVisor({ informe, feedback, email }: Props) {
 
     return (
       <div className="space-y-5">
-        {/* Aviso de desactualización */}
-        {desactualizado && (
+        {/* Aviso de desactualización. El cambio de datos manda sobre el cambio
+            de formato: si el Eneagrama cambió, ese es el motivo que importa. */}
+        {desactualizado ? (
           <Alert tone="warning" title="Tu informe está desactualizado">
             Modificaste tu Eneagrama o tu Human Design. Actualizá el informe para reflejar los cambios.
             <div className="mt-3">
@@ -84,14 +92,24 @@ export function InformeVisor({ informe, feedback, email }: Props) {
               </Button>
             </div>
           </Alert>
-        )}
+        ) : formatoAnterior ? (
+          <Alert tone="info" title="Hay una versión nueva de tu informe">
+            Este informe es válido, pero se generó con un formato anterior. La versión nueva describe cada
+            competencia con más detalle según tu nivel. Podés regenerarlo cuando quieras.
+            <div className="mt-3">
+              <Button variant="primary" size="sm" loading={isPending} onClick={handleGenerar} disabled={isPending}>
+                Regenerar con el formato nuevo
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
         {actionError && <Alert tone="error" title="No se pudo actualizar">{actionError}</Alert>}
 
         {/* Status + descarga */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Badge tone={desactualizado ? 'warning' : 'success'} dot>
-              {desactualizado ? 'Desactualizado' : 'Generado'}
+            <Badge tone={desactualizado ? 'warning' : formatoAnterior ? 'info' : 'success'} dot>
+              {desactualizado ? 'Desactualizado' : formatoAnterior ? 'Formato anterior' : 'Generado'}
             </Badge>
             {informe.fecha_generacion && (
               <span className="text-xs text-muted">{formatFecha(informe.fecha_generacion)}</span>

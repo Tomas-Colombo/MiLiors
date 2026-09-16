@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
 import type { InformePersonalidadJSON, BloqueCompetencia, NivelCompetencia } from '@/lib/types/informe'
-import { BLOQUES_ORDEN, TALENTOS_ACLARACION } from './competencias'
+import { BLOQUES_ORDEN } from './competencias'
 import { DOC } from '@/lib/constants/documento'
 
 /**
@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
   },
   bodyText: { fontSize: 9.5, color: DOC.soft, lineHeight: 1.5 },
-  framing: { fontSize: 8, color: DOC.muted, fontFamily: 'Helvetica-Oblique', marginTop: 6, lineHeight: 1.45 },
 
   // Mapa de personalidad
   mapaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3.5 },
@@ -239,24 +238,10 @@ export function InformePDF({ informe, email, fechaGeneracion, logoBase64 }: Info
           ))}
         </View>
 
-        {/* 4. Talentos */}
-        {informe.talentosTop.length > 0 && (
-          <View style={styles.section}>
-            <SectionHead n={++n}>Tus 4 talentos más fuertes</SectionHead>
-            <Text style={styles.framing}>{TALENTOS_ACLARACION}</Text>
-            {informe.talentosTop.map(t => (
-              <View key={t.nombre} style={styles.itemBlock} wrap={false}>
-                <Text style={styles.itemTitle}>{t.nombre}</Text>
-                {t.descripcion ? <Text style={styles.itemText}>{t.descripcion}</Text> : null}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* 5. Cómo trabajás */}
+        {/* 4. Cómo trabaja */}
         {informe.comoTrabajas.length > 0 && (
           <View style={styles.section}>
-            <SectionHead n={++n}>Cómo trabajás</SectionHead>
+            <SectionHead n={++n}>Cómo trabaja</SectionHead>
             {informe.comoTrabajas.map(item => (
               <View key={item.titulo} style={styles.itemBlock} wrap={false}>
                 <Text style={styles.itemTitle}>{item.titulo}</Text>

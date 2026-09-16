@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { BloqueCompetencia, CompetenciaItem, InformePersonalidadJSON, NivelCompetencia } from '@/lib/types/informe'
-import { BLOQUES_ORDEN, TALENTOS_ACLARACION } from './competencias'
+import { BLOQUES_ORDEN } from './competencias'
 
 /**
  * Render presentacional del informe estructurado. Sin estado ni hooks: sirve
@@ -104,25 +104,7 @@ export function InformeDisplay({ data, variant = 'full', renderCompetenciaExtra 
         </div>
       </section>
 
-      {/* Talentos */}
-      {data.talentosTop.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-primary-600">
-            Talentos más fuertes
-          </h3>
-          <p className="mb-4 text-xs italic text-muted">{TALENTOS_ACLARACION}</p>
-          <div className="space-y-4">
-            {data.talentosTop.map(t => (
-              <div key={t.nombre}>
-                <h4 className="text-sm font-bold text-ink">{t.nombre}</h4>
-                {t.descripcion && <p className="mt-1 text-[13.5px] leading-relaxed text-soft">{t.descripcion}</p>}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Cómo trabajás */}
+      {/* Cómo trabaja */}
       {data.comoTrabajas.length > 0 && (
         <section>
           <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-primary-600">Cómo trabaja</h3>

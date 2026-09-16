@@ -278,11 +278,13 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     objetivo,
     subtitulo: informeJson.subtitulo ?? null,
     descripcionPersonalidad: informeJson.descripcionPersonalidad,
-    talentos: (informeJson.talentosTop ?? []).map(t => ({ nombre: t.nombre, descripcion: t.descripcion })),
-    // Solo las más marcadas: son anclas para tejer, no una lista a mostrar.
+    // Solo las más marcadas, con su descripción: son las anclas para tejer, no
+    // una lista a mostrar. Reemplazan al top-4 de talentos, que el informe dejó
+    // de generar — y traen más material, porque el informe ahora describe cada
+    // competencia con la extensión que le corresponde a su nivel.
     competenciasDestacadas: (informeJson.competencias ?? [])
       .filter(c => c.nivel === 'Alto' || c.nivel === 'Medio-Alto')
-      .map(c => ({ nombre: c.nombre, nivel: c.nivel })),
+      .map(c => ({ nombre: c.nombre, nivel: c.nivel, descripcion: c.descripcion })),
     comoTrabaja: (informeJson.comoTrabajas ?? []).map(i => ({ titulo: i.titulo, texto: i.texto })),
     competenciasTecnicas,
     formaciones,

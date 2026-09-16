@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { BloqueCompetencia, CompetenciaItem, InformePersonalidadJSON, NivelCompetencia } from '@/lib/types/informe'
-import { BLOQUES_ORDEN, TALENTOS_ACLARACION } from './competencias'
+import { BLOQUES_ORDEN } from './competencias'
 import { DOC } from '@/lib/constants/documento'
 import { Papel, PapelHeader, PapelIdentidad, PapelSectionHead } from '@/components/shared/documento-papel'
 
@@ -138,34 +138,10 @@ export function InformePapel({
           ))}
         </section>
 
-        {/* 4. Talentos */}
-        {data.talentosTop.length > 0 && (
-          <section className="mt-5">
-            <PapelSectionHead n={++n}>Tus 4 talentos más fuertes</PapelSectionHead>
-            <p className="mt-2 text-[11.5px] italic" style={{ color: DOC.muted }}>
-              {TALENTOS_ACLARACION}
-            </p>
-            <div className="mt-2 space-y-3">
-              {data.talentosTop.map(t => (
-                <div key={t.nombre}>
-                  <h4 className="text-[13px] font-bold" style={{ color: DOC.navy }}>
-                    {t.nombre}
-                  </h4>
-                  {t.descripcion && (
-                    <p className="mt-0.5 text-[12.5px] leading-relaxed" style={{ color: DOC.soft }}>
-                      {t.descripcion}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* 5. Cómo trabajás */}
+        {/* 4. Cómo trabaja */}
         {data.comoTrabajas.length > 0 && (
           <section className="mt-5">
-            <PapelSectionHead n={++n}>Cómo trabajás</PapelSectionHead>
+            <PapelSectionHead n={++n}>Cómo trabaja</PapelSectionHead>
             <div className="mt-2 space-y-3">
               {data.comoTrabajas.map(item => (
                 <div key={item.titulo}>
