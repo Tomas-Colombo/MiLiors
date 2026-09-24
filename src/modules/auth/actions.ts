@@ -146,6 +146,10 @@ export async function iniciarSesion(
 
   const rol = rolDeUsuario(data.user)
   if (!rol || !RUTAS_POR_ROL[rol]) {
+    // signInWithPassword ya dejó la sesión en las cookies. Sin cerrarla, la
+    // persona queda logueada a medias: no puede entrar a ningún panel y el
+    // próximo intento de login choca con el proxy, que ya ve un usuario.
+    await supabase.auth.signOut()
     return { success: false, error: 'Cuenta con configuración incorrecta. Contactá soporte.' }
   }
 

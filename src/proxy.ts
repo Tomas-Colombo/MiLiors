@@ -55,8 +55,12 @@ export async function proxy(request: NextRequest) {
     (path) => pathname === path || pathname.startsWith(path + '/')
   )
   if (isPublic) {
-    // Si el usuario ya está logueado y va al login/registro, redirigir al dashboard de su rol
-    if (user && (pathname === '/iniciar-sesion' || pathname === '/registro')) {
+    // Si el usuario ya está logueado y va al login/registro, redirigir al dashboard de su rol.
+    // Sólo en navegaciones (GET): una server action es un POST que espera su
+    // propia respuesta, y si recibe un redirect del proxy el cliente de Next
+    // falla con "An unexpected response was received from the server". La
+    // acción de login ya redirige sola al panel del rol.
+    if (user && request.method === 'GET' && (pathname === '/iniciar-sesion' || pathname === '/registro')) {
       const destino = rutaDeRol(rolDeUsuario(user))
       // Sin rol utilizable no hay adónde mandarlo: se lo deja ver la pantalla
       // de acceso en lugar de redirigir /iniciar-sesion → /iniciar-sesion, que
