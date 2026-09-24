@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { esFormatoAnterior, INFORME_VERSION, type InformePersonalidadJSON } from './informe'
+import { esFeedbackVigente, esFormatoAnterior, INFORME_VERSION, type InformePersonalidadJSON } from './informe'
 
 /**
  * `esFormatoAnterior` es lo único que habilita regenerar un informe que no está
@@ -28,5 +28,21 @@ describe('esFormatoAnterior', () => {
   it('sin informe no hay nada que ofrecer', () => {
     expect(esFormatoAnterior(null)).toBe(false)
     expect(esFormatoAnterior(undefined)).toBe(false)
+  })
+})
+
+describe('esFeedbackVigente', () => {
+  const generacion = '2026-09-24T10:00:00.000+00:00'
+
+  it('cuenta lo respondido sobre la generación actual', () => {
+    expect(esFeedbackVigente(generacion, generacion)).toBe(true)
+  })
+
+  it('descarta lo respondido sobre una generación anterior', () => {
+    expect(esFeedbackVigente('2026-09-20T10:00:00.000+00:00', generacion)).toBe(false)
+  })
+
+  it('compara instantes, no texto: el mismo momento en otro formato es vigente', () => {
+    expect(esFeedbackVigente('2026-09-24T07:00:00-03:00', generacion)).toBe(true)
   })
 })

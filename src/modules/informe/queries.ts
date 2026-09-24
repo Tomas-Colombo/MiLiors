@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { esFeedbackVigente, type InformePersonalidadJSON } from '@/lib/types/informe'
 
 export type InformeData = {
   id: string
@@ -79,7 +79,7 @@ export const getFeedbackInforme = cache(async (
     getConfiguracionSistema(),
   ])
 
-  const vigente = (fila: { informe_generado_at: string }) => fila.informe_generado_at >= generadoAt
+  const vigente = (fila: { informe_generado_at: string }) => esFeedbackVigente(fila.informe_generado_at, generadoAt)
 
   const secciones: Record<string, number> = {}
   for (const fila of filasSecciones ?? []) {

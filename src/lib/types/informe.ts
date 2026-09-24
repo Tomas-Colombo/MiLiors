@@ -149,6 +149,16 @@ export const SECCIONES_FEEDBACK_ANTERIORES: Record<string, string> = {
 }
 
 /**
+ * `true` si una respuesta de feedback corresponde a la generación vigente del
+ * informe. Al regenerar, el informe conserva su id pero cambia el texto: lo
+ * respondido antes habla de algo que ya no está en pantalla. El postulante y el
+ * admin aplican esta misma regla, así los dos ven las mismas respuestas.
+ */
+export function esFeedbackVigente(informeGeneradoAt: string, fechaGeneracionActual: string): boolean {
+  return new Date(informeGeneradoAt).getTime() >= new Date(fechaGeneracionActual).getTime()
+}
+
+/**
  * `true` si el informe se generó con un esquema anterior al vigente. Esos
  * informes no se dibujan: su forma es otra y se ofrece regenerarlos.
  */

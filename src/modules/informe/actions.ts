@@ -5,11 +5,16 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { z } from 'zod'
-import { SECCIONES_FEEDBACK, type SeccionFeedbackKey } from '@/lib/types/informe'
 import { generarInformePersonalidad, type AuditoriaGeneracion, type InformeContext } from './service'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import type { ActionResult } from '@/lib/types/domain'
-import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
+import {
+  esFeedbackVigente,
+  esFormatoAnterior,
+  SECCIONES_FEEDBACK,
+  type InformePersonalidadJSON,
+  type SeccionFeedbackKey,
+} from '@/lib/types/informe'
 
 async function recopilarContexto(postulanteId: string): Promise<InformeContext | null> {
   const session = await verifySession()
@@ -195,7 +200,7 @@ export async function guardarFeedbackInforme(
   const previaTyped = previa as { informe_generado_at: string; updated_at: string } | null
 
   // Una respuesta anterior a la última regeneración no cuenta: el informe cambió.
-  if (previaTyped && previaTyped.informe_generado_at >= informe.fechaGeneracion) {
+  if (previaTyped && esFeedbackVigente(previaTyped.informe_generado_at, informe.fechaGeneracion)) {
     const { diasReactivarFeedback } = await getConfiguracionSistema()
     const reabre =
       new Date(previaTyped.updated_at).getTime() + diasReactivarFeedback * 24 * 60 * 60 * 1000

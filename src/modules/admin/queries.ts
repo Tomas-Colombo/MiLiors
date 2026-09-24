@@ -9,6 +9,7 @@ import {
 import {
   NIVELES_INFORME,
   SECCIONES_FEEDBACK,
+  esFeedbackVigente,
   SECCIONES_FEEDBACK_ANTERIORES,
   type NivelCompetencia,
 } from '@/lib/types/informe'
@@ -627,6 +628,36 @@ async function eneatipoPorPostulante(postulanteIds: string[]): Promise<Record<st
   return mapa
 }
 
+/** Fecha de generación actual de cada informe, para descartar feedback de generaciones anteriores. */
+async function generacionPorInforme(informeIds: string[]): Promise<Record<string, string>> {
+  const admin = createAdminClient()
+  const mapa: Record<string, string> = {}
+
+  for (let i = 0; i < informeIds.length; i += LOTE_IDS) {
+    const lote = informeIds.slice(i, i + LOTE_IDS)
+    const { data, error } = await admin.from('informe_personalidad').select('id, fecha_generacion').in('id', lote)
+    if (error) {
+      logFeedbackError('la fecha de generación de los informes', error)
+      continue
+    }
+    for (const r of data ?? []) mapa[r.id] = r.fecha_generacion
+  }
+  return mapa
+}
+
+/**
+ * Deja sólo el feedback de la generación vigente de cada informe, con la misma
+ * regla que usa el postulante (`esFeedbackVigente`): lo que él ya no ve en su
+ * pantalla tampoco cuenta acá.
+ */
+async function soloVigentes<T extends { informe_id: string; informe_generado_at: string }>(filas: T[]): Promise<T[]> {
+  const generacion = await generacionPorInforme([...new Set(filas.map(f => f.informe_id))])
+  return filas.filter(f => {
+    const actual = generacion[f.informe_id]
+    return actual !== undefined && esFeedbackVigente(f.informe_generado_at, actual)
+  })
+}
+
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
@@ -764,29 +795,35 @@ const LABEL_POR_SECCION: Record<string, string> = {
   ...Object.fromEntries(SECCIONES_FEEDBACK.map(s => [s.key, s.label])),
 }
 
-/** Respuestas por sección del informe, con los filtros de eneatipo y fecha. */
+/**
+ * Respuestas por sección del informe vigente de cada postulante, con los
+ * filtros de eneatipo y fecha.
+ */
 export async function getFeedbackSeccionesAdmin(
   filtros: FeedbackFiltros = {},
 ): Promise<FeedbackSeccionRow[]> {
   const admin = createAdminClient()
   const rango = rangoISO(filtros)
 
-  const filas = await traerPaginado<{
+  const todas = await traerPaginado<{
     id: string
+    informe_id: string
     postulante_id: string
     seccion_key: string
     puntaje: number
+    informe_generado_at: string
     updated_at: string
   }>(() => {
     let query = admin
       .from('feedback_informe_seccion')
-      .select('id, postulante_id, seccion_key, puntaje, updated_at')
+      .select('id, informe_id, postulante_id, seccion_key, puntaje, informe_generado_at, updated_at')
 
     if (rango.desde) query = query.gte('updated_at', rango.desde)
     if (rango.hasta) query = query.lte('updated_at', rango.hasta)
 
     return query.order('updated_at', { ascending: false }).order('id')
   }, 'las respuestas por sección')
+  const filas = await soloVigentes(todas)
 
   const eneatipos = await eneatipoPorPostulante([...new Set(filas.map(f => f.postulante_id))])
 
@@ -856,29 +893,32 @@ export function agregarPorSeccion(rows: FeedbackSeccionRow[]): AgregadoSeccion[]
     .sort((a, b) => (orden.get(a.key) ?? 99) - (orden.get(b.key) ?? 99))
 }
 
-/** Respuestas a la pregunta global de cierre, con los mismos filtros aplicables. */
+/** Respuestas a la pregunta global de cierre del informe vigente, con los mismos filtros aplicables. */
 export async function getFeedbackGlobalAdmin(
   filtros: FeedbackFiltros = {},
 ): Promise<FeedbackGlobalRow[]> {
   const admin = createAdminClient()
   const rango = rangoISO(filtros)
 
-  const filas = await traerPaginado<{
+  const todas = await traerPaginado<{
     id: string
+    informe_id: string
     postulante_id: string
     representatividad: number
     comentario: string | null
+    informe_generado_at: string
     updated_at: string
   }>(() => {
     let query = admin
       .from('feedback_informe')
-      .select('id, postulante_id, representatividad, comentario, updated_at')
+      .select('id, informe_id, postulante_id, representatividad, comentario, informe_generado_at, updated_at')
 
     if (rango.desde) query = query.gte('updated_at', rango.desde)
     if (rango.hasta) query = query.lte('updated_at', rango.hasta)
 
     return query.order('updated_at', { ascending: false }).order('id')
   }, 'las respuestas globales')
+  const filas = await soloVigentes(todas)
 
   const eneatipos = await eneatipoPorPostulante([...new Set(filas.map(f => f.postulante_id))])
 
