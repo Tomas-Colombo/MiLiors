@@ -16,6 +16,7 @@ type Perfil = {
   id: string
   nombre_completo: string
   nombre_preferido: string | null
+  fecha_nacimiento: string | null
   telefono: string | null
   carrera_id: string | null
   carrera_otra: string | null
@@ -68,6 +69,22 @@ export function OnboardingForm({
               placeholder="Ej: Majo"
               maxLength={60}
               defaultValue={perfil?.nombre_preferido ?? ''}
+            />
+          </Field>
+
+          <Field
+            label="Fecha de nacimiento"
+            htmlFor="fecha_nacimiento"
+            required
+            error={state && !state.success ? state.fieldErrors?.fecha_nacimiento?.[0] : undefined}
+          >
+            <Input
+              id="fecha_nacimiento"
+              name="fecha_nacimiento"
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
+              defaultValue={perfil?.fecha_nacimiento ?? ''}
+              status={state && !state.success && state.fieldErrors?.fecha_nacimiento ? 'error' : undefined}
             />
           </Field>
 

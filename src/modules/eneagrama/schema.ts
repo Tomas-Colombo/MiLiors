@@ -1,5 +1,16 @@
 import { z } from 'zod'
 
+/** Edad mínima para trabajar en Argentina (Ley 26.390). */
+export const EDAD_MINIMA = 16
+const EDAD_MAXIMA = 100
+
+/** Edad cumplida al día de hoy para una fecha 'YYYY-MM-DD'. */
+export function edadCumplida(fecha: string, hoy = new Date()): number {
+  const [anio, mes, dia] = fecha.split('-').map(Number)
+  const cumplioEsteAnio = hoy.getMonth() + 1 > mes || (hoy.getMonth() + 1 === mes && hoy.getDate() >= dia)
+  return hoy.getFullYear() - anio - (cumplioEsteAnio ? 0 : 1)
+}
+
 export const onboardingPostulanteSchema = z.object({
   nombre_completo: z
     .string()
@@ -12,6 +23,13 @@ export const onboardingPostulanteSchema = z.object({
     .trim()
     .max(60, { message: 'Máximo 60 caracteres.' })
     .optional(),
+  // 'YYYY-MM-DD', tal como la manda el <input type="date">.
+  fecha_nacimiento: z
+    .string({ message: 'Ingresá tu fecha de nacimiento.' })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ingresá tu fecha de nacimiento.' })
+    .refine(f => !Number.isNaN(new Date(f).getTime()), { message: 'La fecha no es válida.' })
+    .refine(f => edadCumplida(f) >= EDAD_MINIMA, { message: `Tenés que tener al menos ${EDAD_MINIMA} años.` })
+    .refine(f => edadCumplida(f) <= EDAD_MAXIMA, { message: 'Revisá el año de nacimiento.' }),
   // Sólo la provincia es obligatoria. Bajar hasta la localidad es opcional:
   // sirve para afinar la búsqueda de los reclutadores, no para completar el
   // registro. Cuando está, implica departamento y provincia por FK.

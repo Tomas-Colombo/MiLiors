@@ -1027,7 +1027,7 @@ export type Database = {
           carrera_otra: string | null
           created_at: string
           enlace_linkedin: string | null
-          fecha_hora_nacimiento: string | null
+          fecha_nacimiento: string | null
           id: string
           localidad_id: string | null
           mostrar_personalidad_publico: boolean
@@ -1046,7 +1046,7 @@ export type Database = {
           carrera_otra?: string | null
           created_at?: string
           enlace_linkedin?: string | null
-          fecha_hora_nacimiento?: string | null
+          fecha_nacimiento?: string | null
           id?: string
           localidad_id?: string | null
           mostrar_personalidad_publico?: boolean
@@ -1065,7 +1065,7 @@ export type Database = {
           carrera_otra?: string | null
           created_at?: string
           enlace_linkedin?: string | null
-          fecha_hora_nacimiento?: string | null
+          fecha_nacimiento?: string | null
           id?: string
           localidad_id?: string | null
           mostrar_personalidad_publico?: boolean

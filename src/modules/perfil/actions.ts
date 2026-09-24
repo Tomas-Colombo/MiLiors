@@ -28,6 +28,7 @@ export async function actualizarPerfilPostulante(
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
     nombre_preferido: formData.get('nombre_preferido') || undefined,
+    fecha_nacimiento: formData.get('fecha_nacimiento') || '',
     provincia_id: formData.get('provincia_id') || '',
     localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
@@ -64,6 +65,7 @@ export async function actualizarPerfilPostulante(
     .update({
       nombre_completo: parsed.data.nombre_completo,
       nombre_preferido: nombrePreferido,
+      fecha_nacimiento: parsed.data.fecha_nacimiento,
       // La localidad es opcional; si vino, el trigger de la base recalcula
       // provincia_id a partir de ella y descarta lo que mande el formulario.
       provincia_id: parsed.data.provincia_id,
