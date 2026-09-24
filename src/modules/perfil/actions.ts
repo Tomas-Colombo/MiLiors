@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { onboardingPostulanteSchema } from '@/modules/eneagrama/schema'
 import { passwordSchema } from '@/modules/auth/schema'
@@ -81,8 +82,9 @@ export async function actualizarPerfilPostulante(
 
   // El informe está redactado con el nombre preferido: si cambió, queda
   // desactualizado (sin regenerar, igual que al rehacer el Eneagrama).
+  // Con la service role: el postulante no escribe su informe (sin RLS de escritura).
   if (nombrePreferido !== existente.nombre_preferido) {
-    await supabase
+    await createAdminClient()
       .from('informe_personalidad')
       .update({ desactualizado: true })
       .eq('postulante_id', existente.id)
