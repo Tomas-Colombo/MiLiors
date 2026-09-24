@@ -10,7 +10,7 @@ import { ChevronLeftIcon, UserIcon } from '@/components/icons'
  * Esqueleto: el link de volver —su destino depende de dónde venga el reclutador
  * (`?volver=`), que se resuelve en la page—, el nombre, carrera, ubicación,
  * eneatipo, competencias y todo el contenido de las tarjetas. Las secciones
- * condicionales (Human Design, preselector, cursos) no se pintan: mostrar una
+ * condicionales (preselector, cursos) no se pintan: mostrar una
  * tarjeta que después puede no existir sería peor que no mostrarla.
  */
 export default function LoadingPerfilCandidato() {

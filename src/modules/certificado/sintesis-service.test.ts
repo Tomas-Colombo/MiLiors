@@ -32,7 +32,7 @@ function ctx(overrides: Partial<SintesisContext> = {}): SintesisContext {
     objetivo: 'Analista de datos',
     subtitulo: null,
     descripcionPersonalidad: 'Perfil analítico.',
-    competenciasDestacadas: [{ nombre: 'Analítico / numérico', nivel: 'Alto', descripcion: 'Lee datos con soltura.' }],
+    competenciasDestacadas: [{ nombre: 'Analítico / numérico', descripcion: 'Lee datos con soltura.' }],
     comoTrabaja: [],
     competenciasTecnicas: ['SQL'],
     formaciones: [],

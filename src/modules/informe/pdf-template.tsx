@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
-import type { InformePersonalidadJSON, BloqueCompetencia, NivelCompetencia } from '@/lib/types/informe'
-import { BLOQUES_ORDEN } from './competencias'
+import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { LEYENDA_INFORME } from './competencias'
+import { seccionesInforme, type BloqueInforme, type SeccionInforme } from './secciones'
 import { DOC } from '@/lib/constants/documento'
 
 /**
@@ -10,15 +11,6 @@ import { DOC } from '@/lib/constants/documento'
  * secciones numeradas con regla dorada) y es espejo de `informe-papel.tsx`: lo
  * que el postulante ve en pantalla y lo que descarga tienen que coincidir.
  */
-
-/** Los niveles altos van en el dorado AA; el resto en navy/gris para no gritar. */
-const nivelColor: Record<NivelCompetencia, string> = {
-  'Alto': DOC.goldDark,
-  'Medio-Alto': DOC.goldDark,
-  'Medio': DOC.navy,
-  'Medio-Bajo': DOC.muted,
-  'Bajo': DOC.muted,
-}
 
 const styles = StyleSheet.create({
   page: {
@@ -99,21 +91,12 @@ const styles = StyleSheet.create({
   mapaBarFill: { height: 6, backgroundColor: DOC.gold, borderRadius: 3 },
   mapaScore: { fontSize: 8.5, color: DOC.muted, width: 24, textAlign: 'right' },
 
-  // Competencias
-  bloqueTitle: { fontSize: 9.5, color: DOC.navy, fontFamily: 'Helvetica-Bold', marginTop: 9, marginBottom: 4 },
-  compRow: { marginBottom: 6 },
-  compHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  compName: { flex: 1, fontSize: 9.5, color: DOC.ink, fontFamily: 'Helvetica-Bold' },
-  compNivelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  compNivel: { fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
-  barras: { flexDirection: 'row', gap: 1.5 },
-  barra: { width: 6, height: 6, borderRadius: 1 },
-  compDesc: { fontSize: 9, color: DOC.soft, lineHeight: 1.45, marginTop: 1.5 },
-
-  // Talentos / cómo trabajás
+  // Ítems y listas de las secciones
   itemBlock: { marginTop: 7.5 },
   itemTitle: { fontSize: 10, color: DOC.navy, fontFamily: 'Helvetica-Bold' },
   itemText: { fontSize: 9, color: DOC.soft, lineHeight: 1.5, marginTop: 1.5 },
+  itemNota: { fontSize: 8.5, color: DOC.muted, lineHeight: 1.45, marginTop: 1.5, fontFamily: 'Helvetica-Oblique' },
+  listaItem: { fontSize: 9, color: DOC.soft, lineHeight: 1.5, marginTop: 1.5, paddingLeft: 8 },
 
   footer: { marginTop: 14, paddingTop: 10, borderTop: `1px solid ${DOC.line}` },
   footerText: { fontSize: 7, color: DOC.faint, lineHeight: 1.5 },
@@ -137,22 +120,35 @@ function SectionHead({ n, children }: { n: number; children: string }) {
   )
 }
 
-function Barras({ n, tone }: { n: number; tone: string }) {
+function Bloque({ b }: { b: BloqueInforme }) {
+  if (b.tipo === 'parrafo') {
+    return (
+      <View style={styles.descripcionCard}>
+        <Text style={styles.bodyText}>{b.texto}</Text>
+      </View>
+    )
+  }
   return (
-    <View style={styles.barras}>
-      {[0, 1, 2, 3, 4].map(i => (
-        <View key={i} style={[styles.barra, { backgroundColor: i < n ? tone : DOC.line }]} />
-      ))}
+    <View style={styles.itemBlock} wrap={false}>
+      <Text style={styles.itemTitle}>{b.titulo}</Text>
+      {b.tipo === 'item' ? (
+        <>
+          <Text style={styles.itemText}>{b.texto}</Text>
+          {b.nota ? <Text style={styles.itemNota}>{b.nota}</Text> : null}
+        </>
+      ) : (
+        b.items.map(i => (
+          <Text key={i} style={styles.listaItem}>
+            • {i}
+          </Text>
+        ))
+      )}
     </View>
   )
 }
 
 export function InformePDF({ informe, email, fechaGeneracion, logoBase64 }: InformePDFProps) {
-  const porBloque = BLOQUES_ORDEN.map((bloque: BloqueCompetencia) => ({
-    bloque,
-    items: informe.competencias.filter(c => c.bloque === bloque),
-  })).filter(b => b.items.length > 0)
-
+  const [sintesis, ...resto] = seccionesInforme(informe)
   const fecha = fechaGeneracion
     ? new Date(fechaGeneracion).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
     : null
@@ -160,8 +156,17 @@ export function InformePDF({ informe, email, fechaGeneracion, logoBase64 }: Info
   const maxScore = Math.max(1, ...informe.mapaPersonalidad.map(m => m.score))
   let n = 0
 
+  const seccion = (sec: SeccionInforme) => (
+    <View key={sec.key} style={styles.section}>
+      <SectionHead n={++n}>{sec.titulo}</SectionHead>
+      {sec.bloques.map((b, i) => (
+        <Bloque key={i} b={b} />
+      ))}
+    </View>
+  )
+
   return (
-    <Document title={`Informe de Personalidad — ${informe.nombre}`} author="MiLiors">
+    <Document title={`Informe de Talentos — ${informe.nombre}`} author="MiLiors">
       <Page size="A4" style={styles.page}>
         {/* Cabecera de marca */}
         <View style={styles.header}>
@@ -175,7 +180,7 @@ export function InformePDF({ informe, email, fechaGeneracion, logoBase64 }: Info
           </View>
           <View>
             <View style={styles.docPill}>
-              <Text style={styles.docPillText}>INFORME DE PERSONALIDAD</Text>
+              <Text style={styles.docPillText}>INFORME DE TALENTOS</Text>
             </View>
             {fecha && <Text style={styles.headerMeta}>Generado el {fecha}</Text>}
           </View>
@@ -188,21 +193,13 @@ export function InformePDF({ informe, email, fechaGeneracion, logoBase64 }: Info
           {email ? <Text style={styles.email}>{email}</Text> : null}
         </View>
 
-        {/* 1. Descripción */}
-        {informe.descripcionPersonalidad ? (
-          <View style={styles.section}>
-            <SectionHead n={++n}>Breve descripción de personalidad</SectionHead>
-            <View style={styles.descripcionCard}>
-              <Text style={styles.bodyText}>{informe.descripcionPersonalidad}</Text>
-            </View>
-          </View>
-        ) : null}
+        {seccion(sintesis)}
 
-        {/* 2. Mapa de personalidad */}
+        {/* Mapa de personalidad: lo dibuja el sistema, no el LLM. */}
         <View style={styles.section}>
-          <SectionHead n={++n}>Tu mapa de personalidad</SectionHead>
+          <SectionHead n={++n}>Mapa de personalidad</SectionHead>
           <View style={styles.card}>
-            {informe.mapaPersonalidad.map(m => (
+            {[...informe.mapaPersonalidad].sort((a, b) => b.score - a.score).map(m => (
               <View key={m.eneatipo} style={styles.mapaRow}>
                 <Text style={styles.mapaLabel}>
                   {m.eneatipo}. {m.nombre}
@@ -216,45 +213,11 @@ export function InformePDF({ informe, email, fechaGeneracion, logoBase64 }: Info
           </View>
         </View>
 
-        {/* 3. Competencias */}
-        <View style={styles.section}>
-          <SectionHead n={++n}>Tus competencias</SectionHead>
-          {porBloque.map(b => (
-            <View key={b.bloque} wrap={false}>
-              <Text style={styles.bloqueTitle}>{b.bloque}</Text>
-              {b.items.map(c => (
-                <View key={c.nombre} style={styles.compRow}>
-                  <View style={styles.compHead}>
-                    <Text style={styles.compName}>{c.nombre}</Text>
-                    <View style={styles.compNivelRow}>
-                      <Text style={[styles.compNivel, { color: nivelColor[c.nivel] }]}>{c.nivel}</Text>
-                      <Barras n={c.barras} tone={nivelColor[c.nivel]} />
-                    </View>
-                  </View>
-                  {c.descripcion ? <Text style={styles.compDesc}>{c.descripcion}</Text> : null}
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
-
-        {/* 4. Cómo trabaja */}
-        {informe.comoTrabajas.length > 0 && (
-          <View style={styles.section}>
-            <SectionHead n={++n}>Cómo trabaja</SectionHead>
-            {informe.comoTrabajas.map(item => (
-              <View key={item.titulo} style={styles.itemBlock} wrap={false}>
-                <Text style={styles.itemTitle}>{item.titulo}</Text>
-                {item.texto ? <Text style={styles.itemText}>{item.texto}</Text> : null}
-              </View>
-            ))}
-          </View>
-        )}
+        {resto.map(seccion)}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Generado por MiLiors{fecha ? ` · ${fecha}` : ''} a partir del Eneagrama y Human Design. Es un marco de
-            autoconocimiento, no un test psicométrico estandarizado ni una evaluación clínica.
+            Generado por MiLiors{fecha ? ` · ${fecha}` : ''}. {LEYENDA_INFORME}
           </Text>
         </View>
       </Page>

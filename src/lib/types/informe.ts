@@ -3,15 +3,20 @@
  *
  * La salida se compone de dos partes:
  *   - Motor determinístico (src/modules/informe/competencias.ts): mapa de los 9
- *     eneatipos, las 13 competencias con nivel + barras, y estilos.
- *   - Prosa del LLM (una sola llamada): descripciones en 3ª persona.
+ *     eneatipos, orden de las 13 competencias, fortalezas y focos.
+ *   - Prosa del LLM (una sola llamada): las 7 secciones y el anexo del
+ *     reclutador, en 3ª persona.
  *
  * `InformePersonalidadJSON` es la forma final que se guarda en
  * `informe_personalidad.contenido_json` (jsonb) y alimenta el visor y el PDF.
  */
 
 /**
- * Los 5 niveles del informe, de mayor a menor. Es una lista en runtime y no
+ * Los 5 niveles que mostraba el informe hasta la versión 3 (el motor v2 ya no
+ * asigna niveles). Quedan porque el feedback histórico los guarda en
+ * `nivel_mostrado` y el panel de admin los sigue filtrando.
+ *
+ * De mayor a menor. Es una lista en runtime y no
  * solo un tipo porque el filtro de admin y los reportes necesitan iterarlos y
  * validarlos: cuando esto era únicamente un tipo, el filtro "Nivel mostrado"
  * validaba contra NIVEL_COMPETENCIA de constants/enums (BASICO/INTERMEDIO/
@@ -22,7 +27,7 @@ export const NIVELES_INFORME = ['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Ba
 
 export type NivelCompetencia = (typeof NIVELES_INFORME)[number]
 
-/** Los 4 bloques en los que se agrupan las 13 competencias para el render. */
+/** Los 4 bloques en los que se agrupan las 13 competencias. */
 export type BloqueCompetencia =
   | 'Cómo decide y lidera'
   | 'Cómo se relaciona'
@@ -35,19 +40,45 @@ export type MapaPersonalidadItem = {
   score: number
 }
 
-export type CompetenciaItem = {
-  bloque: BloqueCompetencia
-  nombre: string
-  nivel: NivelCompetencia
-  /** 1-5 posiciones llenas. */
-  barras: number
-  /** Línea descriptiva en 3ª persona (prosa del LLM). */
-  descripcion: string
-}
+/** Referencia a un eneatipo: número y nombre. */
+export type EneatipoRef = { numero: number; nombre: string }
 
-export type ComoTrabajasItem = {
-  titulo: string
-  texto: string
+/** Los 5 ejes de "Cómo trabaja", en orden de render. */
+export const EJES_COMO_TRABAJA = [
+  { key: 'liderazgo', titulo: 'Liderazgo' },
+  { key: 'decision', titulo: 'Decisión' },
+  { key: 'comunicacion', titulo: 'Comunicación' },
+  { key: 'equipo', titulo: 'Equipo' },
+  { key: 'influencia', titulo: 'Influencia y ventas' },
+] as const
+
+export type EjeComoTrabaja = (typeof EJES_COMO_TRABAJA)[number]['key']
+
+/**
+ * Prosa que devuelve el LLM en su única llamada: el formato de salida de la
+ * especificación v2.0. El motor ya resolvió fortalezas y focos; el LLM los
+ * repite en `fortalezas[].competencia` y `planDesarrollo.focos[].competencia`
+ * y la fusión exige que coincidan, en el mismo orden.
+ */
+export type InformeProseLLM = {
+  subtitulo: string
+  sintesis: string
+  fortalezas: { competencia: string; texto: string }[]
+  comoTrabaja: Record<EjeComoTrabaja, { estilo: string; dondeCrecer: string }>
+  mejorMomento: string
+  bajoPresion: string
+  ecosistema: { tareas: string[]; puestos: string[]; zonaFriccion: string[] }
+  planDesarrollo: {
+    focos: { competencia: string; accion: string }[]
+    preguntasReflexion: string[]
+  }
+  /** Solo para el reclutador: nunca se muestra al postulante. */
+  anexoReclutador: {
+    preguntasSTAR: string[]
+    comoAsignarle: string
+    queEvitar: string
+    senalAlerta: string
+  }
 }
 
 /**
@@ -62,42 +93,66 @@ export type ComoTrabajasItem = {
  *     sección de talentos; títulos de "cómo trabaja" en 3ª persona.
  * 3 — "Cómo trabaja" reducido de 9 a 4 ítems: se sacaron los que repetían lo
  *     que ya dicen las descripciones de competencia.
+ * 4 — Intermedio del rediseño v2 (no publicado).
+ * 5 — Especificación v2.0: motor relativo sin niveles ni Human Design, 7
+ *     secciones y anexo para el reclutador. Los informes anteriores no se
+ *     dibujan con este diseño: se ofrece regenerarlos.
  */
-export const INFORME_VERSION = 3
+export const INFORME_VERSION = 5
 
-/** Forma final persistida en `informe_personalidad.contenido_json`. */
-export type InformePersonalidadJSON = {
+/** Anexo del reclutador. Se guarda en `informe_anexo`, nunca en `contenido_json`. */
+export type AnexoReclutador = InformeProseLLM['anexoReclutador']
+
+/**
+ * Forma final persistida en `informe_personalidad.contenido_json`. No lleva el
+ * anexo: el postulante puede leer esta fila.
+ */
+export type InformePersonalidadJSON = Omit<InformeProseLLM, 'fortalezas' | 'anexoReclutador'> & {
+  /** Nombre completo: encabezado del documento. */
   nombre: string
-  subtitulo: string
-  descripcionPersonalidad: string
   /** 9 filas — del motor. */
   mapaPersonalidad: MapaPersonalidadItem[]
-  /** 13 competencias, agrupadas por bloque — nivel/barras del motor, descripción del LLM. */
-  competencias: CompetenciaItem[]
-  /** 4 ítems de estilo — del LLM. Informes viejos pueden traer hasta 9. */
-  comoTrabajas: ComoTrabajasItem[]
-  /** Esquema con el que se generó. Ausente = 1 (anterior a esta versión). */
+  /** Datos del Eneagrama — del motor. */
+  eneagrama: {
+    dominante: EneatipoRef
+    ala: EneatipoRef
+    secundario: EneatipoRef
+    integracion: EneatipoRef
+    estres: EneatipoRef
+  }
+  /** Las 4 fortalezas del motor, cada una con su texto del LLM. */
+  fortalezas: { competencia: string; texto: string }[]
+  /** Esquema con el que se generó. Ausente = 1. */
   version?: number
 }
 
-/** `true` si el informe se generó con un esquema anterior al vigente. */
-export function esFormatoAnterior(json: InformePersonalidadJSON | null | undefined): boolean {
-  if (!json) return false
-  return (json.version ?? 1) < INFORME_VERSION
+/**
+ * Secciones del informe que el postulante valora con "¿Te reconocés?" (1-5).
+ * La key es lo que se guarda en `feedback_informe_seccion.seccion_key`: no se
+ * renombra, se agrega. El mapa no está porque lo dibuja el sistema, no el LLM.
+ */
+export const SECCIONES_FEEDBACK = [
+  { key: 'sintesis', label: 'Síntesis del perfil' },
+  { key: 'fortalezas', label: 'Fortalezas naturales' },
+  { key: 'como_trabaja', label: 'Cómo trabaja' },
+  { key: 'momento_presion', label: 'En su mejor momento y bajo presión' },
+  { key: 'ecosistema', label: 'Ecosistema laboral' },
+  { key: 'plan_desarrollo', label: 'Plan de desarrollo' },
+] as const
+
+export type SeccionFeedbackKey = (typeof SECCIONES_FEEDBACK)[number]['key']
+
+/** Keys de secciones de informes anteriores: solo para leer el feedback histórico. */
+export const SECCIONES_FEEDBACK_ANTERIORES: Record<string, string> = {
+  descripcion: 'Descripción de personalidad (v4)',
+  competencias: 'Competencias (v4)',
 }
 
 /**
- * Prosa que devuelve el LLM en su única llamada. El motor ya resolvió números,
- * niveles y rankings; el LLM SOLO escribe texto y lo referencia por `nombre`.
+ * `true` si el informe se generó con un esquema anterior al vigente. Esos
+ * informes no se dibujan: su forma es otra y se ofrece regenerarlos.
  */
-export type InformeProseLLM = {
-  subtitulo: string
-  descripcionPersonalidad: string
-  /**
-   * Una descripción por competencia (13), referida por `nombre`. Su extensión
-   * depende del nivel que calculó el motor (ver el prompt).
-   */
-  competenciasDesc: { nombre: string; descripcion: string }[]
-  /** 4 ítems, en el orden de COMO_TRABAJAS_TITULOS. */
-  comoTrabajas: ComoTrabajasItem[]
+export function esFormatoAnterior(json: InformePersonalidadJSON | null | undefined): boolean {
+  if (!json) return false
+  return (json.version ?? 1) < INFORME_VERSION
 }

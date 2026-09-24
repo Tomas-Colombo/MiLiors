@@ -6,8 +6,7 @@ import { Alert, Skeleton, Card, Badge, Button } from '@/components/ui'
 import { generarInforme } from '@/modules/informe/actions'
 import type { InformeData, FeedbackInforme } from '@/modules/informe/queries'
 import { InformePapel } from '@/modules/informe/informe-papel'
-import { ValoracionCompetenciaControl, FeedbackGlobalForm } from './informe-feedback'
-import { competenciaKeyPorNombre } from '@/modules/informe/competencias'
+import { FeedbackGlobalForm, ReconocimientoSeccionControl } from './informe-feedback'
 
 type Props = {
   informe: InformeData | null
@@ -85,7 +84,7 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
             de formato: si el Eneagrama cambió, ese es el motivo que importa. */}
         {desactualizado ? (
           <Alert tone="warning" title="Tu informe está desactualizado">
-            Modificaste tu Eneagrama o tu Human Design. Actualizá el informe para reflejar los cambios.
+            Rehiciste tu Eneagrama. Actualizá el informe para reflejar los cambios.
             <div className="mt-3">
               <Button variant="primary" size="sm" loading={isPending} onClick={handleGenerar} disabled={isPending}>
                 Actualizar informe
@@ -94,8 +93,8 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
           </Alert>
         ) : formatoAnterior ? (
           <Alert tone="info" title="Hay una versión nueva de tu informe">
-            Este informe es válido, pero se generó con un formato anterior. La versión nueva describe cada
-            competencia con más detalle según tu nivel. Podés regenerarlo cuando quieras.
+            Tu informe se generó con un formato anterior y ya no se puede mostrar. La versión nueva
+            destaca tus fortalezas naturales, cómo trabajás y un plan de desarrollo. Regeneralo para verlo.
             <div className="mt-3">
               <Button variant="primary" size="sm" loading={isPending} onClick={handleGenerar} disabled={isPending}>
                 Regenerar con el formato nuevo
@@ -115,28 +114,27 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
               <span className="text-xs text-muted">{formatFecha(informe.fecha_generacion)}</span>
             )}
           </div>
-          <Button variant="secondary" size="sm" onClick={() => window.open('/api/informe/descargar', '_blank')}>
-            Descargar informe de personalidad
-          </Button>
+          {!formatoAnterior && (
+            <Button variant="secondary" size="sm" onClick={() => window.open('/api/informe/descargar', '_blank')}>
+              Descargar informe de talentos
+            </Button>
+          )}
         </div>
 
-        {/* El informe como documento — mismo diseño que el PDF que se descarga */}
-        <InformePapel
-          data={data}
-          email={email}
-          fechaGeneracion={informe.fecha_generacion ? formatFecha(informe.fecha_generacion) : undefined}
-          renderCompetenciaExtra={
-            feedback
-              ? c => {
-                  // Un informe viejo puede traer competencias que ya no están
-                  // en el motor: sin key no hay dónde guardar la valoración.
-                  const key = competenciaKeyPorNombre(c.nombre)
-                  if (!key) return null
-                  return <ValoracionCompetenciaControl nombre={c.nombre} inicial={feedback.competencias[key]} />
-                }
-              : undefined
-          }
-        />
+        {/* El informe como documento — mismo diseño que el PDF que se descarga.
+            El formato anterior tiene otra forma y no se dibuja. */}
+        {!formatoAnterior && (
+          <InformePapel
+            data={data}
+            email={email}
+            fechaGeneracion={informe.fecha_generacion ? formatFecha(informe.fecha_generacion) : undefined}
+            renderSeccionExtra={
+              feedback
+                ? seccion => <ReconocimientoSeccionControl seccion={seccion} inicial={feedback.secciones[seccion]} />
+                : undefined
+            }
+          />
+        )}
 
         {/* Cierre: una sola pregunta para el informe entero */}
         {feedback && (
@@ -148,7 +146,7 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
         )}
 
         <p className="text-right text-xs text-muted">
-          Se marca como desactualizado al rehacer el Eneagrama o modificar el Human Design.
+          Se marca como desactualizado al rehacer el Eneagrama.
         </p>
       </div>
     )

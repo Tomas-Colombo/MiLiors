@@ -1,13 +1,11 @@
 import Link from 'next/link'
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
-import { getHumanDesign } from '@/modules/human-design/queries'
 import { createClient } from '@/lib/supabase/server'
 import { PERFILES_PROFESIONALES } from '@/modules/eneagrama/perfiles-profesionales'
 import { evaluarRehacer, formatearFecha, MESES_ESPERA_REHACER } from '@/modules/eneagrama/rehacer-policy'
-import { CheckIcon, ArrowRightIcon, InfoIcon } from '@/components/icons'
+import { CheckIcon, ArrowRightIcon } from '@/components/icons'
 import { Alert } from '@/components/ui'
-import { HumanDesignForm } from './human-design-form'
 
 export const metadata = { title: 'Perfil de personalidad — MiLiors' }
 
@@ -52,7 +50,7 @@ export default async function PerfilPersonalidadPage() {
   await verifySession()
   await requireEneagramaCompleto()
 
-  const [hd, test] = await Promise.all([getHumanDesign(), getTestConDominantes()])
+  const test = await getTestConDominantes()
 
   const dominantes = test?.test_eneagrama_dominante ?? []
   const tieneEmpate = test?.tiene_empate_dominante ?? false
@@ -200,33 +198,6 @@ export default async function PerfilPersonalidadPage() {
             </Link>
           </div>
         )}
-      </section>
-
-      {/* Divisor */}
-      <hr className="border-neutral-200" />
-
-      {/* ── Sección Human Design ── */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-ink">Human Design</h2>
-          <p className="mt-1 text-sm text-muted">Tu carta de Human Design enriquece el informe combinado de personalidad.</p>
-        </div>
-
-        {!hd && (
-          <div className="flex items-start gap-3 rounded-xl bg-primary-tint px-4 py-3 ring-1 ring-primary-ring">
-            <span className="mt-0.5 shrink-0 text-primary-600">
-              <InfoIcon size={17} />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-primary-700">Sección opcional</p>
-              <p className="mt-0.5 text-sm text-primary-600">
-                Completá tu carta solo si ya la conocés. Una vez guardada, no podrás eliminar esta información.
-              </p>
-            </div>
-          </div>
-        )}
-
-        <HumanDesignForm hd={hd} />
       </section>
 
     </div>

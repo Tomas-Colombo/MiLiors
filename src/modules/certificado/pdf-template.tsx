@@ -1,5 +1,5 @@
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
-import { agruparPorNivel, type CompetenciaDestacada, type NivelCert } from './niveles'
+import { agruparPorNivel, type NivelCert } from './niveles'
 import { verificarLabel } from '@/lib/app-url'
 
 /**
@@ -186,8 +186,8 @@ export type CertificadoPDFProps = {
   eneatipoNombre: string
   /** Síntesis de personalidad — un solo párrafo. */
   sintesis?: string
-  /** Competencias destacadas derivadas del informe, ya filtradas y agrupadas por nivel. */
-  destacadas: CompetenciaDestacada[]
+  /** Fortalezas naturales del informe, en orden y sin nivel. */
+  fortalezasNaturales: string[]
   /** Habilidades técnicas y herramientas del perfil, con el nivel declarado. */
   competencias: { nombre: string; nivel: NivelCert }[]
   idiomas: { nombre: string; nivel_idioma: string }[]
@@ -262,7 +262,7 @@ export function CertificadoPDF({
   eneatipoNumero,
   eneatipoNombre,
   sintesis,
-  destacadas,
+  fortalezasNaturales,
   competencias,
   idiomas,
   experiencias,
@@ -344,16 +344,22 @@ export function CertificadoPDF({
           </View>
         )}
 
-        {/* 2. Competencias destacadas */}
-        {destacadas.length > 0 && (
+        {/* 2. Fortalezas naturales */}
+        {fortalezasNaturales.length > 0 && (
           <View style={styles.section}>
-            <SectionHead n={++n}>Competencias destacadas</SectionHead>
+            <SectionHead n={++n}>Fortalezas naturales</SectionHead>
             <View style={styles.card}>
               <Text style={styles.fuenteText}>
                 <Text style={styles.fuenteStrong}>Evaluación de perfil y estilo de trabajo </Text>
                 (Resultados derivados del test de Eneagrama — Tipo {eneatipoNumero}: {eneatipoNombre})
               </Text>
-              <NivelChips items={destacadas} />
+              <View style={styles.chipsWrap}>
+                {fortalezasNaturales.map(nombre => (
+                  <View key={nombre} style={[styles.chip, styles.chipDestacado]}>
+                    <Text style={styles.chipTextDestacado}>{nombre}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
         )}

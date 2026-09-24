@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { z } from 'zod'
-import { generarInformePersonalidad, type InformeContext } from './service'
-import { competenciaKeyPorNombre } from './competencias'
+import { SECCIONES_FEEDBACK, type SeccionFeedbackKey } from '@/lib/types/informe'
+import { generarInformePersonalidad, type AuditoriaGeneracion, type InformeContext } from './service'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import type { ActionResult } from '@/lib/types/domain'
 import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
@@ -18,7 +18,7 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   // Perfil básico
   const { data: perfil } = await supabase
     .from('perfil_postulante')
-    .select('nombre_completo, carrera_otra, carrera:carrera_id(nombre)')
+    .select('nombre_completo, nombre_preferido, carrera_otra, carrera:carrera_id(nombre)')
     .eq('id', postulanteId)
     .eq('usuario_id', session.id)
     .single()
@@ -26,6 +26,7 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   if (!perfil) return null
   const perfilTyped = perfil as {
     nombre_completo: string
+    nombre_preferido: string | null
     carrera_otra: string | null
     carrera: { nombre: string } | null
   }
@@ -52,20 +53,11 @@ async function recopilarContexto(postulanteId: string): Promise<InformeContext |
   const scores: Record<number, number> = {}
   for (const f of filas) scores[f.eneatipo_numero] = Number(f.porcentaje)
 
-  // Human Design (opcional)
-  const { data: hd } = await supabase
-    .from('human_design')
-    .select('tipo_energetico, autoridad_hd, perfil_hd, estrategia_hd')
-    .eq('postulante_id', postulanteId)
-    .single()
-
   return {
     nombre: perfilTyped.nombre_completo,
+    nombrePreferido: perfilTyped.nombre_preferido,
     especificidadPuesto: perfilTyped.carrera?.nombre ?? perfilTyped.carrera_otra ?? null,
     scores,
-    humanDesign: hd
-      ? (hd as { tipo_energetico: string; autoridad_hd: string; perfil_hd: string; estrategia_hd: string })
-      : null,
   }
 }
 
@@ -126,40 +118,32 @@ async function getInformeVigente(): Promise<{
   }
 }
 
-const valoracionSchema = z.enum(['SUBESTIMA', 'JUSTO', 'SOBRESTIMA'])
+const reconocimientoSchema = z.object({
+  seccion: z.enum(SECCIONES_FEEDBACK.map(s => s.key) as [SeccionFeedbackKey, ...SeccionFeedbackKey[]]),
+  puntaje: z.number().int().min(1).max(5),
+})
 
 /**
- * Registra cómo le cae al postulante el nivel calculado para UNA competencia.
- *
- * El cliente manda sólo el nombre y la valoración: el nivel mostrado se deriva
- * acá del informe persistido. Que el navegador declare qué nivel vio abriría la
- * puerta a ensuciar el agregado que después usamos para mover los pesos.
+ * Registra cuánto se reconoce el postulante en UNA sección de su informe (1-5).
+ * Cambiar de opinión actualiza la misma fila.
  */
-export async function valorarCompetencia(
-  nombre: string,
-  valoracion: string,
-): Promise<ActionResult> {
-  const parsed = valoracionSchema.safeParse(valoracion)
-  if (!parsed.success) return { success: false, error: 'Valoración inválida.' }
+export async function valorarSeccion(seccion: string, puntaje: number): Promise<ActionResult> {
+  const parsed = reconocimientoSchema.safeParse({ seccion, puntaje })
+  if (!parsed.success) return { success: false, error: 'Respuesta inválida.' }
 
   const informe = await getInformeVigente()
   if (!informe) return { success: false, error: 'No tenés un informe generado.' }
 
-  const competencia = informe.contenido.competencias.find(c => c.nombre === nombre)
-  const key = competenciaKeyPorNombre(nombre)
-  if (!competencia || !key) return { success: false, error: 'Competencia no encontrada en tu informe.' }
-
   const supabase = await createClient()
-  const { error } = await supabase.from('feedback_informe_competencia').upsert(
+  const { error } = await supabase.from('feedback_informe_seccion').upsert(
     {
       informe_id: informe.id,
       postulante_id: informe.postulanteId,
-      competencia_key: key,
-      nivel_mostrado: competencia.nivel,
-      valoracion: parsed.data,
+      seccion_key: parsed.data.seccion,
+      puntaje: parsed.data.puntaje,
       informe_generado_at: informe.fechaGeneracion,
     },
-    { onConflict: 'informe_id,competencia_key' },
+    { onConflict: 'informe_id,seccion_key' },
   )
 
   if (error) return { success: false, error: 'No se pudo guardar tu respuesta.' }
@@ -234,6 +218,36 @@ export async function guardarFeedbackInforme(
   if (error) return { success: false, error: 'No se pudo guardar tu respuesta.' }
   revalidatePath('/postulante/informe')
   return { success: true, data: undefined }
+}
+
+/**
+ * Guarda cada intento contra el modelo en `informe_auditoria`. No es fatal: si
+ * falla, el informe sigue su curso y el error queda en el log.
+ */
+async function registrarAuditoria(
+  admin: ReturnType<typeof createAdminClient>,
+  postulanteId: string,
+  informeId: string,
+  auditoria: AuditoriaGeneracion,
+): Promise<void> {
+  if (auditoria.intentos.length === 0) return
+  const { error } = await admin.from('informe_auditoria').insert(
+    auditoria.intentos.map(i => ({
+      postulante_id: postulanteId,
+      informe_id: informeId,
+      intento: i.intento,
+      modelo: i.modelo,
+      entrada: JSON.parse(JSON.stringify(auditoria.entrada)),
+      system_prompt: auditoria.systemPrompt,
+      user_prompt: auditoria.userPrompt,
+      salida: i.salida,
+      ok: i.ok,
+      motivo: i.motivo,
+      tokens_entrada: i.tokensEntrada,
+      tokens_salida: i.tokensSalida,
+    })),
+  )
+  if (error) console.error('[informe/actions] No se pudo guardar la auditoría:', error.message)
 }
 
 export async function generarInforme(): Promise<ActionResult> {
@@ -314,6 +328,7 @@ export async function generarInforme(): Promise<ActionResult> {
   }
 
   const resultado = await generarInformePersonalidad(ctx)
+  await registrarAuditoria(admin, postulanteId, informeId, resultado.auditoria)
   if (!resultado.ok) {
     // `motivo` ya es una frase cerrada y en castellano, y `fallarGeneracion`
     // le pone su propio encabezado: envolverlo acá duplicaba el prefijo
@@ -335,6 +350,15 @@ export async function generarInforme(): Promise<ActionResult> {
     console.error('[informe/actions] Error al guardar informe LISTO:', saveError)
     return fallarGeneracion('El informe se generó pero no se pudo guardar. Intentá de nuevo.')
   }
+
+  // El anexo va aparte: el postulante puede leer su fila del informe y no debe
+  // ver las preguntas de su entrevista. No es fatal: el informe ya está bien;
+  // sin anexo, el reclutador solo pierde la guía.
+  const { error: anexoError } = await admin.from('informe_anexo').upsert(
+    { informe_id: informeId, postulante_id: postulanteId, contenido: resultado.anexo },
+    { onConflict: 'informe_id' },
+  )
+  if (anexoError) console.error('[informe/actions] No se pudo guardar el anexo:', anexoError.message)
 
   // El certificado imprime contenido del informe —las competencias destacadas y,
   // sin síntesis, el párrafo de personalidad (ver `pdf-props`)— y lo lee vivo en

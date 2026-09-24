@@ -48,10 +48,10 @@ const QUICK_LINKS = [
     desc: 'Estado de tus aplicaciones',
   },
   {
-    href: '/postulante/human-design',
+    href: '/postulante/personalidad',
     icon: <GridIcon size={17} />,
     title: 'Perfil de personalidad',
-    desc: 'Tipo energético y autoridad',
+    desc: 'Tu resultado del Eneagrama',
   },
 ]
 

@@ -53,6 +53,7 @@ export async function guardarDatosBasicos(
 
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
+    nombre_preferido: formData.get('nombre_preferido') || undefined,
     provincia_id: formData.get('provincia_id') || '',
     localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
@@ -83,6 +84,7 @@ export async function guardarDatosBasicos(
   const payload: TablesInsert<'perfil_postulante'> = {
     usuario_id: session.id,
     nombre_completo: parsed.data.nombre_completo,
+    nombre_preferido: parsed.data.nombre_preferido || null,
     // La localidad es opcional; si vino, el trigger de la base recalcula
     // provincia_id a partir de ella y descarta lo que mande el formulario.
     provincia_id: parsed.data.provincia_id,

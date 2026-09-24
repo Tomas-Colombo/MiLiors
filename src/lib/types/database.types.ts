@@ -538,6 +538,54 @@ export type Database = {
           },
         ]
       }
+      feedback_informe_seccion: {
+        Row: {
+          created_at: string
+          id: string
+          informe_generado_at: string
+          informe_id: string
+          postulante_id: string
+          puntaje: number
+          seccion_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          informe_generado_at: string
+          informe_id: string
+          postulante_id: string
+          puntaje: number
+          seccion_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          informe_generado_at?: string
+          informe_id?: string
+          postulante_id?: string
+          puntaje?: number
+          seccion_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_informe_seccion_informe_id_fkey"
+            columns: ["informe_id"]
+            isOneToOne: false
+            referencedRelation: "informe_personalidad"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_informe_seccion_postulante_id_fkey"
+            columns: ["postulante_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_postulante"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formacion_academica: {
         Row: {
           created_at: string
@@ -634,53 +682,6 @@ export type Database = {
           },
         ]
       }
-      human_design: {
-        Row: {
-          autoridad_hd: Database["public"]["Enums"]["autoridad_hd"]
-          created_at: string
-          energy_type_classification: Database["public"]["Enums"]["energy_type_classification_hd"] | null
-          estrategia_hd: Database["public"]["Enums"]["estrategia_hd"]
-          id: string
-          perfil_hd: Database["public"]["Enums"]["perfil_hd"]
-          postulante_id: string
-          tipo_energetico: Database["public"]["Enums"]["tipo_energetico_hd"]
-          updated_at: string
-          veces_guardado: number
-        }
-        Insert: {
-          autoridad_hd: Database["public"]["Enums"]["autoridad_hd"]
-          created_at?: string
-          energy_type_classification?: Database["public"]["Enums"]["energy_type_classification_hd"] | null
-          estrategia_hd: Database["public"]["Enums"]["estrategia_hd"]
-          id?: string
-          perfil_hd: Database["public"]["Enums"]["perfil_hd"]
-          postulante_id: string
-          tipo_energetico: Database["public"]["Enums"]["tipo_energetico_hd"]
-          updated_at?: string
-          veces_guardado?: number
-        }
-        Update: {
-          autoridad_hd?: Database["public"]["Enums"]["autoridad_hd"]
-          created_at?: string
-          energy_type_classification?: Database["public"]["Enums"]["energy_type_classification_hd"] | null
-          estrategia_hd?: Database["public"]["Enums"]["estrategia_hd"]
-          id?: string
-          perfil_hd?: Database["public"]["Enums"]["perfil_hd"]
-          postulante_id?: string
-          tipo_energetico?: Database["public"]["Enums"]["tipo_energetico_hd"]
-          updated_at?: string
-          veces_guardado?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "human_design_postulante_id_fkey"
-            columns: ["postulante_id"]
-            isOneToOne: true
-            referencedRelation: "perfil_postulante"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       idioma: {
         Row: {
           created_at: string
@@ -733,6 +734,114 @@ export type Database = {
           nombre?: string
         }
         Relationships: []
+      }
+      informe_anexo: {
+        Row: {
+          contenido: Json
+          created_at: string
+          id: string
+          informe_id: string
+          postulante_id: string
+          updated_at: string
+        }
+        Insert: {
+          contenido: Json
+          created_at?: string
+          id?: string
+          informe_id: string
+          postulante_id: string
+          updated_at?: string
+        }
+        Update: {
+          contenido?: Json
+          created_at?: string
+          id?: string
+          informe_id?: string
+          postulante_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informe_anexo_informe_id_fkey"
+            columns: ["informe_id"]
+            isOneToOne: true
+            referencedRelation: "informe_personalidad"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "informe_anexo_postulante_id_fkey"
+            columns: ["postulante_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_postulante"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      informe_auditoria: {
+        Row: {
+          created_at: string
+          entrada: Json
+          id: string
+          informe_id: string | null
+          intento: number
+          modelo: string | null
+          motivo: string | null
+          ok: boolean
+          postulante_id: string
+          salida: string | null
+          system_prompt: string
+          tokens_entrada: number | null
+          tokens_salida: number | null
+          user_prompt: string
+        }
+        Insert: {
+          created_at?: string
+          entrada: Json
+          id?: string
+          informe_id?: string | null
+          intento: number
+          modelo?: string | null
+          motivo?: string | null
+          ok: boolean
+          postulante_id: string
+          salida?: string | null
+          system_prompt: string
+          tokens_entrada?: number | null
+          tokens_salida?: number | null
+          user_prompt: string
+        }
+        Update: {
+          created_at?: string
+          entrada?: Json
+          id?: string
+          informe_id?: string | null
+          intento?: number
+          modelo?: string | null
+          motivo?: string | null
+          ok?: boolean
+          postulante_id?: string
+          salida?: string | null
+          system_prompt?: string
+          tokens_entrada?: number | null
+          tokens_salida?: number | null
+          user_prompt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informe_auditoria_informe_id_fkey"
+            columns: ["informe_id"]
+            isOneToOne: false
+            referencedRelation: "informe_personalidad"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "informe_auditoria_postulante_id_fkey"
+            columns: ["postulante_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_postulante"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       informe_personalidad: {
         Row: {
@@ -923,6 +1032,7 @@ export type Database = {
           localidad_id: string | null
           mostrar_personalidad_publico: boolean
           nombre_completo: string
+          nombre_preferido: string | null
           perfil_en_busqueda: boolean
           portfolio: string | null
           provincia_id: string
@@ -941,6 +1051,7 @@ export type Database = {
           localidad_id?: string | null
           mostrar_personalidad_publico?: boolean
           nombre_completo: string
+          nombre_preferido?: string | null
           perfil_en_busqueda?: boolean
           portfolio?: string | null
           provincia_id: string
@@ -959,6 +1070,7 @@ export type Database = {
           localidad_id?: string | null
           mostrar_personalidad_publico?: boolean
           nombre_completo?: string
+          nombre_preferido?: string | null
           perfil_en_busqueda?: boolean
           portfolio?: string | null
           provincia_id?: string
@@ -1751,18 +1863,13 @@ export type Database = {
       }
     }
     Enums: {
-      autoridad_hd: 'Emocional' | 'Sacral' | 'Esplénico' | 'Ego/Corazón' | 'Auto-Proyectado' | 'Mental/Ambiental' | 'Lunar'
       carga_horaria: 'TIEMPO_COMPLETO' | 'MEDIO_TIEMPO' | 'POR_HORAS_FREELANCE'
-      energy_type_classification_hd: 'Energético' | 'No Energético'
       estado_consulta_ia: 'PENDIENTE' | 'LISTO'
       estado_informe: 'PENDIENTE' | 'LISTO' | 'ERROR'
       estado_postulacion: 'ENVIADA' | 'VISTO' | 'PROCESO_FINALIZADO' | 'CERRADA'
-      estrategia_hd: 'Responder' | 'Informar' | 'Esperar la Invitación' | 'Esperar un Ciclo Lunar'
       nivel_competencia: 'BASICO' | 'INTERMEDIO' | 'AVANZADO'
       nivel_idioma: 'BASICO' | 'INTERMEDIO' | 'AVANZADO' | 'NATIVO'
-      perfil_hd: '1/3' | '1/4' | '2/4' | '2/5' | '3/5' | '3/6' | '4/6' | '4/1' | '5/1' | '5/2' | '6/2' | '6/3'
       rol_usuario: 'ADMIN' | 'POSTULANTE' | 'RECLUTADOR'
-      tipo_energetico_hd: 'Generador' | 'Generador Manifestante' | 'Proyector' | 'Manifestador' | 'Reflector'
       tipo_pregunta_preselector: 'OPCIONES' | 'TEXTO_LIBRE'
       ubicacion: 'REMOTO' | 'HIBRIDO' | 'LOCALIDADES'
       valoracion_competencia: 'SUBESTIMA' | 'JUSTO' | 'SOBRESTIMA'

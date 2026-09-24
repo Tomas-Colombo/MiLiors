@@ -8,15 +8,8 @@ import { esFormatoAnterior, INFORME_VERSION, type InformePersonalidadJSON } from
  * nadie migra nunca.
  */
 function json(version?: number): InformePersonalidadJSON {
-  return {
-    nombre: 'Ana',
-    subtitulo: '',
-    descripcionPersonalidad: '',
-    mapaPersonalidad: [],
-    competencias: [],
-    comoTrabajas: [],
-    ...(version !== undefined && { version }),
-  }
+  // Solo importa `version`: el resto de la forma no participa del chequeo.
+  return { ...(version !== undefined && { version }) } as InformePersonalidadJSON
 }
 
 describe('esFormatoAnterior', () => {

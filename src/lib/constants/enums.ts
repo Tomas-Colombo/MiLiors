@@ -87,41 +87,6 @@ export const NIVEL_COMPETENCIA_LABEL: Record<NivelCompetencia, string> = {
   AVANZADO: 'Avanzado',
 }
 
-export const TIPO_ENERGETICO_HD = [
-  'Generador',
-  'Generador Manifestante',
-  'Proyector',
-  'Manifestador',
-  'Reflector',
-] as const
-
-export const ENERGY_TYPE_CLASSIFICATION_HD = [
-  'Energético',
-  'No Energético',
-] as const
-
-export const PERFIL_HD = [
-  '1/3', '1/4', '2/4', '2/5', '3/5', '3/6',
-  '4/6', '4/1', '5/1', '5/2', '6/2', '6/3',
-] as const
-
-export const AUTORIDAD_HD = [
-  'Emocional',
-  'Sacral',
-  'Esplénico',
-  'Ego/Corazón',
-  'Auto-Proyectado',
-  'Mental/Ambiental',
-  'Lunar',
-] as const
-
-export const ESTRATEGIA_HD = [
-  'Responder',
-  'Informar',
-  'Esperar la Invitación',
-  'Esperar un Ciclo Lunar',
-] as const
-
 export const UNIVERSIDADES_ARGENTINA = [
   'Universidad de Buenos Aires (UBA)',
   'Universidad Nacional de Córdoba (UNC)',

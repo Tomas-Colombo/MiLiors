@@ -16,7 +16,7 @@ export default function LoadingInforme() {
         <SkeletonPageHeader
           title="Informe de Personalidad"
           titleClassName="tracking-tight"
-          subtitle="Generado a partir de tu Eneagrama y Human Design."
+          subtitle="Generado a partir de tu Eneagrama."
           subtitleClassName="text-sm"
         />
       </div>

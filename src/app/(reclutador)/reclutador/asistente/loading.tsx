@@ -19,7 +19,7 @@ export default function LoadingAsistente() {
         <div>
           <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
           <p className="text-[13px] text-muted">
-            Consultá la compatibilidad candidato-puesto usando Eneagrama y Human Design.
+            Consultá la compatibilidad candidato-puesto usando el Eneagrama.
           </p>
         </div>
       </div>

@@ -6,6 +6,12 @@ export const onboardingPostulanteSchema = z.object({
     .min(2, { message: 'Ingresá tu nombre completo.' })
     .max(120, { message: 'El nombre es demasiado largo.' })
     .trim(),
+  // Opcional: si queda vacío, el informe usa el primer nombre.
+  nombre_preferido: z
+    .string()
+    .trim()
+    .max(60, { message: 'Máximo 60 caracteres.' })
+    .optional(),
   // Sólo la provincia es obligatoria. Bajar hasta la localidad es opcional:
   // sirve para afinar la búsqueda de los reclutadores, no para completar el
   // registro. Cuando está, implica departamento y provincia por FK.

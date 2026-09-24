@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { COMO_TRABAJAS_TITULOS, COMPETENCIAS } from './competencias'
+import { calcularMotorV2 } from './competencias'
+import { proseValida } from './prose.fixture'
 import { AIError } from '@/lib/ai/port'
 
 /**
@@ -23,31 +24,25 @@ const { generarInformePersonalidad } = await import('./service')
 
 const ctx = {
   nombre: 'Ana Pérez',
+  nombrePreferido: null,
   especificidadPuesto: 'Administración',
   scores: { 1: 52, 2: 78, 3: 65, 4: 41, 5: 38, 6: 55, 7: 71, 8: 49, 9: 60 },
-  humanDesign: null,
 }
+
+const motor = calcularMotorV2(ctx.scores)
 
 /** Lo que devuelve el proveedor cuando todo sale bien. */
 function respuestaCompleta(overrides: Record<string, unknown> = {}) {
   return {
-    content: JSON.stringify({
-      subtitulo: 'Perfil relacional',
-      descripcionPersonalidad: 'Párrafo de personalidad.',
-      competenciasDesc: COMPETENCIAS.map(c => ({ nombre: c.nombre, descripcion: 'Descripción.' })),
-      comoTrabajas: COMO_TRABAJAS_TITULOS.map(titulo => ({ titulo, texto: 'Texto.' })),
-      ...overrides,
-    }),
+    content: JSON.stringify({ ...proseValida(motor), ...overrides }),
     usage: { inputTokens: 900, outputTokens: 2300 },
     model: 'gemini-2.5-flash',
   }
 }
 
-/** Respuesta a la que le falta una competencia: el caso silencioso de antes. */
+/** Respuesta sin síntesis: el caso silencioso de antes. */
 function respuestaIncompleta() {
-  return respuestaCompleta({
-    competenciasDesc: COMPETENCIAS.slice(0, 11).map(c => ({ nombre: c.nombre, descripcion: 'Descripción.' })),
-  })
+  return respuestaCompleta({ sintesis: '' })
 }
 
 beforeEach(() => {
@@ -63,7 +58,7 @@ describe('generarInformePersonalidad', () => {
     expect(r.ok).toBe(true)
     expect(generate).toHaveBeenCalledTimes(1)
     if (!r.ok) return
-    expect(r.contenido_json.competencias).toHaveLength(13)
+    expect(r.contenido_json.fortalezas).toHaveLength(4)
     expect(r.tokens).toEqual({ input: 900, output: 2300 })
   })
 
@@ -75,7 +70,7 @@ describe('generarInformePersonalidad', () => {
     expect(generate).toHaveBeenCalledTimes(2)
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.contenido_json.competencias.every(c => c.descripcion.length > 0)).toBe(true)
+    expect(r.contenido_json.sintesis.length).toBeGreaterThan(0)
   })
 
   it('reintenta una vez si el JSON viene roto', async () => {
@@ -101,7 +96,7 @@ describe('generarInformePersonalidad', () => {
   })
 
   it('reintenta un 503 del proveedor: es el caso que se arregla solo', async () => {
-    // Pasó en producción: rehacer el Human Design devolvió 503 UNAVAILABLE y el
+    // Pasó en producción: regenerar el informe devolvió 503 UNAVAILABLE y el
     // informe falló; el usuario apretó el botón otra vez y salió. Ese reintento
     // lo tiene que hacer el código.
     generate

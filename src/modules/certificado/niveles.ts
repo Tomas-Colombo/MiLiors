@@ -1,19 +1,14 @@
 /**
  * Niveles del certificado.
  *
- * El certificado agrupa dos cosas distintas bajo la misma escala visual:
- *   - Competencias destacadas → derivan del informe (motor de Eneagrama), que
- *     puntúa en 5 niveles (Alto … Bajo).
- *   - Habilidades técnicas → las carga el postulante en su perfil, en 3 niveles
- *     (BASICO / INTERMEDIO / AVANZADO).
- *
- * Ambas se proyectan a la misma escala de 3 —Avanzado / Medio / Básico— para
- * que el documento se lea como una sola tabla de dominio y no como dos escalas
- * mezcladas.
+ * Solo las habilidades técnicas tienen nivel: las carga el postulante en su
+ * perfil (BASICO / INTERMEDIO / AVANZADO) y se muestran como Avanzado / Medio /
+ * Básico. Las fortalezas naturales del informe NO llevan nivel: el Eneagrama
+ * mide preferencias, no habilidades demostradas.
  */
 
 import type { NivelCompetencia as NivelTecnico } from '@/lib/constants/enums'
-import type { CompetenciaItem as CompetenciaInforme } from '@/lib/types/informe'
+import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 
 export const NIVELES_CERT = ['Avanzado', 'Medio', 'Básico'] as const
 export type NivelCert = (typeof NIVELES_CERT)[number]
@@ -25,33 +20,14 @@ export function nivelTecnicoACert(nivel: NivelTecnico | undefined): NivelCert {
   return 'Básico'
 }
 
-/** Máximo de competencias destacadas por nivel: el certificado es un anzuelo, no el informe. */
-const MAX_DESTACADAS = { Avanzado: 4, Medio: 3 } as const
-
-export type CompetenciaDestacada = { nombre: string; nivel: NivelCert }
-
 /**
- * Competencias del informe → destacadas del certificado.
- * Alto/Medio-Alto pasan como "Avanzado" y Medio como "Medio"; lo que quedó por
- * debajo no entra (el certificado muestra fortalezas, el informe completo está
- * detrás del QR).
+ * Fortalezas naturales del informe (las 4 primeras del motor), en orden.
+ * Los informes de formato anterior no las traen con esta forma: la sección no
+ * se muestra hasta que se regeneren.
  */
-export function destacadasDelInforme(competencias: CompetenciaInforme[] | undefined): CompetenciaDestacada[] {
-  if (!competencias || competencias.length === 0) return []
-
-  const avanzado = competencias
-    .filter(c => c.nivel === 'Alto' || c.nivel === 'Medio-Alto')
-    .sort((a, b) => b.barras - a.barras)
-    .slice(0, MAX_DESTACADAS.Avanzado)
-    .map(c => ({ nombre: c.nombre, nivel: 'Avanzado' as const }))
-
-  const medio = competencias
-    .filter(c => c.nivel === 'Medio')
-    .sort((a, b) => b.barras - a.barras)
-    .slice(0, MAX_DESTACADAS.Medio)
-    .map(c => ({ nombre: c.nombre, nivel: 'Medio' as const }))
-
-  return [...avanzado, ...medio]
+export function fortalezasDelInforme(json: InformePersonalidadJSON | null | undefined): string[] {
+  if (!json || esFormatoAnterior(json)) return []
+  return json.fortalezas.map(f => f.competencia)
 }
 
 /** Agrupa por nivel en el orden Avanzado → Medio → Básico, sin grupos vacíos. */

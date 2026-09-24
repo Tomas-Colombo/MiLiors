@@ -52,7 +52,7 @@ async function getPostulanteId(): Promise<string | null> {
  * cambio de formacion, cursos, experiencia, idiomas o competencias lo deja
  * viejo. Aca solo prendemos el flag (una escritura, sin LLM); regenerar la
  * sintesis y re-emitir el PDF queda a cargo del boton "Actualizar certificado"
- * en /postulante/certificado. Mismo patron que eneagrama y human-design.
+ * en /postulante/certificado. Mismo patron que eneagrama.
  */
 async function marcarCambioPerfilTecnico(postulanteId: string | null): Promise<void> {
   if (postulanteId) {

@@ -1,13 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
-  calcularMotor,
-  scoreANivel,
-  barrasAString,
-  aplicarContraste,
-  competenciasReforzadasPorHD,
+  calcularMotorV2,
   COMPETENCIAS,
-  type HumanDesignInput,
 } from './competencias'
+import { PESOS_COMPETENCIAS } from './pesos-competencias'
 
 /** Helper: arma los 9 scores con default 0 y overrides. */
 function scores(overrides: Record<number, number> = {}): Record<number, number> {
@@ -15,127 +11,139 @@ function scores(overrides: Record<number, number> = {}): Record<number, number> 
   return { ...base, ...overrides }
 }
 
-describe('scoreANivel', () => {
-  it('mapea los umbrales exactos a nivel + barras', () => {
-    expect(scoreANivel(100)).toEqual({ nivel: 'Alto', barras: 5 })
-    expect(scoreANivel(80)).toEqual({ nivel: 'Alto', barras: 5 })
-    expect(scoreANivel(79)).toEqual({ nivel: 'Medio-Alto', barras: 4 })
-    expect(scoreANivel(65)).toEqual({ nivel: 'Medio-Alto', barras: 4 })
-    expect(scoreANivel(64)).toEqual({ nivel: 'Medio', barras: 3 })
-    expect(scoreANivel(45)).toEqual({ nivel: 'Medio', barras: 3 })
-    expect(scoreANivel(44)).toEqual({ nivel: 'Medio-Bajo', barras: 2 })
-    expect(scoreANivel(25)).toEqual({ nivel: 'Medio-Bajo', barras: 2 })
-    expect(scoreANivel(24)).toEqual({ nivel: 'Bajo', barras: 1 })
-    expect(scoreANivel(0)).toEqual({ nivel: 'Bajo', barras: 1 })
-  })
-})
-
-describe('barrasAString', () => {
-  it('rinde barras llenas + vacías hasta 5', () => {
-    expect(barrasAString(5)).toBe('■■■■■')
-    expect(barrasAString(4)).toBe('■■■■_')
-    expect(barrasAString(1)).toBe('■____')
-  })
-})
-
-describe('calcularMotor', () => {
-  it('produce 9 filas de mapa y 13 competencias', () => {
-    const r = calcularMotor(scores({ 8: 100, 3: 80, 2: 60 }))
-    expect(r.mapaPersonalidad).toHaveLength(9)
-    expect(r.competencias).toHaveLength(13)
-  })
-
-  it('Liderazgo (8>3>2) llega al máximo cuando los tres tipos están al 100', () => {
-    const r = calcularMotor(scores({ 8: 100, 3: 100, 2: 100 }))
-    const lid = r.competencias.find(c => c.key === 'liderazgo')!
-    expect(lid.score).toBe(100)
-    expect(lid.nivel).toBe('Alto')
-  })
-
-  it('respeta el orden de pesos 3/2/1 (el tipo dominante pesa más)', () => {
-    // Liderazgo pesa 8→3, 3→2, 2→1. Poner 100 solo en el tipo 8 rinde 3/6*100 = 50,
-    // que es el neutro y queda FIJO tras el contraste.
-    const soloOcho = calcularMotor(scores({ 8: 100 }))
-    const lid8 = soloOcho.competencias.find(c => c.key === 'liderazgo')!
-    expect(lid8.score).toBe(50)
-    // Poner 100 solo en el tipo 2 (peso 1) rinde 1/6*100 ≈ 17 en crudo; el contraste
-    // lo empuja por debajo de 0 y clampea a 0. Sigue muy por debajo del tipo 8.
-    const soloDos = calcularMotor(scores({ 2: 100 }))
-    const lid2 = soloDos.competencias.find(c => c.key === 'liderazgo')!
-    expect(lid2.score).toBe(0)
-    expect(lid2.score).toBeLessThan(lid8.score)
-  })
-
-  it('estilo dominante y secundario = 1º y 2º eneatipo por score', () => {
-    const r = calcularMotor(scores({ 7: 90, 4: 70, 2: 50 }))
-    expect(r.estiloDominante.numero).toBe(7)
-    expect(r.estiloSecundario.numero).toBe(4)
-  })
-
-  it('todo en cero no rompe (informe generable con scores nulos)', () => {
-    const r = calcularMotor(scores())
-    expect(r.competencias.every(c => c.score === 0)).toBe(true)
-  })
-
-  it('HD refuerza Autonomía para Manifestor pero no invierte de forma brusca', () => {
-    const base = calcularMotor(scores({ 8: 60, 3: 60, 7: 60 }))
-    const conHD = calcularMotor(
-      scores({ 8: 60, 3: 60, 7: 60 }),
-      { tipo_energetico: 'Manifestador', autoridad_hd: null, perfil_hd: null },
-    )
-    const autoBase = base.competencias.find(c => c.key === 'autonomia')!.score
-    const autoHD = conHD.competencias.find(c => c.key === 'autonomia')!.score
-    expect(autoHD).toBeGreaterThan(autoBase)
-    // Tope +15%.
-    expect(autoHD).toBeLessThanOrEqual(Math.round(autoBase * 1.15))
-  })
-})
-
-describe('aplicarContraste', () => {
-  it('deja fijo el neutro 50 y estira los extremos', () => {
-    expect(aplicarContraste(50)).toBe(50)
-    expect(aplicarContraste(60)).toBeGreaterThan(60)
-    expect(aplicarContraste(40)).toBeLessThan(40)
-  })
-
-  it('recupera contraste: un perfil diferenciado alcanza Medio-Alto/Alto', () => {
-    // Perfil comercial-relacional marcado (2 y 7 altos). Comercial pondera 2>7>3,
-    // por lo que sin contraste caería en "Medio" pese a ser una fortaleza real.
-    const r = calcularMotor(scores({ 2: 90, 7: 85, 3: 70 }))
-    const comercial = r.competencias.find(c => c.key === 'comercial')!
-    expect(['Medio-Alto', 'Alto']).toContain(comercial.nivel)
-  })
-})
-
-describe('competenciasReforzadasPorHD', () => {
-  it('sin HD no refuerza nada', () => {
-    expect(competenciasReforzadasPorHD(null).size).toBe(0)
-  })
-
-  it('Proyector refuerza liderazgo y mediación', () => {
-    const hd: HumanDesignInput = { tipo_energetico: 'Proyector', autoridad_hd: null, perfil_hd: null }
-    const set = competenciasReforzadasPorHD(hd)
-    expect(set.has('liderazgo')).toBe(true)
-    expect(set.has('mediacion')).toBe(true)
-  })
-
-  it('autoridad emocional refuerza mediación; perfil con línea 3 refuerza adaptarse', () => {
-    const hd: HumanDesignInput = { tipo_energetico: 'Generador', autoridad_hd: 'Emocional', perfil_hd: '3/6' }
-    const set = competenciasReforzadasPorHD(hd)
-    expect(set.has('mediacion')).toBe(true)
-    expect(set.has('adaptarse')).toBe(true)
-  })
-
-  it('Generador Manifestante refuerza autonomía', () => {
-    const hd: HumanDesignInput = { tipo_energetico: 'Generador Manifestante', autoridad_hd: null, perfil_hd: null }
-    expect(competenciasReforzadasPorHD(hd).has('autonomia')).toBe(true)
-  })
-})
-
 describe('COMPETENCIAS (tabla)', () => {
   it('define exactamente 13 competencias con keys únicas', () => {
     expect(COMPETENCIAS).toHaveLength(13)
     const keys = new Set(COMPETENCIAS.map(c => c.key))
     expect(keys.size).toBe(13)
+  })
+})
+
+describe('PESOS_COMPETENCIAS (tabla v2)', () => {
+  it('cada eneatipo suma 22 y tiene exactamente 3 competencias con peso 3', () => {
+    const filas = Object.values(PESOS_COMPETENCIAS)
+    expect(filas).toHaveLength(13)
+    for (let i = 0; i < 9; i++) {
+      expect(filas.reduce((acc, fila) => acc + fila[i], 0)).toBe(22)
+      expect(filas.filter(fila => fila[i] === 3)).toHaveLength(3)
+    }
+  })
+})
+
+describe('calcularMotorV2', () => {
+  const JANET = { 1: 70, 2: 20, 3: 47, 4: 27, 5: 37, 6: 38, 7: 62, 8: 52, 9: 40 }
+  const JESICA = { 1: 48, 2: 95, 3: 43, 4: 28, 5: 18, 6: 52, 7: 80, 8: 42, 9: 28 }
+
+  it('Janet: dominante 1, ala 9, secundario 7', () => {
+    const r = calcularMotorV2(JANET)
+    expect(r.dominante).toEqual({ numero: 1, nombre: 'El Reformador' })
+    expect(r.ala.numero).toBe(9)
+    expect(r.secundario.numero).toBe(7)
+  })
+
+  it('Janet: ranking completo con los valores sin redondear', () => {
+    const r = calcularMotorV2(JANET)
+    const esperado: [string, number][] = [
+      ['liderazgo', 661 / 14],
+      ['orientacion_resultados', 46.6],
+      ['analitico', 645 / 14],
+      ['organizacion', 686 / 15],
+      ['atencion_detalle', 673 / 15],
+      ['adaptarse', 44.6],
+      ['autonomia', 44.1875],
+      ['comunicacion', 43],
+      ['innovacion', 43],
+      ['comercial', 42.5625],
+      ['storytelling', 638 / 15],
+      ['trabajo_equipo', 596 / 15],
+      ['mediacion', 38.4375],
+    ]
+    expect(r.ordenCompleto.map(c => c.key)).toEqual(esperado.map(([key]) => key))
+    r.ordenCompleto.forEach((c, i) => expect(c.score).toBeCloseTo(esperado[i][1], 9))
+  })
+
+  it('Janet: 4 fortalezas y 2 focos en orden de ranking', () => {
+    const r = calcularMotorV2(JANET)
+    expect(r.fortalezas.map(c => c.nombre)).toEqual([
+      'Liderazgo',
+      'Orientación a resultados',
+      'Analítico / numérico',
+      'Organización y planificación',
+    ])
+    expect(r.focosDesarrollo.map(c => c.nombre)).toEqual([
+      'Trabajo en equipo',
+      'Mediación y resolución de conflictos',
+    ])
+    expect(r.fortalezas[0]).toEqual({
+      key: 'liderazgo',
+      nombre: 'Liderazgo',
+      bloque: 'Cómo decide y lidera',
+      score: expect.any(Number),
+    })
+  })
+
+  it('empate real (43 = 43) se resuelve por el peso del dominante', () => {
+    // Comunicación = 731/17 e Innovación = 645/15, ambas exactamente 43. El
+    // dominante es 1: pesa 2 en Comunicación y 1 en Innovación.
+    const r = calcularMotorV2(JANET)
+    const keys = r.ordenCompleto.map(c => c.key)
+    expect(keys.indexOf('comunicacion')).toBeLessThan(keys.indexOf('innovacion'))
+  })
+
+  it('no redondea: Liderazgo (47,21) queda estrictamente por encima de Resultados (46,6)', () => {
+    // Redondeando, ambas darían 47: un empate que no existe en los datos.
+    const r = calcularMotorV2(JANET)
+    const lid = r.ordenCompleto.find(c => c.key === 'liderazgo')!
+    const res = r.ordenCompleto.find(c => c.key === 'orientacion_resultados')!
+    expect(lid.score).toBeGreaterThan(res.score)
+    expect(r.ordenCompleto[0].key).toBe('liderazgo')
+    expect(r.ordenCompleto[1].key).toBe('orientacion_resultados')
+  })
+
+  it('Jesica: dominante 2, ala 1, secundario 7 y su ranking', () => {
+    const r = calcularMotorV2(JESICA)
+    expect(r.dominante.numero).toBe(2)
+    expect(r.ala.numero).toBe(1)
+    expect(r.secundario.numero).toBe(7)
+    expect(r.fortalezas.map(c => c.nombre)).toEqual([
+      'Comercial / ventas relacionales',
+      'Trabajo en equipo',
+      'Storytelling y expresión de marca',
+      'Adaptarse y afrontar',
+    ])
+    expect(r.focosDesarrollo.map(c => c.nombre)).toEqual([
+      'Analítico / numérico',
+      'Autonomía e iniciativa',
+    ])
+  })
+
+  it('control por tipo único: las 3 primeras son las competencias con peso 3 para ese tipo', () => {
+    for (let t = 1; t <= 9; t++) {
+      const r = calcularMotorV2(scores({ [t]: 100 }))
+      const conPesoTres = Object.entries(PESOS_COMPETENCIAS)
+        .filter(([, fila]) => fila[t - 1] === 3)
+        .map(([key]) => key)
+      expect(new Set(r.ordenCompleto.slice(0, 3).map(c => c.key))).toEqual(new Set(conPesoTres))
+    }
+  })
+
+  it('todos los scores iguales: desempata por número menor y por peso del tipo 1', () => {
+    const r = calcularMotorV2(scores({ 1: 50, 2: 50, 3: 50, 4: 50, 5: 50, 6: 50, 7: 50, 8: 50, 9: 50 }))
+    expect(r.dominante.numero).toBe(1)
+    // Vecinos del 1: 9 y 2 empatados → el menor.
+    expect(r.ala.numero).toBe(2)
+    expect(r.secundario.numero).toBe(2)
+    expect(r.ordenCompleto.every(c => c.score === 50)).toBe(true)
+    // Todas empatan: peso del tipo 1 desc y, dentro de cada peso, orden de la tabla.
+    const esperado = COMPETENCIAS
+      .map((c, i) => ({ key: c.key, peso: PESOS_COMPETENCIAS[c.key][0], i }))
+      .sort((a, b) => b.peso - a.peso || a.i - b.i)
+      .map(c => c.key)
+    expect(r.ordenCompleto.map(c => c.key)).toEqual(esperado)
+  })
+
+  it('el ala da la vuelta al círculo (9 ↔ 1)', () => {
+    expect(calcularMotorV2(scores({ 9: 90, 1: 60, 8: 40 })).ala.numero).toBe(1)
+    expect(calcularMotorV2(scores({ 1: 90, 9: 60, 2: 40 })).ala.numero).toBe(9)
   })
 })

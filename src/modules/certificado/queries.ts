@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
-import { destacadasDelInforme, nivelTecnicoACert, primerParrafo, type CompetenciaDestacada, type NivelCert } from './niveles'
+import { fortalezasDelInforme, nivelTecnicoACert, primerParrafo, type NivelCert } from './niveles'
 import {
   clavesDescartadas,
   estaDescartada,
@@ -12,7 +12,7 @@ import {
   type SintesisEstado,
   type SintesisFortaleza,
 } from '@/lib/types/certificado'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 import type { NivelCompetencia } from '@/lib/constants/enums'
 
 export type CertificadoData = {
@@ -70,8 +70,8 @@ export type CertificadoContenido = {
   idiomas: { nombre: string; nivel_idioma: string }[]
   /** Habilidades técnicas y herramientas del perfil, con el nivel que declaró el postulante. */
   competencias: { nombre: string; nivel: NivelCert }[]
-  /** Competencias destacadas derivadas del informe (Eneagrama), agrupadas por nivel. */
-  destacadas: CompetenciaDestacada[]
+  /** Fortalezas naturales del informe (Eneagrama), en orden y sin nivel. */
+  fortalezasNaturales: string[]
   /** Párrafo del informe (fallback cuando aún no hay síntesis integrada). */
   personalidad?: string
   /** Perfil profesional integrado (síntesis). Cuando existe, reemplaza a `personalidad`. */
@@ -226,8 +226,8 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     experiencias,
     idiomas,
     competencias,
-    destacadas: destacadasDelInforme(informeJson?.competencias),
-    personalidad: primerParrafo(informeJson?.descripcionPersonalidad),
+    fortalezasNaturales: fortalezasDelInforme(informeJson),
+    personalidad: esFormatoAnterior(informeJson) ? undefined : primerParrafo(informeJson?.sintesis),
     perfilIntegrado,
     fortalezas: sintesis?.fortalezas,
     contextoIdeal: sintesis?.contextoIdeal,

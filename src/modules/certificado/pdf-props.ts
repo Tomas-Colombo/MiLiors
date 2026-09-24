@@ -1,9 +1,9 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { clavesDescartadas, estaDescartada, type CertificadoSintesisJSON } from '@/lib/types/certificado'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 import type { NivelCompetencia } from '@/lib/constants/enums'
-import { destacadasDelInforme, nivelTecnicoACert, primerParrafo } from './niveles'
+import { fortalezasDelInforme, nivelTecnicoACert, primerParrafo } from './niveles'
 import type { CertificadoInput } from './generate-pdf'
 
 /**
@@ -176,8 +176,11 @@ export async function construirPropsCertificado({
       eneatipoNumero: dominante.numero_eneatipo,
       eneatipoNombre: dominante.nombre,
       // Resumen, no informe: el perfil completo es lo que se busca al escanear el QR.
-      sintesis: primerParrafo(sintesis.perfilIntegrado ?? informeTyped.contenido_json?.descripcionPersonalidad),
-      destacadas: destacadasDelInforme(informeTyped.contenido_json?.competencias),
+      sintesis: primerParrafo(
+        sintesis.perfilIntegrado ??
+          (esFormatoAnterior(informeTyped.contenido_json) ? undefined : informeTyped.contenido_json?.sintesis),
+      ),
+      fortalezasNaturales: fortalezasDelInforme(informeTyped.contenido_json),
       competencias,
       idiomas,
       experiencias,

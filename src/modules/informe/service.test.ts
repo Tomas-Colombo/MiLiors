@@ -1,29 +1,22 @@
 import { describe, it, expect } from 'vitest'
 import { fusionarInforme, norm } from './service'
-import { calcularMotor, COMO_TRABAJAS_TITULOS, COMPETENCIAS } from './competencias'
-import { INFORME_VERSION, type InformeProseLLM } from '@/lib/types/informe'
+import { calcularMotorV2, COMPETENCIAS } from './competencias'
+import { EJES_COMO_TRABAJA, INFORME_VERSION, type InformeProseLLM } from '@/lib/types/informe'
+import { proseValida } from './prose.fixture'
 
 /**
  * La fusión es donde vivía la degradación silenciosa: cuando el LLM omitía una
- * competencia o escribía su nombre distinto, el hueco se resolvía con `?? ''` y
- * el informe se guardaba como LISTO con descripciones vacías.
+ * parte, el hueco se resolvía con `?? ''` y el informe se guardaba como LISTO
+ * con textos vacíos. Además es donde se exige que las fortalezas y los focos
+ * que repite el LLM sean los del motor (especificación v2.0).
  *
  * Es la única parte del pipeline que falla y que además es pura, así que se
  * testea sin LLM ni base.
  */
 
-const motor = calcularMotor({ 1: 52, 2: 78, 3: 65, 4: 41, 5: 38, 6: 55, 7: 71, 8: 49, 9: 60 }, null)
+const motor = calcularMotorV2({ 1: 52, 2: 78, 3: 65, 4: 41, 5: 38, 6: 55, 7: 71, 8: 49, 9: 60 })
 
-/** Prosa completa y válida: una entrada por competencia y por título. */
-function proseCompleta(overrides: Partial<InformeProseLLM> = {}): InformeProseLLM {
-  return {
-    subtitulo: 'Perfil relacional y comercial',
-    descripcionPersonalidad: 'Párrafo de personalidad.',
-    competenciasDesc: motor.competencias.map(c => ({ nombre: c.nombre, descripcion: `Prosa de ${c.nombre}.` })),
-    comoTrabajas: COMO_TRABAJAS_TITULOS.map(titulo => ({ titulo, texto: `Prosa de ${titulo}.` })),
-    ...overrides,
-  }
-}
+const proseCompleta = (overrides: Partial<InformeProseLLM> = {}) => proseValida(motor, overrides)
 
 describe('norm', () => {
   it('ignora acentos, puntuación, caja y espacios de más', () => {
@@ -39,14 +32,10 @@ describe('norm', () => {
     expect(new Set(claves).size).toBe(COMPETENCIAS.length)
   })
 
-  it('no colapsa dos títulos de "cómo trabaja" en la misma clave', () => {
-    const claves = COMO_TRABAJAS_TITULOS.map(norm)
-    expect(new Set(claves).size).toBe(COMO_TRABAJAS_TITULOS.length)
-  })
 })
 
 describe('fusionarInforme — prosa completa', () => {
-  it('arma el informe con los números del motor y la prosa del LLM', () => {
+  it('arma el informe con los datos del motor y la prosa del LLM', () => {
     const r = fusionarInforme('Ana Pérez', motor, proseCompleta())
     expect(r.ok).toBe(true)
     if (!r.ok) return
@@ -54,89 +43,78 @@ describe('fusionarInforme — prosa completa', () => {
     const json = r.contenido_json
     expect(json.nombre).toBe('Ana Pérez')
     expect(json.version).toBe(INFORME_VERSION)
-    expect(json.competencias).toHaveLength(13)
-    expect(json.comoTrabajas).toHaveLength(COMO_TRABAJAS_TITULOS.length)
-    // Los números los pone el motor, no el LLM.
     expect(json.mapaPersonalidad).toEqual(motor.mapaPersonalidad)
-    expect(json.competencias[0].nivel).toBe(motor.competencias[0].nivel)
-    expect(json.competencias[0].barras).toBe(motor.competencias[0].barras)
+    expect(json.eneagrama.integracion).toEqual(motor.integracion)
+    expect(json.fortalezas.map(f => f.competencia)).toEqual(motor.fortalezas.map(c => c.nombre))
+    expect(json.planDesarrollo.focos.map(f => f.competencia)).toEqual(motor.focosDesarrollo.map(c => c.nombre))
+    expect(Object.keys(json.comoTrabaja)).toEqual(EJES_COMO_TRABAJA.map(e => e.key))
   })
 
-  it('respeta el orden canónico de títulos aunque el LLM los devuelva mezclados', () => {
+  it('tolera tildes y puntuación en los nombres, y guarda el nombre canónico del motor', () => {
     const prose = proseCompleta()
     const r = fusionarInforme('Ana', motor, {
       ...prose,
-      comoTrabajas: [...prose.comoTrabajas].reverse(),
-    })
-    expect(r.ok).toBe(true)
-    if (!r.ok) return
-    expect(r.contenido_json.comoTrabajas.map(i => i.titulo)).toEqual([...COMO_TRABAJAS_TITULOS])
-  })
-
-  it('tolera nombres con la puntuación o los acentos cambiados', () => {
-    const prose = proseCompleta()
-    const r = fusionarInforme('Ana', motor, {
-      ...prose,
-      competenciasDesc: prose.competenciasDesc.map(d => ({
-        // Lo que hace el modelo en la práctica: come tildes, saca los espacios
-        // de la barra y agrega un punto final.
-        nombre: d.nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ \/ /g, '/') + '.',
-        descripcion: d.descripcion,
+      fortalezas: prose.fortalezas.map(f => ({
+        ...f,
+        competencia: f.competencia.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ \/ /g, '/') + '.',
       })),
     })
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.contenido_json.competencias.every(c => c.descripcion.length > 0)).toBe(true)
+    expect(r.contenido_json.fortalezas.map(f => f.competencia)).toEqual(motor.fortalezas.map(c => c.nombre))
   })
 
-  it('ignora las entradas inventadas que no corresponden a ninguna competencia', () => {
-    const prose = proseCompleta()
-    const r = fusionarInforme('Ana', motor, {
-      ...prose,
-      competenciasDesc: [...prose.competenciasDesc, { nombre: 'Telepatía aplicada', descripcion: 'Inventada.' }],
-    })
+  it('saca las marcas [cite] del texto', () => {
+    const r = fusionarInforme('Ana', motor, proseCompleta({ sintesis: 'Tiende a ordenar [cite: 3] el trabajo.' }))
     expect(r.ok).toBe(true)
     if (!r.ok) return
-    expect(r.contenido_json.competencias).toHaveLength(13)
-    expect(r.contenido_json.competencias.some(c => c.nombre === 'Telepatía aplicada')).toBe(false)
+    expect(r.contenido_json.sintesis).toBe('Tiende a ordenar el trabajo.')
+  })
+})
+
+describe('fusionarInforme — fidelidad al motor', () => {
+  it('rechaza las fortalezas en otro orden', () => {
+    const prose = proseCompleta()
+    const r = fusionarInforme('Ana', motor, { ...prose, fortalezas: [...prose.fortalezas].reverse() })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.faltantes).toEqual(['fortalezas: no coinciden con el motor'])
+  })
+
+  it('rechaza un foco reemplazado por otra competencia', () => {
+    const prose = proseCompleta()
+    const otra = motor.ordenCompleto[0].nombre
+    const r = fusionarInforme('Ana', motor, {
+      ...prose,
+      planDesarrollo: {
+        ...prose.planDesarrollo,
+        focos: [{ competencia: otra, accion: 'X.' }, prose.planDesarrollo.focos[1]],
+      },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.faltantes).toContain('planDesarrollo.focos: no coinciden con el motor')
   })
 })
 
 describe('fusionarInforme — prosa incompleta', () => {
-  it('rechaza el informe si falta una competencia, y la nombra', () => {
+  it('trata un texto vacío o en blanco como faltante, y lo nombra', () => {
     const prose = proseCompleta()
-    const omitida = prose.competenciasDesc[3].nombre
     const r = fusionarInforme('Ana', motor, {
       ...prose,
-      competenciasDesc: prose.competenciasDesc.filter(d => d.nombre !== omitida),
+      comoTrabaja: { ...prose.comoTrabaja, liderazgo: { estilo: '   ', dondeCrecer: 'Algo.' } },
     })
     expect(r.ok).toBe(false)
     if (r.ok) return
-    expect(r.faltantes).toEqual([omitida])
+    expect(r.faltantes).toEqual(['comoTrabaja.liderazgo.estilo'])
   })
 
-  it('trata una descripción vacía o en blanco como faltante', () => {
+  it('rechaza una lista vacía del ecosistema', () => {
     const prose = proseCompleta()
-    const r = fusionarInforme('Ana', motor, {
-      ...prose,
-      competenciasDesc: prose.competenciasDesc.map((d, i) =>
-        i === 0 ? { ...d, descripcion: '   ' } : d,
-      ),
-    })
+    const r = fusionarInforme('Ana', motor, { ...prose, ecosistema: { ...prose.ecosistema, puestos: [] } })
     expect(r.ok).toBe(false)
     if (r.ok) return
-    expect(r.faltantes).toEqual([prose.competenciasDesc[0].nombre])
-  })
-
-  it('rechaza el informe si falta un ítem de "cómo trabaja"', () => {
-    const prose = proseCompleta()
-    const r = fusionarInforme('Ana', motor, {
-      ...prose,
-      comoTrabajas: prose.comoTrabajas.slice(1),
-    })
-    expect(r.ok).toBe(false)
-    if (r.ok) return
-    expect(r.faltantes).toEqual([COMO_TRABAJAS_TITULOS[0]])
+    expect(r.faltantes).toEqual(['ecosistema.puestos'])
   })
 
   it('rechaza el informe sin subtítulo', () => {
@@ -146,14 +124,11 @@ describe('fusionarInforme — prosa incompleta', () => {
     expect(r.faltantes).toEqual(['subtitulo'])
   })
 
-  it('reporta todos los faltantes juntos, no solo el primero', () => {
-    const r = fusionarInforme('Ana', motor, {
-      ...proseCompleta({ subtitulo: '' }),
-      competenciasDesc: [],
-      comoTrabajas: [],
-    })
+  it('no rompe si el modelo omite secciones enteras: reporta todo lo que falta', () => {
+    const r = fusionarInforme('Ana', motor, { subtitulo: 'S' } as InformeProseLLM)
     expect(r.ok).toBe(false)
     if (r.ok) return
-    expect(r.faltantes).toHaveLength(13 + COMO_TRABAJAS_TITULOS.length + 1)
+    expect(r.faltantes).toContain('sintesis')
+    expect(r.faltantes).toContain('anexoReclutador.senalAlerta')
   })
 })

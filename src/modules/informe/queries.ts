@@ -36,11 +36,10 @@ export const getInformeActual = cache(async (): Promise<InformeData | null> => {
 })
 
 /** Valoración direccional de una competencia, desde la perspectiva del motor. */
-export type ValoracionCompetencia = 'SUBESTIMA' | 'JUSTO' | 'SOBRESTIMA'
 
 export type FeedbackInforme = {
-  /** competencia_key → valoración ya guardada. */
-  competencias: Record<string, ValoracionCompetencia>
+  /** seccion_key → puntaje (1-5) ya guardado. */
+  secciones: Record<string, number>
   global: { representatividad: number; comentario: string | null } | null
   /**
    * Si el cuadro de opinión global se ofrece ahora. Falso mientras corre el
@@ -55,7 +54,7 @@ export type FeedbackInforme = {
  * Feedback que el postulante ya dejó sobre su informe vigente, para que la UI
  * muestre lo elegido en lugar de arrancar en blanco cada visita.
  *
- * Se descarta el feedback anterior a la última regeneración: valorar un nivel
+ * Se descarta el feedback anterior a la última regeneración: valorar un texto
  * que ya no está en pantalla confundiría al postulante y ensuciaría el agregado.
  * Ese mismo descarte reabre el cuadro global aunque el período de reactivación
  * siga corriendo: es otro informe, la opinión anterior no aplica.
@@ -67,10 +66,10 @@ export const getFeedbackInforme = cache(async (
   await verifySession()
   const supabase = await createClient()
 
-  const [{ data: comps }, { data: global }, config] = await Promise.all([
+  const [{ data: filasSecciones }, { data: global }, config] = await Promise.all([
     supabase
-      .from('feedback_informe_competencia')
-      .select('competencia_key, valoracion, informe_generado_at')
+      .from('feedback_informe_seccion')
+      .select('seccion_key, puntaje, informe_generado_at')
       .eq('informe_id', informeId),
     supabase
       .from('feedback_informe')
@@ -82,9 +81,9 @@ export const getFeedbackInforme = cache(async (
 
   const vigente = (fila: { informe_generado_at: string }) => fila.informe_generado_at >= generadoAt
 
-  const competencias: Record<string, ValoracionCompetencia> = {}
-  for (const fila of (comps ?? []) as { competencia_key: string; valoracion: ValoracionCompetencia; informe_generado_at: string }[]) {
-    if (vigente(fila)) competencias[fila.competencia_key] = fila.valoracion
+  const secciones: Record<string, number> = {}
+  for (const fila of filasSecciones ?? []) {
+    if (vigente(fila)) secciones[fila.seccion_key] = fila.puntaje
   }
 
   const globalTyped = global as {
@@ -107,7 +106,7 @@ export const getFeedbackInforme = cache(async (
   const puedeOpinar = !reabre || reabre.getTime() <= Date.now()
 
   return {
-    competencias,
+    secciones,
     global: respuestaVigente
       ? { representatividad: respuestaVigente.representatividad, comentario: respuestaVigente.comentario }
       : null,

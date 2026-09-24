@@ -67,7 +67,6 @@ type Props = {
   testId: string | null
   respuestasIniciales: Record<string, number>
   yaCompleto: boolean
-  humanDesignCompleto: boolean
   estadoRehacer: EstadoRehacer
 }
 
@@ -78,7 +77,6 @@ export function EneagramaWizard({
   testId: testIdInicial,
   respuestasIniciales,
   yaCompleto,
-  humanDesignCompleto,
   estadoRehacer,
 }: Props) {
   const router = useRouter()
@@ -385,44 +383,15 @@ export function EneagramaWizard({
             <p className="mt-1 text-sm text-muted">Tipo {eneatipoResultado}</p>
           </div>
 
-          {/* Propuesta Human Design — solo si no fue completado aún */}
-          {!humanDesignCompleto ? (
-            <div className="mt-6 rounded-2xl bg-surface p-6 shadow-card">
-              <div className="mb-1 text-base font-bold text-ink">¿Agregás tu Human Design?</div>
-              <p className="mb-5 text-sm text-muted">
-                Si conocés tu carta, podés incorporarla ahora y el informe de personalidad
-                combinará ambos sistemas para un resultado más completo.
-              </p>
-              <div className="flex flex-col gap-3">
-                <Button
-                  size="lg"
-                  className="w-full"
-                  rightIcon={<ArrowRightIcon size={16} />}
-                  onClick={() => router.push('/postulante/human-design')}
-                >
-                  Agregar Human Design
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className="w-full"
-                  onClick={() => router.push('/postulante')}
-                >
-                  Continuar sin Human Design
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-6">
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={() => router.push('/postulante')}
-              >
-                Ir a mi perfil
-              </Button>
-            </div>
-          )}
+          <div className="mt-6">
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => router.push('/postulante')}
+            >
+              Ir a mi perfil
+            </Button>
+          </div>
         </div>
       </div>
     )

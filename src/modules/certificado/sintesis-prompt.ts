@@ -60,11 +60,10 @@ export type SintesisPromptContext = {
   /** Párrafo de personalidad ya redactado por el informe. */
   descripcionPersonalidad: string
   /**
-   * Competencias del informe con nivel Alto/Medio-Alto, con su descripción ya
-   * redactada: son las anclas para tejer el retrato. Antes este rol lo cumplía
-   * el top-4 de talentos, que el informe dejó de generar.
+   * Fortalezas naturales del informe, con su descripción ya redactada: son las
+   * anclas para tejer el retrato.
    */
-  competenciasDestacadas: { nombre: string; nivel: string; descripcion: string }[]
+  competenciasDestacadas: { nombre: string; descripcion: string }[]
   /** Ítems de estilo del informe ("cómo trabaja") — material de fondo, NO se copian. */
   comoTrabaja: { titulo: string; texto: string }[]
   /** Competencias técnicas vigentes del perfil (nombres). */
@@ -352,7 +351,7 @@ Es el "cómo". NO lo copies ni lo resumas: usalo para explicar la trayectoria de
 Síntesis de personalidad:
 ${ctx.descripcionPersonalidad}
 
-Competencias de personalidad más marcadas, con su descripción (son las anclas para tejer — NO las listes ni menciones sus niveles):
+Fortalezas naturales, con su descripción (son las anclas para tejer — NO las listes):
 ${destacadasStr}
 
 Cómo trabaja (anclalo en su experiencia real; NO lo transcribas):

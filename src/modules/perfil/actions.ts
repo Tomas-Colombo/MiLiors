@@ -26,6 +26,7 @@ export async function actualizarPerfilPostulante(
 
   const raw = {
     nombre_completo: formData.get('nombre_completo'),
+    nombre_preferido: formData.get('nombre_preferido') || undefined,
     provincia_id: formData.get('provincia_id') || '',
     localidad_id: formData.get('localidad_id') || '',
     telefono: formData.get('telefono') || undefined,
@@ -48,7 +49,7 @@ export async function actualizarPerfilPostulante(
 
   const { data: existente } = await supabase
     .from('perfil_postulante')
-    .select('id')
+    .select('id, nombre_preferido')
     .eq('usuario_id', session.id)
     .single()
 
@@ -56,9 +57,12 @@ export async function actualizarPerfilPostulante(
     return { success: false, error: 'No se encontró el perfil del postulante.' }
   }
 
+  const nombrePreferido = parsed.data.nombre_preferido || null
+
   const { error } = await supabase.from('perfil_postulante')
     .update({
       nombre_completo: parsed.data.nombre_completo,
+      nombre_preferido: nombrePreferido,
       // La localidad es opcional; si vino, el trigger de la base recalcula
       // provincia_id a partir de ella y descarta lo que mande el formulario.
       provincia_id: parsed.data.provincia_id,
@@ -69,10 +73,20 @@ export async function actualizarPerfilPostulante(
       enlace_linkedin: parsed.data.enlace_linkedin || null,
       portfolio: parsed.data.portfolio || null,
     })
-    .eq('id', (existente as { id: string }).id)
+    .eq('id', existente.id)
 
   if (error) {
     return { success: false, error: 'No se pudieron guardar los cambios. Intentá de nuevo.' }
+  }
+
+  // El informe está redactado con el nombre preferido: si cambió, queda
+  // desactualizado (sin regenerar, igual que al rehacer el Eneagrama).
+  if (nombrePreferido !== existente.nombre_preferido) {
+    await supabase
+      .from('informe_personalidad')
+      .update({ desactualizado: true })
+      .eq('postulante_id', existente.id)
+      .eq('estado_informe', 'LISTO')
   }
 
   revalidatePath('/postulante/mi-perfil')

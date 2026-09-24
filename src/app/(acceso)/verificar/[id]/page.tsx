@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getCertificadoParaVerificar, type CertificadoVerificacion } from '@/modules/certificado/queries'
 import { InformePapel } from '@/modules/informe/informe-papel'
+import { esFormatoAnterior } from '@/lib/types/informe'
 import { BackButton } from './back-button'
 import { CopyId } from './copy-id'
 import { BrandLogo } from '@/components/shared/brand-logo'
@@ -36,7 +37,7 @@ export default async function VerificarPage({
 
         {/* El informe del titular: es lo que hace que verificar valga la pena
             mirar, y de ahí sale el interés por tener uno propio. */}
-        {cert?.informe && (
+        {cert?.informe && !esFormatoAnterior(cert.informe) && (
           <section className="vf-informe">
             <InformePapel
               data={cert.informe}
@@ -53,7 +54,7 @@ export default async function VerificarPage({
             <div className="vf-cta">
               <p className="vf-cta-title">¿Y vos? Conocé tus talentos.</p>
               <p className="vf-cta-desc">
-                Este informe salió del Eneagrama y el Human Design de {cert.nombre_completo.split(' ')[0]}. El tuyo
+                Este informe salió del Eneagrama de {cert.nombre_completo.split(' ')[0]}. El tuyo
                 tarda unos minutos y viene con certificado verificable.
               </p>
               <Link href="/registro" className="vf-cta-btn">

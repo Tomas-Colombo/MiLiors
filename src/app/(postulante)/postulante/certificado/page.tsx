@@ -69,7 +69,7 @@ export default async function CertificadoPage() {
         // antes de su propio contenido y declara no haber sido alterado. Es un
         // hecho derivable del dato, así que no depende de que alguien se acuerde de
         // prender `certificado_pdf.desactualizado` — ese flag sigue cubriendo los
-        // casos que NO se pueden derivar (eneagrama, HD, perfil técnico, informe).
+        // casos que NO se pueden derivar (eneagrama, perfil técnico, informe).
         pdfPrevioALaSintesis =
           !!generadaAt &&
           !!certificado?.timestamp_firma &&

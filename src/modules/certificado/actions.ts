@@ -8,7 +8,7 @@ import { generarPDFBuffer } from './generate-pdf'
 import { generarSintesisCertificado } from './sintesis-service'
 import { construirPropsCertificado } from './pdf-props'
 import type { ActionResult } from '@/lib/types/domain'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { EJES_COMO_TRABAJA, esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 import type { CertificadoSintesisJSON } from '@/lib/types/certificado'
 
 export async function crearCertificado(): Promise<ActionResult<{ certificadoId: string }>> {
@@ -142,6 +142,9 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   }
   if (informeTyped.desactualizado) {
     return { success: false, error: 'El informe está desactualizado. Regeneralo antes de la síntesis.' }
+  }
+  if (esFormatoAnterior(informeTyped.contenido_json)) {
+    return { success: false, error: 'Tu informe tiene un formato anterior. Regeneralo antes de la síntesis.' }
   }
 
   // "¿Qué estudiaste / qué buscás?" es el eje del certificado: sin esto no hay
@@ -278,15 +281,11 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
     nombre: postulanteTyped.nombre_completo,
     objetivo,
     subtitulo: informeJson.subtitulo ?? null,
-    descripcionPersonalidad: informeJson.descripcionPersonalidad,
-    // Solo las más marcadas, con su descripción: son las anclas para tejer, no
-    // una lista a mostrar. Reemplazan al top-4 de talentos, que el informe dejó
-    // de generar — y traen más material, porque el informe ahora describe cada
-    // competencia con la extensión que le corresponde a su nivel.
-    competenciasDestacadas: (informeJson.competencias ?? [])
-      .filter(c => c.nivel === 'Alto' || c.nivel === 'Medio-Alto')
-      .map(c => ({ nombre: c.nombre, nivel: c.nivel, descripcion: c.descripcion })),
-    comoTrabaja: (informeJson.comoTrabajas ?? []).map(i => ({ titulo: i.titulo, texto: i.texto })),
+    descripcionPersonalidad: informeJson.sintesis,
+    // Solo las fortalezas naturales, con su texto: son las anclas para tejer,
+    // no una lista a mostrar.
+    competenciasDestacadas: informeJson.fortalezas.map(f => ({ nombre: f.competencia, descripcion: f.texto })),
+    comoTrabaja: EJES_COMO_TRABAJA.map(eje => ({ titulo: eje.titulo, texto: informeJson.comoTrabaja[eje.key].estilo })),
     competenciasTecnicas,
     formaciones,
     cursos,
@@ -316,7 +315,7 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   // el <fecha de la firma anterior>" y su bloque legal declara que no fue
   // alterado, cuando el párrafo que lleva no existía ese día. Marcarlo
   // desactualizado fuerza la re-emisión, que es la que firma de nuevo con un ID
-  // y una fecha nuevos. Mismo patrón que eneagrama/human-design/informe.
+  // y una fecha nuevos. Mismo patrón que eneagrama/informe.
   const { error: marcarCertError } = await admin.from('certificado_pdf')
     .update({ desactualizado: true })
     .eq('postulante_id', postulanteTyped.id)

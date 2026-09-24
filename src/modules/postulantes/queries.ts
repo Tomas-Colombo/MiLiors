@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import type { AnexoReclutador, InformePersonalidadJSON } from '@/lib/types/informe'
 
 /** UUID v4-ish check — used to distinguish real carrera ids from the 'OTRAS' sentinel */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -42,14 +42,10 @@ export type PostulanteDetalle = PostulanteCard & {
   idiomas: { nombre: string; nivel_idioma: string }[]
   /** Departamento de la localidad, cuando el perfil bajó hasta ese nivel. */
   nombre_departamento: string | null
-  humanDesign: {
-    tipo_energetico: string
-    autoridad_hd: string
-    perfil_hd: string
-    estrategia_hd: string
-  } | null
   // Informe (solo si perfil_en_busqueda y estado LISTO)
   informe: InformePersonalidadJSON | null
+  /** Anexo del reclutador (preguntas STAR y guía). Mismo criterio de visibilidad que el informe. */
+  anexo: AnexoReclutador | null
 }
 
 /**
@@ -283,25 +279,27 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     idiomas = (i.data ?? []) as typeof idiomas
   }
 
-  // Human Design — admin to bypass RLS
-  const { data: hd } = await admin
-    .from('human_design')
-    .select('tipo_energetico, autoridad_hd, perfil_hd, estrategia_hd')
-    .eq('postulante_id', postulanteId)
-    .maybeSingle()
-
   // Informe: visible if searchable OR applied to this recruiter's jobs — admin to bypass RLS
   let informeContenido: InformePersonalidadJSON | null = null
+  let anexo: AnexoReclutador | null = null
   if (p.perfil_en_busqueda || postuloAlReclutador) {
     const { data: informe } = await admin
       .from('informe_personalidad')
-      .select('contenido_json, estado_informe')
+      .select('id, contenido_json, estado_informe')
       .eq('postulante_id', postulanteId)
       .eq('estado_informe', 'LISTO')
       .maybeSingle()
-    informeContenido = informe
-      ? (informe as { contenido_json: InformePersonalidadJSON | null }).contenido_json
-      : null
+    const informeTyped = informe as { id: string; contenido_json: InformePersonalidadJSON | null } | null
+    informeContenido = informeTyped?.contenido_json ?? null
+
+    if (informeTyped) {
+      const { data: filaAnexo } = await admin
+        .from('informe_anexo')
+        .select('contenido')
+        .eq('informe_id', informeTyped.id)
+        .maybeSingle()
+      anexo = (filaAnexo?.contenido as AnexoReclutador | undefined) ?? null
+    }
   }
 
   // Competencias del postulante — admin to bypass RLS
@@ -337,15 +335,8 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     cursos,
     experiencias,
     idiomas,
-    humanDesign: hd
-      ? (hd as {
-          tipo_energetico: string
-          autoridad_hd: string
-          perfil_hd: string
-          estrategia_hd: string
-        })
-      : null,
     informe: informeContenido,
+    anexo,
   }
 }
 

@@ -1,70 +1,68 @@
-import type { ReactNode } from 'react'
-import type { BloqueCompetencia, CompetenciaItem, InformePersonalidadJSON, NivelCompetencia } from '@/lib/types/informe'
-import { BLOQUES_ORDEN } from './competencias'
+import type { AnexoReclutador, InformePersonalidadJSON } from '@/lib/types/informe'
+import { bloquesAnexo, seccionesInforme, type BloqueInforme } from './secciones'
 
 /**
- * Render presentacional del informe estructurado. Sin estado ni hooks: sirve
- * tanto en el visor del postulante como en la vista del reclutador.
+ * Render presentacional del informe dentro del chrome de la app (vista del
+ * reclutador). Mismas secciones que el papel y el PDF (`seccionesInforme`),
+ * con los estilos de la app.
  */
 
-const NIVEL_TONE: Record<NivelCompetencia, string> = {
-  'Alto': 'text-emerald-600',
-  'Medio-Alto': 'text-primary-600',
-  'Medio': 'text-amber-600',
-  'Medio-Bajo': 'text-orange-600',
-  'Bajo': 'text-muted',
-}
-
-function Barras({ n }: { n: number }) {
+function Bloque({ b }: { b: BloqueInforme }) {
+  if (b.tipo === 'parrafo') return <p className="text-[13.5px] leading-relaxed text-ink">{b.texto}</p>
   return (
-    <span className="inline-flex gap-0.5" aria-hidden>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={`h-2.5 w-2.5 rounded-[2px] ${i < n ? 'bg-primary-500' : 'bg-neutral-200'}`} />
-      ))}
-    </span>
+    <div>
+      <h4 className="text-sm font-bold text-ink">{b.titulo}</h4>
+      {b.tipo === 'item' ? (
+        <>
+          <p className="mt-0.5 text-[13px] leading-relaxed text-soft">{b.texto}</p>
+          {b.nota && <p className="mt-0.5 text-[12.5px] italic leading-relaxed text-muted">{b.nota}</p>}
+        </>
+      ) : (
+        <ul className="mt-0.5 list-disc space-y-0.5 pl-5 text-[13px] leading-relaxed text-soft">
+          {b.items.map(i => (
+            <li key={i}>{i}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
 type Props = {
   data: InformePersonalidadJSON
-  /** Compacto = para la vista del reclutador (menos aire, sin mapa por defecto). */
+  /** Compacto = para la vista del reclutador (menos aire). */
   variant?: 'full' | 'compact'
-  /**
-   * Slot bajo cada competencia. Lo usa sólo el visor del postulante para colgar
-   * el control de feedback; sin él este componente sigue siendo presentacional
-   * puro (vista del reclutador y PDF lo omiten).
-   */
-  renderCompetenciaExtra?: (competencia: CompetenciaItem) => ReactNode
 }
 
-export function InformeDisplay({ data, variant = 'full', renderCompetenciaExtra }: Props) {
-  const porBloque = BLOQUES_ORDEN.map((bloque: BloqueCompetencia) => ({
-    bloque,
-    items: data.competencias.filter(c => c.bloque === bloque),
-  })).filter(b => b.items.length > 0)
+export function InformeDisplay({ data, variant = 'full' }: Props) {
   const maxScore = Math.max(1, ...data.mapaPersonalidad.map(m => m.score))
+  const [sintesis, ...resto] = seccionesInforme(data)
+
+  const seccion = (s: typeof sintesis) => (
+    <section key={s.key}>
+      <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-primary-600">{s.titulo}</h3>
+      <div className="space-y-3">
+        {s.bloques.map((b, i) => (
+          <Bloque key={i} b={b} />
+        ))}
+      </div>
+    </section>
+  )
 
   return (
     <div className={variant === 'compact' ? 'space-y-5' : 'space-y-6'}>
-      {/* Descripción */}
-      {data.descripcionPersonalidad && (
-        <section>
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-primary-600">
-            Breve descripción de personalidad
-          </h3>
-          {data.subtitulo && variant === 'compact' && <p className="mb-1 text-[13px] text-muted">{data.subtitulo}</p>}
-          <p className="text-[13.5px] leading-relaxed text-ink">{data.descripcionPersonalidad}</p>
-        </section>
-      )}
+      {data.subtitulo && variant === 'compact' && <p className="text-[13px] text-muted">{data.subtitulo}</p>}
+      {seccion(sintesis)}
 
-      {/* Mapa (solo en full) */}
-      {variant === 'full' && (
-        <section>
-          <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-primary-600">
-            Tu mapa de personalidad
-          </h3>
-          <div className="space-y-1.5">
-            {data.mapaPersonalidad.map(m => (
+      {/* Informe único: el reclutador ve las mismas secciones que el postulante. */}
+      <section>
+        <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-primary-600">
+          Mapa de personalidad
+        </h3>
+        <div className="space-y-1.5">
+          {[...data.mapaPersonalidad]
+            .sort((a, b) => b.score - a.score)
+            .map(m => (
               <div key={m.eneatipo} className="flex items-center gap-3">
                 <span className="w-40 shrink-0 text-[13px] text-soft">{m.eneatipo}. {m.nombre}</span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200">
@@ -73,51 +71,33 @@ export function InformeDisplay({ data, variant = 'full', renderCompetenciaExtra 
                 <span className="w-8 text-right text-xs tabular-nums text-muted">{m.score}</span>
               </div>
             ))}
-          </div>
-        </section>
-      )}
-
-      {/* Competencias */}
-      <section>
-        <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-primary-600">Competencias</h3>
-        <div className="space-y-5">
-          {porBloque.map(b => (
-            <div key={b.bloque}>
-              <h4 className="mb-2 text-sm font-bold text-ink">{b.bloque}</h4>
-              <div className="space-y-3">
-                {b.items.map(c => (
-                  <div key={c.nombre}>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[13.5px] font-semibold text-ink">{c.nombre}</span>
-                      <span className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${NIVEL_TONE[c.nivel]}`}>{c.nivel}</span>
-                        <Barras n={c.barras} />
-                      </span>
-                    </div>
-                    {c.descripcion && <p className="mt-0.5 text-[13px] leading-relaxed text-soft">{c.descripcion}</p>}
-                    {renderCompetenciaExtra?.(c)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
-      {/* Cómo trabaja */}
-      {data.comoTrabajas.length > 0 && (
-        <section>
-          <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-primary-600">Cómo trabaja</h3>
-          <div className="space-y-4">
-            {data.comoTrabajas.map(item => (
-              <div key={item.titulo}>
-                <h4 className="text-sm font-bold text-ink">{item.titulo}</h4>
-                {item.texto && <p className="mt-1 text-[13.5px] leading-relaxed text-soft">{item.texto}</p>}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {resto.map(seccion)}
     </div>
+  )
+}
+
+/**
+ * Anexo solo para el reclutador: preguntas STAR y guía para el líder. Se
+ * muestra únicamente en la ficha del reclutador; el postulante no tiene de
+ * dónde leerlo (vive en `informe_anexo`, sin acceso por RLS).
+ */
+export function AnexoReclutadorDisplay({ anexo }: { anexo: AnexoReclutador }) {
+  return (
+    <section className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+      <h3 className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
+        Anexo para el reclutador
+      </h3>
+      <p className="mt-0.5 text-[12px] text-muted">
+        Orienta la entrevista y la gestión. El candidato no ve esta sección.
+      </p>
+      <div className="mt-3 space-y-3">
+        {bloquesAnexo(anexo).map((b, i) => (
+          <Bloque key={i} b={b} />
+        ))}
+      </div>
+    </section>
   )
 }

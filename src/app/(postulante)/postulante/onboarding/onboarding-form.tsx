@@ -15,6 +15,7 @@ import type { ActionResult } from '@/lib/types/domain'
 type Perfil = {
   id: string
   nombre_completo: string
+  nombre_preferido: string | null
   telefono: string | null
   carrera_id: string | null
   carrera_otra: string | null
@@ -54,6 +55,19 @@ export function OnboardingForm({
               leftIcon={<UserIcon size={17} />}
               defaultValue={perfil?.nombre_completo ?? ''}
               status={state && !state.success && state.fieldErrors?.nombre_completo ? 'error' : undefined}
+            />
+          </Field>
+
+          <Field
+            label="¿Cómo querés que te llamen en el informe?"
+            hint="Si lo dejás vacío, usamos tu primer nombre."
+            error={state && !state.success ? state.fieldErrors?.nombre_preferido?.[0] : undefined}
+          >
+            <Input
+              name="nombre_preferido"
+              placeholder="Ej: Majo"
+              maxLength={60}
+              defaultValue={perfil?.nombre_preferido ?? ''}
             />
           </Field>
 

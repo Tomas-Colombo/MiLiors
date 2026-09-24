@@ -26,7 +26,7 @@ export default async function InformePage() {
           Informe de Personalidad
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Generado a partir de tu Eneagrama y Human Design.
+          Generado a partir de tu Eneagrama.
         </p>
       </div>
       <InformeVisor

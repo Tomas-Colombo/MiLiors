@@ -2,20 +2,17 @@
  * Motor de competencias — cálculo DETERMINÍSTICO, sin LLM.
  *
  * Entrada: los 9 scores del Eneagrama (porcentaje 0-100 por eneatipo, tal como
- * se guardan en `resultado_puntaje_eneagrama`) + Human Design opcional.
- * Salida: mapa de personalidad (9), 13 competencias con nivel + barras agrupadas
- * en 4 bloques y estilos dominante/secundario.
+ * se guardan en `resultado_puntaje_eneagrama`).
+ * Salida: mapa de personalidad (9), dominante/ala/secundario, puntos de
+ * integración y estrés, y las 13 competencias ordenadas dentro de la persona,
+ * con sus fortalezas y focos.
  *
- * La tabla de pesos y las reglas de refuerzo de HD son CONSTANTES EDITABLES
- * (la clienta las validará). No mover esta lógica al LLM.
+ * La tabla de pesos vive en `pesos-competencias.ts` (la clienta la calibra).
+ * No mover esta lógica al LLM.
  */
 
-import type {
-  BloqueCompetencia,
-  CompetenciaItem,
-  MapaPersonalidadItem,
-  NivelCompetencia,
-} from '@/lib/types/informe'
+import type { BloqueCompetencia, MapaPersonalidadItem } from '@/lib/types/informe'
+import { CANTIDAD_FOCOS, CANTIDAD_FORTALEZAS, PESOS_COMPETENCIAS } from './pesos-competencias'
 
 // ── Eneatipos ────────────────────────────────────────────────────────────────
 
@@ -31,9 +28,16 @@ export const ENEATIPO_NOMBRES: Record<number, string> = {
   9: 'El Pacificador',
 }
 
-// ── Tabla de pesos (eneatipo → competencia) ─────────────────────────────────
-// Esquema 3/2/1: el primer tipo listado pesa 3, el segundo 2, el tercero 1.
-// EDITABLE: la clienta puede ajustar tipos y pesos por competencia.
+/**
+ * Hacia dónde se mueve cada dominante (tabla fija del Eneagrama, especificación
+ * v2.0). Integración: hacia dónde crece la persona cuando está bien. Estrés:
+ * cómo reacciona bajo presión. Índice = eneatipo dominante.
+ */
+export const PUNTO_INTEGRACION: Record<number, number> = { 1: 7, 2: 4, 3: 6, 4: 1, 5: 8, 6: 9, 7: 5, 8: 2, 9: 3 }
+export const PUNTO_ESTRES: Record<number, number> = { 1: 4, 2: 8, 3: 9, 4: 2, 5: 7, 6: 3, 7: 1, 8: 5, 9: 6 }
+
+// ── Competencias ─────────────────────────────────────────────────────────────
+// Los pesos por eneatipo están en PESOS_COMPETENCIAS (pesos-competencias.ts).
 
 export type CompetenciaKey =
   | 'comercial'
@@ -54,235 +58,150 @@ type CompetenciaDef = {
   key: CompetenciaKey
   nombre: string
   bloque: BloqueCompetencia
-  /** eneatipo → peso. Suma de pesos = 6 (3+2+1) con el esquema por defecto. */
-  pesos: Record<number, number>
-}
-
-/** Peso por posición en la lista de tipos de cada competencia. */
-export const PESOS_POR_POSICION = [3, 2, 1] as const
-
-function pesos(...tipos: number[]): Record<number, number> {
-  const out: Record<number, number> = {}
-  tipos.forEach((t, i) => {
-    out[t] = PESOS_POR_POSICION[i] ?? 1
-  })
-  return out
 }
 
 export const COMPETENCIAS: CompetenciaDef[] = [
   // Cómo decide y lidera
-  { key: 'liderazgo', nombre: 'Liderazgo', bloque: 'Cómo decide y lidera', pesos: pesos(8, 3, 2) },
-  { key: 'autonomia', nombre: 'Autonomía e iniciativa', bloque: 'Cómo decide y lidera', pesos: pesos(8, 3, 7) },
+  { key: 'liderazgo', nombre: 'Liderazgo', bloque: 'Cómo decide y lidera' },
+  { key: 'autonomia', nombre: 'Autonomía e iniciativa', bloque: 'Cómo decide y lidera' },
   // Cómo se relaciona
-  { key: 'comercial', nombre: 'Comercial / ventas relacionales', bloque: 'Cómo se relaciona', pesos: pesos(2, 7, 3) },
-  { key: 'comunicacion', nombre: 'Comunicación', bloque: 'Cómo se relaciona', pesos: pesos(2, 7, 3) },
-  { key: 'trabajo_equipo', nombre: 'Trabajo en equipo', bloque: 'Cómo se relaciona', pesos: pesos(2, 9, 6) },
-  { key: 'mediacion', nombre: 'Mediación y resolución de conflictos', bloque: 'Cómo se relaciona', pesos: pesos(9, 2, 6) },
+  { key: 'comercial', nombre: 'Comercial / ventas relacionales', bloque: 'Cómo se relaciona' },
+  { key: 'comunicacion', nombre: 'Comunicación', bloque: 'Cómo se relaciona' },
+  { key: 'trabajo_equipo', nombre: 'Trabajo en equipo', bloque: 'Cómo se relaciona' },
+  { key: 'mediacion', nombre: 'Mediación y resolución de conflictos', bloque: 'Cómo se relaciona' },
   // Cómo piensa y resuelve
-  { key: 'analitico', nombre: 'Analítico / numérico', bloque: 'Cómo piensa y resuelve', pesos: pesos(5, 1, 6) },
-  { key: 'atencion_detalle', nombre: 'Atención al detalle', bloque: 'Cómo piensa y resuelve', pesos: pesos(1, 5, 6) },
-  { key: 'innovacion', nombre: 'Innovación y creatividad', bloque: 'Cómo piensa y resuelve', pesos: pesos(7, 4, 5) },
-  { key: 'storytelling', nombre: 'Storytelling y expresión de marca', bloque: 'Cómo piensa y resuelve', pesos: pesos(4, 7, 2) },
+  { key: 'analitico', nombre: 'Analítico / numérico', bloque: 'Cómo piensa y resuelve' },
+  { key: 'atencion_detalle', nombre: 'Atención al detalle', bloque: 'Cómo piensa y resuelve' },
+  { key: 'innovacion', nombre: 'Innovación y creatividad', bloque: 'Cómo piensa y resuelve' },
+  { key: 'storytelling', nombre: 'Storytelling y expresión de marca', bloque: 'Cómo piensa y resuelve' },
   // Cómo ejecuta y se sostiene
-  { key: 'organizacion', nombre: 'Organización y planificación', bloque: 'Cómo ejecuta y se sostiene', pesos: pesos(1, 3, 6) },
-  { key: 'adaptarse', nombre: 'Adaptarse y afrontar', bloque: 'Cómo ejecuta y se sostiene', pesos: pesos(7, 9, 4) },
-  { key: 'orientacion_resultados', nombre: 'Orientación a resultados', bloque: 'Cómo ejecuta y se sostiene', pesos: pesos(3, 8, 1) },
+  { key: 'organizacion', nombre: 'Organización y planificación', bloque: 'Cómo ejecuta y se sostiene' },
+  { key: 'adaptarse', nombre: 'Adaptarse y afrontar', bloque: 'Cómo ejecuta y se sostiene' },
+  { key: 'orientacion_resultados', nombre: 'Orientación a resultados', bloque: 'Cómo ejecuta y se sostiene' },
 ]
-
-/**
- * `nombre` visible → `key` estable. El informe persistido en jsonb guarda las
- * competencias por nombre; el feedback las referencia por key para que renombrar
- * una competencia no invalide el histórico. Devuelve null si el nombre no existe
- * (informe de una versión anterior con otro set de competencias).
- */
-export function competenciaKeyPorNombre(nombre: string): CompetenciaKey | null {
-  const def = COMPETENCIAS.find(c => c.nombre === nombre)
-  return def ? def.key : null
-}
-
-/** Orden de los bloques para el render. */
-export const BLOQUES_ORDEN: BloqueCompetencia[] = [
-  'Cómo decide y lidera',
-  'Cómo se relaciona',
-  'Cómo piensa y resuelve',
-  'Cómo ejecuta y se sostiene',
-]
-
-// ── Refuerzo suave de Human Design ──────────────────────────────────────────
-// Tope +15% sobre la competencia base, nunca invierte el Eneagrama. Si no hay
-// HD, se omite sin romper el cálculo.
-
-export const HD_REFUERZO_FACTOR = 0.15
-
-export type HumanDesignInput = {
-  tipo_energetico: string | null
-  autoridad_hd: string | null
-  perfil_hd: string | null
-} | null
-
-/** Devuelve el set de competencias reforzadas según los rasgos de HD. */
-export function competenciasReforzadasPorHD(hd: HumanDesignInput): Set<CompetenciaKey> {
-  const reforzadas = new Set<CompetenciaKey>()
-  if (!hd) return reforzadas
-
-  const tipo = (hd.tipo_energetico ?? '').toLowerCase()
-  // Manifestor / Manifesting Generator → Autonomía e iniciativa.
-  if (tipo.includes('manifest')) reforzadas.add('autonomia')
-  // Proyector → Liderazgo y Mediación.
-  if (tipo.includes('proyector')) {
-    reforzadas.add('liderazgo')
-    reforzadas.add('mediacion')
-  }
-  // Autoridad emocional → Mediación.
-  if ((hd.autoridad_hd ?? '').toLowerCase().includes('emocional')) reforzadas.add('mediacion')
-  // Perfil con línea 3 (ej "1/3", "3/5", "3/6") → Adaptarse y afrontar.
-  if (perfilTieneLinea(hd.perfil_hd, 3)) reforzadas.add('adaptarse')
-
-  return reforzadas
-}
-
-function perfilTieneLinea(perfil: string | null | undefined, linea: number): boolean {
-  if (!perfil) return false
-  return perfil.split('/').map(s => s.trim()).includes(String(linea))
-}
-
-// ── Contraste (recalibración de escala) ──────────────────────────────────────
-// Los porcentajes del Eneagrama están centrados en 50: responder "3" en la escala
-// Likert 1-5 rinde 50%. Además, cada competencia es un promedio ponderado de 3
-// eneatipos, lo que comprime todavía más los valores hacia el centro (regresión a
-// la media). Sin corrección, casi todas las competencias caen en "Medio" y casi
-// ninguna alcanza "Medio-Alto"/"Alto" — el techo práctico queda en Medio.
-//
-// Para recuperar contraste estiramos la distribución alrededor del neutro 50:
-//   score' = 50 + (score - 50) * FACTOR_CONTRASTE
-// El neutro (50) queda fijo; lo que está por encima sube y lo que está por debajo
-// baja, ensanchando la separación entre fortalezas y debilidades del perfil.
-// EDITABLE: subir el factor rinde informes más marcados (más Altos/Bajos); bajarlo,
-// informes más conservadores. La clienta lo valida contra datos reales.
-export const FACTOR_CONTRASTE = 1.8
-
-/** Estira un score 0-100 alrededor del neutro 50 (sin clampear). */
-export function aplicarContraste(score: number): number {
-  return 50 + (score - 50) * FACTOR_CONTRASTE
-}
-
-// ── Niveles + barras ────────────────────────────────────────────────────────
-
-/** Mapea un score 0-100 a nivel + cantidad de barras (1-5). */
-export function scoreANivel(score: number): { nivel: NivelCompetencia; barras: number } {
-  if (score >= 80) return { nivel: 'Alto', barras: 5 }
-  if (score >= 65) return { nivel: 'Medio-Alto', barras: 4 }
-  if (score >= 45) return { nivel: 'Medio', barras: 3 }
-  if (score >= 25) return { nivel: 'Medio-Bajo', barras: 2 }
-  return { nivel: 'Bajo', barras: 1 }
-}
-
-/** Representación textual de las barras, ej barras=4 → "■■■■_". */
-export function barrasAString(barras: number): string {
-  const llenas = Math.max(0, Math.min(5, barras))
-  return '■'.repeat(llenas) + '_'.repeat(5 - llenas)
-}
 
 // ── Textos de marco ──────────────────────────────────────────────────────────
 
+/** Leyenda al pie del informe (especificación v2.0). Pantalla y PDF la comparten. */
+export const LEYENDA_INFORME =
+  'Este informe describe preferencias y estilos naturales de trabajo a partir del Eneagrama. ' +
+  'No mide conocimientos ni habilidades adquiridas, no es una evaluación clínica y no reemplaza ' +
+  'la entrevista ni la verificación de experiencia. Se recomienda usarlo como guía para conversar, ' +
+  'entrevistar y acompañar el desarrollo de la persona.'
+
+// ── Motor v2 ─────────────────────────────────────────────────────────────────
+// Especificación v2.0: cada competencia es el promedio ponderado de los 9
+// eneatipos según PESOS_COMPETENCIAS. Sin contraste, sin Human Design, sin
+// niveles ni barras: el informe muestra un ranking (fortalezas y focos).
+//
+// NO se redondea en ningún paso del cálculo. Redondear inventa empates (47,21 y
+// 46,6 pasarían a 47 y 47) y altera el ranking; el redondeo es solo de display.
+
 /**
- * Títulos exactos del bloque "Cómo trabaja" (4 ítems).
- *
- * Van en 3ª persona igual que el resto del informe: el prompt prohíbe la 2ª
- * persona, y darle títulos en voseo ("Ambiente donde rendís mejor") como
- * ejemplos obligatorios contradecía esa misma regla.
- *
- * Quedaron los cuatro que MIRAN HACIA ADELANTE —entorno, desarrollo, entrevista
- * y encaje laboral—. Los cinco que se sacaron (liderazgo, decisión, comercial,
- * equipo y comunicación) describían rasgos que las 13 competencias ya cubren, y
- * con más detalle desde que su descripción se extiende según el nivel: eran la
- * misma información contada dos veces.
- *
- * Los informes ya generados guardan sus títulos dentro de `contenido_json`, así
- * que cambiar esta lista no los rompe: siguen renderizando los que tenían.
+ * Tolerancia para comparar scores en punto flotante. Hay empates reales que la
+ * aritmética puede dejar a un ulp de distancia (ej 731/17 y 645/15 valen 43).
  */
-export const COMO_TRABAJAS_TITULOS = [
-  'Ambiente donde rinde mejor',
-  'Para seguir creciendo',
-  'Tip para sus entrevistas',
-  'En qué trabajos se va a destacar',
-] as const
+const EPSILON_SCORE = 1e-9
 
-// ── Motor ────────────────────────────────────────────────────────────────────
+function mismoScore(a: number, b: number): boolean {
+  return Math.abs(a - b) < EPSILON_SCORE
+}
 
-export type CompetenciaCalculada = {
+export type EneatipoReferencia = { numero: number; nombre: string }
+
+export type CompetenciaRanking = {
   key: CompetenciaKey
   nombre: string
   bloque: BloqueCompetencia
+  /** Promedio ponderado 0-100 SIN redondear. */
   score: number
-  nivel: NivelCompetencia
-  barras: number
 }
 
-export type EstiloEneatipo = { numero: number; nombre: string; score: number }
-
-export type MotorResultado = {
+export type MotorV2Resultado = {
   mapaPersonalidad: MapaPersonalidadItem[]
-  competencias: CompetenciaCalculada[]
-  estiloDominante: EstiloEneatipo
-  estiloSecundario: EstiloEneatipo
+  dominante: EneatipoReferencia
+  ala: EneatipoReferencia
+  secundario: EneatipoReferencia
+  integracion: EneatipoReferencia
+  estres: EneatipoReferencia
+  /** Las 13 competencias de mayor a menor score. */
+  ordenCompleto: CompetenciaRanking[]
+  fortalezas: CompetenciaRanking[]
+  focosDesarrollo: CompetenciaRanking[]
+}
+
+function referenciaEneatipo(numero: number): EneatipoReferencia {
+  return { numero, nombre: ENEATIPO_NOMBRES[numero] }
 }
 
 /**
- * Calcula el informe determinístico.
- * @param scores  Record eneatipo(1-9) → porcentaje 0-100.
- * @param hd      Human Design opcional (refuerzo suave).
+ * Eneatipo de mayor score entre los candidatos. Empate → el de número menor
+ * (los candidatos se recorren en orden ascendente).
  */
-export function calcularMotor(scores: Record<number, number>, hd: HumanDesignInput = null): MotorResultado {
-  const puntaje = (t: number) => Math.max(0, Math.min(100, scores[t] ?? 0))
-  const reforzadas = competenciasReforzadasPorHD(hd)
-
-  const competencias: CompetenciaCalculada[] = COMPETENCIAS.map(def => {
-    const sumaPesos = Object.values(def.pesos).reduce((a, b) => a + b, 0) || 1
-    const raw = Object.entries(def.pesos).reduce(
-      (acc, [tipo, peso]) => acc + peso * puntaje(Number(tipo)),
-      0,
-    )
-    // Normalizar 0-100 (raw máximo = sumaPesos * 100).
-    let score = raw / sumaPesos
-    // Recalibración de contraste (ver FACTOR_CONTRASTE): estira la distribución
-    // alrededor del neutro 50 para que las competencias no se aplasten en "Medio".
-    score = aplicarContraste(score)
-    // Refuerzo suave de HD (tope +15%, clamp a 100 → nunca invierte de forma brusca).
-    if (reforzadas.has(def.key)) score = score * (1 + HD_REFUERZO_FACTOR)
-    score = Math.round(Math.max(0, Math.min(100, score)))
-    const { nivel, barras } = scoreANivel(score)
-    return { key: def.key, nombre: def.nombre, bloque: def.bloque, score, nivel, barras }
-  })
-
-  // Mapa de personalidad (9 eneatipos con su score).
-  const mapaPersonalidad: MapaPersonalidadItem[] = Array.from({ length: 9 }, (_, i) => {
-    const numero = i + 1
-    return { eneatipo: numero, nombre: ENEATIPO_NOMBRES[numero], score: Math.round(puntaje(numero)) }
-  })
-
-  // Estilos dominante + secundario (mayor y segundo mayor score de eneatipo).
-  const ranking = [...mapaPersonalidad].sort((a, b) => b.score - a.score || a.eneatipo - b.eneatipo)
-  const estiloDominante: EstiloEneatipo = {
-    numero: ranking[0].eneatipo,
-    nombre: ranking[0].nombre,
-    score: ranking[0].score,
+function mayorEneatipo(candidatos: number[], puntaje: (t: number) => number): number {
+  const ordenados = [...candidatos].sort((a, b) => a - b)
+  let mejor = ordenados[0]
+  for (const t of ordenados.slice(1)) {
+    if (!mismoScore(puntaje(t), puntaje(mejor)) && puntaje(t) > puntaje(mejor)) mejor = t
   }
-  const estiloSecundario: EstiloEneatipo = {
-    numero: ranking[1].eneatipo,
-    nombre: ranking[1].nombre,
-    score: ranking[1].score,
-  }
-
-  return { mapaPersonalidad, competencias, estiloDominante, estiloSecundario }
+  return mejor
 }
 
-/** Reordena las competencias calculadas por bloque (orden de render). */
-export function agruparPorBloque(
-  competencias: CompetenciaItem[],
-): { bloque: BloqueCompetencia; items: CompetenciaItem[] }[] {
-  return BLOQUES_ORDEN.map(bloque => ({
-    bloque,
-    items: competencias.filter(c => c.bloque === bloque),
+/** Vecinos circulares en el eneagrama: el 1 limita con 9 y 2; el 9, con 8 y 1. */
+function vecinosEneatipo(numero: number): [number, number] {
+  return [numero === 1 ? 9 : numero - 1, numero === 9 ? 1 : numero + 1]
+}
+
+/**
+ * Calcula el ranking de competencias según la especificación v2.0.
+ * @param scores  Record eneatipo(1-9) → porcentaje 0-100 (faltante = 0).
+ */
+export function calcularMotorV2(scores: Record<number, number>): MotorV2Resultado {
+  const puntaje = (t: number) => Math.max(0, Math.min(100, scores[t] ?? 0))
+  const eneatipos = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+  // Mapa de personalidad: el score se redondea solo para mostrarlo.
+  const mapaPersonalidad: MapaPersonalidadItem[] = eneatipos.map(numero => ({
+    eneatipo: numero,
+    nombre: ENEATIPO_NOMBRES[numero],
+    score: Math.round(puntaje(numero)),
   }))
+
+  const dominante = mayorEneatipo(eneatipos, puntaje)
+  // El ala sale siempre de los dos vecinos del dominante; el secundario, del
+  // resto de los eneatipos. Pueden coincidir.
+  const ala = mayorEneatipo(vecinosEneatipo(dominante), puntaje)
+  const secundario = mayorEneatipo(eneatipos.filter(t => t !== dominante), puntaje)
+
+  const calculadas = COMPETENCIAS.map((def, posicionTabla) => {
+    const pesosDef = PESOS_COMPETENCIAS[def.key]
+    const sumaPesos = pesosDef.reduce((a, b) => a + b, 0)
+    const ponderado = pesosDef.reduce((acc, peso, i) => acc + peso * puntaje(i + 1), 0)
+    return {
+      item: { key: def.key, nombre: def.nombre, bloque: def.bloque, score: ponderado / sumaPesos },
+      pesoDominante: pesosDef[dominante - 1],
+      posicionTabla,
+    }
+  })
+
+  // Orden: score desc; empate → mayor peso para el eneatipo dominante; si sigue
+  // el empate → orden de la tabla COMPETENCIAS.
+  calculadas.sort((a, b) => {
+    if (!mismoScore(a.item.score, b.item.score)) return b.item.score - a.item.score
+    if (a.pesoDominante !== b.pesoDominante) return b.pesoDominante - a.pesoDominante
+    return a.posicionTabla - b.posicionTabla
+  })
+  const ordenCompleto = calculadas.map(c => c.item)
+
+  return {
+    mapaPersonalidad,
+    dominante: referenciaEneatipo(dominante),
+    ala: referenciaEneatipo(ala),
+    secundario: referenciaEneatipo(secundario),
+    integracion: referenciaEneatipo(PUNTO_INTEGRACION[dominante]),
+    estres: referenciaEneatipo(PUNTO_ESTRES[dominante]),
+    ordenCompleto,
+    fortalezas: ordenCompleto.slice(0, CANTIDAD_FORTALEZAS),
+    focosDesarrollo: ordenCompleto.slice(-CANTIDAD_FOCOS),
+  }
 }

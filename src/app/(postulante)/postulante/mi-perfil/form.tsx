@@ -15,6 +15,7 @@ import type { ActionResult } from '@/lib/types/domain'
 type Perfil = {
   id: string
   nombre_completo: string
+  nombre_preferido: string | null
   telefono: string | null
   carrera_id: string | null
   carrera_otra: string | null
@@ -79,6 +80,21 @@ export function PerfilPostulanteForm({
           leftIcon={<UserIcon size={17} />}
           defaultValue={perfil?.nombre_completo ?? ''}
           status={fieldErrors.nombre_completo ? 'error' : 'default'}
+        />
+      </Field>
+
+      <Field
+        htmlFor="nombre_preferido"
+        label="¿Cómo querés que te llamen en el informe?"
+        hint="Si lo dejás vacío, usamos tu primer nombre."
+        error={fieldErrors.nombre_preferido?.[0]}
+      >
+        <Input
+          id="nombre_preferido"
+          name="nombre_preferido"
+          placeholder="Ej: Majo"
+          maxLength={60}
+          defaultValue={perfil?.nombre_preferido ?? ''}
         />
       </Field>
 

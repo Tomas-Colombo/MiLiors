@@ -1,12 +1,12 @@
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generarInformePDFBuffer } from '@/modules/informe/generate-pdf'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 
 export const maxDuration = 60
 
 /**
- * Descarga el informe de personalidad del postulante autenticado como PDF.
+ * Descarga el informe de talentos del postulante autenticado como PDF.
  * El PDF NO se almacena: se regenera on-demand desde `contenido_json`.
  */
 export async function GET(_req: NextRequest) {
@@ -39,6 +39,10 @@ export async function GET(_req: NextRequest) {
   if (!informeTyped || informeTyped.estado_informe !== 'LISTO' || !informeTyped.contenido_json) {
     return new Response('El informe no está disponible para descargar.', { status: 404 })
   }
+  // El formato anterior tiene otra forma: no se dibuja, se regenera.
+  if (esFormatoAnterior(informeTyped.contenido_json)) {
+    return new Response('Tu informe tiene un formato anterior. Regeneralo para descargarlo.', { status: 409 })
+  }
 
   let pdfBuffer: Buffer
   try {
@@ -52,7 +56,7 @@ export async function GET(_req: NextRequest) {
     return new Response('No se pudo generar el PDF.', { status: 500 })
   }
 
-  const nombreArchivo = `Informe-Personalidad-${informeTyped.contenido_json.nombre.replace(/\s+/g, '-')}.pdf`
+  const nombreArchivo = `Informe-Talentos-${informeTyped.contenido_json.nombre.replace(/\s+/g, '-')}.pdf`
 
   return new Response(new Uint8Array(pdfBuffer), {
     status: 200,

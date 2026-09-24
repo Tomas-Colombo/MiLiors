@@ -1,5 +1,5 @@
 import type { CertificadoContenido } from './queries'
-import { agruparPorNivel, type CompetenciaDestacada, type NivelCert } from './niveles'
+import { agruparPorNivel, type NivelCert } from './niveles'
 import { DOC } from '@/lib/constants/documento'
 import { verificarLabel } from '@/lib/app-url'
 import { Papel, PapelHeader, PapelIdentidad, PapelSectionHead } from '@/components/shared/documento-papel'
@@ -97,7 +97,6 @@ export function CertificadoDisplay({
   emitidoEl?: string
 }) {
   const sintesis = data.perfilIntegrado ?? data.personalidad
-  const destacadas: CompetenciaDestacada[] = data.destacadas
   let n = 0
 
   return (
@@ -142,16 +141,26 @@ export function CertificadoDisplay({
           </section>
         )}
 
-        {/* 2. Competencias destacadas */}
-        {destacadas.length > 0 && (
+        {/* 2. Fortalezas naturales */}
+        {data.fortalezasNaturales.length > 0 && (
           <section className="mt-5">
-            <PapelSectionHead n={++n}>Competencias destacadas</PapelSectionHead>
+            <PapelSectionHead n={++n}>Fortalezas naturales</PapelSectionHead>
             <div className="mt-2 rounded-lg bg-[#f7f8fb] px-4 py-3">
               <p className="mb-2.5 text-[11.5px] text-[#6b7085]">
                 <strong className="text-[#1a1d29]">Evaluación de perfil y estilo de trabajo</strong> (Resultados
                 derivados del test de Eneagrama — Tipo {data.eneatipoNumero}: {data.eneatipoNombre})
               </p>
-              <NivelChips items={destacadas} />
+              <div className="flex flex-wrap gap-1.5">
+                {data.fortalezasNaturales.map(nombre => (
+                  <span
+                    key={nombre}
+                    className="rounded border border-[#f0d089] bg-[#fdf6e6] px-2 py-0.5 text-[11.5px] font-semibold"
+                    style={{ color: GOLD_DARK }}
+                  >
+                    {nombre}
+                  </span>
+                ))}
+              </div>
             </div>
           </section>
         )}

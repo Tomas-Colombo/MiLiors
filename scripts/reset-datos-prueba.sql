@@ -60,7 +60,6 @@ DELETE FROM certificado_pdf;
 DELETE FROM feedback_informe_competencia;
 DELETE FROM feedback_informe;
 DELETE FROM informe_personalidad;
-DELETE FROM human_design;
 DELETE FROM test_eneagrama_dominante;
 DELETE FROM resultado_puntaje_eneagrama;
 DELETE FROM respuesta_item_eneagrama;

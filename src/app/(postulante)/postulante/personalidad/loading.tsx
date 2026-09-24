@@ -2,17 +2,16 @@ import { Skeleton } from '@/components/ui'
 import { MESES_ESPERA_REHACER } from '@/modules/eneagrama/rehacer-policy'
 
 /**
- * Eneagrama + Human Design.
+ * Perfil de personalidad (Eneagrama).
  *
- * Real: los dos encabezados de sección con sus bajadas y la tarjeta completa
+ * Real: el encabezado con su bajada y la tarjeta completa
  * "¿Qué es el Eneagrama?" —es texto fijo y el período de espera sale de una
  * constante del módulo, no de la base—. Es la parte que más se lee de la
  * pantalla, así que llega de entrada.
  *
- * Esqueleto: el bloque de resultado (tipo dominante, fortalezas, entorno) y el
- * formulario de Human Design, que arranca con la carta ya guardada.
+ * Esqueleto: el bloque de resultado (tipo dominante, fortalezas, entorno).
  */
-export default function LoadingHumanDesign() {
+export default function LoadingPersonalidad() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 space-y-10" aria-busy="true">
       <section className="space-y-4">
@@ -61,17 +60,6 @@ export default function LoadingHumanDesign() {
         </div>
       </section>
 
-      <hr className="border-neutral-200" />
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-ink">Human Design</h2>
-          <p className="mt-1 text-sm text-muted">
-            Tu carta de Human Design enriquece el informe combinado de personalidad.
-          </p>
-        </div>
-        <Skeleton className="h-64 w-full" borderRadius={12} />
-      </section>
     </div>
   )
 }

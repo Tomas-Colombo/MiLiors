@@ -2,49 +2,37 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import { Alert, Button, Textarea } from '@/components/ui'
-import { valorarCompetencia, guardarFeedbackInforme } from '@/modules/informe/actions'
-import type { FeedbackInforme, ValoracionCompetencia } from '@/modules/informe/queries'
+import { guardarFeedbackInforme, valorarSeccion } from '@/modules/informe/actions'
+import type { FeedbackInforme } from '@/modules/informe/queries'
+import type { SeccionFeedbackKey } from '@/lib/types/informe'
 import type { ActionResult } from '@/lib/types/domain'
 
 /**
- * Feedback del postulante sobre su informe. Dos piezas separadas a propósito:
+ * Feedback del postulante sobre su informe. Dos piezas:
  *
- *  - `ValoracionCompetenciaControl` cuelga de cada una de las 13 competencias.
- *    Es el único feedback que mapea a un número corregible del motor, y por eso
- *    es DIRECCIONAL: "no estoy de acuerdo" no diría para qué lado mover el peso.
- *  - `FeedbackGlobalForm` cierra el informe con una sola pregunta. Cubre la prosa
- *    del LLM ("cómo trabaja", descripción) sin pedir ~22 respuestas,
- *    que es donde la gente abandona.
+ *  - `ReconocimientoSeccionControl` cuelga de cada sección redactada:
+ *    "¿Te reconocés en esta descripción?" de 1 a 5. Es el insumo de la
+ *    validación del informe (aprobado con al menos 8 de cada 10 en 4 o 5).
+ *  - `FeedbackGlobalForm` cierra el informe con una sola pregunta general.
  */
 
-/**
- * Las etiquetas hablan del NIVEL REAL de la persona, no de cómo "le queda" el
- * que calculamos: "me queda alto" obligaba a resolver mentalmente si lo alto
- * era el nivel o la molestia. Acá el sujeto es él y la dirección es explícita.
- */
-const OPCIONES: { valor: ValoracionCompetencia; label: string }[] = [
-  { valor: 'SUBESTIMA', label: 'Mi nivel es mayor' },
-  { valor: 'JUSTO', label: 'Es correcto' },
-  { valor: 'SOBRESTIMA', label: 'Mi nivel es menor' },
-]
-
-export function ValoracionCompetenciaControl({
-  nombre,
+export function ReconocimientoSeccionControl({
+  seccion,
   inicial,
 }: {
-  nombre: string
-  inicial?: ValoracionCompetencia
+  seccion: SeccionFeedbackKey
+  inicial?: number
 }) {
-  const [valor, setValor] = useState<ValoracionCompetencia | undefined>(inicial)
+  const [valor, setValor] = useState<number | undefined>(inicial)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  function handleClick(opcion: ValoracionCompetencia) {
+  function handleClick(puntaje: number) {
     const previo = valor
-    setValor(opcion)
+    setValor(puntaje)
     setError(null)
     startTransition(async () => {
-      const result = await valorarCompetencia(nombre, opcion)
+      const result = await valorarSeccion(seccion, puntaje)
       // Revertimos en vez de dejar marcada una respuesta que no se guardó: el
       // postulante creería que ya opinó y no reintentaría.
       if (!result.success) {
@@ -55,27 +43,29 @@ export function ValoracionCompetenciaControl({
   }
 
   return (
-    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] text-neutral-400">¿Refleja tu nivel real?</span>
-      {OPCIONES.map(o => {
-        const seleccionada = valor === o.valor
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] text-neutral-400">¿Te reconocés en esta descripción?</span>
+      {[1, 2, 3, 4, 5].map(n => {
+        const seleccionada = valor === n
         return (
           <button
-            key={o.valor}
+            key={n}
             type="button"
-            onClick={() => handleClick(o.valor)}
+            onClick={() => handleClick(n)}
             disabled={isPending}
             aria-pressed={seleccionada}
-            className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+            aria-label={`${n} de 5`}
+            className={`h-6 w-6 rounded-full border text-[11px] font-medium transition-colors disabled:opacity-50 ${
               seleccionada
                 ? 'border-primary-600 bg-primary-600 text-white'
                 : 'border-neutral-200 bg-surface text-muted hover:border-neutral-300 hover:text-ink'
             }`}
           >
-            {o.label}
+            {n}
           </button>
         )
       })}
+      <span className="text-[10.5px] text-neutral-400">1 = nada · 5 = totalmente</span>
       {error && <span className="text-[11px] text-error">{error}</span>}
     </div>
   )

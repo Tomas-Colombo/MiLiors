@@ -29,7 +29,8 @@ import { getPostulanteDetalle, getNotasPrivadas } from '@/modules/postulantes/qu
 import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
-import { InformeDisplay } from '@/modules/informe/informe-display'
+import { AnexoReclutadorDisplay, InformeDisplay } from '@/modules/informe/informe-display'
+import { esFormatoAnterior } from '@/lib/types/informe'
 import { ubicacionLabel } from '@/lib/ubicacion'
 import { verifySession } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
@@ -241,31 +242,6 @@ export default async function PostulanteDetallePage({
         {/* Left column — main info */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Human Design */}
-          {postulante.humanDesign && (
-            <Card>
-              <h2 className="text-[14px] font-bold text-ink mb-3">Human Design</h2>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
-                <div>
-                  <dt className="text-muted">Tipo energético</dt>
-                  <dd className="font-medium text-ink">{postulante.humanDesign.tipo_energetico}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Autoridad</dt>
-                  <dd className="font-medium text-ink">{postulante.humanDesign.autoridad_hd}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Perfil</dt>
-                  <dd className="font-medium text-ink">{postulante.humanDesign.perfil_hd}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Estrategia</dt>
-                  <dd className="font-medium text-ink">{postulante.humanDesign.estrategia_hd}</dd>
-                </div>
-              </dl>
-            </Card>
-          )}
-
           {/* Respuestas del formulario preselector */}
           {respuestasFormulario.length > 0 && (
             <Card>
@@ -400,7 +376,7 @@ export default async function PostulanteDetallePage({
             <Card padding="none">
               <details className="group">
                 <summary className="cursor-pointer list-none px-[22px] py-4 flex items-center justify-between">
-                  <h2 className="text-[14px] font-bold text-ink">Informe de personalidad</h2>
+                  <h2 className="text-[14px] font-bold text-ink">Informe de talentos</h2>
                   <span className="text-[12px] text-primary-600 font-medium group-open:hidden">
                     Ver informe ▾
                   </span>
@@ -409,7 +385,16 @@ export default async function PostulanteDetallePage({
                   </span>
                 </summary>
                 <div className="px-[22px] pb-5 pt-1">
-                  <InformeDisplay data={postulante.informe!} variant="compact" />
+                  {esFormatoAnterior(postulante.informe) ? (
+                    <p className="text-[13px] text-muted">
+                      El candidato todavía no actualizó su informe al formato nuevo.
+                    </p>
+                  ) : (
+                    <div className="space-y-5">
+                      <InformeDisplay data={postulante.informe!} variant="compact" />
+                      {postulante.anexo && <AnexoReclutadorDisplay anexo={postulante.anexo} />}
+                    </div>
+                  )}
                 </div>
               </details>
             </Card>
