@@ -1,12 +1,17 @@
 import {
   getFeedbackCompetenciasAdmin,
   getFeedbackGlobalAdmin,
+  getFeedbackSeccionesAdmin,
   LIMITE_FILAS_CONSULTA,
+  UMBRAL_RECONOCIMIENTO,
   contarFeedbackCompetencias,
   contarFeedbackGlobal,
+  contarFeedbackSecciones,
   agregarPorCompetencia,
+  agregarPorSeccion,
   type FeedbackFiltros,
   type AgregadoCompetencia,
+  type AgregadoSeccion,
   type FeedbackGlobalRow,
 } from '@/modules/admin/queries'
 import { Alert, KpiCard, Table, EmptyState } from '@/components/ui'
@@ -102,26 +107,32 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
     hasta: sp.hasta,
   }
 
-  const [valoraciones, globales, totalHistorico, totalGlobalHistorico, config] = await Promise.all([
-    getFeedbackCompetenciasAdmin(filtros),
-    getFeedbackGlobalAdmin(filtros),
-    contarFeedbackCompetencias(),
-    contarFeedbackGlobal(),
-    getConfiguracionSistema(),
-  ])
+  const [secciones, valoraciones, globales, totalSecciones, totalHistorico, totalGlobalHistorico, config] =
+    await Promise.all([
+      getFeedbackSeccionesAdmin(filtros),
+      getFeedbackCompetenciasAdmin(filtros),
+      getFeedbackGlobalAdmin(filtros),
+      contarFeedbackSecciones(),
+      contarFeedbackCompetencias(),
+      contarFeedbackGlobal(),
+      getConfiguracionSistema(),
+    ])
 
   // Se tocó el techo de filas: los porcentajes salen de una muestra recortada
   // por fecha de carga. Callarlo sería peor que no mostrarlos.
   const truncado =
-    valoraciones.length >= LIMITE_FILAS_CONSULTA || globales.length >= LIMITE_FILAS_CONSULTA
+    secciones.length >= LIMITE_FILAS_CONSULTA ||
+    valoraciones.length >= LIMITE_FILAS_CONSULTA ||
+    globales.length >= LIMITE_FILAS_CONSULTA
 
+  const agregadosSeccion = agregarPorSeccion(secciones)
+  const totalReconocen = secciones.filter(s => s.puntaje >= 4).length
   const agregados = agregarPorCompetencia(valoraciones)
-  const totalJusto = valoraciones.filter(v => v.valoracion === 'JUSTO').length
 
   // Nadie respondió nada todavía. Se distingue de "valoraron competencias pero
   // los filtros no dejan nada" y de "sólo contestaron la pregunta de cierre":
   // con un comentario cargado, decir "todavía no hay feedback" es falso.
-  const sinFeedbackAlguno = totalHistorico === 0 && totalGlobalHistorico === 0
+  const sinFeedbackAlguno = totalSecciones === 0 && totalHistorico === 0 && totalGlobalHistorico === 0
 
   const comentarios = globales.filter(g => g.comentario)
   // Cruda para el link del Excel (que la muestra en el subtítulo del archivo) y
@@ -186,6 +197,40 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       ? null
       : `${Math.round(globales.reduce((acc, g) => acc + g.representatividad, 0) / globales.length)}%`
 
+  const seccionColumns: Column<AgregadoSeccion>[] = [
+    {
+      key: 'seccion',
+      header: 'Sección',
+      width: '2fr',
+      cell: row => (
+        <div>
+          <p className="font-medium text-ink leading-tight">{row.label}</p>
+          <p className="text-[11px] text-muted">{row.total} respuestas</p>
+        </div>
+      ),
+    },
+    {
+      key: 'promedio',
+      header: 'Promedio',
+      align: 'right',
+      cell: row => (
+        <span className="text-[13px] font-semibold tabular-nums text-ink-soft">
+          {row.promedio.toLocaleString('es-AR', { maximumFractionDigits: 1 })}
+        </span>
+      ),
+    },
+    {
+      key: 'reconocen',
+      header: '4 o 5',
+      align: 'right',
+      cell: row => (
+        <span className={`text-[13px] font-semibold tabular-nums ${row.aprobada ? 'text-emerald-600' : 'text-error'}`}>
+          {Math.round(row.reconocen * 100)}%
+        </span>
+      ),
+    },
+  ]
+
   const columns: Column<AgregadoCompetencia>[] = [
     {
       key: 'competencia',
@@ -236,9 +281,8 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
     <div className="mx-auto max-w-5xl px-8 py-10">
       <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Feedback del informe</h1>
       <p className="mt-1 text-[13px] text-muted">
-        Qué tan bien calibrado está el motor de competencias, según los propios postulantes. No
-        modifica ningún informe: es insumo para ajustar la matriz eneatipo→competencia y el factor
-        de contraste.
+        Cuánto se reconocen los postulantes en su informe, sección por sección. No modifica ningún
+        informe: es insumo para calibrar la tabla de pesos del motor.
       </p>
 
       <div className="mt-8">
@@ -249,14 +293,14 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
         <KpiCard
           icon={<BarChartIcon size={20} />}
           tone="violet"
-          label="Valoraciones"
-          value={valoraciones.length}
+          label="Respuestas por sección"
+          value={secciones.length}
         />
         <KpiCard
           icon={<CheckCircleIcon size={20} />}
           tone="green"
-          label="Nivel correcto"
-          value={`${pct(totalJusto, valoraciones.length)}%`}
+          label="Se reconocen (4 o 5)"
+          value={`${pct(totalReconocen, secciones.length)}%`}
         />
         <KpiCard
           icon={<StarIcon size={20} />}
@@ -296,12 +340,44 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
           Descargar Excel
         </a>
         <span className="text-[11px] text-muted">
-          Cuatro hojas con lo que estos filtros dejan a la vista. Seudónimo: incluye el id del
+          La hoja por sección y el histórico por nivel, con lo que estos filtros dejan a la vista. Seudónimo: incluye el id del
           postulante, nunca nombre ni email.
         </span>
       </div>
 
       <div className="mt-6">
+        <h2 className="text-[15px] font-bold text-ink">¿Se reconocen? — por sección</h2>
+        <p className="mt-0.5 text-[12px] text-muted">
+          Respuestas a &ldquo;¿Te reconocés en esta descripción?&rdquo; (1 a 5). Una sección se aprueba
+          con al menos {Math.round(UMBRAL_RECONOCIMIENTO * 100)}% de respuestas en 4 o 5. Filtran el
+          eneatipo y las fechas.
+        </p>
+        <div className="mt-3">
+          {agregadosSeccion.length === 0 ? (
+            <EmptyState
+              icon={<BarChartIcon size={22} />}
+              title={sinFeedbackAlguno ? 'Todavía no hay feedback' : 'Sin respuestas por sección'}
+              description={
+                sinFeedbackAlguno
+                  ? 'Ningún postulante valoró su informe todavía. Las respuestas aparecen acá a medida que se cargan.'
+                  : 'Nadie respondió todavía la pregunta por sección, o los filtros no dejan ninguna respuesta.'
+              }
+            />
+          ) : (
+            <Table columns={seccionColumns} rows={agregadosSeccion} rowKey={row => row.key} />
+          )}
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-[15px] font-bold text-ink">Histórico — nivel por competencia</h2>
+        <p className="mt-0.5 text-[12px] text-muted">
+          Valoraciones de los informes hasta la versión 3, cuando cada competencia mostraba un nivel. Ya
+          no se cargan respuestas nuevas: queda como referencia.
+        </p>
+      </div>
+
+      <div className="mt-4">
         <ComoLeer />
       </div>
 
@@ -310,17 +386,11 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
           <EmptyState
             icon={<BarChartIcon size={22} />}
             title={
-              sinFeedbackAlguno
-                ? 'Todavía no hay feedback'
-                : totalHistorico === 0
-                ? 'Sin valoraciones por competencia'
-                : 'Sin resultados'
+              totalHistorico === 0 ? 'Sin valoraciones históricas' : 'Sin resultados'
             }
             description={
-              sinFeedbackAlguno
-                ? 'Ningún postulante valoró su informe todavía. Las respuestas aparecen acá a medida que se cargan.'
-                : totalHistorico === 0
-                ? 'Hay respuestas a la pregunta de cierre, pero nadie valoró competencia por competencia todavía. Los comentarios se listan más abajo.'
+              totalHistorico === 0
+                ? 'No hay valoraciones por nivel de informes anteriores.'
                 : 'Ninguna respuesta coincide con los filtros aplicados.'
             }
           />

@@ -11,13 +11,20 @@ import {
 import {
   agregarPorCompetencia,
   agregarPorCompetenciaYNivel,
+  agregarPorSeccion,
   diagnosticoSesgo,
+  UMBRAL_RECONOCIMIENTO,
   type FeedbackCompetenciaRow,
   type FeedbackGlobalRow,
+  type FeedbackSeccionRow,
 } from './queries'
 
 /**
- * Reporte de feedback del informe, en un solo .xlsx de cuatro hojas.
+ * Reporte de feedback del informe, en un solo .xlsx.
+ *
+ * La primera hoja es la vigente: "¿Te reconocés?" por sección (1-5), con el
+ * criterio de aprobación de la especificación v2.0. Las cuatro siguientes son
+ * el HISTÓRICO de la valoración por nivel (informes hasta la versión 3).
  *
  * El grano crudo (una fila por valoración, 13 por postulante) responde mal la
  * única pregunta que se le hace a este archivo: qué competencia está mal
@@ -58,6 +65,7 @@ function pintarDiagnostico(cell: ExcelJS.Cell, sesgo: number, diagnostico: strin
 }
 
 export type FeedbackWorkbookInput = {
+  secciones: FeedbackSeccionRow[]
   valoraciones: FeedbackCompetenciaRow[]
   globales: FeedbackGlobalRow[]
   /** Descripción legible de los filtros aplicados, para que el archivo diga qué contiene. */
@@ -71,18 +79,49 @@ export type FeedbackWorkbookInput = {
 }
 
 export async function construirFeedbackWorkbook(input: FeedbackWorkbookInput): Promise<Buffer> {
-  const { valoraciones, globales, truncado } = input
+  const { secciones, valoraciones, globales, truncado } = input
   const filtrosDescripcion = truncado
     ? `⚠ PARCIAL: se alcanzó el máximo de filas y estos números salen de una muestra recortada. Achicá el rango de fechas. ${input.filtrosDescripcion}`
     : input.filtrosDescripcion
 
   const wb = nuevoLibro()
 
+  // ── Hoja 0 · Por sección (vigente) ─────────────────────────────────────────
+  const porSeccion = wb.addWorksheet('Por sección', { properties: { tabColor: { argb: C.primary } } })
+  prepararHoja(
+    porSeccion,
+    '¿Se reconocen? — por sección',
+    `Respuestas a "¿Te reconocés en esta descripción?" (1 nada · 5 totalmente). La sección se aprueba con al menos ${Math.round(UMBRAL_RECONOCIMIENTO * 100)}% de respuestas en 4 o 5. ${filtrosDescripcion}`,
+    [
+      { header: 'Sección', key: 'seccion', width: 30 },
+      { header: 'Respuestas', key: 'total', width: 12 },
+      { header: 'Promedio', key: 'promedio', width: 11 },
+      { header: '4 o 5', key: 'reconocen', width: 10 },
+      { header: 'Resultado', key: 'resultado', width: 16 },
+    ],
+  )
+  for (const a of agregarPorSeccion(secciones)) {
+    const row = porSeccion.addRow({
+      seccion: a.label,
+      total: a.total,
+      promedio: a.promedio,
+      reconocen: a.reconocen,
+      resultado: a.aprobada ? 'Aprobada' : 'A revisar',
+    })
+    row.getCell('promedio').numFmt = '0.0'
+    row.getCell('reconocen').numFmt = '0%'
+    const [texto, fondo] = a.aprobada ? [C.success, C.successBg] : [C.error, C.errorBg]
+    const celda = row.getCell('resultado')
+    celda.font = { name: 'Calibri', size: 10, bold: true, color: { argb: texto } }
+    celda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fondo } }
+  }
+  estilarFilas(porSeccion)
+
   // ── Hoja 1 · Resumen ───────────────────────────────────────────────────────
-  const resumen = wb.addWorksheet('Resumen', { properties: { tabColor: { argb: C.primary } } })
+  const resumen = wb.addWorksheet('Histórico · Resumen', { properties: { tabColor: { argb: C.muted } } })
   prepararHoja(
     resumen,
-    'Resumen por competencia',
+    'Histórico — resumen por competencia (informes hasta v3)',
     `Qué competencia está mal calibrada. Sesgo = % subestimado − % sobrestimado. Positivo: el motor se queda corto, subir su peso. Negativo: se pasa. ${filtrosDescripcion}`,
     [
       { header: 'Competencia', key: 'nombre', width: 30 },
@@ -114,7 +153,7 @@ export async function construirFeedbackWorkbook(input: FeedbackWorkbookInput): P
   estilarFilas(resumen)
 
   // ── Hoja 2 · Por nivel ─────────────────────────────────────────────────────
-  const porNivel = wb.addWorksheet('Por nivel', { properties: { tabColor: { argb: C.gold } } })
+  const porNivel = wb.addWorksheet('Histórico · Por nivel', { properties: { tabColor: { argb: C.muted } } })
   prepararHoja(
     porNivel,
     'Competencia × nivel mostrado',
@@ -196,10 +235,10 @@ export async function construirFeedbackWorkbook(input: FeedbackWorkbookInput): P
   estilarFilas(coments)
 
   // ── Hoja 4 · Detalle ───────────────────────────────────────────────────────
-  const detalle = wb.addWorksheet('Detalle', { properties: { tabColor: { argb: C.muted } } })
+  const detalle = wb.addWorksheet('Histórico · Detalle', { properties: { tabColor: { argb: C.muted } } })
   prepararHoja(
     detalle,
-    'Detalle de valoraciones',
+    'Histórico — detalle de valoraciones por nivel',
     'Una fila por valoración: el grano crudo, por si querés rehacer las cuentas o cruzarlo con otra cosa. Seudónimo: el id permite agrupar las respuestas de una misma persona, nunca expone nombre ni email.',
     [
       { header: 'Competencia', key: 'competencia', width: 30 },

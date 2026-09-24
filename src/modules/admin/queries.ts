@@ -6,7 +6,12 @@ import {
   valorEnum,
   type ValoracionCompetencia,
 } from '@/lib/constants/enums'
-import { NIVELES_INFORME, type NivelCompetencia } from '@/lib/types/informe'
+import {
+  NIVELES_INFORME,
+  SECCIONES_FEEDBACK,
+  SECCIONES_FEEDBACK_ANTERIORES,
+  type NivelCompetencia,
+} from '@/lib/types/informe'
 import { patronSinTildes } from '@/lib/texto'
 
 // ─── Métricas del dashboard ──────────────────────────────────────────────────
@@ -491,6 +496,17 @@ export type FeedbackCompetenciaRow = {
   informeGeneradoAt: string
 }
 
+/** Respuesta a "¿Te reconocés en esta descripción?" sobre una sección (1-5). */
+export type FeedbackSeccionRow = {
+  id: string
+  postulanteId: string
+  eneatipo: number | null
+  seccionKey: string
+  seccionLabel: string
+  puntaje: number
+  respondidoAt: string
+}
+
 export type FeedbackGlobalRow = {
   id: string
   postulanteId: string
@@ -741,6 +757,103 @@ export async function contarFeedbackGlobal(): Promise<number> {
     .select('*', { count: 'exact', head: true })
   if (error) logFeedbackError('el total de respuestas globales', error)
   return count ?? 0
+}
+
+const LABEL_POR_SECCION: Record<string, string> = {
+  ...SECCIONES_FEEDBACK_ANTERIORES,
+  ...Object.fromEntries(SECCIONES_FEEDBACK.map(s => [s.key, s.label])),
+}
+
+/** Respuestas por sección del informe, con los filtros de eneatipo y fecha. */
+export async function getFeedbackSeccionesAdmin(
+  filtros: FeedbackFiltros = {},
+): Promise<FeedbackSeccionRow[]> {
+  const admin = createAdminClient()
+  const rango = rangoISO(filtros)
+
+  const filas = await traerPaginado<{
+    id: string
+    postulante_id: string
+    seccion_key: string
+    puntaje: number
+    updated_at: string
+  }>(() => {
+    let query = admin
+      .from('feedback_informe_seccion')
+      .select('id, postulante_id, seccion_key, puntaje, updated_at')
+
+    if (rango.desde) query = query.gte('updated_at', rango.desde)
+    if (rango.hasta) query = query.lte('updated_at', rango.hasta)
+
+    return query.order('updated_at', { ascending: false }).order('id')
+  }, 'las respuestas por sección')
+
+  const eneatipos = await eneatipoPorPostulante([...new Set(filas.map(f => f.postulante_id))])
+
+  const rows = filas.map(f => ({
+    id: f.id,
+    postulanteId: f.postulante_id,
+    eneatipo: eneatipos[f.postulante_id] ?? null,
+    seccionKey: f.seccion_key,
+    seccionLabel: LABEL_POR_SECCION[f.seccion_key] ?? f.seccion_key,
+    puntaje: f.puntaje,
+    respondidoAt: f.updated_at,
+  }))
+
+  const eneatipoFiltro = parseInt(filtros.eneatipo ?? '', 10)
+  return Number.isFinite(eneatipoFiltro)
+    ? rows.filter(r => r.eneatipo === eneatipoFiltro)
+    : rows
+}
+
+/** Total histórico de respuestas por sección, sin filtros. */
+export async function contarFeedbackSecciones(): Promise<number> {
+  const admin = createAdminClient()
+  const { count, error } = await admin
+    .from('feedback_informe_seccion')
+    .select('*', { count: 'exact', head: true })
+  if (error) logFeedbackError('el total de respuestas por sección', error)
+  return count ?? 0
+}
+
+/**
+ * Criterio de aprobación de la especificación v2.0: al menos 8 de cada 10
+ * respuestas en 4 o 5.
+ */
+export const UMBRAL_RECONOCIMIENTO = 0.8
+
+export type AgregadoSeccion = {
+  key: string
+  label: string
+  total: number
+  promedio: number
+  /** Proporción 0-1 de respuestas 4 o 5. */
+  reconocen: number
+  aprobada: boolean
+}
+
+/** Agrega por sección, en el orden de SECCIONES_FEEDBACK (las desconocidas al final). */
+export function agregarPorSeccion(rows: FeedbackSeccionRow[]): AgregadoSeccion[] {
+  const porKey = new Map<string, { label: string; total: number; suma: number; altos: number }>()
+  for (const r of rows) {
+    const actual = porKey.get(r.seccionKey) ?? { label: r.seccionLabel, total: 0, suma: 0, altos: 0 }
+    actual.total += 1
+    actual.suma += r.puntaje
+    if (r.puntaje >= 4) actual.altos += 1
+    porKey.set(r.seccionKey, actual)
+  }
+
+  const orden = new Map<string, number>(SECCIONES_FEEDBACK.map((s, i) => [s.key, i]))
+  return [...porKey.entries()]
+    .map(([key, a]) => ({
+      key,
+      label: a.label,
+      total: a.total,
+      promedio: a.suma / a.total,
+      reconocen: a.altos / a.total,
+      aprobada: a.altos / a.total >= UMBRAL_RECONOCIMIENTO,
+    }))
+    .sort((a, b) => (orden.get(a.key) ?? 99) - (orden.get(b.key) ?? 99))
 }
 
 /** Respuestas a la pregunta global de cierre, con los mismos filtros aplicables. */

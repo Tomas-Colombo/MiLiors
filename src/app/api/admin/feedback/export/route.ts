@@ -2,6 +2,7 @@ import { type NextRequest } from 'next/server'
 import { getSessionUser } from '@/lib/dal'
 import {
   getFeedbackCompetenciasAdmin,
+  getFeedbackSeccionesAdmin,
   getFeedbackGlobalAdmin,
   type FeedbackFiltros,
 } from '@/modules/admin/queries'
@@ -83,7 +84,8 @@ export async function GET(req: NextRequest) {
   // comentarios, el archivo no puede traer 300.
   const busqueda = (sp.get('qC') ?? '').trim()
 
-  const [valoraciones, todosLosGlobales] = await Promise.all([
+  const [secciones, valoraciones, todosLosGlobales] = await Promise.all([
+    getFeedbackSeccionesAdmin(filtros),
     getFeedbackCompetenciasAdmin(filtros),
     getFeedbackGlobalAdmin(filtros),
   ])
@@ -95,11 +97,14 @@ export async function GET(req: NextRequest) {
     : todosLosGlobales
 
   const truncado =
-    valoraciones.length >= LIMITE_FILAS_CONSULTA || todosLosGlobales.length >= LIMITE_FILAS_CONSULTA
+    secciones.length >= LIMITE_FILAS_CONSULTA ||
+    valoraciones.length >= LIMITE_FILAS_CONSULTA ||
+    todosLosGlobales.length >= LIMITE_FILAS_CONSULTA
 
   let xlsx: Buffer
   try {
     xlsx = await construirFeedbackWorkbook({
+      secciones,
       valoraciones,
       globales,
       filtrosDescripcion: describirFiltros(filtros, busqueda),
