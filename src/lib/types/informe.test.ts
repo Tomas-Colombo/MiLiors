@@ -21,8 +21,8 @@ describe('esFormatoAnterior', () => {
     expect(esFormatoAnterior(json(INFORME_VERSION))).toBe(false)
   })
 
-  it('una versión futura tampoco ofrece regenerarse (no volvemos atrás)', () => {
-    expect(esFormatoAnterior(json(INFORME_VERSION + 1))).toBe(false)
+  it('una versión futura tampoco se dibuja: este código no conoce su forma', () => {
+    expect(esFormatoAnterior(json(INFORME_VERSION + 1))).toBe(true)
   })
 
   it('sin informe no hay nada que ofrecer', () => {

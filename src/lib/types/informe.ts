@@ -159,10 +159,14 @@ export function esFeedbackVigente(informeGeneradoAt: string, fechaGeneracionActu
 }
 
 /**
- * `true` si el informe se generó con un esquema anterior al vigente. Esos
- * informes no se dibujan: su forma es otra y se ofrece regenerarlos.
+ * `true` si el informe no es del esquema vigente. Esos informes no se dibujan:
+ * su forma es otra y se ofrece regenerarlos.
+ *
+ * Incluye versiones POSTERIORES a la vigente: las escribe un deploy más nuevo
+ * (o una rama local contra la misma base) y este código no conoce su forma.
+ * Dibujarlas rompe la página; regenerarlas la deja en una forma conocida.
  */
 export function esFormatoAnterior(json: InformePersonalidadJSON | null | undefined): boolean {
   if (!json) return false
-  return (json.version ?? 1) < INFORME_VERSION
+  return (json.version ?? 1) !== INFORME_VERSION
 }
