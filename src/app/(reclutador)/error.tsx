@@ -31,7 +31,7 @@ export default function Error({
       icon={<AlertTriangleIcon size={24} />}
       code="Error"
       title="No pudimos cargar esta pantalla"
-      description="Volvé a intentarlo; si sigue fallando, escribinos con el código de abajo."
+      description="Volvé a intentarlo más tarde."
       actions={
         <>
           <Button onClick={() => unstable_retry()}>Reintentar</Button>
