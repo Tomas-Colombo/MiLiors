@@ -41,6 +41,37 @@ export async function registrarUsuario(
 
   const { email, password, rol } = parsed.data
   const supabase = await createClient()
+  const adminClient = createAdminClient()
+
+  // 0. Email ya registrado: no volver a pasar por signUp().
+  // Con una cuenta SIN confirmar, signUp() reenvía el mail pero además pisa la
+  // contraseña con la que se escribió ahora. Quien se registraba de nuevo porque
+  // el link había vencido quedaba confirmado con una contraseña distinta a la que
+  // recordaba, y el login le respondía "Email o contraseña incorrectos". Acá solo
+  // se reenvía el mail; la contraseña sigue siendo la del primer registro.
+  const { data: existente } = await adminClient
+    .from('usuario')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (existente) {
+    const { data: { user: authUser } } = await adminClient.auth.admin.getUserById(existente.id)
+    if (authUser?.email_confirmed_at) {
+      return { success: false, error: 'Ya existe una cuenta con ese email.', fieldErrors: { _email: [email] } }
+    }
+    if (authUser) {
+      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email })
+      if (resendError) {
+        console.error('[registrarUsuario] resend error:', resendError)
+        if (resendError.status === 429 || resendError.code === 'over_email_send_rate_limit') {
+          return { success: false, error: 'Demasiados intentos. Esperá unos minutos antes de volver a intentarlo.' }
+        }
+        return { success: false, error: 'No se pudo reenviar el mail. Intentá de nuevo.', fieldErrors: { _email: [email] } }
+      }
+      return { success: true, data: { email, reenviado: true } }
+    }
+  }
 
   // 1. Crear el usuario en Supabase Auth.
   // El rol NO va acá: `options.data` escribe en user_metadata, que el propio
@@ -76,7 +107,6 @@ export async function registrarUsuario(
   }
 
   // 2. Insertar en tabla usuario (usando admin client para saltear RLS en insert inicial)
-  const adminClient = createAdminClient()
   const usuarioRow: TablesInsert<'usuario'> = {
     id: authData.user.id,
     email,

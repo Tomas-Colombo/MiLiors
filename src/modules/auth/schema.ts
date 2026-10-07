@@ -60,5 +60,7 @@ export type NuevaPasswordInput = z.infer<typeof nuevaPasswordSchema>
  * Lo que devuelve `registrarUsuario` cuando la cuenta se creó pero todavía no
  * hay sesión: Supabase manda el mail de verificación y no emite token hasta que
  * el enlace se abre. El email viaja de vuelta para poder mostrarlo en el aviso.
+ * `reenviado` marca que la cuenta ya existía sin confirmar: solo se reenvió el
+ * mail y la contraseña válida sigue siendo la del primer registro.
  */
-export type RegistroPendiente = { email: string }
+export type RegistroPendiente = { email: string; reenviado?: boolean }

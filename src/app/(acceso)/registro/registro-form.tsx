@@ -32,6 +32,17 @@ export function RegistroForm() {
   // Antes acá había un redirect al onboarding del rol que el proxy rebotaba a
   // la pantalla de acceso, sin explicar nada. Mismo tratamiento que
   // `RecuperarPasswordForm`: el formulario se reemplaza por el aviso.
+  if (state?.success && state.data.reenviado) {
+    return (
+      <div className="tid-alert tid-alert-info">
+        Ya tenías una cuenta pendiente de activar con <strong>{state.data.email}</strong>. Te
+        reenviamos el mail de verificación: abrí el enlace más reciente y después ingresá con la
+        contraseña que elegiste la primera vez. Si no la recordás, usá &quot;¿La olvidaste?&quot; en
+        la pantalla de ingreso.
+      </div>
+    )
+  }
+
   if (state?.success) {
     return (
       <div className="tid-alert tid-alert-info">
