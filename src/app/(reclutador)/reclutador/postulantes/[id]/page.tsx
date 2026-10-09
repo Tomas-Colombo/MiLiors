@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { VolverLink } from '@/components/shared/volver-link'
-import { Card, Badge, Chip, Alert } from '@/components/ui'
+import { Card, Badge, Chip, Alert, buttonClassName } from '@/components/ui'
 import {
   ChevronLeftIcon,
   MailIcon,
@@ -163,11 +163,11 @@ export default async function PostulanteDetallePage({
   const contactoDisponible = postulante.email !== null
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       {/* Back */}
       <VolverLink
         href={volver.href}
-        className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
+        className="inline-flex items-center gap-1.5 text-compact text-muted hover:text-ink transition-colors"
       >
         <ChevronLeftIcon size={16} />
         {volver.label}
@@ -190,12 +190,12 @@ export default async function PostulanteDetallePage({
                 <UserIcon size={22} />
               </span>
               <div>
-                <h1 className="text-xl font-extrabold text-ink">{postulante.nombre_completo}</h1>
+                <h1 className="text-xl font-extrabold tracking-tight text-ink">{postulante.nombre_completo}</h1>
                 {postulante.carrera && (
-                  <p className="text-[13px] text-muted">{postulante.carrera}</p>
+                  <p className="text-compact text-muted">{postulante.carrera}</p>
                 )}
                 {ubicacionLabel(postulante) && (
-                  <p className="text-[12px] text-neutral-400 mt-0.5">
+                  <p className="text-xs text-neutral-400 mt-0.5">
                     📍 {ubicacionLabel(postulante)}
                   </p>
                 )}
@@ -230,7 +230,7 @@ export default async function PostulanteDetallePage({
           {/* AI assistant CTA */}
           <Link
             href={`/reclutador/asistente?postulante=${id}`}
-            className="inline-flex items-center gap-2 rounded-md bg-primary-tint px-4 h-10 text-[13px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors"
+            className={buttonClassName({ variant: 'tonal' })}
           >
             <SparklesIcon size={16} />
             Consultar Asistente IA
@@ -245,10 +245,10 @@ export default async function PostulanteDetallePage({
           {/* Respuestas del formulario preselector */}
           {respuestasFormulario.length > 0 && (
             <Card>
-              <h2 className="text-[14px] font-bold text-ink mb-3">Respuestas del formulario preselector</h2>
+              <h2 className="text-sm font-bold text-ink mb-3">Respuestas del formulario preselector</h2>
               <ul className="space-y-3">
                 {respuestasFormulario.map((r, i) => (
-                  <li key={i} className="text-[13px]">
+                  <li key={i} className="text-compact">
                     <p className="font-semibold text-ink">{r.preguntaTexto}</p>
                     <p className={r.fallidaCritica ? 'text-error' : 'text-ink-soft'}>
                       {r.respuestaTexto}
@@ -267,10 +267,10 @@ export default async function PostulanteDetallePage({
           {/* Formación académica */}
           {postulante.formaciones.length > 0 && (
             <Card>
-              <h2 className="text-[14px] font-bold text-ink mb-3">Formación académica</h2>
+              <h2 className="text-sm font-bold text-ink mb-3">Formación académica</h2>
               <ul className="space-y-3">
                 {postulante.formaciones.map((f, i) => (
-                  <li key={i} className="text-[13px]">
+                  <li key={i} className="text-compact">
                     <p className="font-semibold text-ink">{f.titulo}</p>
                     <p className="text-muted">{f.institucion}</p>
                     {f.fecha_graduacion && (
@@ -290,10 +290,10 @@ export default async function PostulanteDetallePage({
           {/* Cursos */}
           {postulante.cursos.length > 0 && (
             <Card>
-              <h2 className="text-[14px] font-bold text-ink mb-3">Cursos</h2>
+              <h2 className="text-sm font-bold text-ink mb-3">Cursos</h2>
               <ul className="space-y-3">
                 {postulante.cursos.map((c, i) => (
-                  <li key={i} className="text-[13px]">
+                  <li key={i} className="text-compact">
                     <p className="font-semibold text-ink">{c.nombre}</p>
                     <p className="text-muted">{c.institucion}</p>
                     <p className="text-neutral-400 text-xs">
@@ -328,10 +328,10 @@ export default async function PostulanteDetallePage({
           {/* Experiencia laboral */}
           {postulante.experiencias.length > 0 && (
             <Card>
-              <h2 className="text-[14px] font-bold text-ink mb-3">Experiencia laboral</h2>
+              <h2 className="text-sm font-bold text-ink mb-3">Experiencia laboral</h2>
               <ul className="space-y-3">
                 {postulante.experiencias.map((e, i) => (
-                  <li key={i} className="text-[13px]">
+                  <li key={i} className="text-compact">
                     <p className="font-semibold text-ink">{e.puesto}</p>
                     <p className="text-muted">{e.empresa}</p>
                     <p className="text-neutral-400 text-xs">
@@ -359,10 +359,10 @@ export default async function PostulanteDetallePage({
           {/* Idiomas */}
           {postulante.idiomas.length > 0 && (
             <Card>
-              <h2 className="text-[14px] font-bold text-ink mb-3">Idiomas</h2>
+              <h2 className="text-sm font-bold text-ink mb-3">Idiomas</h2>
               <ul className="space-y-1.5">
                 {postulante.idiomas.map((id, i) => (
-                  <li key={i} className="flex items-center justify-between text-[13px]">
+                  <li key={i} className="flex items-center justify-between text-compact">
                     <span className="text-ink">{id.nombre}</span>
                     <Badge tone="neutral">{id.nivel_idioma}</Badge>
                   </li>
@@ -376,17 +376,17 @@ export default async function PostulanteDetallePage({
             <Card padding="none">
               <details className="group">
                 <summary className="cursor-pointer list-none px-[22px] py-4 flex items-center justify-between">
-                  <h2 className="text-[14px] font-bold text-ink">Informe de talentos</h2>
-                  <span className="text-[12px] text-primary-600 font-medium group-open:hidden">
+                  <h2 className="text-sm font-bold text-ink">Informe de talentos</h2>
+                  <span className="text-xs text-primary-600 font-medium group-open:hidden">
                     Ver informe ▾
                   </span>
-                  <span className="text-[12px] text-primary-600 font-medium hidden group-open:inline">
+                  <span className="text-xs text-primary-600 font-medium hidden group-open:inline">
                     Ocultar ▴
                   </span>
                 </summary>
                 <div className="px-[22px] pb-5 pt-1">
                   {esFormatoAnterior(postulante.informe) ? (
-                    <p className="text-[13px] text-muted">
+                    <p className="text-compact text-muted">
                       El candidato todavía no actualizó su informe al formato nuevo.
                     </p>
                   ) : (
@@ -405,9 +405,9 @@ export default async function PostulanteDetallePage({
         <div className="space-y-6">
           {/* Contact */}
           <Card>
-            <h2 className="text-[14px] font-bold text-ink mb-3">Contacto</h2>
+            <h2 className="text-sm font-bold text-ink mb-3">Contacto</h2>
             {contactoDisponible ? (
-              <ul className="space-y-2 text-[13px]">
+              <ul className="space-y-2 text-compact">
                 {postulante.email && (
                   <li className="flex items-center gap-2">
                     <MailIcon size={14} className="text-muted flex-none" />
@@ -453,7 +453,7 @@ export default async function PostulanteDetallePage({
               </Alert>
             )}
             {tiempoRelativo(postulante.ultima_conexion) && (
-              <p className="mt-3 pt-3 border-t border-neutral-100 text-[12px] text-neutral-400">
+              <p className="mt-3 pt-3 border-t border-neutral-100 text-xs text-neutral-400">
                 Último acceso:{' '}
                 <span className="font-semibold text-ink">
                   {tiempoRelativo(postulante.ultima_conexion)}

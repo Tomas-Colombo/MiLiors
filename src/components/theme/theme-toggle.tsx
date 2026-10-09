@@ -31,11 +31,8 @@ export function ThemeToggle({ iconOnly = false, className }: Props) {
       title="Cambiar tema"
       className={
         className ??
-        'flex items-center gap-2 text-xs font-medium transition-colors disabled:opacity-50'
+        'app-sidebar__btn flex items-center gap-2 text-xs font-medium disabled:opacity-50'
       }
-      style={{ color: 'var(--sidebar-item-text)' }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--sidebar-item-text-active)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--sidebar-item-text)' }}
     >
       {/* El CSS se encarga de mostrar el ícono correcto — sin estado de React */}
       <SunIcon  size={14} className="hidden dark:block" />

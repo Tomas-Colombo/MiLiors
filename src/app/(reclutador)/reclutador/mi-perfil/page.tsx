@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { verifySession, getTyCVigente } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
-import { Card } from '@/components/ui'
+import { PageHeader, Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
 import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
 import { PerfilReclutadorForm } from './form'
@@ -26,17 +26,19 @@ export default async function MiPerfilReclutadorPage() {
   const [perfil, tyc] = await Promise.all([getPerfilReclutador(session.id), getTyCVigente()])
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-10 space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Mi perfil</h1>
-        <p className="mt-1 text-sm text-muted">
-          Actualizá tus datos. Las empresas se administran en{' '}
-          <Link href="/reclutador/empresas" className="font-medium text-primary-600 hover:underline">
-            Mis empresas
-          </Link>
-          .
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
+      <PageHeader
+        title="Mi perfil"
+        description={
+          <>
+            Actualizá tus datos. Las empresas se administran en{' '}
+            <Link href="/reclutador/empresas" className="font-medium text-primary-600 hover:underline">
+              Mis empresas
+            </Link>
+            .
+          </>
+        }
+      />
 
       <Card padding="lg">
         <PerfilReclutadorForm perfil={perfil} />

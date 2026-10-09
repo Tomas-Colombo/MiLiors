@@ -82,10 +82,9 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
   return (
     <aside
       className={[
-        'flex flex-none flex-col h-screen sticky top-0 py-5 transition-[width] duration-200 ease-out',
+        'app-sidebar flex flex-none flex-col h-screen sticky top-0 py-5',
         collapsed ? 'w-[72px] px-2' : 'w-56 px-3',
       ].join(' ')}
-      style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
     >
       {/* Brand + colapsar */}
       <div className={['mb-6 flex items-center px-1', collapsed ? 'flex-col gap-3' : 'justify-between gap-2'].join(' ')}>
@@ -93,13 +92,10 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
           <BrandLogo size={40} />
           {!collapsed && (
             <div className="min-w-0">
-              <div
-                className="text-[13.5px] font-extrabold tracking-tight text-white"
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
+              <div className="font-heading text-compact font-extrabold tracking-tight text-white">
                 MiLiors
               </div>
-              <div className="truncate text-[10px] font-medium" style={{ color: 'var(--sidebar-item-text)' }}>
+              <div className="app-sidebar__muted truncate text-2xs font-medium">
                 {rolLabel}
               </div>
             </div>
@@ -110,16 +106,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
           onClick={toggleCollapsed}
           aria-label={collapsed ? 'Expandir barra lateral' : 'Retraer barra lateral'}
           title={collapsed ? 'Expandir barra lateral' : 'Retraer barra lateral'}
-          className="flex-none rounded-[7px] p-1.5 transition-colors"
-          style={{ color: 'var(--sidebar-item-text)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'
-            e.currentTarget.style.color = 'var(--sidebar-item-text-active)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = 'var(--sidebar-item-text)'
-          }}
+          className="app-sidebar__btn app-sidebar__btn--tile flex-none rounded-md p-1.5"
         >
           {collapsed ? <PanelLeftOpenIcon size={16} /> : <PanelLeftCloseIcon size={16} />}
         </button>
@@ -128,7 +115,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
       {/* Nav */}
       <nav className="flex flex-col gap-0.5 flex-1">
         {navBloqueado && !collapsed && (
-          <p className="mb-2 px-3 text-[11px] leading-snug" style={{ color: 'var(--sidebar-item-text)' }}>
+          <p className="app-sidebar__muted mb-2 px-3 text-2xs leading-snug">
             {navBloqueado}
           </p>
         )}
@@ -141,10 +128,9 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
                 aria-disabled="true"
                 title={navBloqueado}
                 className={[
-                  'flex cursor-not-allowed items-center rounded-[9px] py-2.5 text-sm font-medium opacity-45',
+                  'app-sidebar__muted flex cursor-not-allowed items-center rounded-md py-2.5 text-sm font-medium opacity-45',
                   collapsed ? 'justify-center px-2' : 'gap-3 px-3',
                 ].join(' ')}
-                style={{ color: 'var(--sidebar-item-text)' }}
               >
                 <span className="flex-none">{item.icon}</span>
                 {!collapsed && <span className="flex-1">{item.label}</span>}
@@ -158,34 +144,12 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
               aria-current={active ? 'page' : undefined}
               title={collapsed ? item.label : undefined}
               className={[
-                'flex items-center rounded-[9px] py-2.5 text-sm font-medium transition-colors',
+                // Colores de reposo, hover y activo (aria-current): globals.css, sección Sidebar.
+                'app-sidebar__link flex items-center rounded-md py-2.5 text-sm',
                 collapsed ? 'justify-center px-2' : 'gap-3 px-3',
               ].join(' ')}
-              style={{
-                background: active ? 'var(--sidebar-item-active-bg)' : 'transparent',
-                // El aro interno es lo que despega el ítem activo del fondo de
-                // la barra sin sumarle un borde que corra el layout.
-                boxShadow: active ? 'inset 0 0 0 1px var(--sidebar-item-active-ring)' : 'none',
-                color: active ? 'var(--sidebar-item-text-active)' : 'var(--sidebar-item-text)',
-                fontWeight: active ? 600 : 500,
-              }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  e.currentTarget.style.background = 'var(--sidebar-item-hover-bg)'
-                  e.currentTarget.style.color = 'var(--sidebar-item-text-active)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'var(--sidebar-item-text)'
-                }
-              }}
             >
-              <span
-                className="relative flex-none"
-                style={{ color: active ? 'var(--sidebar-icon-active)' : 'var(--sidebar-item-text)' }}
-              >
+              <span className="app-sidebar__link-icon relative flex-none">
                 {item.icon}
                 {item.badge && collapsed && (
                   <span
@@ -209,30 +173,26 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
 
       {/* Footer */}
       <div
-        className={['pt-4 space-y-3', collapsed ? 'px-1' : 'px-3'].join(' ')}
-        style={{ borderTop: '1px solid var(--sidebar-border)' }}
+        className={['border-t border-[color:var(--sidebar-border)] pt-4 space-y-3', collapsed ? 'px-1' : 'px-3'].join(' ')}
       >
         {!collapsed && (
           <div>
             <div className="flex items-center gap-1.5">
-              <p
-                className="text-[11.5px] font-semibold truncate"
-                style={{ color: 'var(--sidebar-item-text-active)' }}
-              >
+              <p className="app-sidebar__strong text-2xs font-semibold truncate">
                 {userEmail}
               </p>
               {settingsHref && (
                 <Link
                   href={settingsHref}
                   aria-label="Configuración de perfil"
-                  className="flex-none transition-colors"
+                  className="flex-none rounded-sm transition-colors"
                   style={{ color: pathname.startsWith(settingsHref) ? 'var(--color-accent-light)' : 'var(--sidebar-item-text)' }}
                 >
                   <SettingsIcon size={13} />
                 </Link>
               )}
             </div>
-            <p className="text-[11px]" style={{ color: 'var(--sidebar-item-text)' }}>
+            <p className="app-sidebar__muted text-2xs">
               {rolLabel}
             </p>
           </div>
@@ -243,7 +203,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
             href={settingsHref}
             aria-label="Configuración de perfil"
             title="Configuración de perfil"
-            className="flex justify-center transition-colors"
+            className="flex justify-center rounded-sm transition-colors"
             style={{ color: pathname.startsWith(settingsHref) ? 'var(--color-accent-light)' : 'var(--sidebar-item-text)' }}
           >
             <SettingsIcon size={16} />
@@ -253,7 +213,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
         <ThemeToggle
           iconOnly={collapsed}
           className={[
-            'flex items-center text-xs font-medium transition-colors disabled:opacity-50',
+            'app-sidebar__btn flex items-center rounded-sm text-xs font-medium disabled:opacity-50',
             collapsed ? 'justify-center w-full' : 'gap-2',
           ].join(' ')}
         />
@@ -264,12 +224,9 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
           disabled={isPending}
           title={collapsed ? 'Cerrar sesión' : undefined}
           className={[
-            'flex items-center text-xs font-medium transition-colors disabled:opacity-50',
+            'app-sidebar__btn app-sidebar__btn--danger flex items-center rounded-sm text-xs font-medium disabled:opacity-50',
             collapsed ? 'justify-center w-full' : 'gap-2',
           ].join(' ')}
-          style={{ color: 'var(--sidebar-item-text)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--sidebar-item-text)' }}
         >
           <LogOutIcon size={14} />
           {!collapsed && (isPending ? 'Cerrando sesión...' : 'Cerrar sesión')}

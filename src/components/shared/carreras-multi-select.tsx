@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { coincideBusqueda } from '@/lib/texto'
 import { ChevronDownIcon } from '@/components/icons'
+import { inputClassName } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
 
 interface CarrerasMultiSelectProps {
@@ -72,7 +73,7 @@ export function CarrerasMultiSelect({
           {selected.map((val) => (
             <span
               key={val}
-              className="inline-flex items-center gap-1 rounded-full bg-primary-ghost-hover py-1 pl-2.5 pr-1.5 text-[12.5px] font-medium text-primary-600"
+              className="inline-flex items-center gap-1 rounded-full bg-primary-ghost-hover py-1 pl-2.5 pr-1.5 text-xs font-medium text-primary-600"
             >
               {labelDe(val)}
               <button
@@ -81,7 +82,7 @@ export function CarrerasMultiSelect({
                 aria-label={`Quitar ${labelDe(val)}`}
                 className="flex h-4 w-4 items-center justify-center rounded-full text-primary-500 transition-colors hover:bg-primary-100 hover:text-primary-700"
               >
-                <span className="text-[13px] leading-none">×</span>
+                <span className="text-compact leading-none">×</span>
               </button>
             </span>
           ))}
@@ -99,11 +100,7 @@ export function CarrerasMultiSelect({
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
-          className={cn(
-            'h-10 w-full rounded-md border border-neutral-300 bg-surface pl-3.5 pr-10 font-sans text-sm outline-none',
-            'transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50',
-            query ? 'text-ink' : 'text-neutral-400',
-          )}
+          className={inputClassName({ empty: !query, className: 'pr-10' })}
         />
         <ChevronDownIcon
           size={16}
@@ -124,7 +121,7 @@ export function CarrerasMultiSelect({
                 e.preventDefault()
                 agregar(opt.value)
               }}
-              className="flex w-full items-center rounded-[7px] px-[11px] py-[9px] text-left text-[13.5px] text-ink-soft hover:bg-neutral-50"
+              className="flex w-full items-center rounded-md px-[11px] py-[9px] text-left text-compact text-ink-soft hover:bg-neutral-50"
             >
               {opt.label}
             </button>

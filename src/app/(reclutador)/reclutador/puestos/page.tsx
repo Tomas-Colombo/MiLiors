@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Badge, EmptyState, Table } from '@/components/ui'
+import { PageHeader, Badge, EmptyState, Table, buttonClassName } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, AlertCircleIcon } from '@/components/icons'
 import {
@@ -94,7 +94,7 @@ export default async function MisPuestosPage({
         const postulaciones = conteoPostulaciones.get(p.id) ?? 0
         return (
           <div>
-            <p className="truncate text-[13px] font-semibold text-ink">{p.titulo_puesto}</p>
+            <p className="truncate text-compact font-semibold text-ink">{p.titulo_puesto}</p>
             <p className="text-xs text-neutral-400">
               {p.nombre_empresa && `${p.nombre_empresa} · `}
               {postulaciones} postulación{postulaciones !== 1 ? 'es' : ''}
@@ -149,7 +149,7 @@ export default async function MisPuestosPage({
       key: 'apertura',
       header: 'Apertura',
       cell: (p) => (
-        <span className="text-[13px] text-neutral-400">
+        <span className="text-compact text-neutral-400">
           {new Date(apertura(p)).toLocaleDateString('es-AR', {
             day: '2-digit',
             month: '2-digit',
@@ -164,9 +164,9 @@ export default async function MisPuestosPage({
       cell: (p) => {
         const fin = pausa(p)
         // Ciclo abierto: el puesto está corriendo y no hay pausa que mostrar.
-        if (!fin) return <span className="text-[13px] text-neutral-300">—</span>
+        if (!fin) return <span className="text-compact text-neutral-300">—</span>
         return (
-          <span className="text-[13px] text-neutral-400">
+          <span className="text-compact text-neutral-400">
             {new Date(fin).toLocaleDateString('es-AR', {
               day: '2-digit',
               month: '2-digit',
@@ -187,20 +187,17 @@ export default async function MisPuestosPage({
   ]
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">Mis puestos</h1>
-          <p className="mt-1 text-muted">{puestos.length} puesto{puestos.length !== 1 ? 's' : ''}</p>
-        </div>
-        <Link
-          href="/reclutador/puestos/nuevo"
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-[18px] text-sm font-semibold text-white hover:brightness-105"
-        >
-          <PlusIcon size={16} />
-          Nuevo puesto
-        </Link>
-      </div>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
+      <PageHeader
+        title="Mis puestos"
+        description={<>{puestos.length} puesto{puestos.length !== 1 ? 's' : ''}</>}
+        actions={
+          <Link href="/reclutador/puestos/nuevo" className={buttonClassName({ variant: 'primary', size: 'md' })}>
+            <PlusIcon size={16} />
+            Nuevo puesto
+          </Link>
+        }
+      />
 
       {puestos.length > 0 && (
         <Suspense>
@@ -220,7 +217,7 @@ export default async function MisPuestosPage({
           action={
             <Link
               href="/reclutador/puestos/nuevo"
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
+              className={buttonClassName()}
             >
               <PlusIcon size={16} />
               Publicar puesto

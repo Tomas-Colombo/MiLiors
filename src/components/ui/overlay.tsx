@@ -31,8 +31,9 @@ export function Tooltip({ content, children, side = "top", className }: TooltipP
         <span
           role="tooltip"
           className={cn(
-            "absolute left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-lg bg-neutral-900 px-3 py-2 text-[12.5px] font-medium text-neutral-0 shadow-md",
-            side === "top" ? "bottom-full mb-2" : "top-full mt-2",
+            "absolute left-1/2 z-30 -translate-x-1/2 animate-pop-in whitespace-nowrap rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-neutral-0 shadow-md",
+            // Entra desde el lado contrario al que se abre: sube si va arriba.
+            side === "top" ? "bottom-full mb-2 [--ds-pop-offset:4px]" : "top-full mt-2",
           )}
         >
           {content}
@@ -61,7 +62,7 @@ export function MenuItem({ icon, children, onSelect, active, destructive }: Menu
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-center gap-2.5 rounded-lg px-[11px] py-[9px] text-left text-[13.5px] transition-colors",
+        "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-compact -outline-offset-2 transition-colors",
         destructive
           ? "text-error hover:bg-error-bg"
           : active
@@ -76,12 +77,14 @@ export function MenuItem({ icon, children, onSelect, active, destructive }: Menu
 }
 
 export function MenuSeparator() {
-  return <div className="mx-2 my-[5px] h-px bg-neutral-100" />;
+  return <div className="mx-2 my-1 h-px bg-line" />;
 }
 
 export function Menu({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("rounded-lg border border-neutral-300 bg-neutral-0 p-1.5 shadow-md", className)}>{children}</div>
+    <div className={cn("animate-pop-in rounded-lg border border-line-strong bg-neutral-0 p-1.5 shadow-md", className)}>
+      {children}
+    </div>
   );
 }
 
@@ -174,8 +177,8 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
       // margen dejaban el diálogo en 279px de ancho útil en una pantalla de
       // 375px. El padding además es lo que descuenta el `max-h-full` del
       // diálogo, así que en mobile esto también le da más alto al cuerpo.
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-12"
-      style={{ background: "rgba(28,32,48,.40)" }}
+      className="fixed inset-0 z-50 flex animate-backdrop-in items-center justify-center p-4 sm:p-12"
+      style={{ background: "var(--overlay-backdrop)" }}
       onClick={onClose}
     >
       <div
@@ -198,7 +201,7 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
         // contenido largo estiraba el diálogo más allá de la pantalla y, como
         // el contenedor recorta con `overflow-hidden`, el footer con los
         // botones quedaba fuera de vista y el diálogo era imposible de cerrar.
-        className="flex max-h-full flex-col overflow-hidden rounded-xl bg-neutral-0 shadow-lg outline-none"
+        className="flex max-h-full animate-modal-in flex-col overflow-hidden rounded-xl bg-neutral-0 shadow-lg outline-none"
         style={{ width, maxWidth: "100%" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -209,17 +212,17 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
               type="button"
               onClick={onClose}
               aria-label="Cerrar"
-              className="ml-auto cursor-pointer p-1 text-neutral-400 hover:text-ink-soft"
+              className="-mr-2 -mt-2 ml-auto flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-ink-soft"
             >
               <CloseIcon size={18} />
             </button>
           </div>
-          <h3 id={tituloId} className="mb-1.5 mt-4 text-[18px] font-bold">
+          <h3 id={tituloId} className="mb-1.5 mt-4 text-lg font-bold tracking-tight">
             {title}
           </h3>
         </div>
         {children && (
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 text-sm leading-[1.55] text-muted">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 text-sm leading-normal text-muted">
             {children}
           </div>
         )}
@@ -227,7 +230,7 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
           // `bg-neutral-50` en vez del `#fafbfc` que estaba fijo: en claro es
           // prácticamente el mismo gris, pero el hex no se invertía y en modo
           // oscuro dejaba una franja casi blanca al pie del diálogo.
-          <div className="flex flex-none gap-3 border-t border-neutral-100 bg-neutral-50 px-6 py-4">{footer}</div>
+          <div className="flex flex-none gap-3 border-t border-line bg-neutral-50 px-6 py-4">{footer}</div>
         )}
       </div>
     </div>
@@ -406,7 +409,7 @@ export function PromptDialog({
       }
     >
       {children}
-      <label htmlFor={campoId} className="mb-1.5 mt-3 block text-[13px] font-medium text-ink-soft">
+      <label htmlFor={campoId} className="mb-1.5 mt-3 block text-compact font-semibold text-ink-soft">
         {label}
       </label>
       <Input

@@ -11,13 +11,11 @@ import { SkeletonPageHeader } from '@/components/shell/page-skeleton'
  */
 export default function LoadingCertificado() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8" aria-busy="true">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <div className="mb-6">
         <SkeletonPageHeader
           title="Certificado de Perfil"
-          titleClassName="tracking-tight"
           subtitle="Descargá tu certificado verificable con QR para compartir con reclutadores."
-          subtitleClassName="text-sm"
         />
       </div>
 

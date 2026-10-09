@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui'
  */
 export function NotaTexto({
   contenido,
-  className = 'text-[13px] text-ink leading-relaxed',
+  className = 'text-compact text-ink leading-relaxed',
   titulo = 'Nota',
   lineas = 3,
 }: {
@@ -40,14 +40,14 @@ export function NotaTexto({
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="text-[12.5px] font-semibold text-primary-600 hover:underline"
+          className="text-xs font-semibold text-primary-600 hover:underline"
         >
           Ver
         </button>
       )}
 
       <Modal open={abierto} onClose={() => setAbierto(false)} title={titulo} width={560}>
-        <p className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed text-ink">
+        <p className="whitespace-pre-wrap break-words text-compact leading-relaxed text-ink">
           {contenido}
         </p>
       </Modal>

@@ -11,13 +11,11 @@ import { SkeletonPageHeader } from '@/components/shell/page-skeleton'
  */
 export default function LoadingPerfilTecnico() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8" aria-busy="true">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <div className="mb-6">
         <SkeletonPageHeader
           title="Perfil Técnico"
-          titleClassName="tracking-tight"
           subtitle="Tu experiencia, formación, cursos, idiomas y habilidades y tecnologías."
-          subtitleClassName="text-sm"
         />
       </div>
 

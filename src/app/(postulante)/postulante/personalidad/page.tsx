@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PERFILES_PROFESIONALES } from '@/modules/eneagrama/perfiles-profesionales'
 import { evaluarRehacer, formatearFecha, MESES_ESPERA_REHACER } from '@/modules/eneagrama/rehacer-policy'
 import { CheckIcon, ArrowRightIcon } from '@/components/icons'
-import { Alert } from '@/components/ui'
+import { PageHeader, Alert, buttonClassName } from '@/components/ui'
 
 export const metadata = { title: 'Perfil de personalidad — MiLiors' }
 
@@ -57,14 +57,11 @@ export default async function PerfilPersonalidadPage() {
   const estadoRehacer = evaluarRehacer(test?.veces_completado ?? 0, test?.fecha_realizacion ?? null)
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 space-y-10">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-10">
 
       {/* ── Sección Eneagrama ── */}
       <section className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Eneagrama</h1>
-          <p className="mt-1 text-sm text-muted">Tu tipo de personalidad según el sistema ITA Riso-Hudson.</p>
-        </div>
+        <PageHeader title="Eneagrama" description="Tu tipo de personalidad según el sistema ITA Riso-Hudson." />
 
         {/* Introducción: qué es y para qué se usa acá */}
         <div className="rounded-xl border border-neutral-200 bg-surface px-5 py-4 shadow-card">
@@ -99,7 +96,7 @@ export default async function PerfilPersonalidadPage() {
               {estadoRehacer.puedeRehacer ? (
                 <Link
                   href="/postulante/eneagrama"
-                  className="shrink-0 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-neutral-200"
+                  className={buttonClassName({ variant: 'secondary', className: 'shrink-0' })}
                 >
                   Rehacer test →
                 </Link>
@@ -192,7 +189,7 @@ export default async function PerfilPersonalidadPage() {
             </div>
             <Link
               href="/postulante/eneagrama"
-              className="shrink-0 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+              className={buttonClassName({ className: 'shrink-0' })}
             >
               Ir al test →
             </Link>

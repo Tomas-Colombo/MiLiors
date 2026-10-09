@@ -31,8 +31,8 @@ export function PrivacidadPersonalidad({ inicial }: { inicial: boolean }) {
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[14px] font-semibold text-ink">Mostrar mi informe de personalidad</p>
-          <p className="mt-0.5 text-[13px] leading-relaxed text-muted">
+          <p className="text-sm font-semibold text-ink">Mostrar mi informe de personalidad</p>
+          <p className="mt-0.5 text-compact leading-relaxed text-muted">
             Quien escanee el QR de tu certificado —o ingrese su ID en la web— ve tu informe de
             personalidad. Nunca se muestran tu email, tu teléfono ni tu LinkedIn.
           </p>
@@ -45,7 +45,7 @@ export function PrivacidadPersonalidad({ inicial }: { inicial: boolean }) {
           onClick={toggle}
           disabled={isPending}
           className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors disabled:opacity-60 ${
-            visible ? 'bg-primary-600' : 'bg-neutral-300'
+            visible ? 'bg-primary-solid' : 'bg-neutral-300'
           }`}
         >
           <span
@@ -57,7 +57,7 @@ export function PrivacidadPersonalidad({ inicial }: { inicial: boolean }) {
       </div>
 
       {!visible && (
-        <p className="text-[12.5px] text-muted">
+        <p className="text-xs text-muted">
           Tu certificado sigue siendo verificable: quien lo consulte va a ver tu nombre y la fecha
           de emisión, pero no tu personalidad.
         </p>

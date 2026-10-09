@@ -118,19 +118,19 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
       <div className="flex flex-nowrap items-center justify-center gap-1.5">
         <Link
           href={`/reclutador/puestos/${puestoId}`}
-          className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
+          className="inline-flex h-7 items-center rounded-sm border border-neutral-300 bg-surface px-2.5 text-2xs font-semibold text-ink-soft hover:bg-neutral-50"
         >
           Ver
         </Link>
         <Link
           href={`/reclutador/postulaciones?puesto=${puestoId}`}
-          className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50 whitespace-nowrap"
+          className="inline-flex h-7 items-center rounded-sm border border-neutral-300 bg-surface px-2.5 text-2xs font-semibold text-ink-soft hover:bg-neutral-50 whitespace-nowrap"
         >
           Postulaciones
         </Link>
         <Link
           href={`/reclutador/puestos/${puestoId}/editar`}
-          className="inline-flex h-7 items-center rounded-[6px] border border-neutral-300 bg-surface px-2.5 text-[11.5px] font-semibold text-ink-soft hover:bg-neutral-50"
+          className="inline-flex h-7 items-center rounded-sm border border-neutral-300 bg-surface px-2.5 text-2xs font-semibold text-ink-soft hover:bg-neutral-50"
         >
           Editar
         </Link>
@@ -138,7 +138,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
           <Link
             href={`/reclutador/puestos/${puestoId}/asistente`}
             aria-label="Asistente IA"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-neutral-300 bg-surface text-primary-600 hover:bg-primary-tint"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-neutral-300 bg-surface text-primary-600 hover:bg-primary-tint"
           >
             <SparklesIcon size={14} />
           </Link>
@@ -148,7 +148,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
             type="button"
             onClick={() => abrirModal('cerrar')}
             disabled={isPending}
-            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-[6px] bg-error-solid px-2.5 text-[11.5px] font-semibold text-white hover:bg-error-strong disabled:bg-neutral-disabled disabled:cursor-not-allowed"
+            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-sm bg-error-solid px-2.5 text-2xs font-semibold text-white hover:bg-error-strong disabled:bg-neutral-disabled disabled:cursor-not-allowed"
           >
             {isPending && modo === 'cerrar' ? <Spinner size={13} /> : 'Pausar'}
           </button>
@@ -157,7 +157,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
             type="button"
             onClick={() => abrirModal('reactivar')}
             disabled={isPending}
-            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-[6px] bg-primary-tint px-2.5 text-[11.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover disabled:text-neutral-400 disabled:bg-neutral-100 disabled:cursor-not-allowed"
+            className="inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-sm bg-primary-tint px-2.5 text-2xs font-semibold text-primary-600 hover:bg-primary-tint-hover disabled:text-neutral-400 disabled:bg-neutral-100 disabled:cursor-not-allowed"
           >
             {isPending && modo === 'reactivar' ? <Spinner size={13} /> : 'Reactivar'}
           </button>
@@ -166,7 +166,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
           <button
             type="button"
             aria-label="Eliminar puesto"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-400 hover:bg-error-bg hover:text-error disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-neutral-400 hover:bg-error-bg hover:text-error-ink disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => abrirModal('eliminar')}
             disabled={isPending}
           >
@@ -183,7 +183,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
               <CheckCircleIcon size={22} strokeWidth={2} />
             </span>
           ) : (
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-error-bg text-error">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-error-bg text-error-ink">
               <AlertTriangleIcon size={22} strokeWidth={2} />
             </span>
           )
@@ -248,7 +248,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
         {/* Registro de contratación (opcional) */}
         {registraContratacion && (
         <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3.5">
-          <p className="text-[13px] font-semibold text-ink">
+          <p className="text-compact font-semibold text-ink">
             ¿Contrataste a alguien para este puesto?
           </p>
           <p className="mt-0.5 text-xs text-neutral-400">

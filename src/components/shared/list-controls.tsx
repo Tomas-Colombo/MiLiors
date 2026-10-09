@@ -13,7 +13,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
-import { Input, FancySelect, SearchableSelect, Pagination, DateInput, Field } from '@/components/ui'
+import { Input, FancySelect, SearchableSelect, Pagination, DateInput, Field, buttonClassName } from '@/components/ui'
 import type { SelectOption } from '@/components/ui'
 import { SearchIcon, TrashIcon } from '@/components/icons'
 
@@ -161,7 +161,7 @@ export function FilterSearchableSelect({
           setParams({ [paramKey]: next, ...Object.fromEntries((alsoClear ?? []).map((k) => [k, null])) })
         }}
       />
-      {hint && <p className="mt-1 text-[11px] leading-tight text-neutral-400">{hint}</p>}
+      {hint && <p className="mt-1 text-2xs leading-tight text-neutral-400">{hint}</p>}
     </div>
   )
 }
@@ -230,7 +230,7 @@ export function ClearFilters({
       onClick={() =>
         setParams(Object.fromEntries([...keys, ...(alsoClear ?? [])].map((k) => [k, null])))
       }
-      className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-ink"
+      className={buttonClassName({ variant: 'secondary', className: 'whitespace-nowrap' })}
     >
       <TrashIcon size={14} />
       Limpiar filtros
@@ -300,7 +300,7 @@ export function FiltrosBar({
 export function CampoFiltro({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
+      <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">{label}</p>
       {children}
     </div>
   )

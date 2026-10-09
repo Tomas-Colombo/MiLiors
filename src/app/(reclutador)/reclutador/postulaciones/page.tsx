@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Card, Badge, Chip, EmptyState, Tooltip } from '@/components/ui'
+import { PageHeader, Card, Badge, Chip, EmptyState, Tooltip, buttonClassName } from '@/components/ui'
 import { UsersIcon, MailIcon, FileTextIcon, SparklesIcon, WhatsAppIcon } from '@/components/icons'
 import { getPostulacionesRecibidas, getPuestoById } from '@/modules/puestos/queries'
 import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
@@ -157,13 +157,17 @@ export default async function PostulacionesRecibidasPage({
   )
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-ink">Postulaciones recibidas</h1>
-        <p className="mt-1 text-muted">
-          {totalPuesto} postulación{totalPuesto !== 1 ? 'es' : ''}{' '}
-          {tituloPuestoFiltrado ? `para ${tituloPuestoFiltrado}` : 'en total'}
-        </p>
+        <PageHeader
+          title="Postulaciones recibidas"
+          description={
+            <>
+              {totalPuesto} postulación{totalPuesto !== 1 ? 'es' : ''}{' '}
+              {tituloPuestoFiltrado ? `para ${tituloPuestoFiltrado}` : 'en total'}
+            </>
+          }
+        />
         {puestoFiltrado?.cerrado && (
           <div className="mt-2">
             <Badge tone="warning" dot>Este puesto está pausado</Badge>
@@ -227,7 +231,7 @@ export default async function PostulacionesRecibidasPage({
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[14px] font-semibold text-ink">
+                    <p className="text-sm font-semibold text-ink">
                       {p.nombre_completo ?? 'Candidato'}
                     </p>
                     {detalleNoAvanza ? (
@@ -278,7 +282,7 @@ export default async function PostulacionesRecibidasPage({
                     )}
                   </div>
 
-                  <p className="text-[13px] text-muted truncate">
+                  <p className="text-compact text-muted truncate">
                     Puesto:{' '}
                     <span className="font-medium text-ink-soft">{p.titulo_puesto ?? '—'}</span>
                     {p.nombre_empresa && (
@@ -290,7 +294,7 @@ export default async function PostulacionesRecibidasPage({
                   </p>
 
                   {p.carrera && (
-                    <p className="text-[12px] text-neutral-400">
+                    <p className="text-xs text-neutral-400">
                       Carrera:{' '}
                       <span className="text-neutral-500">{p.carrera}</span>
                     </p>
@@ -301,14 +305,14 @@ export default async function PostulacionesRecibidasPage({
                     {p.contacto.email && (
                       <a
                         href={`mailto:${p.contacto.email}`}
-                        className="inline-flex items-center gap-1.5 text-[12.5px] text-primary-600 hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs text-primary-600 hover:underline"
                       >
                         <MailIcon size={13} />
                         {p.contacto.email}
                       </a>
                     )}
                     {p.contacto.telefono && (
-                      <span className="inline-flex items-center gap-1.5 text-[12.5px]">
+                      <span className="inline-flex items-center gap-1.5 text-xs">
                         <a
                           href={`tel:${p.contacto.telefono}`}
                           className="text-primary-600 hover:underline"
@@ -342,7 +346,7 @@ export default async function PostulacionesRecibidasPage({
                 {p.habilidades.length > 0 && (
                   <div className="hidden sm:flex sm:w-48 flex-none flex-wrap content-start justify-start gap-1.5 overflow-hidden max-h-36 sm:ml-2">
                     {p.habilidades.slice(0, 5).map((h) => (
-                      <Chip key={h} className="!px-2.5 !py-1 !text-[11.5px] whitespace-nowrap">
+                      <Chip key={h} className="!px-2.5 !py-1 !text-2xs whitespace-nowrap">
                         {h.length > 20 ? `${h.slice(0, 20)}…` : h}
                       </Chip>
                     ))}
@@ -378,7 +382,7 @@ export default async function PostulacionesRecibidasPage({
                     >
                       <Link
                         href={`/reclutador/asistente?postulante=${p.postulante_id}&puesto=${p.puesto_id ?? ''}&postulacion=${p.id}`}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-2 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+                        className={buttonClassName({ variant: 'tonal', size: 'sm', className: 'w-full whitespace-nowrap' })}
                       >
                         <SparklesIcon size={14} />
                         Asistente IA

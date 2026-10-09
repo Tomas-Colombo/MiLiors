@@ -26,10 +26,22 @@
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
   --font-heading: var(--font-fraunces), Georgia, serif;
 
+  /* ----- Escala tipográfica ---------------------------------------------
+     Tailwind ya trae xs (12), sm (14), base (16), lg (18), xl (20) y 2xl (24).
+     Acá se suman los tres escalones intermedios que usa la interfaz densa.
+     En rem para que respeten el tamaño de fuente del usuario. */
+  --text-2xs: 0.6875rem; /* 11px · metadatos, badges */
+  --text-2xs--line-height: 1.4;
+  --text-compact: 0.8125rem; /* 13px · cuerpo denso, controles chicos */
+  --text-compact--line-height: 1.5;
+  --text-md: 0.9375rem; /* 15px · cuerpo destacado, subtítulos */
+  --text-md--line-height: 1.5;
+
   /* ----- Color · Primario (azul corporativo) ---------------------------- */
   --color-primary-50: #eef4fe;
   --color-primary-100: #e7effd;
   --color-primary-300: #a8c5f8;
+  --color-primary-400: #7aa5f4; /* punto medio 300-500; antes no existía y `*-primary-400` no generaba nada */
   --color-primary-500: #4b86f0;
   /* Un punto más oscuro que el acento de marca (#2f6fed) a propósito: este es
      el token que pinta TEXTO (enlaces, botones ghost/tonal) y sobre el vidrio
@@ -45,7 +57,14 @@
   --color-primary-tint: #e7effd; /* fondo tonal */
   --color-primary-tint-hover: #d8e5fc; /* hover tonal */
   --color-primary-ghost-hover: #f3f7fe; /* hover ghost */
-  --color-primary-ring: #e7effd; /* anillo de foco */
+  /* Halo de foco de los campos (ring-primary-ring). Era #e7effd, casi igual al
+     lienzo y por lo tanto invisible; ahora es el primario translúcido, así se
+     lee igual sobre vidrio, blanco y modo oscuro. */
+  --color-primary-ring: rgba(37, 100, 220, .20);
+  /* Relleno sólido bajo texto blanco (chip/segmentado/página activa, contador).
+     En oscuro `primary-600` se aclara a #6fa3ff y el blanco encima daba 2.4:1;
+     este token se mantiene saturado en los dos temas. */
+  --color-primary-solid: #2564dc;
 
   /* ----- Color · Dorado de marca (isotipo, énfasis, sellos) -------------
      Nunca para texto largo sobre blanco: no alcanza contraste AA. Se usa en
@@ -85,6 +104,10 @@
   /* #6b7085 (el gris de la paleta) se queda en 4.36:1 sobre el vidrio; este
      tono un punto más oscuro llega a 4.76:1. */
   --color-muted: #656a80;
+  /* Placeholder de todos los controles. Antes usaban `faint` (2.6:1); este tono
+     llega a 4.5:1 sobre el fondo opaco de los campos y se sigue leyendo como
+     "sugerencia" frente al `ink` del valor escrito. */
+  --color-placeholder: #6f758c;
   --color-faint: #9aa0b6; /* deliberadamente por debajo de AA: placeholders y
                              texto decorativo, nunca contenido */
 
@@ -127,6 +150,24 @@
   --color-info-bg: #e4effe;
   --color-info-border: #bbd6fb;
 
+  /* Texto sobre el `-bg` de su propio tono (Badge, Alert). `success`/`warning`
+     (#16a34a / #b7791f) dan ~3:1 sobre su fondo tintado; estos tonos llegan a
+     AA. En oscuro se invierten a los tonos claros (ver `.dark`). No usar
+     `*-strong` para texto: en oscuro se reutiliza como relleno de hover. */
+  --color-success-ink: #0f6e40;
+  --color-warning-ink: #925a12;
+  --color-error-ink: #a6241f;
+  --color-info-ink: #1f52a8;
+
+  /* ----- Movimiento · utilidades `animate-*` ----------------------------
+     Sólo entrada (no hay estado de salida). Keyframes al final del archivo.
+     `--default-transition-timing-function` hace que todo `transition-*` use
+     `--ease-ui` (definido en :root). No se pisa `--ease-out` de Tailwind. */
+  --default-transition-timing-function: var(--ease-ui);
+  --animate-backdrop-in: ds-backdrop-in var(--duration-base) var(--ease-ui) backwards;
+  --animate-modal-in: ds-modal-in var(--duration-base) var(--ease-ui) backwards;
+  --animate-pop-in: ds-pop-in var(--duration-fast) var(--ease-ui) backwards;
+
   /* ----- Radios --------------------------------------------------------- */
   --radius-sm: 6px; /* badges */
   --radius-md: 8px; /* inputs / botones */
@@ -145,6 +186,22 @@
   --shadow-promo: 0 10px 28px rgba(47, 111, 237, 0.28); /* card promocional */
   --shadow-gold: 0 4px 14px rgba(164, 115, 42, 0.28); /* realces dorados */
   --shadow-toast: 0 10px 28px rgba(16, 24, 40, 0.22);
+}
+
+/* =========================================================================
+   Movimiento y foco
+   ========================================================================= */
+:root {
+  --ease-ui: cubic-bezier(0.16, 1, 0.3, 1); /* desaceleración exponencial */
+  --duration-fast: 120ms; /* feedback inmediato: hover, press */
+  --duration-base: 180ms; /* cambio de estado de rutina */
+
+  /* Color del anillo de foco por teclado. Sigue al primario, que en modo
+     oscuro se reasigna a un azul claro. */
+  --focus-ring: var(--color-primary-600);
+
+  /* Telón detrás de los diálogos. */
+  --overlay-backdrop: rgba(28, 32, 48, .40);
 }
 
 /* =========================================================================
@@ -254,6 +311,7 @@
   --color-primary-50: rgba(111, 163, 255, .10);
   --color-primary-100: rgba(111, 163, 255, .14);
   --color-primary-300: #8fb6f7;
+  --color-primary-400: #75a4f5;
   --color-primary-500: #5b92f2;
   --color-primary-600: #6fa3ff;
   --color-primary-700: #9ac1ff;
@@ -263,6 +321,7 @@
   --color-primary-tint-hover: rgba(111, 163, 255, .22);
   --color-primary-ghost-hover: rgba(111, 163, 255, .10);
   --color-primary-ring: rgba(111, 163, 255, .30);
+  --color-primary-solid: #2f6fed;
 
   --color-gold-50: #2a2413;
   --color-gold-100: #3a3119;
@@ -297,6 +356,7 @@
   --color-soft: #bfc7d6;
   --color-muted: #8b95a6;
   --color-faint: #6b7484;
+  --color-placeholder: #8089a0;
 
   --color-accent-violet: #6fa3ff;
   --color-accent-violet-bg: rgba(111, 163, 255, .14);
@@ -324,6 +384,10 @@
   --color-info: #7dabf8;
   --color-info-bg: #122a4a;
   --color-info-border: #1d4f8f;
+  --color-success-ink: #4ade80;
+  --color-warning-ink: #fbbf24;
+  --color-error-ink: #f87171;
+  --color-info-ink: #7dabf8;
 
   /* Mismo criterio que en claro: el relleno de los botones se mantiene
      saturado para que el texto blanco siga por encima de 4.5:1. */
@@ -348,6 +412,8 @@
 
   --accent: #6fa3ff;
   --accent-soft: rgba(111, 163, 255, .14);
+
+  --overlay-backdrop: rgba(6, 9, 15, .62);
 
   --card-border: rgba(255, 255, 255, .09);
   --card-blur: blur(18px) saturate(1.15);
@@ -386,6 +452,47 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Foco visible global (sólo teclado). Los componentes que dibujan su propio
+   anillo lo hacen con utilidades, que ganan a esta capa base. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Tailwind v4 dejó los botones con cursor por defecto. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* Con la preferencia de movimiento reducido: sin scroll animado, las
+   transiciones pasan a ser instantáneas y las animaciones decorativas se
+   cortan. El spinner de carga es feedback de estado, no decoración: se
+   mantiene, más lento. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+
+  [style*="ds-spin"] {
+    animation-duration: 1.4s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 body {
@@ -442,7 +549,7 @@ button.bg-surface {
 }
 
 ::selection {
-  background: #d8e5fc;
+  background: var(--color-primary-tint-hover);
 }
 
 .dark ::selection {
@@ -474,5 +581,114 @@ button.bg-surface {
   }
   100% {
     background-position: 400px 0;
+  }
+}
+
+/* Entrada de capas flotantes (sólo entrada). Ver `--animate-*` en @theme. */
+
+/* Sólo el telón: animar `opacity` del contenedor desvanecería también el
+   diálogo hijo, que ya tiene su propia entrada. */
+@keyframes ds-backdrop-in {
+  from {
+    background-color: transparent;
+  }
+}
+
+@keyframes ds-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+/* Menús, desplegables y tooltips. `--ds-pop-offset` permite invertir el
+   sentido cuando la capa se abre hacia arriba (ej. tooltip `top`). */
+@keyframes ds-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--ds-pop-offset, -4px));
+  }
+}
+
+/* =========================================================================
+   Sidebar
+   El hover y el estado activo se pintan acá (no con handlers de mouse ni
+   estilos en línea) para que las transiciones y el foco por teclado sean
+   consistentes. Estado activo: `aria-current="page"` en el enlace.
+   ========================================================================= */
+.app-sidebar {
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  transition: width var(--duration-base) var(--ease-ui);
+}
+
+.app-sidebar__muted {
+  color: var(--sidebar-item-text);
+}
+
+.app-sidebar__strong {
+  color: var(--sidebar-item-text-active);
+}
+
+/* Foco por teclado: el azul de marca no da contraste sobre el navy, se usa el
+   tono claro del ícono activo. */
+.app-sidebar :focus-visible {
+  outline: 2px solid var(--sidebar-icon-active);
+  outline-offset: 2px;
+}
+
+/* Botones de texto/ícono del sidebar (colapsar, tema, cerrar sesión). */
+.app-sidebar__btn {
+  color: var(--sidebar-item-text);
+  transition: background-color var(--duration-fast) var(--ease-ui),
+    color var(--duration-fast) var(--ease-ui);
+}
+
+.app-sidebar__btn:disabled {
+  cursor: not-allowed;
+}
+
+/* Ítem de navegación. */
+.app-sidebar__link {
+  background-color: transparent;
+  color: var(--sidebar-item-text);
+  font-weight: 500;
+  transition: background-color var(--duration-fast) var(--ease-ui),
+    color var(--duration-fast) var(--ease-ui),
+    box-shadow var(--duration-fast) var(--ease-ui);
+}
+
+.app-sidebar__link-icon {
+  color: var(--sidebar-item-text);
+  transition: color var(--duration-fast) var(--ease-ui);
+}
+
+/* El aro interno despega el ítem activo del fondo de la barra sin sumarle un
+   borde que corra el layout. */
+.app-sidebar__link[aria-current="page"] {
+  background-color: var(--sidebar-item-active-bg);
+  box-shadow: inset 0 0 0 1px var(--sidebar-item-active-ring);
+  color: var(--sidebar-item-text-active);
+  font-weight: 600;
+}
+
+.app-sidebar__link[aria-current="page"] .app-sidebar__link-icon {
+  color: var(--sidebar-icon-active);
+}
+
+@media (hover: hover) {
+  .app-sidebar__btn:hover:not(:disabled),
+  .app-sidebar__link:hover:not([aria-current="page"]) {
+    color: var(--sidebar-item-text-active);
+  }
+
+  .app-sidebar__btn--tile:hover,
+  .app-sidebar__link:hover:not([aria-current="page"]) {
+    background-color: var(--sidebar-item-hover-bg);
+  }
+
+  /* Cerrar sesión avisa con rojo (red-400) al pasar el mouse. */
+  .app-sidebar__btn--danger:hover:not(:disabled) {
+    color: #f87171;
   }
 }

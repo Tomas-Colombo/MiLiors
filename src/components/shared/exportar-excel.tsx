@@ -24,12 +24,12 @@ export function ExportarExcel({
     <div className="flex flex-wrap items-center gap-3">
       <a
         href={href}
-        className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted transition-colors hover:border-primary-300 hover:bg-primary-tint hover:text-primary-600"
+        className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-xs font-medium text-muted transition-colors hover:border-primary-300 hover:bg-primary-tint hover:text-primary-600"
       >
         <DownloadIcon size={14} />
         {label}
       </a>
-      {nota && <span className="text-[11px] text-muted">{nota}</span>}
+      {nota && <span className="text-2xs text-muted">{nota}</span>}
     </div>
   )
 }
@@ -51,11 +51,11 @@ export function ExportarExcelSkeleton({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted">
+      <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-xs font-medium text-muted">
         <DownloadIcon size={14} />
         {label}
       </span>
-      {nota && <span className="text-[11px] text-muted">{nota}</span>}
+      {nota && <span className="text-2xs text-muted">{nota}</span>}
     </div>
   )
 }

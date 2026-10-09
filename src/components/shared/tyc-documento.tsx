@@ -30,7 +30,7 @@ export function TyCDocumento({
   return (
     <div
       className={cn(
-        'whitespace-pre-wrap break-words text-[13.5px] leading-relaxed text-soft',
+        'whitespace-pre-wrap break-words text-compact leading-relaxed text-soft',
         className
       )}
     >

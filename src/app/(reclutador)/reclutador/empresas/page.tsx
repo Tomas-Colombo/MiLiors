@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { Badge, EmptyState, Table } from '@/components/ui'
+import { PageHeader, Badge, EmptyState, Table } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon } from '@/components/icons'
 import { getMisEmpresas, type EmpresaDelReclutador } from '@/modules/empresas/queries'
@@ -36,9 +36,9 @@ export default async function MisEmpresasPage({ searchParams }: { searchParams: 
       width: '2fr',
       cell: (e) => (
         <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-ink">{e.nombre_empresa}</p>
+          <p className="truncate text-compact font-semibold text-ink">{e.nombre_empresa}</p>
           {e.descripcion && (
-            <p className="line-clamp-1 text-[11.5px] text-muted">{e.descripcion}</p>
+            <p className="line-clamp-1 text-2xs text-muted">{e.descripcion}</p>
           )}
         </div>
       ),
@@ -58,14 +58,14 @@ export default async function MisEmpresasPage({ searchParams }: { searchParams: 
       key: 'puestos',
       header: 'Puestos activos',
       align: 'center',
-      cell: (e) => <span className="text-[13px] font-semibold text-ink">{e.puestos_activos}</span>,
+      cell: (e) => <span className="text-compact font-semibold text-ink">{e.puestos_activos}</span>,
     },
     {
       key: 'postulaciones',
       header: 'Postulaciones activas',
       align: 'center',
       cell: (e) => (
-        <span className="text-[13px] font-semibold text-ink">{e.postulaciones_activas}</span>
+        <span className="text-compact font-semibold text-ink">{e.postulaciones_activas}</span>
       ),
     },
     {
@@ -84,19 +84,19 @@ export default async function MisEmpresasPage({ searchParams }: { searchParams: 
   const postulacionesActivas = todas.reduce((acc, e) => acc + e.postulaciones_activas, 0)
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">Mis empresas</h1>
-          <p className="mt-1 text-muted">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
+      <PageHeader
+        title="Mis empresas"
+        description={
+          <>
             {todas.length} empresa{todas.length !== 1 ? 's' : ''} · {puestosActivos} puesto
             {puestosActivos !== 1 ? 's' : ''} activo{puestosActivos !== 1 ? 's' : ''} ·{' '}
             {postulacionesActivas} postulación{postulacionesActivas !== 1 ? 'es' : ''} activa
             {postulacionesActivas !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <NuevaEmpresaBtn />
-      </div>
+          </>
+        }
+        actions={<NuevaEmpresaBtn />}
+      />
 
       {todas.length > 0 && (
         <Suspense>

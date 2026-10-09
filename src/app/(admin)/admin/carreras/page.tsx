@@ -1,6 +1,6 @@
 import { getCarrerasAdmin, getCarrerasOtrasAdmin } from '@/modules/admin/queries'
 import type { CarreraAdmin, CarreraOtraAdmin } from '@/modules/admin/queries'
-import { Table, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { NotebookIcon } from '@/components/icons'
 import { CrearCarreraForm, CarreraAcciones, PromoverCarreraOtraBoton } from './carreras-ui'
@@ -123,14 +123,11 @@ export default async function CarrerasPage({
   ]
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Carreras</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        Catálogo oficial de carreras y valores de texto libre cargados por postulantes.
-      </p>
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Carreras" description="Catálogo oficial de carreras y valores de texto libre cargados por postulantes." />
 
       {/* ─── Carreras oficiales ─────────────────────────────────── */}
-      <h2 className="mt-8 text-[15px] font-bold text-ink">Carreras oficiales</h2>
+      <h2 className="mt-8 text-md font-bold text-ink">Carreras oficiales</h2>
 
       <div className="mt-3 rounded-xl border border-neutral-200 bg-surface p-6 shadow-card">
         <CrearCarreraForm />
@@ -174,8 +171,8 @@ export default async function CarrerasPage({
       <Paginador page={pageA} pageCount={pageCountA} paramKey="pageA" />
 
       {/* ─── Cargadas por postulantes (otras) ──────────────────────── */}
-      <h2 className="mt-10 text-[15px] font-bold text-ink">Cargadas por postulantes (Otras)</h2>
-      <p className="mt-1 text-[13px] text-muted">
+      <h2 className="mt-10 text-md font-bold text-ink">Cargadas por postulantes (Otras)</h2>
+      <p className="mt-1 text-compact text-muted">
         Valores de texto libre que los postulantes cargaron cuando su carrera no estaba en el catálogo.
       </p>
 

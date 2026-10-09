@@ -22,14 +22,14 @@ export function CompetenciasSeleccionadas({
   return (
     <div className="rounded-xl border border-neutral-200 bg-surface p-4">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+        <span className="text-2xs font-semibold uppercase tracking-widest text-muted">
           Tu selección
         </span>
         {seleccionadas.length > 0 && (
           <button
             type="button"
             onClick={onClearAll}
-            className="text-[12px] font-medium text-primary-600 hover:underline"
+            className="text-xs font-medium text-primary-600 hover:underline"
           >
             Limpiar todo
           </button>
@@ -37,7 +37,7 @@ export function CompetenciasSeleccionadas({
       </div>
 
       {seleccionadas.length === 0 ? (
-        <p className="text-[13px] text-neutral-400">
+        <p className="text-compact text-neutral-400">
           Todavía no seleccionaste ninguna habilidad o tecnología.
         </p>
       ) : (
@@ -47,7 +47,7 @@ export function CompetenciasSeleccionadas({
               key={s.id}
               className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
             >
-              <span className="text-[14px] font-medium text-ink">{s.nombre}</span>
+              <span className="text-sm font-medium text-ink">{s.nombre}</span>
               <div className="flex items-center gap-2">
                 <Segmented
                   value={s.nivel}
@@ -59,7 +59,7 @@ export function CompetenciasSeleccionadas({
                   type="button"
                   onClick={() => onRemove(s.id)}
                   aria-label={`Quitar ${s.nombre}`}
-                  className="cursor-pointer rounded-md px-1.5 text-[16px] leading-none text-neutral-400 transition-colors hover:text-error"
+                  className="cursor-pointer rounded-md px-1.5 text-base leading-none text-neutral-400 transition-colors hover:text-error"
                 >
                   ×
                 </button>

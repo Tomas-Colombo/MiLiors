@@ -18,13 +18,13 @@ import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
  */
 export default function LoadingAdminEmpresas() {
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10" aria-busy="true">
-      <SkeletonPageHeader variant="admin" title="Empresas" subtitleWidth="w-96" />
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
+      <SkeletonPageHeader title="Empresas" subtitleWidth="w-96" />
 
       <div className="mt-6">
         <Card className="mb-6">
-          <h2 className="text-[15px] font-bold text-ink">Pausa automática de puestos</h2>
-          <p className="mt-1 text-[13px] text-muted">
+          <h2 className="text-md font-bold text-ink">Pausa automática de puestos</h2>
+          <p className="mt-1 text-compact text-muted">
             Los puestos activos sin actividad del reclutador (revisar postulaciones, cambiar
             estados, notas o editar el puesto) durante este período se pausan automáticamente.
           </p>

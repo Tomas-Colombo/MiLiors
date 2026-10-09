@@ -1,4 +1,5 @@
 import { verifySession } from '@/lib/dal'
+import { PageHeader } from '@/components/ui'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { getPerfilTecnicoCompleto, getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
 import { getCarreras } from '@/modules/carreras/queries'
@@ -17,11 +18,8 @@ export default async function PerfilPage() {
   ])
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Perfil Técnico</h1>
-        <p className="mt-1 text-sm text-muted">Tu experiencia, formación, cursos, idiomas y habilidades y tecnologías.</p>
-      </div>
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Perfil Técnico" description="Tu experiencia, formación, cursos, idiomas y habilidades y tecnologías." className="mb-6" />
       <PerfilTecnicoUI
         perfil={perfil}
         competenciasCatalogo={competenciasCatalogo}

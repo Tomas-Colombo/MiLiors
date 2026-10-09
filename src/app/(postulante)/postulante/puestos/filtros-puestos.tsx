@@ -20,9 +20,9 @@ type Departamento = { value: string; label: string }
 
 function pill(active: boolean) {
   return [
-    'rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer select-none',
+    'rounded-full px-3 py-1.5 text-xs font-semibold transition-[color,background-color,box-shadow] cursor-pointer select-none',
     active
-      ? 'bg-primary-600 text-white shadow-sm'
+      ? 'bg-primary-solid text-white shadow-sm'
       : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
   ].join(' ')
 }
@@ -107,7 +107,7 @@ export function FiltrosPuestos({
           {/* Carrera: filtro principal, a todo el ancho. */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                 Carrera
               </p>
               {carrera && (
@@ -139,7 +139,7 @@ export function FiltrosPuestos({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Publicados */}
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                 Publicados
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -158,7 +158,7 @@ export function FiltrosPuestos({
 
             {/* Sector */}
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                 Sector
               </p>
               <FancySelect
@@ -174,7 +174,7 @@ export function FiltrosPuestos({
 
             {/* Modalidad */}
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                 Modalidad
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -200,7 +200,7 @@ export function FiltrosPuestos({
 
             {/* Dedicación */}
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                 Dedicación
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -226,7 +226,7 @@ export function FiltrosPuestos({
 
             {/* Provincia */}
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                 Provincia
               </p>
               <FancySelect
@@ -243,7 +243,7 @@ export function FiltrosPuestos({
             {/* Departamento: solo se muestra cuando hay una provincia seleccionada. */}
             {provincia && (
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                   Departamento
                 </p>
                 <FancySelect
@@ -257,7 +257,7 @@ export function FiltrosPuestos({
 
             {/* Mis postulaciones */}
             <div className="space-y-2 sm:col-span-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
                 Mis postulaciones
               </p>
               <div className="flex flex-wrap gap-1.5">

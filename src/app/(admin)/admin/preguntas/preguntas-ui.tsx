@@ -2,7 +2,7 @@
 
 import { useActionState, useTransition, useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Button, Switch, Modal, Input, Field, Alert } from '@/components/ui'
+import { Button, Switch, Modal, Input, Field, Alert, inputClassName } from '@/components/ui'
 import { EditIcon, TrashIcon, PlusIcon } from '@/components/icons'
 import {
   editarPregunta,
@@ -62,7 +62,7 @@ export function EliminarPreguntaBtn({ id, enunciado }: { id: string; enunciado: 
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        className="text-error hover:bg-error-bg hover:text-error"
+        className="text-error-ink hover:bg-error-bg hover:text-error-ink"
         aria-label="Eliminar pregunta"
       >
         <TrashIcon size={15} />
@@ -82,17 +82,18 @@ export function EliminarPreguntaBtn({ id, enunciado }: { id: string; enunciado: 
               size="md"
               onClick={handleConfirmar}
               loading={isPending}
-              className="flex-1 bg-error-solid text-white hover:bg-error-strong"
+              variant="destructive"
+              className="flex-1"
             >
               Eliminar
             </Button>
           </>
         }
       >
-        <p className="mt-2 line-clamp-3 rounded-lg bg-neutral-50 px-4 py-3 text-[13px] italic text-ink-soft">
+        <p className="mt-2 line-clamp-3 rounded-lg bg-neutral-50 px-4 py-3 text-compact italic text-ink-soft">
           &ldquo;{enunciado}&rdquo;
         </p>
-        <p className="mt-3 text-[12.5px] text-muted">
+        <p className="mt-3 text-xs text-muted">
           La pregunta pasará a la sección de eliminadas. No se borra de la base de datos.
         </p>
       </Modal>
@@ -148,7 +149,7 @@ function EditarModal({ pregunta, onClose }: { pregunta: Pregunta; onClose: () =>
             defaultValue={pregunta.enunciado}
             required
             rows={4}
-            className="w-full resize-none rounded-lg border border-[#c9cdd4] bg-surface px-3 py-2 text-[13.5px] text-ink outline-none transition-colors placeholder:text-neutral-400 focus:border-primary-400 focus:ring-[3px] focus:ring-primary-50"
+            className={inputClassName({ multiline: true, className: 'resize-none' })}
           />
         </Field>
 
@@ -248,7 +249,7 @@ function CrearModal({ onClose }: { onClose: () => void }) {
             required
             rows={4}
             placeholder="Escribí el enunciado de la pregunta…"
-            className="w-full resize-none rounded-lg border border-[#c9cdd4] bg-surface px-3 py-2 text-[13.5px] text-ink outline-none transition-colors placeholder:text-neutral-400 focus:border-primary-400 focus:ring-[3px] focus:ring-primary-50"
+            className={inputClassName({ multiline: true, className: 'resize-none' })}
           />
         </Field>
 
@@ -309,9 +310,9 @@ export function FiltroPreguntas({ filtroActual }: { filtroActual: Filtro }) {
             key={f.value}
             type="button"
             onClick={() => handleSelect(f.value)}
-            className={`inline-flex items-center gap-2 rounded-[9px] px-3.5 py-1.5 text-[13px] font-medium transition-all ${
+            className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-compact font-medium transition-[color,background-color,box-shadow] ${
               active
-                ? 'bg-primary-600 text-white shadow-sm'
+                ? 'bg-primary-solid text-white shadow-sm'
                 : 'text-ink-soft hover:bg-neutral-50 hover:text-ink'
             }`}
           >

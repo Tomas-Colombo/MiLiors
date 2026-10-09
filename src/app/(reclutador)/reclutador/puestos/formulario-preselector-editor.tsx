@@ -166,8 +166,8 @@ export function FormularioPreselectorEditor({ initialFormulario, fieldErrors, re
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-[15px] font-bold text-ink">Formulario preselector</h2>
-          <p className="text-[13px] text-muted">
+          <h2 className="text-md font-bold text-ink">Formulario preselector</h2>
+          <p className="text-compact text-muted">
             Agregá preguntas para filtrar postulantes antes de que lleguen a vos. Las preguntas eliminatorias
             descartan automáticamente a quienes no marcan una opción válida.
           </p>
@@ -195,7 +195,7 @@ export function FormularioPreselectorEditor({ initialFormulario, fieldErrors, re
       )}
 
       {preguntas.length === 0 && (
-        <p className="text-[13px] text-neutral-400">
+        <p className="text-compact text-neutral-400">
           Este puesto no tiene formulario de preselección. Los postulantes van a poder postularse directamente.
         </p>
       )}
@@ -270,7 +270,7 @@ function PreguntaEditor({
   return (
     <Card padding="md" className="space-y-3">
       <div className="flex items-start justify-between gap-3">
-        <span className="mt-2 shrink-0 text-[12px] font-semibold text-neutral-400">Pregunta {index + 1}</span>
+        <span className="mt-2 shrink-0 text-xs font-semibold text-neutral-400">Pregunta {index + 1}</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -295,7 +295,7 @@ function PreguntaEditor({
             onClick={onDelete}
             disabled={disabled}
             aria-label="Eliminar pregunta"
-            className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-1.5 rounded-md text-muted hover:text-error-ink hover:bg-error-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <TrashIcon size={16} />
           </button>
@@ -343,9 +343,9 @@ function PreguntaEditor({
 
       {esOpciones && (
         <div className="space-y-2">
-          <span className="text-[13px] font-semibold text-ink-soft">Opciones</span>
+          <span className="text-compact font-semibold text-ink-soft">Opciones</span>
           {pregunta.esCritica && (
-            <p className="flex items-start gap-1.5 rounded-md bg-primary-50 px-2.5 py-1.5 text-[12px] text-ink-soft">
+            <p className="flex items-start gap-1.5 rounded-md bg-primary-50 px-2.5 py-1.5 text-xs text-ink-soft">
               <InfoIcon size={14} className="mt-0.5 shrink-0 text-primary-600" />
               <span>
                 Marcá con el casillero las respuestas válidas. Quien elija cualquier otra opción será
@@ -373,7 +373,7 @@ function PreguntaEditor({
                 onClick={() => onRemoveOpcion(opcion.key)}
                 disabled={disabled || pregunta.opciones.length <= MIN_OPCIONES}
                 aria-label="Eliminar opción"
-                className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-md text-muted hover:text-error-ink hover:bg-error-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <TrashIcon size={14} />
               </button>
@@ -384,9 +384,9 @@ function PreguntaEditor({
               Agregar opción
             </Button>
           )}
-          {necesitaMasOpciones && <p className="text-[12px] text-error">Necesitás al menos 2 opciones.</p>}
+          {necesitaMasOpciones && <p className="text-xs text-error">Necesitás al menos 2 opciones.</p>}
           {necesitaValidaCritica && (
-            <p className="text-[12px] text-error">
+            <p className="text-xs text-error">
               Marcá al menos una opción como válida para que la pregunta sea eliminatoria.
             </p>
           )}

@@ -19,8 +19,8 @@ export function ConfigInactividad({ diasActual }: { diasActual: number }) {
 
   return (
     <Card className="mb-6">
-      <h2 className="text-[15px] font-bold text-ink">Pausa automática de puestos</h2>
-      <p className="mt-1 text-[13px] text-muted">
+      <h2 className="text-md font-bold text-ink">Pausa automática de puestos</h2>
+      <p className="mt-1 text-compact text-muted">
         Los puestos activos sin actividad del reclutador (revisar postulaciones, cambiar
         estados, notas o editar el puesto) durante este período se pausan automáticamente.
       </p>
@@ -42,7 +42,7 @@ export function ConfigInactividad({ diasActual }: { diasActual: number }) {
           Guardar
         </Button>
         {state.success && sinCambios && (
-          <span className="pb-2.5 text-[13px] font-medium text-success">Guardado ✓</span>
+          <span className="pb-2.5 text-compact font-medium text-success">Guardado ✓</span>
         )}
       </form>
 

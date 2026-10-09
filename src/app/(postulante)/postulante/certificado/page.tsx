@@ -1,4 +1,5 @@
 import { verifySession } from '@/lib/dal'
+import { PageHeader } from '@/components/ui'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { createClient } from '@/lib/supabase/server'
 import { getUltimoCertificado, getCertificadoContenido } from '@/modules/certificado/queries'
@@ -92,13 +93,8 @@ export default async function CertificadoPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Certificado de Perfil</h1>
-        <p className="mt-1 text-sm text-muted">
-          Descargá tu certificado verificable con QR para compartir con reclutadores.
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Certificado de Perfil" description="Descargá tu certificado verificable con QR para compartir con reclutadores." className="mb-6" />
       <CertificadoUI
         certificado={
           certificado && pdfPrevioALaSintesis

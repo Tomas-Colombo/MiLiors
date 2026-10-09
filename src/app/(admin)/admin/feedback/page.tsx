@@ -14,7 +14,7 @@ import {
   type AgregadoSeccion,
   type FeedbackGlobalRow,
 } from '@/modules/admin/queries'
-import { Alert, KpiCard, Table, EmptyState } from '@/components/ui'
+import { PageHeader, Alert, KpiCard, Table, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon, CheckCircleIcon, StarIcon, MessageIcon, DownloadIcon } from '@/components/icons'
 import { FiltrosFeedback } from './filtros-feedback'
@@ -153,14 +153,14 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       key: 'comentario',
       header: 'Comentario',
       width: '3fr',
-      cell: row => <p className="text-[13px] leading-relaxed text-ink">{row.comentario}</p>,
+      cell: row => <p className="text-compact leading-relaxed text-ink">{row.comentario}</p>,
     },
     {
       key: 'representatividad',
       header: 'Representatividad',
       align: 'right',
       cell: row => (
-        <span className="text-[13px] font-semibold tabular-nums text-ink-soft">
+        <span className="text-compact font-semibold tabular-nums text-ink-soft">
           {row.representatividad}%
         </span>
       ),
@@ -171,16 +171,16 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       align: 'center',
       cell: row =>
         row.eneatipo ? (
-          <span className="text-[12.5px] text-ink-soft">{row.eneatipo}</span>
+          <span className="text-xs text-ink-soft">{row.eneatipo}</span>
         ) : (
-          <span className="text-[12px] text-neutral-400">—</span>
+          <span className="text-xs text-neutral-400">—</span>
         ),
     },
     {
       key: 'respondidoAt',
       header: 'Respondido',
       cell: row => (
-        <span className="text-[12px] text-muted">
+        <span className="text-xs text-muted">
           {new Date(row.respondidoAt).toLocaleDateString('es-AR', {
             day: '2-digit',
             month: '2-digit',
@@ -205,7 +205,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       cell: row => (
         <div>
           <p className="font-medium text-ink leading-tight">{row.label}</p>
-          <p className="text-[11px] text-muted">{row.total} respuestas</p>
+          <p className="text-2xs text-muted">{row.total} respuestas</p>
         </div>
       ),
     },
@@ -214,7 +214,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       header: 'Promedio',
       align: 'right',
       cell: row => (
-        <span className="text-[13px] font-semibold tabular-nums text-ink-soft">
+        <span className="text-compact font-semibold tabular-nums text-ink-soft">
           {row.promedio.toLocaleString('es-AR', { maximumFractionDigits: 1 })}
         </span>
       ),
@@ -224,7 +224,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       header: '4 o 5',
       align: 'right',
       cell: row => (
-        <span className={`text-[13px] font-semibold tabular-nums ${row.aprobada ? 'text-emerald-600' : 'text-error'}`}>
+        <span className={`text-compact font-semibold tabular-nums ${row.aprobada ? 'text-emerald-600' : 'text-error'}`}>
           {Math.round(row.reconocen * 100)}%
         </span>
       ),
@@ -239,7 +239,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       cell: row => (
         <div>
           <p className="font-medium text-ink leading-tight">{row.nombre}</p>
-          <p className="text-[11px] text-muted">{row.total} respuestas</p>
+          <p className="text-2xs text-muted">{row.total} respuestas</p>
         </div>
       ),
     },
@@ -250,7 +250,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       cell: row => (
         <div className="w-full space-y-1">
           <BarraDistribucion a={row} />
-          <p className="text-[11px] text-muted">
+          <p className="text-2xs text-muted">
             {pct(row.subestima, row.total)}% subestimado · {pct(row.justo, row.total)}% correcto ·{' '}
             {pct(row.sobrestima, row.total)}% sobrestimado
           </p>
@@ -268,7 +268,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
             ? 'text-amber-600'
             : 'text-muted'
         return (
-          <span className={`text-[13px] font-semibold tabular-nums ${tone}`}>
+          <span className={`text-compact font-semibold tabular-nums ${tone}`}>
             {row.sesgo > 0 ? '+' : ''}
             {row.sesgo}
           </span>
@@ -278,12 +278,8 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
   ]
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Feedback del informe</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        Cuánto se reconocen los postulantes en su informe, sección por sección. No modifica ningún
-        informe: es insumo para calibrar la tabla de pesos del motor.
-      </p>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Feedback del informe" description="Cuánto se reconocen los postulantes en su informe, sección por sección. No modifica ningún informe: es insumo para calibrar la tabla de pesos del motor." />
 
       <div className="mt-8">
         <ConfigReactivacion diasActual={config.diasReactivarFeedback} />
@@ -334,20 +330,20 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <a
           href={`/api/admin/feedback/export?${filtrosQS(filtros, busquedaComentario)}`}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-[12.5px] font-medium text-muted transition-colors hover:border-primary-300 hover:bg-primary-tint hover:text-primary-600"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 text-xs font-medium text-muted transition-colors hover:border-primary-300 hover:bg-primary-tint hover:text-primary-600"
         >
           <DownloadIcon size={14} />
           Descargar Excel
         </a>
-        <span className="text-[11px] text-muted">
+        <span className="text-2xs text-muted">
           La hoja por sección y el histórico por nivel, con lo que estos filtros dejan a la vista. Seudónimo: incluye el id del
           postulante, nunca nombre ni email.
         </span>
       </div>
 
       <div className="mt-6">
-        <h2 className="text-[15px] font-bold text-ink">¿Se reconocen? — por sección</h2>
-        <p className="mt-0.5 text-[12px] text-muted">
+        <h2 className="text-md font-bold text-ink">¿Se reconocen? — por sección</h2>
+        <p className="mt-0.5 text-xs text-muted">
           Respuestas a &ldquo;¿Te reconocés en esta descripción?&rdquo; (1 a 5). Una sección se aprueba
           con al menos {Math.round(UMBRAL_RECONOCIMIENTO * 100)}% de respuestas en 4 o 5. Filtran el
           eneatipo y las fechas.
@@ -370,8 +366,8 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       </div>
 
       <div className="mt-10">
-        <h2 className="text-[15px] font-bold text-ink">Histórico — nivel por competencia</h2>
-        <p className="mt-0.5 text-[12px] text-muted">
+        <h2 className="text-md font-bold text-ink">Histórico — nivel por competencia</h2>
+        <p className="mt-0.5 text-xs text-muted">
           Valoraciones de los informes hasta la versión 3, cuando cada competencia mostraba un nivel. Ya
           no se cargan respuestas nuevas: queda como referencia.
         </p>
@@ -397,7 +393,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
         ) : (
           <>
             <Table columns={columns} rows={agregados} rowKey={row => row.key} />
-            <p className="mt-2 text-[11px] text-muted">
+            <p className="mt-2 text-2xs text-muted">
               Sesgo = % que la considera baja − % que la considera alta. Positivo: el motor le queda
               corto y conviene subir su peso. Negativo: se pasa. Cerca de cero: calibrada.
             </p>
@@ -407,8 +403,8 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
 
       {comentarios.length > 0 && (
         <div className="mt-10">
-          <h2 className="text-[15px] font-bold text-ink">Comentarios</h2>
-          <p className="mt-0.5 text-[12px] text-muted">
+          <h2 className="text-md font-bold text-ink">Comentarios</h2>
+          <p className="mt-0.5 text-xs text-muted">
             Texto libre de la pregunta de cierre. Los filtros de arriba también los alcanzan.
           </p>
 

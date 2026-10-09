@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useActionState, useState } from 'react'
-import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert, Modal } from '@/components/ui'
+import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert, Modal, buttonClassName } from '@/components/ui'
 import { AlertTriangleIcon, PlusIcon } from '@/components/icons'
 import { NuevaEmpresaModal } from '@/components/shared/nueva-empresa-modal'
 import { UbicacionSelector, type ProvinciaOption } from '@/components/shared/ubicacion-selector'
@@ -296,7 +296,7 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
       <div className="flex justify-end gap-3 pt-2">
         <Link
           href="/reclutador/puestos"
-          className="inline-flex h-10 items-center rounded-md border border-neutral-300 bg-surface px-[18px] text-sm font-semibold text-ink-soft hover:bg-neutral-50"
+          className={buttonClassName({ variant: 'secondary' })}
         >
           Cancelar
         </Link>

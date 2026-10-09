@@ -6,7 +6,7 @@ import {
 } from '@/modules/admin/queries'
 import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
 import { ExportarExcel } from '@/components/shared/exportar-excel'
-import { Table, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon } from '@/components/icons'
 import { CrearCompetenciaForm, CompetenciaAcciones } from './competencias-ui'
@@ -119,7 +119,7 @@ export default async function CompetenciasPage({
       cell: row => (
         <div>
           <p className="font-medium text-ink leading-tight">{row.nombre}</p>
-          {!row.activa && <p className="text-[11px] text-warning">Dada de baja, todavía en uso</p>}
+          {!row.activa && <p className="text-2xs text-warning">Dada de baja, todavía en uso</p>}
         </div>
       ),
     },
@@ -128,7 +128,7 @@ export default async function CompetenciasPage({
       header: 'Postulantes',
       align: 'right',
       cell: row => (
-        <span className="text-[13px] font-semibold tabular-nums text-ink-soft">{row.postulantes}</span>
+        <span className="text-compact font-semibold tabular-nums text-ink-soft">{row.postulantes}</span>
       ),
     },
     {
@@ -142,7 +142,7 @@ export default async function CompetenciasPage({
             <span className="bg-primary-500" style={{ width: `${pct(row.intermedio, row.postulantes)}%` }} />
             <span className="bg-emerald-500" style={{ width: `${pct(row.avanzado, row.postulantes)}%` }} />
           </span>
-          <p className="text-[11px] text-muted">
+          <p className="text-2xs text-muted">
             {row.basico} básico · {row.intermedio} intermedio · {row.avanzado} avanzado
           </p>
         </div>
@@ -160,11 +160,8 @@ export default async function CompetenciasPage({
   ]
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Habilidades y tecnologías</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        Las habilidades/tecnologías inactivas se conservan como baja lógica y no se eliminan.
-      </p>
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Habilidades y tecnologías" description="Las habilidades/tecnologías inactivas se conservan como baja lógica y no se eliminan." />
 
       <div className="mt-8 rounded-xl border border-neutral-200 bg-surface p-6 shadow-card">
         <CrearCompetenciaForm />
@@ -210,8 +207,8 @@ export default async function CompetenciasPage({
       <Paginador page={page} pageCount={pageCount} />
 
       {/* ─── Uso real por postulantes ─────────────────────────────── */}
-      <h2 className="mt-10 text-[15px] font-bold text-ink">Cargadas por postulantes</h2>
-      <p className="mt-1 text-[13px] text-muted">
+      <h2 className="mt-10 text-md font-bold text-ink">Cargadas por postulantes</h2>
+      <p className="mt-1 text-compact text-muted">
         Qué habilidades cargan efectivamente los postulantes y con qué nivel. No hay forma de saber
         si una habilidad la creó un admin o un postulante — el texto libre se da de alta en este
         mismo catálogo —, pero una con mucho uso y alta reciente casi siempre la trajo alguien

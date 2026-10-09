@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getPreguntasAdmin } from '@/modules/admin/queries'
-import { Table, Badge } from '@/components/ui'
+import { PageHeader, Table, Badge } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { ChevronUpIcon, ChevronDownIcon } from '@/components/icons'
 import {
@@ -112,7 +112,7 @@ export default async function PreguntasPage({
           header: '#',
           width: '52px',
           cell: row => (
-            <span className="font-mono text-[12px] font-semibold text-muted">
+            <span className="font-mono text-xs font-semibold text-muted">
               {String(row.numero_pregunta).padStart(3, '0')}
             </span>
           ),
@@ -121,7 +121,7 @@ export default async function PreguntasPage({
           key: 'enunciado',
           header: 'Enunciado',
           width: '3fr',
-          cell: row => <span className="line-clamp-2 text-[13px] text-ink">{row.enunciado}</span>,
+          cell: row => <span className="line-clamp-2 text-compact text-ink">{row.enunciado}</span>,
         },
         {
           key: 'eneatipo',
@@ -134,7 +134,7 @@ export default async function PreguntasPage({
           header: 'Eliminada el',
           width: '130px',
           cell: row => (
-            <span className="text-[12px] text-muted">
+            <span className="text-xs text-muted">
               {new Date(row.fecha_baja!).toLocaleDateString('es-AR', {
                 day: '2-digit',
                 month: '2-digit',
@@ -152,7 +152,7 @@ export default async function PreguntasPage({
           ),
           width: '52px',
           cell: row => (
-            <span className="font-mono text-[12px] font-semibold text-muted">
+            <span className="font-mono text-xs font-semibold text-muted">
               {String(row.numero_pregunta).padStart(3, '0')}
             </span>
           ),
@@ -161,7 +161,7 @@ export default async function PreguntasPage({
           key: 'enunciado',
           header: 'Enunciado',
           width: '3fr',
-          cell: row => <span className="line-clamp-2 text-[13px] text-ink">{row.enunciado}</span>,
+          cell: row => <span className="line-clamp-2 text-compact text-ink">{row.enunciado}</span>,
         },
         {
           key: 'eneatipo',
@@ -192,20 +192,14 @@ export default async function PreguntasPage({
       ]
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[22px] font-extrabold tracking-tight text-ink">
-            Preguntas del eneagrama
-          </h1>
-          <p className="mt-1 text-[13px] text-muted">
-            {totalActivas} activas · {totalPausadas} pausadas · {totalEliminadas} eliminadas
-          </p>
-        </div>
-        <CrearPreguntaBtn />
-      </div>
+      <PageHeader
+        title="Preguntas del eneagrama"
+        description={<>{totalActivas} activas · {totalPausadas} pausadas · {totalEliminadas} eliminadas</>}
+        actions={<CrearPreguntaBtn />}
+      />
 
       {/* Filtro + búsqueda */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -222,7 +216,7 @@ export default async function PreguntasPage({
           </>
         ) : (
           <div className="rounded-xl border border-neutral-200 bg-surface px-6 py-12 text-center shadow-card">
-            <p className="text-[14px] text-muted">No hay preguntas que coincidan con el filtro.</p>
+            <p className="text-sm text-muted">No hay preguntas que coincidan con el filtro.</p>
           </div>
         )}
       </div>

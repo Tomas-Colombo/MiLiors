@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Modal, Badge, Alert, Skeleton, Tooltip } from '@/components/ui'
+import { Modal, Badge, Alert, Skeleton, Tooltip, buttonClassName } from '@/components/ui'
 import { FileTextIcon } from '@/components/icons'
 import { getRespuestasParaReclutador, type RespuestaParaReclutador } from '@/modules/preselector/actions'
 import { cn } from '@/lib/utils'
@@ -45,7 +45,7 @@ export function VerRespuestasBtn({ postulacionId, nombrePostulante }: Props) {
         <button
           type="button"
           onClick={handleOpen}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+          className={buttonClassName({ variant: 'tonal', size: 'sm', className: 'w-full whitespace-nowrap' })}
         >
           <FileTextIcon size={14} />
           Ver respuestas
@@ -60,7 +60,7 @@ export function VerRespuestasBtn({ postulacionId, nombrePostulante }: Props) {
       >
         <div className="space-y-3">
           {nombrePostulante && (
-            <p className="text-[13px] text-muted">
+            <p className="text-compact text-muted">
               Respuestas de <span className="font-semibold text-ink-soft">{nombrePostulante}</span>
             </p>
           )}
@@ -75,7 +75,7 @@ export function VerRespuestasBtn({ postulacionId, nombrePostulante }: Props) {
           )}
 
           {respuestas && respuestas.length === 0 && (
-            <p className="text-[13px] text-neutral-400">
+            <p className="text-compact text-neutral-400">
               Esta postulación no tiene respuestas de preselección.
             </p>
           )}
@@ -89,14 +89,14 @@ export function VerRespuestasBtn({ postulacionId, nombrePostulante }: Props) {
               )}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[13px] font-semibold text-ink">{r.preguntaTexto}</p>
+                <p className="text-compact font-semibold text-ink">{r.preguntaTexto}</p>
                 {r.esCritica && (
                   <Badge tone={r.fallidaCritica ? 'error' : 'success'}>
                     {r.fallidaCritica ? 'Eliminatoria · no superada' : 'Eliminatoria · superada'}
                   </Badge>
                 )}
               </div>
-              <p className="mt-1 text-[13px] text-ink-soft whitespace-pre-wrap">{r.respuestaTexto}</p>
+              <p className="mt-1 text-compact text-ink-soft whitespace-pre-wrap">{r.respuestaTexto}</p>
             </div>
           ))}
         </div>

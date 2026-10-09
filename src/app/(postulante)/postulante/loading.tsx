@@ -14,7 +14,7 @@ import { QuickLinksPostulante } from './quick-links'
  */
 export default function LoadingPostulanteHome() {
   return (
-    <div className="min-h-screen px-8 py-10" style={{ background: 'var(--color-page)' }} aria-busy="true">
+    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 lg:py-10" style={{ background: 'var(--color-page)' }} aria-busy="true">
       <div className="mb-8">
         <Skeleton className="h-9 w-64" />
         <Skeleton className="mt-2 h-4 w-56" />
@@ -23,7 +23,7 @@ export default function LoadingPostulanteHome() {
       <div className="flex flex-wrap items-start gap-6 lg:flex-nowrap">
         <div className="min-w-0 flex-1">
           <div
-            className="rounded-[14px] bg-surface p-8"
+            className="rounded-xl bg-surface p-8"
             style={{ border: '1px solid var(--color-border-soft)' }}
           >
             <Skeleton className="h-3 w-40" />
@@ -40,7 +40,7 @@ export default function LoadingPostulanteHome() {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-[10px] px-4 py-3.5"
+                  className="rounded-lg px-4 py-3.5"
                   style={{
                     background: 'var(--color-page)',
                     border: '1px solid var(--color-border-soft)',
@@ -62,11 +62,11 @@ export default function LoadingPostulanteHome() {
 
         <div className="flex w-full flex-none flex-col gap-4 lg:w-72 xl:w-80">
           <div
-            className="rounded-[14px] bg-surface px-5 py-4"
+            className="rounded-xl bg-surface px-5 py-4"
             style={{ border: '1px solid var(--color-border-soft)' }}
           >
             <h2
-              className="mb-3 text-[11px] font-semibold uppercase tracking-widest"
+              className="mb-3 text-2xs font-semibold uppercase tracking-widest"
               style={{ color: 'var(--color-accent-violet)' }}
             >
               Visibilidad en búsquedas

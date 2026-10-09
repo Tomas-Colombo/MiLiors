@@ -94,7 +94,7 @@ export function InactivityWatcher() {
       open={showWarning}
       onClose={seguirConectado}
       icon={
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] bg-warning-bg text-warning">
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-warning-bg text-warning-ink">
           <AlertTriangleIcon size={22} strokeWidth={2.5} />
         </span>
       }

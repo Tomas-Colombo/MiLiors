@@ -96,9 +96,9 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
   return (
     <Card>
       <div className="mb-4 flex items-baseline justify-between gap-2">
-        <h3 className="text-[15px] font-bold text-ink">Notas privadas</h3>
+        <h3 className="text-md font-bold text-ink">Notas privadas</h3>
         {notas.length > 0 && (
-          <span className="text-[12px] tabular-nums text-muted">
+          <span className="text-xs tabular-nums text-muted">
             {notas.length} nota{notas.length !== 1 ? 's' : ''}
           </span>
         )}
@@ -129,7 +129,7 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
 
       {/* Notes list */}
       {notas.length === 0 ? (
-        <p className="text-[13px] text-muted text-center py-4">
+        <p className="text-compact text-muted text-center py-4">
           Todavía no escribiste notas sobre este candidato.
         </p>
       ) : (
@@ -168,7 +168,7 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
                 <>
                   <NotaTexto contenido={nota.contenido} />
                   <div className="mt-2 flex items-center justify-between">
-                    <div className="text-[11.5px] text-neutral-400">
+                    <div className="text-2xs text-neutral-400">
                       {nota.titulo_puesto && (
                         <span className="mr-2">📌 {nota.titulo_puesto}</span>
                       )}
@@ -191,7 +191,7 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
                         type="button"
                         onClick={() => handleEliminar(nota.id)}
                         disabled={isPending}
-                        className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error-bg transition-colors disabled:opacity-50"
+                        className="p-1.5 rounded-md text-muted hover:text-error-ink hover:bg-error-bg transition-colors disabled:opacity-50"
                         aria-label="Eliminar nota"
                       >
                         <TrashIcon size={14} />

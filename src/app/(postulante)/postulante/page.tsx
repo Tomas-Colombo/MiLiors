@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { buttonClassName } from '@/components/ui'
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { VisibilityToggle } from '@/modules/visibilidad/visibility-toggle'
@@ -82,7 +83,7 @@ export default async function PostulanteDashboard() {
   const perfilProfesional = principal ? PERFILES_PROFESIONALES[principal.numero] : undefined
 
   return (
-    <div className="min-h-screen px-8 py-10" style={{ background: 'var(--color-page)' }}>
+    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 lg:py-10" style={{ background: 'var(--color-page)' }}>
 
       {/* Saludo */}
       <div className="mb-8">
@@ -100,7 +101,7 @@ export default async function PostulanteDashboard() {
         {/* ─── Columna principal: Perfil profesional ─── */}
         <div className="flex-1 min-w-0">
           <div
-            className="rounded-[14px] bg-surface p-8"
+            className="rounded-xl bg-surface p-8"
             style={{ border: '1px solid var(--color-border-soft)' }}
           >
             {perfilProfesional && principal ? (
@@ -131,14 +132,14 @@ export default async function PostulanteDashboard() {
                   ].map((b) => (
                     <div
                       key={b.label}
-                      className="rounded-[10px] px-4 py-3.5"
+                      className="rounded-lg px-4 py-3.5"
                       style={{ background: 'var(--color-page)', border: '1px solid var(--color-border-soft)' }}
                     >
                       <div className="flex items-center gap-2 mb-1.5" style={{ color: 'var(--color-accent-violet)' }}>
                         {b.icon}
-                        <span className="text-[11px] font-semibold uppercase tracking-wide">{b.label}</span>
+                        <span className="text-2xs font-semibold uppercase tracking-wide">{b.label}</span>
                       </div>
-                      <p className="text-[13px] leading-snug" style={{ color: 'var(--color-ink)' }}>{b.text}</p>
+                      <p className="text-compact leading-snug" style={{ color: 'var(--color-ink)' }}>{b.text}</p>
                     </div>
                   ))}
                 </div>
@@ -146,7 +147,7 @@ export default async function PostulanteDashboard() {
                 <div className="mt-6 flex items-center gap-3 flex-wrap">
                   <Link
                     href="/postulante/puestos"
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+                    className={buttonClassName()}
                   >
                     <SearchIcon size={15} />
                     Buscar puestos para tu perfil
@@ -169,11 +170,11 @@ export default async function PostulanteDashboard() {
 
           {/* Visibilidad */}
           <div
-            className="rounded-[14px] bg-surface px-5 py-4"
+            className="rounded-xl bg-surface px-5 py-4"
             style={{ border: '1px solid var(--color-border-soft)' }}
           >
             <h2
-              className="text-[11px] font-semibold uppercase tracking-widest mb-3"
+              className="text-2xs font-semibold uppercase tracking-widest mb-3"
               style={{ color: 'var(--color-accent-violet)' }}
             >
               Visibilidad en búsquedas

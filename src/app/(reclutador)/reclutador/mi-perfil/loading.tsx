@@ -12,11 +12,9 @@ import { SkeletonForm, SkeletonPageHeader } from '@/components/shell/page-skelet
  */
 export default function LoadingReclutadorMiPerfil() {
   return (
-    <div className="mx-auto max-w-xl px-6 py-10 space-y-6" aria-busy="true">
+    <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
       <SkeletonPageHeader
         title="Mi perfil"
-        titleClassName="tracking-tight"
-        subtitleClassName="text-sm"
         subtitle={
           <>
             Actualizá tus datos. Las empresas se administran en{' '}

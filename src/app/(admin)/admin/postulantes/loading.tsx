@@ -9,8 +9,8 @@ import { SkeletonFilters, SkeletonFiltroFechas, SkeletonPageHeader, SkeletonTabl
  */
 export default function LoadingAdminPostulantes() {
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10" aria-busy="true">
-      <SkeletonPageHeader variant="admin" title="Postulantes" subtitleWidth="w-80" />
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
+      <SkeletonPageHeader title="Postulantes" subtitleWidth="w-80" />
 
       <SkeletonFilters selects={6} className="mt-6" />
 

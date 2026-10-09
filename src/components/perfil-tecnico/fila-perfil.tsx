@@ -39,9 +39,9 @@ export function FilaPerfil({
       )}
     >
       <div>
-        <p className="text-[14px] font-semibold text-ink">{titulo}</p>
-        {subtitulo && <p className="text-[13px] text-muted">{subtitulo}</p>}
-        {meta && <p className="text-[12px] text-neutral-400">{meta}</p>}
+        <p className="text-sm font-semibold text-ink">{titulo}</p>
+        {subtitulo && <p className="text-compact text-muted">{subtitulo}</p>}
+        {meta && <p className="text-xs text-neutral-400">{meta}</p>}
         {children}
       </div>
 
@@ -55,7 +55,7 @@ export function FilaPerfil({
           type="button"
           size="sm"
           variant="ghost"
-          className="text-error hover:bg-error-bg"
+          className="!text-error-ink hover:!bg-error-bg"
           onClick={onEliminar}
         >
           Eliminar

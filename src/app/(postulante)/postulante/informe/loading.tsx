@@ -11,13 +11,11 @@ import { SkeletonPageHeader, SkeletonText } from '@/components/shell/page-skelet
  */
 export default function LoadingInforme() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8" aria-busy="true">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <div className="mb-6">
         <SkeletonPageHeader
           title="Informe de Personalidad"
-          titleClassName="tracking-tight"
           subtitle="Generado a partir de tu Eneagrama."
-          subtitleClassName="text-sm"
         />
       </div>
 

@@ -15,8 +15,8 @@ import { ChevronLeftIcon, UserIcon } from '@/components/icons'
  */
 export default function LoadingPerfilCandidato() {
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6" aria-busy="true">
-      <span className="inline-flex items-center gap-1.5 text-[13px] text-muted">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
+      <span className="inline-flex items-center gap-1.5 text-compact text-muted">
         <ChevronLeftIcon size={16} />
         Volver
       </span>
@@ -49,7 +49,7 @@ export default function LoadingPerfilCandidato() {
         <div className="space-y-6 lg:col-span-2">
           {['Formación académica', 'Experiencia laboral'].map((titulo) => (
             <Card key={titulo}>
-              <h2 className="mb-3 text-[14px] font-bold text-ink">{titulo}</h2>
+              <h2 className="mb-3 text-sm font-bold text-ink">{titulo}</h2>
               <ul className="space-y-3">
                 {Array.from({ length: 2 }).map((_, i) => (
                   <li key={i}>

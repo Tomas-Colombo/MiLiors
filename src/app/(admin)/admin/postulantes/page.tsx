@@ -1,7 +1,7 @@
 import { getPostulantesAdmin } from '@/modules/admin/queries'
 import { getProvincias, getDepartamentosPorProvincia } from '@/modules/ubicacion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
-import { Table, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { CheckIcon, CloseIcon, UsersIcon } from '@/components/icons'
 import { DesactivarPostulanteBtn } from './postulantes-acciones'
@@ -75,7 +75,7 @@ type Postulante = {
 }
 
 function EstadoInformeBadge({ estado }: { estado: string | null }) {
-  if (!estado) return <span className="text-[12px] text-neutral-400">Sin informe</span>
+  if (!estado) return <span className="text-xs text-neutral-400">Sin informe</span>
   const map: Record<string, 'success' | 'warning' | 'error'> = {
     LISTO: 'success',
     PENDIENTE: 'warning',
@@ -165,7 +165,7 @@ export default async function PostulantesPage({
       cell: row => (
         <div>
           <p className="font-medium text-ink leading-tight">{row.nombre_completo}</p>
-          {row.email && <p className="break-words text-[11px] text-muted">{row.email}</p>}
+          {row.email && <p className="break-words text-2xs text-muted">{row.email}</p>}
         </div>
       ),
     },
@@ -174,9 +174,9 @@ export default async function PostulantesPage({
       header: 'Carrera',
       cell: row =>
         row.carrera ? (
-          <span className="text-[12.5px] text-ink-soft">{row.carrera}</span>
+          <span className="text-xs text-ink-soft">{row.carrera}</span>
         ) : (
-          <span className="text-[12px] text-neutral-400">—</span>
+          <span className="text-xs text-neutral-400">—</span>
         ),
     },
     {
@@ -184,11 +184,11 @@ export default async function PostulantesPage({
       header: 'Ubicación',
       cell: row =>
         row.nombre_localidad || row.nombre_provincia ? (
-          <span className="text-[12.5px] text-muted">
+          <span className="text-xs text-muted">
             {[row.nombre_localidad, row.nombre_provincia].filter(Boolean).join(', ')}
           </span>
         ) : (
-          <span className="text-[12px] text-neutral-400">—</span>
+          <span className="text-xs text-neutral-400">—</span>
         ),
     },
     {
@@ -222,7 +222,7 @@ export default async function PostulantesPage({
       key: 'created_at',
       header: 'Registro',
       cell: row => (
-        <span className="text-muted text-[12px]">
+        <span className="text-muted text-xs">
           {new Date(row.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </span>
       ),
@@ -236,11 +236,8 @@ export default async function PostulantesPage({
   ]
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Postulantes</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        {todos.length} registros. Desactivar un perfil lo saca de búsquedas (baja lógica).
-      </p>
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Postulantes" description={<>{todos.length} registros. Desactivar un perfil lo saca de búsquedas (baja lógica).</>} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput placeholder="Buscar por nombre o email…" />

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Card, Alert } from '@/components/ui'
 import { Button } from '@/components/ui'
-import { Field, Textarea } from '@/components/ui'
+import { Field, Textarea, inputClassName } from '@/components/ui'
 import { SparklesIcon, Spinner } from '@/components/icons'
 import { consultarAsistente } from '@/modules/asistente/actions'
 
@@ -71,12 +71,12 @@ export function AsistenteChat({
       {/* Candidate context — read-only, sourced from Server Component */}
       <Card>
         <div className="flex items-center gap-3 mb-4">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-tint text-primary-600 text-[13px] font-bold">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-tint text-primary-600 text-compact font-bold">
             {nombrePostulante.charAt(0).toUpperCase()}
           </span>
           <div>
-            <p className="text-[13px] text-muted">Candidato seleccionado</p>
-            <p className="text-[15px] font-semibold text-ink">{nombrePostulante}</p>
+            <p className="text-compact text-muted">Candidato seleccionado</p>
+            <p className="text-md font-semibold text-ink">{nombrePostulante}</p>
           </div>
         </div>
 
@@ -85,7 +85,7 @@ export function AsistenteChat({
           <select
             value={puestoId}
             onChange={(e) => setPuestoId(e.target.value)}
-            className="w-full h-10 rounded-md border border-neutral-300 bg-surface px-3.5 text-sm text-ink focus:border-primary-600 focus:outline-none focus:ring-[3px] focus:ring-primary-50"
+            className={inputClassName()}
           >
             <option value="">— Seleccioná un puesto —</option>
             {puestos.map((p) => (
@@ -104,14 +104,14 @@ export function AsistenteChat({
             <div key={i} className="space-y-2">
               {/* Question bubble */}
               <div className="flex justify-end">
-                <div className="max-w-[80%] rounded-xl rounded-tr-sm bg-primary-600 px-4 py-3 text-[13px] text-white">
+                <div className="max-w-[80%] rounded-xl rounded-tr-sm bg-primary-600 px-4 py-3 text-compact text-white">
                   {item.pregunta}
                 </div>
               </div>
               {/* Response bubble */}
               <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-xl rounded-tl-sm border border-neutral-200 bg-surface px-4 py-3 text-[13px] text-ink leading-relaxed whitespace-pre-wrap shadow-card">
-                  <div className="flex items-center gap-1.5 mb-2 text-[11px] text-primary-600 font-semibold">
+                <div className="max-w-[85%] rounded-xl rounded-tl-sm border border-neutral-200 bg-surface px-4 py-3 text-compact text-ink leading-relaxed whitespace-pre-wrap shadow-card">
+                  <div className="flex items-center gap-1.5 mb-2 text-2xs text-primary-600 font-semibold">
                     <SparklesIcon size={12} />
                     Asistente IA
                   </div>
@@ -144,7 +144,7 @@ export function AsistenteChat({
         {error && <Alert tone="error" className="mt-3">{error}</Alert>}
 
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-[11.5px] text-neutral-400">
+          <p className="text-2xs text-neutral-400">
             Ctrl + Enter para enviar · Las respuestas no se guardan al cerrar la sesión
           </p>
           <Button

@@ -39,7 +39,7 @@ export function EliminarNotaBtn({
         type="button"
         onClick={() => setConfirmando(true)}
         disabled={isPending}
-        className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error-bg transition-colors disabled:opacity-50"
+        className="p-1.5 rounded-md text-muted hover:text-error-ink hover:bg-error-bg transition-colors disabled:opacity-50"
         aria-label="Eliminar nota"
         title="Eliminar nota"
       >

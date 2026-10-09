@@ -11,7 +11,7 @@ import { SkeletonFilters, SkeletonPageHeader } from '@/components/shell/page-ske
  */
 export default function LoadingMisPostulaciones() {
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6" aria-busy="true">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
       <SkeletonPageHeader title="Mis postulaciones" subtitleWidth="w-32" />
 
       <SkeletonFilters selects={2} />

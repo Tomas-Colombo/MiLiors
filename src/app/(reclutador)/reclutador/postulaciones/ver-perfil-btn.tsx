@@ -3,7 +3,7 @@
 import { useTransition } from 'react'
 import Link from 'next/link'
 import { EyeIcon } from '@/components/icons'
-import { Tooltip } from '@/components/ui'
+import { Tooltip, buttonClassName } from '@/components/ui'
 import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 
@@ -34,7 +34,7 @@ export function VerPerfilBtn({ postulacionId, postulanteId, estadoActual }: Prop
       >
         <Link
           href={`/reclutador/postulantes/${postulanteId}?postulacion=${postulacionId}&from=postulaciones`}
-          className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-tint px-3 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+          className={buttonClassName({ variant: 'tonal', size: 'sm', className: 'w-full whitespace-nowrap' })}
         >
           Evaluar perfil
         </Link>

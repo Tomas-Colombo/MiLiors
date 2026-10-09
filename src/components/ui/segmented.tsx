@@ -36,7 +36,7 @@ export function Segmented<T extends string>({
       role="group"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex shrink-0 overflow-hidden rounded-md border border-neutral-300",
+        "inline-flex shrink-0 overflow-hidden rounded-md border border-line-strong",
         className,
       )}
     >
@@ -47,9 +47,9 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           aria-pressed={value === o.value}
           className={cn(
-            "cursor-pointer px-2.5 py-1 text-[12px] font-medium transition-colors",
+            "h-8 px-3 text-xs font-medium -outline-offset-2 transition-colors",
             value === o.value
-              ? "bg-primary-600 text-white"
+              ? "bg-primary-solid text-white"
               : "bg-surface text-muted hover:bg-primary-ghost-hover hover:text-primary-600",
           )}
         >

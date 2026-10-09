@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useState, useTransition } from 'react'
-import { Button, Alert, Modal } from '@/components/ui'
+import { Button, Alert, Modal, buttonClassName } from '@/components/ui'
 import { PlusIcon, AlertTriangleIcon } from '@/components/icons'
 import { CamposEmpresa, NuevaEmpresaModal } from '@/components/shared/nueva-empresa-modal'
 import { actualizarEmpresa, darDeBajaEmpresa } from '@/modules/empresas/actions'
@@ -21,7 +21,7 @@ export function NuevaEmpresaBtn() {
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-[18px] text-sm font-semibold text-white hover:brightness-105"
+        className={buttonClassName()}
       >
         <PlusIcon size={16} />
         Nueva empresa
@@ -37,8 +37,8 @@ export function NuevaEmpresaBtn() {
 
 /** Clases comunes de los tres botones de la fila: mismo alto y misma caja. */
 const accion =
-  'inline-flex h-7 w-full items-center justify-center rounded-[6px] px-2 ' +
-  'text-[11.5px] font-semibold whitespace-nowrap transition-colors'
+  'inline-flex h-7 w-full items-center justify-center rounded-sm px-2 ' +
+  'text-2xs font-semibold whitespace-nowrap transition-colors'
 
 export function EmpresaAcciones({ empresa }: { empresa: EmpresaDelReclutador }) {
   const [modo, setModo] = useState<'editar' | 'baja' | null>(null)
@@ -131,7 +131,7 @@ export function EmpresaAcciones({ empresa }: { empresa: EmpresaDelReclutador }) 
         open={modo === 'baja'}
         onClose={() => !isPending && setModo(null)}
         icon={
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-error-bg text-error">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-error-bg text-error-ink">
             <AlertTriangleIcon size={22} strokeWidth={2} />
           </span>
         }

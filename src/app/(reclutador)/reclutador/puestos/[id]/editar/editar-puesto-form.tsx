@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useState } from 'react'
-import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert } from '@/components/ui'
+import { Field, Input, Textarea, FancySelect, SearchableSelect, Button, Alert, buttonClassName } from '@/components/ui'
 import {
   UbicacionSelector,
   type ProvinciaOption,
@@ -271,7 +271,7 @@ export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carrera
       <div className="flex justify-end gap-3 pt-2">
         <Link
           href={`/reclutador/puestos/${puestoId}`}
-          className="inline-flex h-10 items-center rounded-md border border-neutral-300 bg-surface px-[18px] text-sm font-semibold text-ink-soft hover:bg-neutral-50"
+          className={buttonClassName({ variant: 'secondary' })}
         >
           Cancelar
         </Link>

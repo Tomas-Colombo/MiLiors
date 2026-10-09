@@ -18,7 +18,7 @@ export function PickerPanel({ children, className }: { children: ReactNode; clas
   return (
     <div
       className={cn(
-        "absolute z-20 mt-2 rounded-lg border border-neutral-300 bg-neutral-0 p-2 shadow-md",
+        "absolute z-20 mt-2 animate-pop-in rounded-lg border border-line-strong bg-neutral-0 p-2 shadow-md",
         className,
       )}
     >
@@ -42,7 +42,7 @@ export function PickerNavBtn({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-7 w-7 items-center justify-center rounded-[7px] text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-ink"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-ink"
     >
       {children}
     </button>
@@ -62,7 +62,7 @@ export function PickerHeader({
   return (
     <div className="flex items-center justify-between px-0.5 pb-1.5">
       <div className="flex items-center gap-0.5">{izquierda}</div>
-      <span className="text-[13px] font-semibold text-ink">{children}</span>
+      <span className="text-compact font-semibold text-ink">{children}</span>
       <div className="flex items-center gap-0.5">{derecha}</div>
     </div>
   );
@@ -71,7 +71,7 @@ export function PickerHeader({
 /** Pie del panel: los atajos ("Hoy", "Limpiar") separados por una línea. */
 export function PickerFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-1.5 flex items-center justify-between border-t border-neutral-100 pt-1.5">
+    <div className="mt-1.5 flex items-center justify-between border-t border-line pt-1.5">
       {children}
     </div>
   );
@@ -92,7 +92,7 @@ export function PickerAction({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-[7px] px-2 py-1 text-[12px] font-medium",
+        "rounded-md px-2 py-1 text-xs font-medium transition-colors",
         tone === "primary"
           ? "text-primary-600 hover:bg-primary-ghost-hover"
           : "text-muted hover:bg-neutral-50 hover:text-ink",

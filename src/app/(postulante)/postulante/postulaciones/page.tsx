@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { requireEneagramaCompleto } from '@/lib/guards'
-import { Card, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Card, Badge, EmptyState } from '@/components/ui'
 import { FileIcon, ChevronLeftIcon, ChevronRightIcon, ArrowRightIcon } from '@/components/icons'
 import { getMisPostulaciones, POSTULACIONES_PER_PAGE } from '@/modules/puestos/queries'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
@@ -50,13 +50,8 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-ink">Mis postulaciones</h1>
-        <p className="mt-1 text-sm text-muted">
-          {total} postulación{total !== 1 ? 'es' : ''}
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
+      <PageHeader title="Mis postulaciones" description={<>{total} postulación{total !== 1 ? 'es' : ''}</>} />
 
       {total === 0 && !hasFilters ? (
         <EmptyState
@@ -80,11 +75,11 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
               <Card key={p.id} padding="md">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0 space-y-0.5">
-                    <p className="text-[14px] font-semibold text-ink truncate">
+                    <p className="text-sm font-semibold text-ink truncate">
                       {p.titulo_puesto ?? 'Puesto'}
                     </p>
                     {p.nombre_empresa && (
-                      <p className="text-[13px] text-muted">{p.nombre_empresa}</p>
+                      <p className="text-compact text-muted">{p.nombre_empresa}</p>
                     )}
                     <p className="text-xs text-neutral-400">
                       Postulado el{' '}
@@ -148,7 +143,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                     className={[
                       'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
                       i === page
-                        ? 'bg-primary-600 text-white'
+                        ? 'bg-primary-solid text-white'
                         : 'border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
                     ].join(' ')}
                   >

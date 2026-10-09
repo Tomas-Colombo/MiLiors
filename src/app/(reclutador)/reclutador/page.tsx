@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { PageHeader } from '@/components/ui'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
 import { redirect } from 'next/navigation'
@@ -33,24 +34,19 @@ export default async function ReclutadorDashboard() {
       : `${empresasActivas.length} empresas activas`
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-ink">
-          ¡Hola, {rec.nombre_reclutador.split(' ')[0]}!
-        </h1>
-        <p className="mt-1 text-sm text-muted">{subtitulo}</p>
-      </div>
+      <PageHeader title={<>¡Hola, {rec.nombre_reclutador.split(' ')[0]}!</>} description={subtitulo} />
 
       {/* Accesos rápidos */}
       <div>
-        <h2 className="text-[13.5px] font-bold text-ink mb-3">Accesos rápidos</h2>
+        <h2 className="text-compact font-bold text-ink mb-3">Accesos rápidos</h2>
         <QuickLinksReclutador />
       </div>
 
       {/* Métricas */}
       <div>
-        <h2 className="text-[13.5px] font-bold text-ink mb-3">Métricas</h2>
+        <h2 className="text-compact font-bold text-ink mb-3">Métricas</h2>
         <Suspense fallback={<MetricasSkeleton />}>
           <MetricasSection />
         </Suspense>

@@ -29,8 +29,8 @@ export function QuickLinksAdmin() {
           className="group flex items-center justify-between rounded-xl border border-neutral-200 bg-surface px-5 py-4 shadow-card transition-colors hover:border-primary-200 hover:bg-primary-ghost-hover"
         >
           <div>
-            <p className="text-[13.5px] font-semibold text-ink group-hover:text-primary-600">{link.label}</p>
-            <p className="text-[12px] text-muted">{link.description}</p>
+            <p className="text-compact font-semibold text-ink group-hover:text-primary-600">{link.label}</p>
+            <p className="text-xs text-muted">{link.description}</p>
           </div>
           <ArrowRightIcon size={16} className="text-neutral-400 group-hover:text-primary-600" />
         </Link>

@@ -302,8 +302,8 @@ export function EneagramaWizard({
           <li key={p.titulo} className="flex gap-3">
             <span className="mt-0.5 flex-none text-primary-600">{p.icon}</span>
             <span>
-              <span className="block text-[13.5px] font-semibold text-ink">{p.titulo}</span>
-              <span className="block text-[13px] leading-snug text-muted">{p.texto}</span>
+              <span className="block text-compact font-semibold text-ink">{p.titulo}</span>
+              <span className="block text-compact leading-snug text-muted">{p.texto}</span>
             </span>
           </li>
         ))}
@@ -503,7 +503,7 @@ export function EneagramaWizard({
   const todasRespondidas = preguntas.length === totalRespondidas
 
   return (
-    <div ref={containerRef} className="mx-auto max-w-2xl px-4 py-8">
+    <div ref={containerRef} className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
       <ConfirmDialog
         open={mostrarConfirmCancelar}
         onClose={() => setMostrarConfirmCancelar(false)}
@@ -553,7 +553,7 @@ export function EneagramaWizard({
               <span className="text-xs font-bold uppercase tracking-wider text-muted">
                 Pregunta {pregunta.numero_pregunta}
               </span>
-              <p className="mt-1 text-[15px] font-medium leading-relaxed text-ink">
+              <p className="mt-1 text-md font-medium leading-relaxed text-ink">
                 {pregunta.enunciado}
               </p>
             </div>
@@ -568,7 +568,7 @@ export function EneagramaWizard({
                     type="button"
                     onClick={() => handleRespuesta(pregunta.id, opcion.valor_numerico)}
                     className={[
-                      'rounded-lg border-2 px-2 py-3 text-center text-xs font-semibold transition-all',
+                      'rounded-lg border-2 px-2 py-3 text-center text-xs font-semibold transition-colors',
                       seleccionada
                         ? 'border-primary-600 bg-primary-50 text-primary-600'
                         : 'border-neutral-200 bg-surface text-soft hover:border-primary-600 hover:text-primary-600',

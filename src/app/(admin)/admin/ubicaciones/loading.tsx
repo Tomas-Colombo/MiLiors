@@ -18,14 +18,13 @@ import { Skeleton } from '@/components/ui'
  */
 export default function LoadingUbicaciones() {
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10" aria-busy="true">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <SkeletonPageHeader
-        variant="admin"
         title="Ubicaciones"
         subtitle="Provincias, departamentos y localidades de Argentina. Cada nivel cuelga del anterior. Los inactivos se conservan como baja lógica y dejan de aparecer en los selectores."
       />
 
-      <h2 className="mt-8 text-[15px] font-bold text-ink">Provincias</h2>
+      <h2 className="mt-8 text-md font-bold text-ink">Provincias</h2>
 
       <div className="mt-3 rounded-xl border border-neutral-200 bg-surface p-6 shadow-card">
         <SkeletonInlineForm label="Nueva provincia" />
@@ -40,8 +39,8 @@ export default function LoadingUbicaciones() {
         rows={8}
       />
 
-      <h2 className="mt-10 text-[15px] font-bold text-ink">Departamentos</h2>
-      <p className="mt-1 text-[13px] text-muted">
+      <h2 className="mt-10 text-md font-bold text-ink">Departamentos</h2>
+      <p className="mt-1 text-compact text-muted">
         Elegí una provincia para ver y gestionar sus departamentos.
       </p>
 
@@ -60,8 +59,8 @@ export default function LoadingUbicaciones() {
         rows={6}
       />
 
-      <h2 className="mt-10 text-[15px] font-bold text-ink">Localidades</h2>
-      <p className="mt-1 text-[13px] text-muted">
+      <h2 className="mt-10 text-md font-bold text-ink">Localidades</h2>
+      <p className="mt-1 text-compact text-muted">
         Elegí un departamento para ver y gestionar sus localidades.
       </p>
 

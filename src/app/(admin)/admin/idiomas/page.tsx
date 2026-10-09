@@ -1,7 +1,7 @@
 import { getIdiomasAdmin, type IdiomaAdmin } from '@/modules/admin/queries'
 import { filtrarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
 import { ExportarExcel } from '@/components/shared/exportar-excel'
-import { Table, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { GlobeIcon } from '@/components/icons'
 import { CrearIdiomaForm, IdiomaAcciones } from './idiomas-ui'
@@ -69,11 +69,8 @@ export default async function IdiomasPage({
   ]
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Idiomas</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        Los idiomas inactivos se conservan como baja lógica y no se eliminan.
-      </p>
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Idiomas" description="Los idiomas inactivos se conservan como baja lógica y no se eliminan." />
 
       <div className="mt-8 rounded-xl border border-neutral-200 bg-surface p-6 shadow-card">
         <CrearIdiomaForm />

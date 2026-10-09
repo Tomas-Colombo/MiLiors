@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import { inputClassName } from "./input";
 import {
   PickerPanel,
   PickerNavBtn,
@@ -126,13 +127,12 @@ export function DateInput({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={toggle}
-        className={cn(
-          "flex h-10 w-full items-center justify-between gap-2 rounded-md bg-surface px-3.5 text-sm outline-none",
-          "disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400",
-          open ? "border-[1.5px] border-primary-600 ring-[3px] ring-primary-50" : "border border-neutral-300",
-        )}
+        className={inputClassName({
+          open,
+          className: "flex items-center justify-between gap-2 text-left",
+        })}
       >
-        <span className={cn("truncate", selected ? "text-ink" : "text-neutral-400")}>
+        <span className={cn("truncate", selected ? "text-ink" : "text-placeholder")}>
           {selected ? formatDisplay(selected) : placeholder}
         </span>
         <CalendarIcon size={16} className={cn("shrink-0 text-neutral-400", open && "text-primary-600")} />
@@ -169,7 +169,7 @@ export function DateInput({
 
           <div className="grid grid-cols-7 gap-0.5 pb-1">
             {DIAS.map((d, i) => (
-              <span key={i} className="flex h-6 items-center justify-center text-[10px] font-bold uppercase text-neutral-400">
+              <span key={i} className="flex h-6 items-center justify-center text-2xs font-semibold uppercase text-muted">
                 {d}
               </span>
             ))}
@@ -188,9 +188,9 @@ export function DateInput({
                   disabled={deshabilitado}
                   onClick={() => elegir(d)}
                   className={cn(
-                    "flex h-8 items-center justify-center rounded-[7px] text-[13px] transition-colors",
-                    deshabilitado && "cursor-not-allowed text-neutral-300",
-                    !deshabilitado && activo && "bg-primary-600 font-semibold text-white",
+                    "flex h-8 items-center justify-center rounded-md text-compact tabular-nums transition-colors",
+                    deshabilitado && "cursor-not-allowed text-neutral-disabled",
+                    !deshabilitado && activo && "bg-primary-solid font-semibold text-white",
                     !deshabilitado && !activo && iso === hoyISO && "font-semibold text-primary-600 hover:bg-neutral-50",
                     !deshabilitado && !activo && iso !== hoyISO && "text-ink-soft hover:bg-neutral-50",
                   )}

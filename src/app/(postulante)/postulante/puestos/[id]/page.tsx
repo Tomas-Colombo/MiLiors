@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { VolverLink } from '@/components/shared/volver-link'
-import { Card, Badge } from '@/components/ui'
+import { Card, Badge, buttonClassName } from '@/components/ui'
 import { ChevronLeftIcon, CalendarIcon, BuildingIcon, ArrowRightIcon } from '@/components/icons'
 import { AvisoCertificado } from '@/components/shared/aviso-certificado'
 import { getPuestoPublicoById, getMisPostulacionesPuestoIds } from '@/modules/puestos/queries'
@@ -47,7 +47,7 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
   }))
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10 space-y-6">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       {/* Volver */}
       <VolverLink
         href={volverHref}
@@ -63,7 +63,7 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
       <Card padding="lg" className="space-y-5">
         {/* Encabezado */}
         <div className="space-y-3">
-          <h1 className="text-xl font-extrabold text-ink leading-snug">
+          <h1 className="text-xl font-extrabold leading-snug tracking-tight text-ink">
             {puesto.titulo_puesto}
           </h1>
           {puesto.nombre_empresa && (
@@ -76,7 +76,7 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
             {puesto.reclutador_id ? (
               <Link
                 href={`/postulante/reclutadores/${puesto.reclutador_id}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-surface px-3 h-9 text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                className={buttonClassName({ variant: 'secondary' })}
               >
                 <BuildingIcon size={14} />
                 Ver perfil de la empresa
@@ -138,7 +138,7 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
         {/* Descripción */}
         {puesto.descripcion_texto && (
           <div className="border-t border-neutral-100 pt-5">
-            <h2 className="mb-3 text-[13px] font-bold uppercase tracking-wider text-neutral-400">
+            <h2 className="mb-3 text-compact font-bold uppercase tracking-wider text-neutral-400">
               Descripción del puesto
             </h2>
             <div className="whitespace-pre-wrap text-sm text-ink-soft leading-relaxed">

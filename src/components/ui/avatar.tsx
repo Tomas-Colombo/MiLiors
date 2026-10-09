@@ -3,9 +3,10 @@ import { cn } from "@/lib/utils";
 type Size = "sm" | "md" | "lg";
 
 const sizes: Record<Size, string> = {
-  sm: "h-[34px] w-[34px] text-xs",
-  md: "h-[42px] w-[42px] text-sm",
-  lg: "h-[52px] w-[52px] text-base",
+  // Misma escala que el alto de los controles (32 · 40 · 48).
+  sm: "h-8 w-8 text-xs",
+  md: "h-10 w-10 text-sm",
+  lg: "h-12 w-12 text-base",
 };
 
 const statusColor = {
@@ -37,7 +38,7 @@ export function Avatar({ initials, color, size = "md", status, className }: Avat
       {status && (
         <span
           className={cn(
-            "absolute bottom-px right-0 h-[13px] w-[13px] rounded-full border-[2.5px] border-surface",
+            "absolute bottom-px right-0 h-3 w-3 rounded-full border-2 border-surface",
             statusColor[status],
           )}
         />

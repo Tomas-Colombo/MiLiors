@@ -13,37 +13,44 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   rightIcon?: ReactNode;
 }
 
+// El anillo de foco viene del `:focus-visible` global (globals.css, capa base) y
+// el cursor del botón habilitado también. El feedback de pulsado (1px hacia
+// abajo) se anula en disabled, igual que el hover: un botón deshabilitado no
+// reacciona a nada.
 const base =
-  "inline-flex items-center justify-center gap-2 font-sans font-semibold cursor-pointer " +
-  "transition-[background,box-shadow,filter,color] disabled:cursor-not-allowed " +
-  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-300/70";
+  "inline-flex items-center justify-center font-sans font-semibold [&_svg]:shrink-0 " +
+  "transition-[background-color,border-color,color,box-shadow,filter,translate] " +
+  "active:translate-y-px disabled:translate-y-0 disabled:cursor-not-allowed";
 
 const variants: Record<Variant, string> = {
   primary:
     "text-white bg-[image:var(--gradient-brand)] shadow-primary border-0 " +
     "hover:brightness-[1.06] hover:shadow-primary-hover active:brightness-95 " +
-    "disabled:bg-none disabled:bg-neutral-disabled disabled:shadow-none",
+    "disabled:bg-none disabled:bg-neutral-disabled disabled:shadow-none disabled:brightness-100",
   secondary:
-    "bg-surface text-ink-soft border border-neutral-300 " +
-    "hover:bg-neutral-50 hover:border-[#d6d9df] disabled:text-neutral-400 disabled:bg-neutral-50",
+    "bg-surface text-ink-soft border border-line-strong " +
+    "hover:bg-neutral-50 hover:border-neutral-400 " +
+    "disabled:text-neutral-400 disabled:bg-neutral-50 disabled:border-line-strong",
   tonal:
     "bg-primary-tint text-primary-600 border-0 hover:bg-primary-tint-hover " +
     "disabled:text-neutral-400 disabled:bg-neutral-100",
   ghost:
     "bg-transparent text-primary-600 border-0 hover:bg-primary-ghost-hover " +
-    "disabled:text-neutral-400",
+    "disabled:text-neutral-400 disabled:bg-transparent",
   destructive:
     // El hover va a `error-strong` y no a `error`: este último es el color de
     // TEXTO del tono, y en modo oscuro se aclara para leerse sobre `error-bg`.
     // Usarlo de relleno dejaría el texto blanco del botón en 2.77:1.
     "bg-error-solid text-white border-0 hover:bg-error-strong active:brightness-95 " +
-    "disabled:bg-neutral-disabled",
+    "disabled:bg-neutral-disabled disabled:brightness-100",
 };
 
+// Escala de alto compartida con Input/Select/DatePicker (sm 32 · md 40 · lg 48)
+// y el mismo radio (`rounded-md`) en los tres tamaños.
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3.5 text-[12.5px] rounded-[7px]",
-  md: "h-10 px-[18px] text-sm rounded-md",
-  lg: "h-12 px-6 text-[15px] rounded-[9px]",
+  sm: "h-8 gap-1.5 px-3.5 text-compact rounded-md",
+  md: "h-10 gap-2 px-4.5 text-sm rounded-md",
+  lg: "h-12 gap-2 px-6 text-md rounded-md",
 };
 
 /**
@@ -90,9 +97,9 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 const iconSizes: Record<Size, string> = {
-  sm: "w-8 h-8 rounded-[7px]",
+  sm: "w-8 h-8 rounded-md",
   md: "w-10 h-10 rounded-md",
-  lg: "w-12 h-12 rounded-[9px]",
+  lg: "w-12 h-12 rounded-md",
 };
 
 export function IconButton({

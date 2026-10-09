@@ -5,6 +5,16 @@ import { cn } from "@/lib/utils";
 import { coincideBusqueda, mismoTexto } from "@/lib/texto";
 import { ChevronDownIcon } from "@/components/icons";
 import { Skeleton } from "./skeleton";
+import { inputClassName } from "./input";
+
+// Panel desplegable y opciones compartidos por SearchableSelect y FancySelect.
+const PANEL =
+  "absolute z-20 mt-2 max-h-60 w-full animate-pop-in overflow-y-auto rounded-lg border border-line-strong bg-neutral-0 p-1.5 shadow-md";
+const OPTION =
+  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-compact transition-colors " +
+  "-outline-offset-2 disabled:opacity-40";
+const OPTION_ACTIVE = "bg-primary-ghost-hover font-semibold text-primary-600";
+const OPTION_IDLE = "text-ink-soft hover:bg-neutral-50";
 
 export interface SelectOption {
   value: string;
@@ -36,13 +46,10 @@ export function Select({ options, placeholder, className, value, defaultValue, .
       <select
         value={value}
         defaultValue={defaultValue}
-        className={cn(
-          "h-10 w-full cursor-pointer appearance-none rounded-md border border-neutral-300 bg-surface pl-3.5 pr-10 font-sans text-sm outline-none",
-          "transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50",
-          "disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400",
-          isPlaceholder ? "text-neutral-400" : "text-ink",
-          className,
-        )}
+        className={inputClassName({
+          empty: isPlaceholder,
+          className: cn("cursor-pointer appearance-none pr-10", className),
+        })}
         {...props}
       >
         {placeholder && (
@@ -156,11 +163,7 @@ export function SearchableSelect({
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
         autoComplete="off"
-        className={cn(
-          "h-10 w-full rounded-md border border-neutral-300 bg-surface pl-3.5 pr-10 font-sans text-sm outline-none",
-          "transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50",
-          query ? "text-ink" : "text-neutral-400",
-        )}
+        className={inputClassName({ className: "pr-10" })}
       />
       <ChevronDownIcon
         size={16}
@@ -170,17 +173,17 @@ export function SearchableSelect({
         )}
       />
       {open && (
-        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-300 bg-neutral-0 p-1.5 shadow-md">
+        <div className={PANEL}>
           {loading ? (
             // Con las opciones en vuelo, "Sin resultados" mentiría: se pintan
             // filas de esqueleto con la misma altura que las opciones reales.
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="px-[11px] py-[9px]">
-                <Skeleton className="h-[15px] w-full" />
+              <div key={i} className="px-3 py-2">
+                <Skeleton className="h-4 w-full" />
               </div>
             ))
           ) : filtered.length === 0 ? (
-            <p className="px-[11px] py-[9px] text-[13.5px] text-neutral-400">Sin resultados</p>
+            <p className="px-3 py-2 text-compact text-muted">Sin resultados</p>
           ) : (
             filtered.map((opt) => {
               const active = opt.value === selected
@@ -189,12 +192,7 @@ export function SearchableSelect({
                   key={opt.value}
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); handleSelect(opt) }}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-[7px] px-[11px] py-[9px] text-left text-[13.5px]",
-                    active
-                      ? "bg-primary-ghost-hover font-semibold text-primary-600"
-                      : "text-ink-soft hover:bg-neutral-50",
-                  )}
+                  className={cn(OPTION, active ? OPTION_ACTIVE : OPTION_IDLE)}
                 >
                   {opt.label}
                   {active && <ChevronDownIcon size={15} className="-rotate-90 text-primary-600" strokeWidth={2.5} />}
@@ -277,15 +275,12 @@ export function FancySelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md bg-surface px-3.5 text-sm outline-none",
-          "disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400",
-          open
-            ? "border-[1.5px] border-primary-600 ring-[3px] ring-primary-50"
-            : "border border-neutral-300",
-        )}
+        className={inputClassName({
+          open,
+          className: "flex items-center justify-between gap-2 text-left",
+        })}
       >
-        <span className={current ? "text-ink" : "text-neutral-400"}>
+        <span className={cn("min-w-0 truncate", current ? "text-ink" : "text-placeholder")}>
           {current?.label ?? placeholder ?? "Seleccionar"}
         </span>
         <ChevronDownIcon
@@ -294,7 +289,7 @@ export function FancySelect({
         />
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-300 bg-neutral-0 p-1.5 shadow-md">
+        <div className={PANEL}>
           {options.map((o) => {
             const active = o.value === selected;
             return (
@@ -303,10 +298,7 @@ export function FancySelect({
                 type="button"
                 disabled={o.disabled}
                 onClick={() => handleSelect(o.value)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-[7px] px-[11px] py-[9px] text-left text-[13.5px] disabled:opacity-40",
-                  active ? "bg-primary-ghost-hover font-semibold text-primary-600" : "text-ink-soft hover:bg-neutral-50",
-                )}
+                className={cn(OPTION, active ? OPTION_ACTIVE : OPTION_IDLE)}
               >
                 {o.label}
                 {active && <ChevronDownIcon size={15} className="-rotate-90 text-primary-600" strokeWidth={2.5} />}

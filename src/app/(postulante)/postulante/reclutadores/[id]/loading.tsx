@@ -11,7 +11,7 @@ import { BuildingIcon, ChevronLeftIcon, UserIcon } from '@/components/icons'
  */
 export default function LoadingPerfilReclutador() {
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10 space-y-6" aria-busy="true">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
       <Link
         href="/postulante/puestos"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
@@ -34,7 +34,7 @@ export default function LoadingPerfilReclutador() {
         <div className="mt-5 space-y-4 border-t border-neutral-100 pt-4">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-tint text-primary-600">
                 <BuildingIcon size={17} />
               </span>
               <div className="min-w-0 flex-1">

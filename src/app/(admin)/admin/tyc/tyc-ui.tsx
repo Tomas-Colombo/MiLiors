@@ -62,7 +62,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'cursor-pointer px-4 py-2.5 text-[13.5px] font-semibold transition-colors -mb-px border-b-2',
+        'cursor-pointer px-4 py-2.5 text-compact font-semibold transition-colors -mb-px border-b-2',
         active
           ? 'border-primary-600 text-primary-600'
           : 'border-transparent text-muted hover:text-ink'
@@ -151,19 +151,19 @@ function HistorialTab({ versiones }: { versiones: Version[] }) {
               onClick={() => setExpandida(abierta ? null : v.id)}
               className="flex w-full items-center gap-3 px-5 py-4 text-left"
             >
-              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-primary-tint text-primary-600">
                 <FileIcon size={18} />
               </span>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-bold text-ink">Versión {v.version}</span>
+                  <span className="text-sm font-bold text-ink">Versión {v.version}</span>
                   {vigente ? (
                     <Badge tone="success" dot>Vigente</Badge>
                   ) : (
                     <Badge tone="neutral" dot>Histórica</Badge>
                   )}
                 </div>
-                <p className="mt-0.5 text-[12px] text-muted">
+                <p className="mt-0.5 text-xs text-muted">
                   Publicada el {fmtFecha(v.fecha_publicacion)}
                   {v.fecha_baja_tyc && ` · Reemplazada el ${fmtFecha(v.fecha_baja_tyc)}`}
                   {` · ${v.aceptaciones} ${v.aceptaciones === 1 ? 'aceptación' : 'aceptaciones'}`}

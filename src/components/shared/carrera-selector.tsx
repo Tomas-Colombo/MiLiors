@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Field, SearchableSelect, Alert } from '@/components/ui'
+import { Field, SearchableSelect, Alert, inputClassName } from '@/components/ui'
 import type { SelectOption } from '@/components/ui/select'
 
 const OTRA_VALUE = '__OTRA__'
@@ -89,7 +89,7 @@ export function CarreraSelector({
               value={carreraOtra}
               onChange={(e) => setCarreraOtra(e.target.value)}
               placeholder="Ej: Licenciatura en Recursos Humanos"
-              className="h-10 w-full rounded-md border border-neutral-300 bg-surface px-3.5 font-sans text-sm text-ink outline-none transition-[border,box-shadow] focus:border-[1.5px] focus:border-primary-600 focus:ring-[3px] focus:ring-primary-50"
+              className={inputClassName()}
             />
           </div>
         )}

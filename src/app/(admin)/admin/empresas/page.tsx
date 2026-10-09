@@ -2,7 +2,7 @@ import { getEmpresasAdmin, type EmpresaAdmin } from '@/modules/admin/queries'
 import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
 import { ExportarExcel } from '@/components/shared/exportar-excel'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
-import { Table, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BuildingIcon } from '@/components/icons'
 import { SearchInput, FilterSelect, FiltroFechas, ClearFilters, Paginador } from '@/components/shared/list-controls'
@@ -77,7 +77,7 @@ export default async function EmpresasPage({
         <div>
           <p className="font-medium text-ink leading-tight">{row.nombre_empresa}</p>
           {row.descripcion && (
-            <p className="text-[11px] text-muted line-clamp-1">{row.descripcion}</p>
+            <p className="text-2xs text-muted line-clamp-1">{row.descripcion}</p>
           )}
         </div>
       ),
@@ -98,13 +98,13 @@ export default async function EmpresasPage({
       cell: row => (
         <div className="min-w-0 space-y-0.5">
           {row.reclutadores.length === 0 ? (
-            <span className="text-[12px] text-neutral-400">Sin reclutadores</span>
+            <span className="text-xs text-neutral-400">Sin reclutadores</span>
           ) : (
             row.reclutadores.map(rec => (
               <div key={rec.id} className="min-w-0">
-                <p className="break-words text-[12.5px] font-medium text-ink-soft leading-tight">{rec.nombre}</p>
+                <p className="break-words text-xs font-medium text-ink-soft leading-tight">{rec.nombre}</p>
                 {rec.email && rec.email !== rec.nombre && (
-                  <p className="break-words text-[11px] text-muted">{rec.email}</p>
+                  <p className="break-words text-2xs text-muted">{rec.email}</p>
                 )}
               </div>
             ))
@@ -116,7 +116,7 @@ export default async function EmpresasPage({
       key: 'created_at',
       header: 'Creada',
       cell: row => (
-        <span className="text-muted text-[12px]">
+        <span className="text-muted text-xs">
           {new Date(row.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </span>
       ),
@@ -124,11 +124,8 @@ export default async function EmpresasPage({
   ]
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Empresas</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        {todas.length} empresas registradas. Vista de solo lectura en MVP.
-      </p>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Empresas" description={<>{todas.length} empresas registradas. Vista de solo lectura en MVP.</>} />
 
       <div className="mt-6">
         <ConfigInactividad diasActual={diasInactividadCierre} />

@@ -151,7 +151,7 @@ function SeccionCursos({ cursos }: { cursos: CursoItem[] }) {
               href={c.url_credencial}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 inline-block text-[12px] font-medium text-primary-600 hover:underline"
+              className="mt-1 inline-block text-xs font-medium text-primary-600 hover:underline"
             >
               Ver credencial
             </a>
@@ -211,7 +211,7 @@ function SeccionExperiencia({ experiencias }: { experiencias: ExperienciaItem[] 
           {...acciones}
         >
           {e.descripcion && (
-            <p className="mt-1 line-clamp-2 text-[12px] text-neutral-500">{e.descripcion}</p>
+            <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{e.descripcion}</p>
           )}
         </FilaPerfil>
       )}

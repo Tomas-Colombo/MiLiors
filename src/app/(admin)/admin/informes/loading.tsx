@@ -9,8 +9,8 @@ import { SkeletonFilters, SkeletonFiltroFechas, SkeletonPageHeader, SkeletonTabl
  */
 export default function LoadingInformes() {
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10" aria-busy="true">
-      <SkeletonPageHeader variant="admin" title="Monitor de informes" subtitleWidth="w-[26rem]" />
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
+      <SkeletonPageHeader title="Monitor de informes" subtitleWidth="w-[26rem]" />
 
       <SkeletonFilters selects={2} className="mt-6" />
 

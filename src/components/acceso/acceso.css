@@ -35,6 +35,9 @@
      aclarado, igual que en el modo oscuro de la app. */
   --doc-accent: #8fb6f7;
   --danger: #c8312b;
+  /* Anillo de foco por teclado: el global sigue al modo oscuro, y esta pantalla
+     es siempre clara. */
+  --focus-ring: var(--accent);
 
   min-height: 100vh;
   display: grid;
@@ -202,10 +205,12 @@
   color: var(--ink);
   background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--radius-md);
+  min-height: 48px;
   padding: 13px 14px;
   outline: none;
-  transition: border-color .15s, box-shadow .15s;
+  transition: border-color var(--duration-fast) var(--ease-ui),
+    box-shadow var(--duration-fast) var(--ease-ui);
 }
 .tid-input::placeholder {
   color: var(--muted);
@@ -255,7 +260,7 @@
   margin-top: 18px;
   border: 1px solid color-mix(in oklab, var(--danger) 40%, transparent);
   background: color-mix(in oklab, var(--danger) 10%, transparent);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 11px 13px;
   font-family: var(--sans);
   font-size: 13px;
@@ -283,9 +288,13 @@
   background: var(--doc-bg);
   box-shadow: 0 4px 12px color-mix(in oklab, var(--doc-bg) 34%, transparent);
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
+  min-height: 48px;
   padding: 15px;
-  transition: transform .1s, filter .2s, box-shadow .2s, opacity .2s;
+  transition: transform var(--duration-fast) var(--ease-ui),
+    filter var(--duration-base) var(--ease-ui),
+    box-shadow var(--duration-base) var(--ease-ui),
+    opacity var(--duration-base) var(--ease-ui);
 }
 .tid-submit:hover:not(:disabled) {
   filter: brightness(1.35);
@@ -490,7 +499,7 @@
   margin-top: 4px;
   padding: 22px 20px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--panel);
 }
 
@@ -514,12 +523,14 @@
   gap: 5px;
   padding: 14px 10px;
   border: 1.5px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--field-bg);
   color: var(--ink-2);
   font-family: var(--sans);
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition: border-color var(--duration-fast) var(--ease-ui),
+    color var(--duration-fast) var(--ease-ui),
+    background-color var(--duration-fast) var(--ease-ui);
 }
 
 .tid-role:hover {

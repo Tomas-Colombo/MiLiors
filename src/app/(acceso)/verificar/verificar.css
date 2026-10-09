@@ -26,6 +26,8 @@
   --verified-bg: rgba(74, 222, 128, .14);
   --danger: #e8756e;
   --danger-bg: rgba(232, 117, 110, .14);
+  /* Anillo de foco por teclado: sobre el navy el azul claro, no el de marca. */
+  --focus-ring: var(--accent-soft);
 
   color-scheme: dark;
   position: relative;
@@ -92,7 +94,7 @@
   font-weight: 500;
   color: var(--muted);
   padding: 4px;
-  transition: color .15s;
+  transition: color var(--duration-fast) var(--ease-ui);
 }
 .vf-back:hover {
   color: var(--ink);
@@ -155,7 +157,7 @@
 .vf-card {
   position: relative;
   border: 1px solid var(--card-line);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: var(--card-bg-2);
   backdrop-filter: blur(16px) saturate(1.08);
   -webkit-backdrop-filter: blur(16px) saturate(1.08);
@@ -295,11 +297,11 @@
   appearance: none;
   cursor: pointer;
   border: 1px solid var(--card-line);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--card-bg);
   padding: 11px 13px;
   text-align: left;
-  transition: border-color .15s;
+  transition: border-color var(--duration-fast) var(--ease-ui);
 }
 .vf-copy:hover {
   border-color: var(--card-accent);
@@ -400,7 +402,7 @@
 .vf-search-form {
   margin-top: 30px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: color-mix(in oklab, var(--bg-2) 72%, transparent);
   backdrop-filter: blur(3px);
   padding: 24px 24px 22px;
@@ -430,10 +432,12 @@
   color: var(--ink);
   background: color-mix(in oklab, var(--bg) 55%, transparent);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
+  min-height: 48px;
   padding: 13px;
   outline: none;
-  transition: border-color .15s, box-shadow .15s;
+  transition: border-color var(--duration-fast) var(--ease-ui),
+    box-shadow var(--duration-fast) var(--ease-ui);
 }
 .vf-search-input::placeholder {
   color: color-mix(in oklab, var(--muted) 78%, transparent);
@@ -455,9 +459,12 @@
   color: #ffffff;
   background: var(--gradient-brand);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
+  min-height: 48px;
   padding: 13px 26px;
-  transition: transform .1s, opacity .2s, filter .2s;
+  transition: transform var(--duration-fast) var(--ease-ui),
+    opacity var(--duration-base) var(--ease-ui),
+    filter var(--duration-base) var(--ease-ui);
 }
 .vf-search-btn:hover:not(:disabled) {
   filter: brightness(1.06);
@@ -500,6 +507,16 @@
   }
 }
 
+/* Esta pantalla no tiene animaciones continuas; sólo transiciones breves y el
+   gesto de pulsado del botón. Con movimiento reducido se quita el desplazamiento
+   y los cambios de color/borde quedan instantáneos (el bloque global de
+   globals.css ya acorta las transiciones). */
+@media (prefers-reduced-motion: reduce) {
+  .vf-search-btn:active:not(:disabled) {
+    transform: none;
+  }
+}
+
 
 /* ---- Informe público del titular ------------------------------------
    Va sobre el navy como una hoja: el papel trae su propio tema claro
@@ -511,7 +528,7 @@
 }
 
 .vf-informe > :first-child {
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
 }
@@ -520,7 +537,7 @@
   margin-top: 18px;
   padding: 20px 22px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.03);
   text-align: center;
 }
@@ -545,7 +562,7 @@
   display: inline-block;
   margin-top: 14px;
   padding: 10px 22px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border-bottom: 2px solid #c79a3f;
   background: #16213a;
   font-family: var(--sans);
@@ -553,7 +570,7 @@
   font-weight: 700;
   color: #f0d089;
   text-decoration: none;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--duration-fast) var(--ease-ui);
 }
 
 .vf-cta-btn:hover {

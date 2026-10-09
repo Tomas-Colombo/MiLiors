@@ -14,9 +14,8 @@ import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
  */
 export default function LoadingIdiomas() {
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10" aria-busy="true">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <SkeletonPageHeader
-        variant="admin"
         title="Idiomas"
         subtitle="Los idiomas inactivos se conservan como baja lógica y no se eliminan."
       />

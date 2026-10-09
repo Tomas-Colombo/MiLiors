@@ -27,17 +27,17 @@ export function TyCLector({ tyc }: { tyc: TyC }) {
         className="group flex w-full items-center justify-between rounded-xl border border-neutral-200 bg-surface px-5 py-4 text-left shadow-card transition-colors hover:border-primary-300 hover:bg-primary-ghost-hover"
       >
         <span className="flex items-center gap-3">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-primary-tint text-primary-600">
             <ShieldIcon size={18} />
           </span>
           <span>
-            <span className="block text-[13.5px] font-semibold text-ink group-hover:text-primary-600">
+            <span className="block text-compact font-semibold text-ink group-hover:text-primary-600">
               Términos y Condiciones
             </span>
-            <span className="block text-[12px] text-muted">Leé los términos vigentes (v{tyc.version})</span>
+            <span className="block text-xs text-muted">Leé los términos vigentes (v{tyc.version})</span>
           </span>
         </span>
-        <span className="text-[12px] font-medium text-primary-600">Leer</span>
+        <span className="text-xs font-medium text-primary-600">Leer</span>
       </button>
 
       <Modal

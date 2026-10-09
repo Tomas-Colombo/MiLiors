@@ -16,14 +16,13 @@ import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
  */
 export default function LoadingCarreras() {
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10" aria-busy="true">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <SkeletonPageHeader
-        variant="admin"
         title="Carreras"
         subtitle="Catálogo oficial de carreras y valores de texto libre cargados por postulantes."
       />
 
-      <h2 className="mt-8 text-[15px] font-bold text-ink">Carreras oficiales</h2>
+      <h2 className="mt-8 text-md font-bold text-ink">Carreras oficiales</h2>
 
       <div className="mt-3 rounded-xl border border-neutral-200 bg-surface p-6 shadow-card">
         <SkeletonInlineForm label="Nueva carrera" />
@@ -42,8 +41,8 @@ export default function LoadingCarreras() {
         rows={8}
       />
 
-      <h2 className="mt-10 text-[15px] font-bold text-ink">Cargadas por postulantes (Otras)</h2>
-      <p className="mt-1 text-[13px] text-muted">
+      <h2 className="mt-10 text-md font-bold text-ink">Cargadas por postulantes (Otras)</h2>
+      <p className="mt-1 text-compact text-muted">
         Valores de texto libre que los postulantes cargaron cuando su carrera no estaba en el catálogo.
       </p>
 

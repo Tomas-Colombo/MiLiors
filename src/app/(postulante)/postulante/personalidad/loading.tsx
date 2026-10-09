@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui'
+import { PageHeader, Skeleton } from '@/components/ui'
 import { MESES_ESPERA_REHACER } from '@/modules/eneagrama/rehacer-policy'
 
 /**
@@ -13,14 +13,9 @@ import { MESES_ESPERA_REHACER } from '@/modules/eneagrama/rehacer-policy'
  */
 export default function LoadingPersonalidad() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 space-y-10" aria-busy="true">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-10" aria-busy="true">
       <section className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Eneagrama</h1>
-          <p className="mt-1 text-sm text-muted">
-            Tu tipo de personalidad según el sistema ITA Riso-Hudson.
-          </p>
-        </div>
+        <PageHeader title="Eneagrama" description="Tu tipo de personalidad según el sistema ITA Riso-Hudson." />
 
         <div className="rounded-xl border border-neutral-200 bg-surface px-5 py-4 shadow-card">
           <p className="text-sm font-semibold text-ink">¿Qué es el Eneagrama?</p>

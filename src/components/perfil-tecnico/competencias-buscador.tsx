@@ -50,7 +50,7 @@ export function CompetenciasBuscador({ seleccion }: { seleccion: SeleccionCompet
             type="button"
             onClick={addCustom}
             disabled={lleno}
-            className="shrink-0 rounded-md bg-ink px-4 text-[13px] font-semibold text-neutral-0 transition-opacity hover:bg-ink/85 disabled:opacity-40"
+            className="shrink-0 rounded-md bg-ink px-4 text-compact font-semibold text-neutral-0 transition-opacity hover:bg-ink/85 disabled:opacity-40"
           >
             + Agregar &ldquo;{queryTrimmed}&rdquo;
           </button>
@@ -75,7 +75,7 @@ export function CompetenciasBuscador({ seleccion }: { seleccion: SeleccionCompet
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-5 text-center text-[13px] text-muted">
+          <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-5 text-center text-compact text-muted">
             No hay habilidades ni tecnologías que coincidan con &ldquo;
             <strong>{queryTrimmed}</strong>&rdquo;.{' '}
             {canAddCustom && (

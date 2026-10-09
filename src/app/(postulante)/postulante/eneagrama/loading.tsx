@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui'
 export default function LoadingEneagrama() {
   return (
     <div className="min-h-screen bg-surface-page" aria-busy="true">
-      <div className="mx-auto max-w-2xl px-4 py-10">
+      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <Skeleton className="h-2 w-full" borderRadius={999} />
 
         <div className="mt-8 rounded-xl border border-neutral-200 bg-surface p-8 shadow-card">

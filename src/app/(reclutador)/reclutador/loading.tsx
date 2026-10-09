@@ -15,19 +15,19 @@ import { MetricasSkeleton } from './metricas-skeleton'
  */
 export default function LoadingReclutadorDashboard() {
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 space-y-8" aria-busy="true">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-8" aria-busy="true">
       <div>
         <Skeleton className="h-8 w-56" />
         <Skeleton className="mt-2 h-4 w-40" />
       </div>
 
       <div>
-        <h2 className="text-[13.5px] font-bold text-ink mb-3">Accesos rápidos</h2>
+        <h2 className="text-compact font-bold text-ink mb-3">Accesos rápidos</h2>
         <QuickLinksReclutador />
       </div>
 
       <div>
-        <h2 className="text-[13.5px] font-bold text-ink mb-3">Métricas</h2>
+        <h2 className="text-compact font-bold text-ink mb-3">Métricas</h2>
         <MetricasSkeleton />
       </div>
     </div>

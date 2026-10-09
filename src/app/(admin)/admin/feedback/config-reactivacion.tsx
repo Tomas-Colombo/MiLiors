@@ -16,8 +16,8 @@ export function ConfigReactivacion({ diasActual }: { diasActual: number }) {
 
   return (
     <Card className="mb-6">
-      <h2 className="text-[15px] font-bold text-ink">Reactivación del cuadro de opinión</h2>
-      <p className="mt-1 text-[13px] text-muted">
+      <h2 className="text-md font-bold text-ink">Reactivación del cuadro de opinión</h2>
+      <p className="mt-1 text-compact text-muted">
         Cuando el postulante responde &ldquo;¿cuánto te representa este informe?&rdquo;, el cuadro se
         cierra y no vuelve a ofrecerse hasta que pase este período. Si regenera su informe se reabre
         antes: es un informe distinto.
@@ -40,7 +40,7 @@ export function ConfigReactivacion({ diasActual }: { diasActual: number }) {
           Guardar
         </Button>
         {state.success && sinCambios && (
-          <span className="pb-2.5 text-[13px] font-medium text-success">Guardado ✓</span>
+          <span className="pb-2.5 text-compact font-medium text-success">Guardado ✓</span>
         )}
       </form>
 

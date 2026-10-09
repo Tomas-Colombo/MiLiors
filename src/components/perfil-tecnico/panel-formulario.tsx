@@ -62,7 +62,7 @@ export function PanelAlta({
         </Button>
       }
     >
-      <p className="text-[13px] font-semibold text-ink">{titulo}</p>
+      <p className="text-compact font-semibold text-ink">{titulo}</p>
       {children}
     </PanelBase>
   )

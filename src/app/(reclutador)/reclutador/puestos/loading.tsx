@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { buttonClassName } from '@/components/ui'
 import { PlusIcon } from '@/components/icons'
 import {
   SkeletonFilters,
@@ -18,14 +19,14 @@ import {
  */
 export default function LoadingMisPuestos() {
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 space-y-6" aria-busy="true">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
       <SkeletonPageHeader
         title="Mis puestos"
         subtitleWidth="w-28"
         action={
           <Link
             href="/reclutador/puestos/nuevo"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-[18px] text-sm font-semibold text-white hover:brightness-105"
+            className={buttonClassName()}
           >
             <PlusIcon size={16} />
             Nuevo puesto

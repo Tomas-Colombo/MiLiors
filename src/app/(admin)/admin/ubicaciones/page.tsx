@@ -1,6 +1,6 @@
 import { getProvinciasAdmin, getDepartamentosAdmin, getLocalidadesAdmin } from '@/modules/admin/queries'
 import type { ProvinciaAdmin, DepartamentoAdmin, LocalidadAdmin } from '@/modules/admin/queries'
-import { Table, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { MapPinIcon } from '@/components/icons'
 import {
@@ -188,15 +188,11 @@ export default async function UbicacionesPage({
   ]
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Ubicaciones</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        Provincias, departamentos y localidades de Argentina. Cada nivel cuelga del anterior. Los
-        inactivos se conservan como baja lógica y dejan de aparecer en los selectores.
-      </p>
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Ubicaciones" description="Provincias, departamentos y localidades de Argentina. Cada nivel cuelga del anterior. Los inactivos se conservan como baja lógica y dejan de aparecer en los selectores." />
 
       {/* ─── Provincias ─────────────────────────────────────────── */}
-      <h2 className="mt-8 text-[15px] font-bold text-ink">Provincias</h2>
+      <h2 className="mt-8 text-md font-bold text-ink">Provincias</h2>
 
       <div className="mt-3 rounded-xl border border-neutral-200 bg-surface p-6 shadow-card">
         <CrearProvinciaForm />
@@ -225,8 +221,8 @@ export default async function UbicacionesPage({
       <Paginador page={pageP} pageCount={pageCountP} paramKey="pageP" />
 
       {/* ─── Departamentos ──────────────────────────────────────── */}
-      <h2 className="mt-10 text-[15px] font-bold text-ink">Departamentos</h2>
-      <p className="mt-1 text-[13px] text-muted">Elegí una provincia para ver y gestionar sus departamentos.</p>
+      <h2 className="mt-10 text-md font-bold text-ink">Departamentos</h2>
+      <p className="mt-1 text-compact text-muted">Elegí una provincia para ver y gestionar sus departamentos.</p>
 
       <div className="mt-3">
         <FilterSearchableSelect
@@ -277,8 +273,8 @@ export default async function UbicacionesPage({
       )}
 
       {/* ─── Localidades ────────────────────────────────────────── */}
-      <h2 className="mt-10 text-[15px] font-bold text-ink">Localidades</h2>
-      <p className="mt-1 text-[13px] text-muted">Elegí un departamento para ver y gestionar sus localidades.</p>
+      <h2 className="mt-10 text-md font-bold text-ink">Localidades</h2>
+      <p className="mt-1 text-compact text-muted">Elegí un departamento para ver y gestionar sus localidades.</p>
 
       <div className="mt-3">
         <FilterSearchableSelect

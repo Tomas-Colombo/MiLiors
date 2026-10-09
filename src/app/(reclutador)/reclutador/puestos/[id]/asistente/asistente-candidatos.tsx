@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Card, Button, Badge, EmptyState, Alert, Tooltip } from '@/components/ui'
+import { Card, Button, Badge, EmptyState, Alert, Tooltip, buttonClassName } from '@/components/ui'
 import { SparklesIcon, CheckCircleIcon, HelpCircleIcon, CloseIcon, MailIcon, UsersIcon, Spinner } from '@/components/icons'
 import { MarcaPostulacionBtns } from '@/components/shared/marca-postulacion'
 import { MARCA_POSTULACION, type MarcaPostulacion } from '@/lib/constants/enums'
@@ -104,8 +104,8 @@ export function AsistenteCandidatos({ puestoId, tituloPuesto, candidatos }: Prop
       <Card>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[14px] font-semibold text-ink">Candidatos a evaluar</p>
-            <p className="text-[12.5px] text-muted">
+            <p className="text-sm font-semibold text-ink">Candidatos a evaluar</p>
+            <p className="text-xs text-muted">
               {lista.length} candidato{lista.length !== 1 ? 's' : ''} en la consulta. Podés sacar a
               quien no quieras incluir; la lista se restablece al recargar.
             </p>
@@ -130,7 +130,7 @@ export function AsistenteCandidatos({ puestoId, tituloPuesto, candidatos }: Prop
           </Alert>
         )}
         {isPending && (
-          <p className="mt-2 text-[11.5px] text-neutral-400">
+          <p className="mt-2 text-2xs text-neutral-400">
             Comparando candidatos y armando el PDF. Puede tardar hasta un minuto…
           </p>
         )}
@@ -154,11 +154,11 @@ export function AsistenteCandidatos({ puestoId, tituloPuesto, candidatos }: Prop
             <Card key={f.postulacionId} padding="md">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[13px] font-bold text-primary-600">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-compact font-bold text-primary-600">
                     {f.nombre.charAt(0).toUpperCase()}
                   </span>
                   <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 text-[13.5px] font-semibold text-ink">
+                    <p className="flex items-center gap-1.5 text-compact font-semibold text-ink">
                       {f.marca === MARCA_POSTULACION.DUDA ? (
                         <HelpCircleIcon size={13} className="shrink-0 text-warning-solid" />
                       ) : (
@@ -168,7 +168,7 @@ export function AsistenteCandidatos({ puestoId, tituloPuesto, candidatos }: Prop
                       {f.marca === MARCA_POSTULACION.DUDA && <Badge tone="warning">En duda</Badge>}
                     </p>
                     {f.email && (
-                      <span className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] text-muted">
+                      <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-muted">
                         <MailIcon size={12} className="shrink-0" />
                         <span className="truncate">{f.email}</span>
                       </span>
@@ -179,7 +179,7 @@ export function AsistenteCandidatos({ puestoId, tituloPuesto, candidatos }: Prop
                 <div className="flex shrink-0 items-center gap-1.5">
                   <Link
                     href={`/reclutador/postulantes/${f.postulanteId}?postulacion=${f.postulacionId}&from=puesto-asistente&puesto=${puestoId}`}
-                    className="inline-flex h-8 items-center rounded-md bg-primary-tint px-3 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+                    className={buttonClassName({ variant: 'tonal', size: 'sm', className: 'whitespace-nowrap' })}
                   >
                     Evaluar perfil
                   </Link>

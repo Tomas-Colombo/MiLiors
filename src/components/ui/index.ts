@@ -19,3 +19,4 @@ export * from "./skeleton";
 export * from "./overlay";
 export * from "./table";
 export * from "./navigation";
+export * from "./page-header";

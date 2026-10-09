@@ -18,7 +18,7 @@ export function Checkbox({ label, indeterminate, checked, disabled, className, i
     <label
       htmlFor={inputId}
       className={cn(
-        "inline-flex items-center gap-[11px] text-sm",
+        "inline-flex items-center gap-2.5 text-sm",
         disabled ? "cursor-not-allowed text-neutral-400" : "cursor-pointer text-ink",
         className,
       )}
@@ -34,13 +34,13 @@ export function Checkbox({ label, indeterminate, checked, disabled, className, i
         />
         <span
           className={cn(
-            "flex h-5 w-5 items-center justify-center rounded-md transition-colors",
+            "flex h-5 w-5 items-center justify-center rounded-sm transition-colors",
             disabled
               ? "border-[1.5px] border-neutral-300 bg-neutral-50"
               : on
-                ? "bg-primary-600"
-                : "border-[1.5px] border-[#c9cdd4] bg-surface",
-            "peer-focus-visible:ring-[3px] peer-focus-visible:ring-primary-50",
+                ? "bg-primary-solid"
+                : "border-[1.5px] border-neutral-400 bg-surface",
+            "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-600",
           )}
         >
           {indeterminate ? (
@@ -63,7 +63,7 @@ export function Radio({ label, checked, disabled, className, id, ...props }: Bas
     <label
       htmlFor={inputId}
       className={cn(
-        "inline-flex items-center gap-[11px] text-sm",
+        "inline-flex items-center gap-2.5 text-sm",
         disabled ? "cursor-not-allowed text-neutral-400" : "cursor-pointer text-ink",
         className,
       )}
@@ -84,8 +84,8 @@ export function Radio({ label, checked, disabled, className, id, ...props }: Bas
               ? "border-neutral-300 bg-neutral-50"
               : checked
                 ? "border-primary-600"
-                : "border-[#c9cdd4] bg-surface",
-            "peer-focus-visible:ring-[3px] peer-focus-visible:ring-primary-50",
+                : "border-neutral-400 bg-surface",
+            "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-600",
           )}
         >
           {checked && !disabled && <span className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
@@ -128,7 +128,7 @@ export function Switch({
     <label
       htmlFor={inputId}
       className={cn(
-        "inline-flex items-center gap-[11px] text-sm",
+        "inline-flex items-center gap-2.5 text-sm",
         disabled ? "cursor-not-allowed text-neutral-400" : "cursor-pointer text-ink",
         className,
       )}
@@ -151,8 +151,8 @@ export function Switch({
           "relative inline-block h-[22px] w-[38px] rounded-full transition-colors",
           // Los dos grises salen de tokens y no de hex fijos: así el riel del
           // switch acompaña al tema en vez de quedar gris claro sobre oscuro.
-          disabled ? "bg-neutral-100" : on ? "bg-primary-600" : "bg-neutral-300",
-          "peer-focus-visible:ring-[3px] peer-focus-visible:ring-primary-50",
+          disabled ? "bg-neutral-100" : on ? "bg-primary-solid" : "bg-neutral-300",
+          "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-600",
         )}
       >
         <span

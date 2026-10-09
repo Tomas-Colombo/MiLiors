@@ -123,7 +123,7 @@ export function MonthYearInput({
         aria-haspopup="dialog"
         aria-expanded={abierto}
         className={cn(
-          "absolute right-2.5 top-[19px] -translate-y-1/2 transition-colors hover:text-neutral-600",
+          "absolute right-2.5 top-[19px] -translate-y-1/2 rounded-md transition-colors hover:text-ink-soft",
           abierto ? "text-primary-600" : "text-neutral-400",
         )}
         aria-label="Seleccionar mes y año"
@@ -172,9 +172,9 @@ export function MonthYearInput({
                   disabled={deshabilitado}
                   onClick={() => elegir(valor)}
                   className={cn(
-                    "flex h-8 items-center justify-center rounded-[7px] text-[13px] capitalize transition-colors",
-                    deshabilitado && "cursor-not-allowed text-neutral-300",
-                    !deshabilitado && activo && "bg-primary-600 font-semibold text-white",
+                    "flex h-8 items-center justify-center rounded-md text-compact capitalize transition-colors",
+                    deshabilitado && "cursor-not-allowed text-neutral-disabled",
+                    !deshabilitado && activo && "bg-primary-solid font-semibold text-white",
                     !deshabilitado && !activo && valor === hoy && "font-semibold text-primary-600 hover:bg-neutral-50",
                     !deshabilitado && !activo && valor !== hoy && "text-ink-soft hover:bg-neutral-50",
                   )}

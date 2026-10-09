@@ -37,18 +37,18 @@ type Props = {
 const estilos = {
   AVANZA: {
     activo: 'bg-success-solid text-white hover:brightness-95',
-    suave: 'bg-success-bg text-success hover:bg-success-border',
-    gris: 'bg-neutral-100 text-neutral-500 hover:bg-success-bg hover:text-success',
+    suave: 'bg-success-bg text-success-ink hover:bg-success-border',
+    gris: 'bg-neutral-100 text-neutral-500 hover:bg-success-bg hover:text-success-ink',
   },
   DUDA: {
     activo: 'bg-warning-solid text-white hover:brightness-95',
-    suave: 'bg-warning-bg text-warning hover:bg-warning-border',
-    gris: 'bg-neutral-100 text-neutral-500 hover:bg-warning-bg hover:text-warning',
+    suave: 'bg-warning-bg text-warning-ink hover:bg-warning-border',
+    gris: 'bg-neutral-100 text-neutral-500 hover:bg-warning-bg hover:text-warning-ink',
   },
   NO_AVANZA: {
     activo: 'bg-error-solid text-white hover:brightness-95',
-    suave: 'bg-error-bg text-error hover:bg-error-border',
-    gris: 'bg-neutral-100 text-neutral-500 hover:bg-error-bg hover:text-error',
+    suave: 'bg-error-bg text-error-ink hover:bg-error-border',
+    gris: 'bg-neutral-100 text-neutral-500 hover:bg-error-bg hover:text-error-ink',
   },
 }
 
@@ -144,7 +144,7 @@ export function MarcaPostulacionBtns({
 
   const btn =
     'inline-flex w-full items-center justify-center gap-1 rounded-md px-1.5 h-8 ' +
-    'text-[11.5px] font-semibold whitespace-nowrap transition-colors disabled:opacity-50'
+    'text-2xs font-semibold whitespace-nowrap transition-colors disabled:opacity-50'
 
   function clases(opcion: keyof typeof estilos) {
     const e = estilos[opcion]
@@ -235,7 +235,7 @@ export function MarcaPostulacionBtns({
         width={520}
       >
         <div className="space-y-4">
-          <p className="text-[13px] text-muted">
+          <p className="text-compact text-muted">
             Podés dejar el motivo como nota privada del candidato (opcional). Si más adelante
             elegís &quot;Avanzar&quot; o &quot;Duda&quot;, el proceso se reabre y la nota queda
             igual como registro.

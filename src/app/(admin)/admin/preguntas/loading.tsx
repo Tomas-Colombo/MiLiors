@@ -11,9 +11,8 @@ import { SkeletonPageHeader, SkeletonTable } from '@/components/shell/page-skele
  */
 export default function LoadingPreguntas() {
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10" aria-busy="true">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <SkeletonPageHeader
-        variant="admin"
         title="Preguntas del eneagrama"
         subtitleWidth="w-72"
         action={<Skeleton className="h-10 w-36" />}

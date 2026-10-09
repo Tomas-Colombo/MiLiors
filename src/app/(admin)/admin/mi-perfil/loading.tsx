@@ -12,19 +12,17 @@ import { SkeletonForm, SkeletonPageHeader } from '@/components/shell/page-skelet
  */
 export default function LoadingAdminMiCuenta() {
   return (
-    <div className="mx-auto max-w-xl px-6 py-10 space-y-8" aria-busy="true">
+    <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-8" aria-busy="true">
       <SkeletonPageHeader
         title="Mi cuenta"
-        titleClassName="tracking-tight"
         subtitle="Gestioná los datos de tu cuenta de administrador."
-        subtitleClassName="text-sm"
       />
 
       <div>
         <h2 className="mb-1 text-lg font-bold tracking-tight text-ink">Datos de acceso</h2>
         <Card padding="lg">
           <div className="space-y-1">
-            <p className="text-[13px] font-semibold text-ink-soft">Email</p>
+            <p className="text-compact font-semibold text-ink-soft">Email</p>
             <Skeleton className="h-4 w-56" />
           </div>
         </Card>

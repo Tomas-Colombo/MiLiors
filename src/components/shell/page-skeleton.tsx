@@ -23,60 +23,40 @@ import { cn } from '@/lib/utils'
 /**
  * Encabezado de página. El título siempre es texto real.
  *
+ * Replica el `PageHeader` de `@/components/ui` (mismo contenedor, mismo título y
+ * misma bajada) para que al entrar el contenido no haya salto de layout.
+ *
  * `subtitle` acepta texto fijo (se pinta real); se usa `subtitleWidth` en su
  * lugar cuando la bajada depende de datos ("12 puestos", "3 empresas activas")
  * y por lo tanto va a esqueleto.
- *
- * `variant`: "admin" usa la tipografía de las pantallas de administración
- * (22px + bajada de 13px); "app" la de reclutador/postulante (2xl).
  */
 export function SkeletonPageHeader({
   title,
   subtitle,
-  titleClassName,
   subtitleWidth,
-  subtitleClassName,
   action,
-  variant = 'app',
 }: {
   title: ReactNode
-  /** Clases extra del <h1>, p. ej. `tracking-tight` en las pantallas de perfil. */
-  titleClassName?: string
   subtitle?: ReactNode
   subtitleWidth?: string
-  /** Clases extra de la bajada, para páginas que usan `text-sm` en vez del default. */
-  subtitleClassName?: string
   action?: ReactNode
-  variant?: 'app' | 'admin'
 }) {
-  const heading = (
-    <div>
-      <h1
-        className={cn(
-          'font-extrabold text-ink',
-          variant === 'admin' ? 'text-[22px] tracking-tight' : 'text-2xl',
-          titleClassName,
-        )}
-      >
-        {title}
-      </h1>
-      {subtitle ? (
-        <p className={cn('mt-1 text-muted', variant === 'admin' && 'text-[13px]', subtitleClassName)}>
-          {subtitle}
-        </p>
-      ) : subtitleWidth ? (
-        <Skeleton className={cn('mt-2 h-4', subtitleWidth)} />
-      ) : null}
-    </div>
-  )
-
-  if (!action) return heading
-
   return (
-    <div className="flex items-center justify-between gap-4">
-      {heading}
-      {action}
-    </div>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="text-balance text-2xl font-extrabold leading-tight tracking-tight text-ink">
+          {title}
+        </h1>
+        {subtitle ? (
+          <div className="mt-1.5 max-w-prose text-compact leading-normal text-muted">{subtitle}</div>
+        ) : subtitleWidth ? (
+          <Skeleton className={cn('mt-1.5 h-5', subtitleWidth)} />
+        ) : null}
+      </div>
+      {action && (
+        <div className="flex flex-wrap items-center gap-2 sm:flex-none sm:justify-end">{action}</div>
+      )}
+    </header>
   )
 }
 
@@ -98,7 +78,7 @@ export function SkeletonKpis({
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="rounded-[14px] border border-neutral-200 bg-surface p-5 shadow-card"
+          className="rounded-xl border border-neutral-200 bg-surface p-5 shadow-card"
         >
           <Skeleton className="mb-3.5 h-11 w-11" borderRadius={11} />
           <Skeleton className="mb-2 h-3.5 w-24" />
@@ -223,7 +203,7 @@ export function SkeletonTable({
           headers ? (
             <div
               key={i}
-              className="text-[11.5px] font-bold uppercase tracking-[0.04em] text-neutral-400"
+              className="text-2xs font-bold uppercase tracking-[0.04em] text-neutral-400"
             >
               {headers[i]}
             </div>
@@ -301,8 +281,8 @@ export function SkeletonPanel({
 }) {
   return (
     <div className={cn('rounded-xl border border-neutral-200 bg-surface p-6 shadow-card', className)}>
-      {title && <h2 className="text-[15px] font-bold text-ink">{title}</h2>}
-      {description && <p className="mt-1 text-[13px] text-muted">{description}</p>}
+      {title && <h2 className="text-md font-bold text-ink">{title}</h2>}
+      {description && <p className="mt-1 text-compact text-muted">{description}</p>}
       <div className={cn(title && 'mt-4')}>{children}</div>
     </div>
   )
@@ -330,7 +310,7 @@ export function SkeletonForm({
       {Array.from({ length: n }).map((_, i) => (
         <div key={i}>
           {labels ? (
-            <span className="mb-[7px] block text-[13px] font-semibold text-ink-soft">
+            <span className="mb-[7px] block text-compact font-semibold text-ink-soft">
               {labels[i]}
             </span>
           ) : (
@@ -363,7 +343,7 @@ export function SkeletonInlineForm({
   return (
     <div className={cn('flex items-end gap-3', className)}>
       <div className="flex-1">
-        <span className="mb-[7px] block text-[13px] font-semibold text-ink-soft">{label}</span>
+        <span className="mb-[7px] block text-compact font-semibold text-ink-soft">{label}</span>
         <Skeleton className="h-10 w-full" />
       </div>
       <span className="inline-flex h-10 items-center rounded-md bg-neutral-100 px-[18px] text-sm font-semibold text-neutral-400">

@@ -3,18 +3,18 @@ import { cn } from "@/lib/utils";
 import { ChevronUpIcon, ChevronDownIcon } from "@/components/icons";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** Padding interno. Default "lg" (22px). */
+  /** Padding interno. Default "md" (24px). Escala de 4px: 20 · 24 · 28. */
   padding?: "none" | "sm" | "md" | "lg";
 }
 
 const paddings = {
   none: "",
   sm: "p-5",
-  md: "p-[22px]",
-  lg: "p-[26px]",
+  md: "p-6",
+  lg: "p-7",
 };
 
-/** Superficie base: blanca, radio 16px, borde 1px y sombra de card. */
+/** Superficie base: vidrio, radio 16px, borde 1px y sombra de card. */
 export function Card({ padding = "md", className, children, ...props }: CardProps) {
   return (
     <div
@@ -49,19 +49,19 @@ export interface KpiCardProps {
 export function KpiCard({ icon, tone = "violet", label, value, trend, className }: KpiCardProps) {
   const up = trend?.direction !== "down";
   return (
-    <div className={cn("rounded-[14px] border border-neutral-200 bg-surface p-5 shadow-card", className)}>
-      <div className={cn("mb-3.5 flex h-11 w-11 items-center justify-center rounded-[11px]", accentTones[tone])}>
+    <div className={cn("rounded-xl border border-neutral-200 bg-surface p-5 shadow-card", className)}>
+      <div className={cn("mb-3.5 flex h-11 w-11 items-center justify-center rounded-lg", accentTones[tone])}>
         {icon}
       </div>
-      <div className="mb-1 text-[13px] text-muted">{label}</div>
-      <div className="text-[26px] font-extrabold tracking-[-0.02em]">{value}</div>
+      <div className="mb-1 text-compact text-muted">{label}</div>
+      <div className="text-2xl font-extrabold tabular-nums tracking-tight">{value}</div>
       {trend && (
         <div className="mt-2 flex items-center gap-1.5">
-          <span className={up ? "text-success" : "text-error"}>
+          <span className={up ? "text-success-ink" : "text-error-ink"}>
             {up ? <ChevronUpIcon size={13} strokeWidth={3} /> : <ChevronDownIcon size={13} strokeWidth={3} />}
           </span>
-          <span className={cn("text-xs font-semibold", up ? "text-success" : "text-error")}>{trend.value}</span>
-          {trend.caption && <span className="text-xs text-neutral-400">{trend.caption}</span>}
+          <span className={cn("text-xs font-semibold", up ? "text-success-ink" : "text-error-ink")}>{trend.value}</span>
+          {trend.caption && <span className="text-xs text-muted">{trend.caption}</span>}
         </div>
       )}
     </div>
@@ -87,13 +87,13 @@ export function PromoCard({
       className={cn("rounded-xl p-6 text-white shadow-promo", className)}
       style={{ background: "var(--gradient-promo)" }}
     >
-      <div className="mb-3.5 flex items-center gap-[9px]">
+      <div className="mb-3.5 flex items-center gap-2">
         {icon && (
-          <div className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-white/[0.18]">{icon}</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.18]">{icon}</div>
         )}
-        <span className="text-[15px] font-bold">{title}</span>
+        <span className="text-md font-bold">{title}</span>
       </div>
-      {children && <p className="m-0 mb-5 text-[13.5px] leading-[1.55] text-white/80">{children}</p>}
+      {children && <p className="m-0 mb-5 text-compact leading-[1.55] text-white/80">{children}</p>}
       {action}
     </div>
   );

@@ -1,6 +1,6 @@
 import { verifySession, getTyCVigente } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
-import { Card } from '@/components/ui'
+import { PageHeader, Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilPostulanteForm } from './form'
 import { PrivacidadPersonalidad } from './privacidad'
@@ -47,11 +47,8 @@ export default async function MiPerfilPostulantePage() {
   const ubicacionInicial = await getUbicacionInicial(perfil?.localidad_id, perfil?.provincia_id)
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-10 space-y-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Mi perfil</h1>
-        <p className="mt-1 text-sm text-muted">Actualizá tus datos básicos de contacto.</p>
-      </div>
+    <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-8">
+      <PageHeader title="Mi perfil" description="Actualizá tus datos básicos de contacto." />
 
       <Card padding="lg">
         <PerfilPostulanteForm

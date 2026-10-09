@@ -26,13 +26,13 @@ export function SeccionCompetencias({
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-[15px] font-bold text-ink">Habilidades y tecnologías</h2>
-          <p className="text-[13px] text-muted">
+          <h2 className="text-md font-bold text-ink">Habilidades y tecnologías</h2>
+          <p className="text-compact text-muted">
             Seleccioná hasta {max} habilidades y tecnologías del catálogo, o agregá las tuyas.
             Después indicá tu nivel en cada una.
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-primary-ghost-hover px-3 py-1 text-[12px] font-semibold text-primary-600">
+        <span className="shrink-0 rounded-full bg-primary-ghost-hover px-3 py-1 text-xs font-semibold text-primary-600">
           {total}/{max} seleccionadas
         </span>
       </div>

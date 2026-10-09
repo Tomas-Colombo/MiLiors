@@ -59,7 +59,7 @@ export function QuickLinksReclutador() {
               <div className="flex-1">
                 <div className="mb-2 flex items-center gap-2">
                   {item.icon}
-                  <span className="text-[13.5px] font-semibold text-ink">{item.title}</span>
+                  <span className="text-compact font-semibold text-ink">{item.title}</span>
                 </div>
                 <p className="text-xs text-muted leading-relaxed">{item.desc}</p>
               </div>

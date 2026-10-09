@@ -44,7 +44,7 @@ export function ReconocimientoSeccionControl({
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] text-neutral-400">¿Te reconocés en esta descripción?</span>
+      <span className="text-2xs text-neutral-400">¿Te reconocés en esta descripción?</span>
       {[1, 2, 3, 4, 5].map(n => {
         const seleccionada = valor === n
         return (
@@ -55,9 +55,9 @@ export function ReconocimientoSeccionControl({
             disabled={isPending}
             aria-pressed={seleccionada}
             aria-label={`${n} de 5`}
-            className={`h-6 w-6 rounded-full border text-[11px] font-medium transition-colors disabled:opacity-50 ${
+            className={`h-6 w-6 rounded-full border text-2xs font-medium transition-colors disabled:opacity-50 ${
               seleccionada
-                ? 'border-primary-600 bg-primary-600 text-white'
+                ? 'border-primary-solid bg-primary-solid text-white'
                 : 'border-neutral-200 bg-surface text-muted hover:border-neutral-300 hover:text-ink'
             }`}
           >
@@ -65,8 +65,8 @@ export function ReconocimientoSeccionControl({
           </button>
         )
       })}
-      <span className="text-[10.5px] text-neutral-400">1 = nada · 5 = totalmente</span>
-      {error && <span className="text-[11px] text-error">{error}</span>}
+      <span className="text-2xs text-neutral-400">1 = nada · 5 = totalmente</span>
+      {error && <span className="text-2xs text-error">{error}</span>}
     </div>
   )
 }
@@ -88,8 +88,8 @@ function formatFecha(iso: string): string {
 function FeedbackCerrado({ reabreAt }: { reabreAt: string | null }) {
   return (
     <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-      <p className="text-[13px] font-semibold text-ink">Gracias, ya registramos tu opinión.</p>
-      <p className="mt-0.5 text-[12px] text-muted">
+      <p className="text-compact font-semibold text-ink">Gracias, ya registramos tu opinión.</p>
+      <p className="mt-0.5 text-xs text-muted">
         {reabreAt
           ? `Vas a poder opinar de nuevo a partir del ${formatFecha(reabreAt)}.`
           : 'Vas a poder opinar de nuevo más adelante.'}
@@ -120,8 +120,8 @@ export function FeedbackGlobalForm({
     <form action={action} className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
       <input type="hidden" name="representatividad" value={puntaje ?? ''} />
       <div>
-        <p className="text-[13px] font-semibold text-ink">¿Cuánto te representa este informe?</p>
-        <p className="mt-0.5 text-[12px] text-muted">
+        <p className="text-compact font-semibold text-ink">¿Cuánto te representa este informe?</p>
+        <p className="mt-0.5 text-xs text-muted">
           Tu respuesta no cambia el informe: nos sirve para ajustar cómo se calcula.
         </p>
       </div>
@@ -134,9 +134,9 @@ export function FeedbackGlobalForm({
               type="button"
               onClick={() => setPuntaje(n)}
               aria-pressed={puntaje === n}
-              className={`h-9 min-w-[3rem] rounded-full border px-2 text-[12.5px] font-semibold tabular-nums transition-colors ${
+              className={`h-9 min-w-[3rem] rounded-full border px-2 text-xs font-semibold tabular-nums transition-colors ${
                 puntaje === n
-                  ? 'border-primary-600 bg-primary-600 text-white'
+                  ? 'border-primary-solid bg-primary-solid text-white'
                   : 'border-neutral-200 bg-surface text-muted hover:border-neutral-300 hover:text-ink'
               }`}
             >
@@ -144,10 +144,10 @@ export function FeedbackGlobalForm({
             </button>
           ))}
         </div>
-        <span className="text-[11px] text-neutral-400">10% = nada · 100% = totalmente</span>
+        <span className="text-2xs text-neutral-400">10% = nada · 100% = totalmente</span>
       </div>
       {state.success === false && state.fieldErrors?.representatividad?.[0] && (
-        <p className="text-[12px] text-error">{state.fieldErrors.representatividad[0]}</p>
+        <p className="text-xs text-error">{state.fieldErrors.representatividad[0]}</p>
       )}
 
       <Textarea

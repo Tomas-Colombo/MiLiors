@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Modal, Button, Textarea, Field, Alert, Skeleton, Tooltip } from '@/components/ui'
+import { Modal, Button, Textarea, Field, Alert, Skeleton, Tooltip, buttonClassName } from '@/components/ui'
 import { EditIcon, TrashIcon, PlusIcon, FileTextIcon } from '@/components/icons'
 import {
   getNotasDePostulante,
@@ -115,7 +115,7 @@ export function NotasModalBtn({ postulanteId, puestoId, nombrePostulante }: Prop
         <button
           type="button"
           onClick={handleOpen}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-tint px-2 h-8 text-[12.5px] font-semibold text-primary-600 hover:bg-primary-tint-hover transition-colors whitespace-nowrap"
+          className={buttonClassName({ variant: 'tonal', size: 'sm', className: 'w-full whitespace-nowrap' })}
         >
           <FileTextIcon size={14} />
           Notas
@@ -125,7 +125,7 @@ export function NotasModalBtn({ postulanteId, puestoId, nombrePostulante }: Prop
       <Modal open={open} onClose={() => setOpen(false)} title="Notas privadas" width={560}>
         <div className="space-y-4">
           {nombrePostulante && (
-            <p className="text-[13px] text-muted">
+            <p className="text-compact text-muted">
               Notas sobre <span className="font-semibold text-ink-soft">{nombrePostulante}</span>
             </p>
           )}
@@ -160,7 +160,7 @@ export function NotasModalBtn({ postulanteId, puestoId, nombrePostulante }: Prop
               <Skeleton className="h-16 w-full" />
             </div>
           ) : notas && notas.length === 0 ? (
-            <p className="text-[13px] text-muted text-center py-4">
+            <p className="text-compact text-muted text-center py-4">
               Todavía no escribiste notas sobre este candidato.
             </p>
           ) : (
@@ -190,7 +190,7 @@ export function NotasModalBtn({ postulanteId, puestoId, nombrePostulante }: Prop
                     <>
                       <NotaTexto contenido={nota.contenido} />
                       <div className="mt-2 flex items-center justify-between">
-                        <div className="text-[11.5px] text-neutral-400">
+                        <div className="text-2xs text-neutral-400">
                           {nota.titulo_puesto && (
                             <span className="mr-2">📌 {nota.titulo_puesto}</span>
                           )}
@@ -213,7 +213,7 @@ export function NotasModalBtn({ postulanteId, puestoId, nombrePostulante }: Prop
                             type="button"
                             onClick={() => handleEliminar(nota.id)}
                             disabled={guardando}
-                            className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error-bg transition-colors disabled:opacity-50"
+                            className="p-1.5 rounded-md text-muted hover:text-error-ink hover:bg-error-bg transition-colors disabled:opacity-50"
                             aria-label="Eliminar nota"
                           >
                             <TrashIcon size={14} />

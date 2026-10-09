@@ -19,7 +19,7 @@ function Muestra({ className, children }: { className: string; children: React.R
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <span className={`h-2.5 w-2.5 flex-none rounded-full ${className}`} />
-      <span className="text-[12px] text-ink-soft">{children}</span>
+      <span className="text-xs text-ink-soft">{children}</span>
     </span>
   )
 }
@@ -27,8 +27,8 @@ function Muestra({ className, children }: { className: string; children: React.R
 function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{titulo}</h3>
-      <div className="mt-1.5 space-y-1.5 text-[12.5px] leading-relaxed text-ink-soft">{children}</div>
+      <h3 className="text-2xs font-bold uppercase tracking-widest text-neutral-400">{titulo}</h3>
+      <div className="mt-1.5 space-y-1.5 text-xs leading-relaxed text-ink-soft">{children}</div>
     </section>
   )
 }
@@ -38,31 +38,31 @@ const FILAS: { sesgo: string; significa: string; hacer: string; tone: string }[]
     sesgo: '+30 o más',
     significa: 'El motor la subestima muchas más veces de las que la sobrestima.',
     hacer: 'Subir su peso en la matriz eneatipo→competencia.',
-    tone: 'text-error',
+    tone: 'text-error-ink',
   },
   {
     sesgo: '+15 a +29',
     significa: 'Tiende a quedarse corta.',
     hacer: 'Subir el peso un punto y volver a medir.',
-    tone: 'text-warning',
+    tone: 'text-warning-ink',
   },
   {
     sesgo: 'Entre −14 y +14',
     significa: 'Calibrada, siempre que el “% correcto” sea alto.',
     hacer: 'No tocar.',
-    tone: 'text-success',
+    tone: 'text-success-ink',
   },
   {
     sesgo: '−15 a −29',
     significa: 'Tiende a pasarse.',
     hacer: 'Bajar el peso un punto y volver a medir.',
-    tone: 'text-warning',
+    tone: 'text-warning-ink',
   },
   {
     sesgo: '−30 o menos',
     significa: 'El motor la sobrestima muchas más veces de las que la subestima.',
     hacer: 'Bajar su peso en la matriz.',
-    tone: 'text-error',
+    tone: 'text-error-ink',
   },
 ]
 
@@ -73,8 +73,8 @@ export function ComoLeer() {
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
         <HelpCircleIcon size={15} className="flex-none text-primary-600" />
-        <span className="text-[13px] font-bold text-ink">Cómo leer esta pantalla</span>
-        <span className="text-[12px] text-muted">y qué hacer con lo que dice</span>
+        <span className="text-compact font-bold text-ink">Cómo leer esta pantalla</span>
+        <span className="text-xs text-muted">y qué hacer con lo que dice</span>
         <ChevronDownIcon
           size={15}
           className="ml-auto flex-none text-neutral-400 transition-transform group-open:rotate-180"
@@ -93,7 +93,7 @@ export function ComoLeer() {
             La pregunta es <span className="font-medium text-ink">direccional</span> a propósito: un
             simple “no estoy de acuerdo” no diría para qué lado corregir.
           </p>
-          <p className="text-[12px] text-muted">
+          <p className="text-xs text-muted">
             El postulante responde desde su lado (“mi nivel es mayor”). Acá se lee desde el motor,
             que es lo que se corrige: esa misma respuesta figura como{' '}
             <span className="font-medium text-ink">subestimado</span>.
@@ -113,30 +113,30 @@ export function ComoLeer() {
         </Bloque>
 
         <Bloque titulo="El sesgo y qué hacer">
-          <p className="text-[12px] text-muted">
+          <p className="text-xs text-muted">
             Sesgo = % subestimado − % sobrestimado.
           </p>
           <div className="overflow-hidden rounded-lg border border-neutral-200">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="bg-neutral-50">
-                  <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-neutral-400">
+                <tr className="border-b border-neutral-200 bg-neutral-50">
+                  <th className="px-3 py-2 text-2xs font-semibold uppercase tracking-wider text-muted">
                     Sesgo
                   </th>
-                  <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-neutral-400">
+                  <th className="px-3 py-2 text-2xs font-semibold uppercase tracking-wider text-muted">
                     Qué hacer
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {FILAS.map(f => (
-                  <tr key={f.sesgo} className="border-t border-neutral-200 align-top">
+                  <tr key={f.sesgo} className="border-b border-neutral-150 align-top last:border-b-0">
                     <td
-                      className={`whitespace-nowrap px-2.5 py-1.5 text-[12px] font-semibold tabular-nums ${f.tone}`}
+                      className={`whitespace-nowrap px-3 py-2 text-compact font-semibold tabular-nums ${f.tone}`}
                     >
                       {f.sesgo}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[12px] text-ink-soft">
+                    <td className="px-3 py-2 text-compact text-ink-soft">
                       <span className="text-muted">{f.significa}</span> {f.hacer}
                     </td>
                   </tr>

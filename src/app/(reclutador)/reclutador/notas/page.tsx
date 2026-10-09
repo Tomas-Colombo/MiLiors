@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Card, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Card, Badge, EmptyState, buttonClassName } from '@/components/ui'
 import { NotebookIcon } from '@/components/icons'
 import { getTodasLasNotasReclutador } from '@/modules/postulantes/queries'
 import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
@@ -112,14 +112,9 @@ export default async function MisNotasPage({
   const { page, pageCount, slice } = paginar(notas, sp.page)
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-ink">Mis notas</h1>
-        <p className="mt-1 text-muted text-sm">
-          {todasLasNotas.length} nota{todasLasNotas.length !== 1 ? 's' : ''} en total
-        </p>
-      </div>
+      <PageHeader title="Mis notas" description={<>{todasLasNotas.length} nota{todasLasNotas.length !== 1 ? 's' : ''} en total</>} />
 
       {todasLasNotas.length > 0 && (
         <Suspense>
@@ -145,7 +140,7 @@ export default async function MisNotasPage({
             todasLasNotas.length === 0 ? (
               <Link
                 href="/reclutador/postulantes"
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:brightness-105"
+                className={buttonClassName()}
               >
                 Buscar candidatos
               </Link>
@@ -198,7 +193,7 @@ function NotaCard({
         <div className="flex items-start justify-between gap-2">
           <Link
             href={`/reclutador/postulantes/${nota.postulante_id}`}
-            className={`text-[15px] font-semibold hover:underline ${
+            className={`text-md font-semibold hover:underline ${
               isDeleted ? 'text-muted' : 'text-primary-600'
             }`}
           >
@@ -217,7 +212,7 @@ function NotaCard({
         {/* Postulación vinculada (a qué puesto se postuló el candidato) */}
         {postulacionesVisibles.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wide text-neutral-400">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-neutral-400">
               {postulacionesVisibles.length > 1 ? 'Postulaciones' : 'Postulación'}
             </span>
             {postulacionesVisibles.map((p) => (

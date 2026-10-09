@@ -12,12 +12,10 @@ import { SkeletonForm, SkeletonPageHeader } from '@/components/shell/page-skelet
  */
 export default function LoadingPostulanteMiPerfil() {
   return (
-    <div className="mx-auto max-w-xl px-6 py-10 space-y-8" aria-busy="true">
+    <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-8" aria-busy="true">
       <SkeletonPageHeader
         title="Mi perfil"
-        titleClassName="tracking-tight"
         subtitle="Actualizá tus datos básicos de contacto."
-        subtitleClassName="text-sm"
       />
 
       <Card padding="lg">

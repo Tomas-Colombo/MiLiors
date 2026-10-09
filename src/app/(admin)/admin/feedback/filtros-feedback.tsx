@@ -80,10 +80,10 @@ export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
       {/* Barra siempre visible: los filtros quedan plegados para no comerse la pantalla. */}
       <div className="flex flex-wrap items-center gap-2">
         {activos > 0 ? (
-          <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-primary-200 bg-primary-50 px-3 text-[12.5px] font-medium text-primary-700">
+          <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-primary-100 bg-primary-50 px-3 text-xs font-medium text-primary-700">
             <FilterIcon size={14} />
             Filtros
-            <span className="ml-0.5 rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
+            <span className="ml-0.5 rounded-full bg-primary-solid px-1.5 text-2xs font-bold text-white">
               {activos}
             </span>
           </span>
@@ -92,9 +92,9 @@ export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
             type="button"
             onClick={() => setAbierto(o => !o)}
             className={[
-              'inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-[12.5px] font-medium transition-colors',
+              'inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors',
               abierto
-                ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
+                ? 'border-primary-100 bg-primary-50 text-primary-700 hover:bg-primary-100'
                 : 'border-neutral-200 bg-surface text-muted hover:bg-neutral-50 hover:text-ink hover:border-neutral-300',
             ].join(' ')}
           >
@@ -157,7 +157,7 @@ export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
           </CampoFiltro>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+            <p className="text-2xs font-bold uppercase tracking-widest text-neutral-400">
               Rango de fechas
             </p>
             <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
                 onChange={value => setParam('desde', value)}
                 aria-label="Desde"
               />
-              <span className="text-[11px] text-neutral-400">a</span>
+              <span className="text-2xs text-neutral-400">a</span>
               <DateInput
                 className="min-w-0 flex-1"
                 value={hasta}
@@ -180,7 +180,7 @@ export function FiltrosFeedback({ totalVisible, totalTotal }: Props) {
           </div>
 
           {hayRango && (
-            <p className="text-[11px] text-muted sm:col-span-3">
+            <p className="text-2xs text-muted sm:col-span-3">
               El rango de fechas tiene prioridad sobre el período.
             </p>
           )}

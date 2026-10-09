@@ -1,4 +1,5 @@
 import { verifySession } from '@/lib/dal'
+import { PageHeader } from '@/components/ui'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { getInformeActual, getFeedbackInforme } from '@/modules/informe/queries'
 import { esFormatoAnterior } from '@/lib/types/informe'
@@ -20,15 +21,8 @@ export default async function InformePage() {
       : null
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">
-          Informe de Personalidad
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Generado a partir de tu Eneagrama.
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Informe de Personalidad" description="Generado a partir de tu Eneagrama." className="mb-6" />
       <InformeVisor
         informe={informe}
         feedback={feedback}

@@ -19,7 +19,7 @@ type Tone = 'error' | 'neutral'
 
 const tonos: Record<Tone, string> = {
   neutral: 'bg-primary-ghost-hover text-primary-500',
-  error: 'bg-error-bg text-error',
+  error: 'bg-error-bg text-error-ink',
 }
 
 export interface PageStateProps {
@@ -53,7 +53,7 @@ export function PageState({
     <div className={cn('mx-auto max-w-md text-center', !screen && 'px-6 py-16', className)}>
       <div
         className={cn(
-          'mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-[14px]',
+          'mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl',
           tonos[tone],
         )}
       >
@@ -61,7 +61,7 @@ export function PageState({
       </div>
 
       {code && (
-        <div className="mb-2 font-mono text-[12px] font-medium uppercase tracking-[0.18em] text-neutral-400">
+        <div className="mb-2 font-mono text-xs font-medium uppercase tracking-[0.18em] text-neutral-400">
           {code}
         </div>
       )}
@@ -75,7 +75,7 @@ export function PageState({
       {actions && <div className="mt-7 flex flex-wrap items-center justify-center gap-3">{actions}</div>}
 
       {detail && (
-        <p className="mt-8 font-mono text-[11.5px] break-all text-neutral-400">{detail}</p>
+        <p className="mt-8 font-mono text-2xs break-all text-neutral-400">{detail}</p>
       )}
     </div>
   )

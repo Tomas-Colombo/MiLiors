@@ -58,11 +58,11 @@ const QUICK_LINKS = [
 export function QuickLinksPostulante() {
   return (
     <div
-      className="rounded-[14px] bg-surface px-5 py-4"
+      className="rounded-xl bg-surface px-5 py-4"
       style={{ border: '1px solid var(--color-border-soft)' }}
     >
       <h2
-        className="text-[11px] font-semibold uppercase tracking-widest mb-3"
+        className="text-2xs font-semibold uppercase tracking-widest mb-3"
         style={{ color: 'var(--color-accent-violet)' }}
       >
         Accesos rápidos
@@ -72,15 +72,15 @@ export function QuickLinksPostulante() {
           <Link
             key={item.href}
             href={item.href}
-            className="flex items-center gap-3 rounded-[9px] px-3 py-2.5 transition-colors group hover:bg-accent-violet-bg"
+            className="flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors group hover:bg-accent-violet-bg"
             style={{ color: 'var(--color-ink)' }}
           >
             <span className="flex-none" style={{ color: 'var(--color-accent-violet)' }}>
               {item.icon}
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block text-[13px] font-semibold leading-tight">{item.title}</span>
-              <span className="block text-[11px] text-muted leading-tight mt-0.5">{item.desc}</span>
+              <span className="block text-compact font-semibold leading-tight">{item.title}</span>
+              <span className="block text-2xs text-muted leading-tight mt-0.5">{item.desc}</span>
             </span>
             <ArrowRightIcon
               size={13}

@@ -21,17 +21,16 @@ import { ExportarExcelSkeleton } from '@/components/shared/exportar-excel'
  */
 export default function LoadingFeedback() {
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10" aria-busy="true">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10" aria-busy="true">
       <SkeletonPageHeader
-        variant="admin"
         title="Feedback del informe"
         subtitle="Qué tan bien calibrado está el motor de competencias, según los propios postulantes. No modifica ningún informe: es insumo para ajustar la matriz eneatipo→competencia y el factor de contraste."
       />
 
       <div className="mt-8">
         <Card className="mb-6">
-          <h2 className="text-[15px] font-bold text-ink">Reactivación del cuadro de opinión</h2>
-          <p className="mt-1 text-[13px] text-muted">
+          <h2 className="text-md font-bold text-ink">Reactivación del cuadro de opinión</h2>
+          <p className="mt-1 text-compact text-muted">
             Cuando el postulante responde &ldquo;¿cuánto te representa este informe?&rdquo;, el cuadro
             se cierra y no vuelve a ofrecerse hasta que pase este período. Si regenera su informe se
             reabre antes: es un informe distinto.

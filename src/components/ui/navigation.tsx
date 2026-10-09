@@ -11,10 +11,10 @@ export interface NavItemProps {
   trailing?: ReactNode;
 }
 
-/** Ítem de navegación lateral. Activo: fondo lavanda + texto violeta. */
+/** Ítem de navegación lateral. Activo: fondo tonal + texto primario. */
 export function NavItem({ icon, label, active, href, onClick, trailing }: NavItemProps) {
   const className = cn(
-    "flex items-center gap-3 rounded-[9px] px-3 py-2.5 text-sm transition-colors",
+    "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
     active ? "bg-primary-tint font-semibold text-primary-600" : "font-medium text-ink-soft hover:bg-neutral-50",
   );
   const content = (
@@ -45,6 +45,10 @@ export interface TabItem {
   icon?: ReactNode;
 }
 
+/**
+ * Pestañas con subrayado. El activo lleva borde de 2px en primario + peso 600;
+ * el inactivo marca el hover con un borde neutro para que el destino se anticipe.
+ */
 export function Tabs({
   items,
   value,
@@ -57,7 +61,7 @@ export function Tabs({
   className?: string;
 }) {
   return (
-    <div className={cn("flex gap-7 border-b border-neutral-100", className)}>
+    <div className={cn("flex gap-6 border-b border-line", className)}>
       {items.map((t) => {
         const active = t.id === value;
         return (
@@ -66,10 +70,10 @@ export function Tabs({
             type="button"
             onClick={() => onChange?.(t.id)}
             className={cn(
-              "-mb-px flex items-center gap-2 border-b-2 px-0.5 py-[15px] text-sm transition-colors",
+              "-mb-px flex items-center gap-2 border-b-2 px-0.5 py-3.5 text-sm transition-colors",
               active
                 ? "border-primary-600 font-semibold text-primary-600"
-                : "border-transparent font-medium text-muted hover:text-ink-soft",
+                : "border-transparent font-medium text-muted hover:border-neutral-300 hover:text-ink-soft",
             )}
           >
             {t.icon && <span className={active ? "text-primary-600" : "text-neutral-400"}>{t.icon}</span>}

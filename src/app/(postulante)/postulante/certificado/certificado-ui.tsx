@@ -315,7 +315,7 @@ export function CertificadoUI({
       <Card padding="lg">
         <div className="mb-3 flex items-center gap-2">
           <SparklesIcon size={16} className="text-primary-600" />
-          <span className="text-[13px] font-semibold text-ink">Generar mi certificado</span>
+          <span className="text-compact font-semibold text-ink">Generar mi certificado</span>
         </div>
         <p className="mb-4 text-xs text-muted">
           El certificado resume tu perfil en una página: síntesis de personalidad, competencias destacadas,
@@ -355,7 +355,7 @@ export function CertificadoUI({
       {/* Previsualización de lo que se certificará */}
       {contenido && (
         <>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted">Previsualización</p>
+          <p className="text-2xs font-bold uppercase tracking-widest text-muted">Previsualización</p>
           <CertificadoDisplay data={contenido} />
         </>
       )}

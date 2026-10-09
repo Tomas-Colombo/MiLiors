@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Card, EmptyState } from '@/components/ui'
+import { PageHeader, Card, EmptyState, buttonClassName } from '@/components/ui'
 import { BuildingIcon, PlusIcon } from '@/components/icons'
 import { getSectores } from '@/modules/puestos/queries'
 import { getProvincias } from '@/modules/ubicacion/queries'
@@ -22,11 +22,8 @@ export default async function NuevoPuestoPage() {
   ])
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-ink">Publicar nuevo puesto</h1>
-        <p className="mt-1 text-muted">Completá la información para que los postulantes puedan encontrarte.</p>
-      </div>
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
+      <PageHeader title="Publicar nuevo puesto" description="Completá la información para que los postulantes puedan encontrarte." />
 
       {empresas.length === 0 ? (
         <EmptyState
@@ -36,7 +33,7 @@ export default async function NuevoPuestoPage() {
           action={
             <Link
               href="/reclutador/empresas"
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-5 text-sm font-semibold text-white hover:brightness-105"
+              className={buttonClassName()}
             >
               <PlusIcon size={16} />
               Ir a mis empresas

@@ -12,22 +12,22 @@ import { ChevronLeftIcon, SparklesIcon } from '@/components/icons'
  */
 export default function LoadingAsistentePuesto() {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10 space-y-6" aria-busy="true">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
       <Link
         href="/reclutador/puestos"
-        className="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
+        className="inline-flex items-center gap-1.5 text-compact text-muted transition-colors hover:text-ink"
       >
         <ChevronLeftIcon size={16} />
         Volver a mis puestos
       </Link>
 
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-tint text-primary-600">
           <SparklesIcon size={22} />
         </span>
         <div>
-          <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
-          <p className="flex items-center gap-1.5 text-[13px] text-muted">
+          <h1 className="text-balance text-2xl font-extrabold leading-tight tracking-tight text-ink">Asistente IA</h1>
+          <p className="flex items-center gap-1.5 text-compact text-muted">
             Candidatos marcados para avanzar en <Skeleton inline className="h-3 w-40" />
           </p>
         </div>

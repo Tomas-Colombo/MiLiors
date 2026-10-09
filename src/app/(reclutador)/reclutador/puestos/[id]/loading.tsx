@@ -17,10 +17,10 @@ export default function LoadingDetallePuesto() {
   const detalles = ['Carga horaria', 'Modalidad', 'Ubicación', 'Idioma', 'Nivel de experiencia']
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6" aria-busy="true">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
       <Link
         href="/reclutador/puestos"
-        className="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
+        className="inline-flex items-center gap-1.5 text-compact text-muted transition-colors hover:text-ink"
       >
         <ChevronLeftIcon size={16} />
         Volver a mis puestos
@@ -30,7 +30,7 @@ export default function LoadingDetallePuesto() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-[11px] bg-primary-tint text-primary-600">
+              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary-tint text-primary-600">
                 <BuildingIcon size={22} />
               </span>
               <div>
@@ -49,18 +49,18 @@ export default function LoadingDetallePuesto() {
 
       <Card padding="md">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-primary-tint text-primary-600">
             <UsersIcon size={20} />
           </span>
           <div>
             <Skeleton className="h-5 w-10" />
-            <p className="mt-1 text-[12.5px] text-muted">Postulaciones recibidas en total</p>
+            <p className="mt-1 text-xs text-muted">Postulaciones recibidas en total</p>
           </div>
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-[14px] font-bold text-ink">Descripción</h2>
+        <h2 className="mb-3 text-sm font-bold text-ink">Descripción</h2>
         <div className="space-y-2">
           <Skeleton className="h-3 w-full" />
           <Skeleton className="h-3 w-full" />
@@ -69,8 +69,8 @@ export default function LoadingDetallePuesto() {
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-[14px] font-bold text-ink">Detalles</h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
+        <h2 className="mb-3 text-sm font-bold text-ink">Detalles</h2>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-compact">
           {detalles.map((label) => (
             <div key={label}>
               <dt className="text-muted">{label}</dt>

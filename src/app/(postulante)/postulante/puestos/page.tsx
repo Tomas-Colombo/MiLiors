@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { requireEneagramaCompleto } from '@/lib/guards'
-import { Alert, Card, EmptyState } from '@/components/ui'
+import { PageHeader, Alert, Card, EmptyState } from '@/components/ui'
 import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 import {
   getPuestosActivos,
@@ -89,14 +89,9 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
   const totalPages = Math.ceil(total / PUESTOS_PER_PAGE)
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-6">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       {/* Encabezado */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-ink">Buscar puestos</h1>
-        <p className="mt-1 text-sm text-muted">
-          {total} resultado{total !== 1 ? 's' : ''}
-        </p>
-      </div>
+      <PageHeader title="Buscar puestos" description={<>{total} resultado{total !== 1 ? 's' : ''}</>} />
 
       {/* Filtros */}
       <Card padding="lg">
@@ -171,7 +166,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
                     className={[
                       'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
                       i === page
-                        ? 'bg-primary-600 text-white'
+                        ? 'bg-primary-solid text-white'
                         : 'border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',
                     ].join(' ')}
                   >

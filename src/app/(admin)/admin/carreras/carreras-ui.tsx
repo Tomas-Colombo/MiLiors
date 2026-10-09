@@ -115,7 +115,7 @@ export function PromoverCarreraOtraBoton({ nombre }: { nombre: string }) {
         loading={isPending}
         error={error}
       >
-        <p className="text-[13.5px] leading-relaxed text-ink-soft">
+        <p className="text-compact leading-relaxed text-ink-soft">
           Revisá la ortografía antes de confirmar: este nombre pasa al catálogo oficial y queda
           disponible para todos. Los postulantes que lo habían escrito a mano —con tildes o sin
           ellas— quedan re-vinculados a la carrera del catálogo.

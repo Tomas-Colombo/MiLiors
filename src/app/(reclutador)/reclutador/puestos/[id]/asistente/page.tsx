@@ -37,11 +37,11 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
     }))
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10 space-y-6">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       {/* Back */}
       <VolverLink
         href="/reclutador/puestos"
-        className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink transition-colors"
+        className="inline-flex items-center gap-1.5 text-compact text-muted hover:text-ink transition-colors"
       >
         <ChevronLeftIcon size={16} />
         Volver a mis puestos
@@ -49,12 +49,12 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-tint text-primary-600">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-tint text-primary-600">
           <SparklesIcon size={22} />
         </span>
         <div>
-          <h1 className="text-2xl font-extrabold text-ink">Asistente IA</h1>
-          <p className="text-[13px] text-muted">
+          <h1 className="text-balance text-2xl font-extrabold leading-tight tracking-tight text-ink">Asistente IA</h1>
+          <p className="text-compact text-muted">
             Candidatos marcados para avanzar en{' '}
             <span className="font-medium text-ink-soft">{puesto.titulo_puesto}</span>.
           </p>

@@ -96,7 +96,7 @@ export function FiltrosPostulaciones({
             type="button"
             onClick={() => setFiltrosAbiertos((v) => !v)}
             aria-pressed={filtrosAbiertos}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-xs font-semibold whitespace-nowrap transition-colors ${
               filtrosAbiertos
                 ? 'bg-primary-tint text-primary-600'
                 : 'bg-neutral-100 text-muted hover:text-ink'
@@ -201,7 +201,7 @@ export function FiltrosPostulaciones({
                   if (value) setParam('departamento', value)
                 }}
               />
-              <p className="mt-1 text-[11px] leading-tight text-neutral-400">Alcanza a quienes cargaron su localidad.</p>
+              <p className="mt-1 text-2xs leading-tight text-neutral-400">Alcanza a quienes cargaron su localidad.</p>
             </div>
           )}
           {/* Marca del reclutador: excluyentes entre sí (una postulación tiene una sola marca) */}
@@ -209,9 +209,9 @@ export function FiltrosPostulaciones({
             type="button"
             onClick={() => setParam('marca', marcaActual === MARCA_POSTULACION.AVANZA ? '' : MARCA_POSTULACION.AVANZA)}
             aria-pressed={marcaActual === MARCA_POSTULACION.AVANZA}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-xs font-semibold whitespace-nowrap transition-colors ${
               marcaActual === MARCA_POSTULACION.AVANZA
-                ? 'bg-success-bg text-success'
+                ? 'bg-success-bg text-success-ink'
                 : 'bg-neutral-100 text-muted hover:text-ink'
             }`}
           >
@@ -222,9 +222,9 @@ export function FiltrosPostulaciones({
             type="button"
             onClick={() => setParam('marca', marcaActual === MARCA_POSTULACION.DUDA ? '' : MARCA_POSTULACION.DUDA)}
             aria-pressed={marcaActual === MARCA_POSTULACION.DUDA}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-xs font-semibold whitespace-nowrap transition-colors ${
               marcaActual === MARCA_POSTULACION.DUDA
-                ? 'bg-warning-bg text-warning'
+                ? 'bg-warning-bg text-warning-ink'
                 : 'bg-neutral-100 text-muted hover:text-ink'
             }`}
           >
@@ -243,7 +243,7 @@ export function FiltrosPostulaciones({
                 type="button"
                 onClick={() => setParam('ciclos', searchParams.get('ciclos') === 'todos' ? '' : 'todos')}
                 aria-pressed={searchParams.get('ciclos') === 'todos'}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-[12.5px] font-semibold whitespace-nowrap transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 h-9 text-xs font-semibold whitespace-nowrap transition-colors ${
                   searchParams.get('ciclos') === 'todos'
                     ? 'bg-primary-tint text-primary-600'
                     : 'bg-neutral-100 text-muted hover:text-ink'

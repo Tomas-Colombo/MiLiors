@@ -1,5 +1,5 @@
 import { getInformesAdmin } from '@/modules/admin/queries'
-import { Table, Badge, EmptyState } from '@/components/ui'
+import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { FileIcon } from '@/components/icons'
 import {
@@ -111,7 +111,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
       cell: row => (
         <div>
           <p className="font-medium text-ink leading-tight">{row.nombre_completo}</p>
-          {row.email && <p className="break-words text-[11px] text-muted">{row.email}</p>}
+          {row.email && <p className="break-words text-2xs text-muted">{row.email}</p>}
         </div>
       ),
     },
@@ -124,7 +124,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
       key: 'fecha_generacion',
       header: 'Generado',
       cell: row => (
-        <span className="text-muted text-[12px]">
+        <span className="text-muted text-xs">
           {row.fecha_generacion
             ? new Date(row.fecha_generacion).toLocaleDateString('es-AR', {
                 day: '2-digit',
@@ -139,7 +139,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
       key: 'updated_at',
       header: 'Últ. actualización',
       cell: row => (
-        <span className="text-muted text-[12px]">
+        <span className="text-muted text-xs">
           {new Date(row.updated_at).toLocaleDateString('es-AR', {
             day: '2-digit',
             month: '2-digit',
@@ -153,11 +153,8 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
   ]
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10">
-      <h1 className="text-[22px] font-extrabold tracking-tight text-ink">Monitor de informes</h1>
-      <p className="mt-1 text-[13px] text-muted">
-        {todos.length} informes en total. Filtrá y ordená para encontrar los que buscás.
-      </p>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <PageHeader title="Monitor de informes" description={<>{todos.length} informes en total. Filtrá y ordená para encontrar los que buscás.</>} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput placeholder="Buscar por participante…" />

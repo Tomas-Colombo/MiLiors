@@ -13,8 +13,8 @@ import { SkeletonForm, SkeletonPageHeader } from '@/components/shell/page-skelet
  */
 export default function LoadingEditarPuesto() {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10 space-y-6" aria-busy="true">
-      <span className="inline-flex items-center gap-1.5 text-[13px] text-muted">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6" aria-busy="true">
+      <span className="inline-flex items-center gap-1.5 text-compact text-muted">
         <ChevronLeftIcon size={16} />
         Volver al detalle
       </span>

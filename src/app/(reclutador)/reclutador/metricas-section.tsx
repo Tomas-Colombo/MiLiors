@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Card, EmptyState } from '@/components/ui'
+import { Card, EmptyState, buttonClassName } from '@/components/ui'
 import { BarChartIcon, PlusIcon } from '@/components/icons'
 import { getDashboardMetrics } from '@/modules/dashboard/queries'
 import { MetricasCliente } from './metricas-cliente'
@@ -55,7 +55,7 @@ export async function MetricasSection() {
           action={
             <Link
               href="/reclutador/puestos/nuevo"
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-600 px-[18px] text-sm font-semibold text-white hover:brightness-105"
+              className={buttonClassName()}
             >
               <PlusIcon size={16} />
               Publicar puesto

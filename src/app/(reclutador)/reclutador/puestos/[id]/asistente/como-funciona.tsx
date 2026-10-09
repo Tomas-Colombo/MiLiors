@@ -19,8 +19,8 @@ import { MAX_CANDIDATOS_SELECCION } from '@/modules/seleccion/constants'
 function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{titulo}</h3>
-      <div className="mt-1.5 space-y-1.5 text-[12.5px] leading-relaxed text-ink-soft">{children}</div>
+      <h3 className="text-2xs font-bold uppercase tracking-widest text-neutral-400">{titulo}</h3>
+      <div className="mt-1.5 space-y-1.5 text-xs leading-relaxed text-ink-soft">{children}</div>
     </section>
   )
 }
@@ -32,8 +32,8 @@ export function ComoFunciona() {
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
         <HelpCircleIcon size={15} className="flex-none text-primary-600" />
-        <span className="text-[13px] font-bold text-ink">Cómo funciona el asistente</span>
-        <span className="text-[12px] text-muted">para qué sirve y cómo se arma la lista</span>
+        <span className="text-compact font-bold text-ink">Cómo funciona el asistente</span>
+        <span className="text-xs text-muted">para qué sirve y cómo se arma la lista</span>
         <ChevronDownIcon
           size={15}
           className="ml-auto flex-none text-neutral-400 transition-transform group-open:rotate-180"
@@ -53,7 +53,7 @@ export function ComoFunciona() {
             individual está <span className="font-medium text-ink">Evaluar perfil</span>, en cada
             fila de la lista.
           </p>
-          <p className="text-[12px] text-muted">
+          <p className="text-xs text-muted">
             El informe no decide: ordena y fundamenta. La contratación es siempre del reclutador.
           </p>
         </Bloque>
@@ -76,7 +76,7 @@ export function ComoFunciona() {
             Sin marca no aparece. Si la lista está vacía, corresponde marcar a algún candidato
             antes de consultar.
           </p>
-          <p className="text-[12px] text-muted">
+          <p className="text-xs text-muted">
             La ✕ retira a un candidato únicamente de esta comparación: no modifica su marca y la
             lista se restablece al recargar la página. “No avanzar”, en cambio, cierra el proceso
             y lo quita de forma definitiva.
@@ -92,7 +92,7 @@ export function ComoFunciona() {
             <span className="font-medium text-ink">De cada candidato:</span> su perfil técnico, su
             informe de personalidad y las notas privadas registradas sobre él.
           </p>
-          <p className="text-[12px] text-muted">
+          <p className="text-xs text-muted">
             Cuanto más completa esté la descripción del puesto, más preciso es el resultado. Si a un
             candidato le falta información, el informe lo señala en lugar de suponerla.
           </p>
@@ -107,13 +107,13 @@ export function ComoFunciona() {
             mejor ajustan y una nota breve sobre los <span className="font-medium text-ink">menos
             relevantes</span> para esta búsqueda.
           </p>
-          <p className="text-[12px] text-muted">
+          <p className="text-xs text-muted">
             “Menos relevante” no es un descarte: sigue en el proceso.
           </p>
         </Bloque>
       </div>
 
-      <div className="border-t border-neutral-200 px-4 py-3 text-[12px] leading-relaxed text-muted">
+      <div className="border-t border-neutral-200 px-4 py-3 text-xs leading-relaxed text-muted">
         Hasta <span className="font-medium text-ink-soft">{MAX_CANDIDATOS_SELECCION} candidatos</span>{' '}
         por consulta. El informe se genera en el momento y no queda almacenado: conviene descargar
         el PDF si se lo va a necesitar más adelante.
