@@ -1,3 +1,8 @@
+import { recortarEnOracion } from '@/lib/recorte-texto'
+
+/** Largo máximo de la descripción del puesto que se envía al modelo. */
+const MAX_DESCRIPCION_PUESTO = 2000
+
 /**
  * Prompts para el informe de selección grupal: compara los candidatos
  * candidatos marcados de un puesto y produce un ranking justificado en JSON.
@@ -10,6 +15,7 @@ export type CandidatoContexto = {
   competencias: string[]
   formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
   experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
+  /** Bloque ya armado por `construirBloquePersonalidad`; null si no hay datos del Eneagrama. */
   informePersonalidad: string | null
   notasPrivadas: string[]
 }
@@ -65,6 +71,8 @@ REGLAS:
 8. Un candidato aparece en "justificaciones" O en "menosRelevantes", nunca en ambos.
 9. "compatibilidad" es tu evaluación global del ajuste candidato-puesto: "Alta", "Media" o "Baja".
 10. "estado" es una etiqueta corta del lugar en el orden de mérito, por ejemplo: "Recomendado (perfil ideal)", "Elegible (fuerte perfil técnico)", "Menos relevante para el puesto". Nunca uses las palabras "Seleccionado" ni "Descartado": la decisión es del reclutador.
+11. Los datos del motor de competencias (eneatipo dominante, orden de competencias, fortalezas y focos de desarrollo) salen de los resultados del Eneagrama de cada candidato y se calculan con el mismo criterio para todos. Ese orden es relativo a cada persona, no un puntaje absoluto: usalo como criterio común para comparar.
+12. Los candidatos cuyo informe de personalidad figura en un formato anterior, o cuya narrativa falta o está desactualizada, tienen igualmente los datos del motor: evalualos sobre esos datos con el mismo peso que al resto. Que tengan menos detalle narrativo NO debe penalizarlos en el ranking ni mencionarse como información faltante. Indicá información faltante de personalidad solo cuando el bloque diga "No disponible".
 
 FORMATO DE SALIDA:
 Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni bloques de código, con este esquema exacto:
@@ -88,7 +96,7 @@ Idioma: Español.`
     `Modalidad: ${ctx.cargaHoraria} · ${ctx.ubicacion}`,
   ]
   if (ctx.nivelExperiencia) puestoLines.push(`Nivel requerido: ${ctx.nivelExperiencia}`)
-  if (ctx.descripcionPuesto) puestoLines.push(`Descripción: ${ctx.descripcionPuesto.slice(0, 600)}`)
+  if (ctx.descripcionPuesto) puestoLines.push(`Descripción: ${recortarEnOracion(ctx.descripcionPuesto, MAX_DESCRIPCION_PUESTO)}`)
   if (ctx.perfilPsicologicoDeseado)
     puestoLines.push(`Perfil psicológico buscado: ${ctx.perfilPsicologicoDeseado}`)
 
@@ -133,7 +141,7 @@ PERFIL TÉCNICO:
 ${perfilTecnico.length > 0 ? perfilTecnico.join('\n\n') : 'No disponible.'}
 
 INFORME DE PERSONALIDAD:
-${c.informePersonalidad ? c.informePersonalidad.slice(0, 1500) : 'No disponible.'}
+${c.informePersonalidad ?? 'No disponible.'}
 
 NOTAS PRIVADAS DEL RECLUTADOR:
 ${notasSection}`

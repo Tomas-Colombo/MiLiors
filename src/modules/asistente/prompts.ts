@@ -1,3 +1,5 @@
+import { recortarEnOracion } from '@/lib/recorte-texto'
+
 export type AsistenteContext = {
   // Candidate
   nombrePostulante: string
@@ -105,7 +107,7 @@ Idioma de respuesta: Español.`
       : 'Sin notas.'
 
   const informeSection = ctx.informePersonalidad
-    ? ctx.informePersonalidad.slice(0, 1500)
+    ? recortarEnOracion(ctx.informePersonalidad, 1500)
     : 'No disponible.'
 
   const puestoLines: string[] = [
@@ -113,7 +115,7 @@ Idioma de respuesta: Español.`
     `Modalidad: ${ctx.cargaHoraria} · ${ctx.ubicacion}`,
   ]
   if (ctx.nivelExperiencia) puestoLines.push(`Nivel requerido: ${ctx.nivelExperiencia}`)
-  if (ctx.descripcionPuesto) puestoLines.push(`Descripción: ${ctx.descripcionPuesto.slice(0, 600)}`)
+  if (ctx.descripcionPuesto) puestoLines.push(`Descripción: ${recortarEnOracion(ctx.descripcionPuesto, 2000)}`)
   if (ctx.perfilPsicologicoDeseado) puestoLines.push(`Perfil psicológico buscado: ${ctx.perfilPsicologicoDeseado}`)
 
   const userPrompt = `=== CANDIDATO: ${ctx.nombrePostulante} ===

@@ -3,9 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { aiProvider } from '@/lib/ai'
-import { informeToPlainText } from '@/modules/informe/format'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
 import { MAX_CANDIDATOS_SELECCION } from './constants'
+import { calcularMotorV2 } from '@/modules/informe/competencias'
+import { construirBloquePersonalidad } from './personalidad'
 import {
   buildSeleccionPrompts,
   type CandidatoContexto,
@@ -123,9 +124,21 @@ export async function generarInformeSeleccion(
   }
 
   // Contexto por candidato (en paralelo): perfil técnico, informe, notas
-  const candidatos: CandidatoContexto[] = await Promise.all(
-    validos.map((postulanteId) => loadCandidatoContexto(admin, supabase, reclutadorId, puestoId, postulanteId))
-  )
+  // Si falta un dato clave de un candidato se corta todo el informe: un ranking
+  // armado con datos silenciosamente incompletos sería engañoso.
+  let candidatos: CandidatoContexto[]
+  try {
+    candidatos = await Promise.all(
+      validos.map((postulanteId) => loadCandidatoContexto(admin, supabase, reclutadorId, puestoId, postulanteId))
+    )
+  } catch (err) {
+    console.error('[seleccion/service] Error cargando el contexto de los candidatos:', err)
+    return {
+      success: false,
+      error: 'No se pudo cargar la información de los candidatos. Intentá de nuevo.',
+      status: 500,
+    }
+  }
 
   const { systemPrompt, userPrompt } = buildSeleccionPrompts({
     tituloPuesto: puestoTyped.titulo_puesto,
@@ -180,19 +193,24 @@ async function loadCandidatoContexto(
   puestoId: string,
   postulanteId: string
 ): Promise<CandidatoContexto> {
-  const [{ data: postulanteRaw }, { data: ptRaw }, { data: informeRaw }, notasRes] =
+  const [
+    { data: postulanteRaw, error: postulanteError },
+    { data: ptRaw },
+    { data: informeRaw, error: informeError },
+    notasRes,
+  ] =
     await Promise.all([
       admin
         .from('perfil_postulante')
         .select(
-          'nombre_completo, test_eneagrama(test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))'
+          'nombre_completo, test_eneagrama(resultado_puntaje_eneagrama(eneatipo_numero, porcentaje), test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))'
         )
         .eq('id', postulanteId)
         .single(),
       admin.from('perfil_tecnico').select('id').eq('postulante_id', postulanteId).maybeSingle(),
       admin
         .from('informe_personalidad')
-        .select('contenido_json')
+        .select('contenido_json, desactualizado')
         .eq('postulante_id', postulanteId)
         .eq('estado_informe', 'LISTO')
         .maybeSingle(),
@@ -206,12 +224,31 @@ async function loadCandidatoContexto(
         .limit(20),
     ])
 
+  if (postulanteError || !postulanteRaw) {
+    throw new Error(
+      `perfil_postulante ${postulanteId}: ${postulanteError?.message ?? 'no se encontró el perfil'}`
+    )
+  }
+  if (informeError) {
+    throw new Error(`informe_personalidad ${postulanteId}: ${informeError.message}`)
+  }
+
   const postulanteTyped = postulanteRaw as {
     nombre_completo: string
     test_eneagrama: {
+      resultado_puntaje_eneagrama: { eneatipo_numero: number; porcentaje: number | string }[]
       test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
     } | null
-  } | null
+  }
+
+  // Los 9 porcentajes por eneatipo alimentan el motor determinístico. No dependen
+  // del informe: un candidato sin informe LISTO igual se compara por el motor.
+  const filasPuntaje = postulanteTyped.test_eneagrama?.resultado_puntaje_eneagrama ?? []
+  let scores: Record<number, number> | null = null
+  if (filasPuntaje.length > 0) {
+    scores = {}
+    for (const f of filasPuntaje) scores[f.eneatipo_numero] = Number(f.porcentaje)
+  }
 
   let competencias: string[] = []
   let formaciones: CandidatoContexto['formaciones'] = []
@@ -236,26 +273,33 @@ async function loadCandidatoContexto(
     experiencias = (expRes.data ?? []) as CandidatoContexto['experiencias']
   }
 
+  // El eneatipo del encabezado sale del mismo motor que el bloque de personalidad:
+  // con un empate de dominante la base y el motor podrían nombrar eneatipos
+  // distintos para un mismo candidato. Sin scores se usa el valor guardado.
+  const dominanteMotor = scores ? calcularMotorV2(scores).dominante : null
+  const dominanteDb = postulanteTyped.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo
+
   const notasPrivadas = ((notasRes.data ?? []) as { contenido: string; puesto_id: string | null }[])
     .filter((n) => n.puesto_id === puestoId || n.puesto_id === null)
     .map((n) => n.contenido)
     .slice(0, 10)
 
+  const informe = informeRaw as
+    | { contenido_json: InformePersonalidadJSON | null; desactualizado: boolean }
+    | null
+
   return {
-    nombre: postulanteTyped?.nombre_completo ?? 'Candidato',
-    eneatipoNumero:
-      postulanteTyped?.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ??
-      null,
-    eneatipoNombre:
-      postulanteTyped?.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,
+    nombre: postulanteTyped.nombre_completo,
+    eneatipoNumero: dominanteMotor?.numero ?? dominanteDb?.numero_eneatipo ?? null,
+    eneatipoNombre: dominanteMotor?.nombre ?? dominanteDb?.nombre ?? null,
     competencias,
     formaciones,
     experiencias,
-    informePersonalidad: informeRaw
-      ? informeToPlainText(
-          (informeRaw as { contenido_json: InformePersonalidadJSON | null }).contenido_json
-        )
-      : null,
+    informePersonalidad: construirBloquePersonalidad(
+      scores,
+      informe?.contenido_json ?? null,
+      { desactualizado: informe?.desactualizado === true }
+    ),
     notasPrivadas,
   }
 }

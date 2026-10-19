@@ -3,8 +3,9 @@ import { seccionesInforme } from './secciones'
 
 /**
  * Aplana el informe estructurado a texto plano legible, para el contexto del
- * asistente de IA del reclutador y del informe de selección. No incluye el
- * anexo: esos prompts ya trabajan desde el lado del reclutador.
+ * asistente de IA del reclutador (1 a 1). No incluye el anexo: ese prompt ya
+ * trabaja desde el lado del reclutador. El informe de selección grupal usa su
+ * propio serializador (`seleccion/personalidad.ts`).
  *
  * Un informe de formato anterior tiene otra forma: devuelve null y el prompt
  * trabaja sin informe, igual que cuando el postulante no tiene uno.
