@@ -183,10 +183,18 @@ export function CertificadoUI({
     )
   }
 
+  // `desactualizado` lo prende rehacer el Eneagrama y la regeneración del informe
+  // es manual: no hay nada en curso, el postulante tiene que regenerarlo. (Mientras
+  // se regenera el estado es PENDIENTE y cae en el aviso de arriba.)
   if (informeDesactualizado) {
     return (
-      <Alert tone="warning" title="Informe en proceso de actualización">
-        Tu informe de personalidad está siendo actualizado. Volvé en unos instantes para emitir el certificado.
+      <Alert tone="warning" title="Tu informe de personalidad está desactualizado">
+        Como rehiciste el Eneagrama, tu informe tiene que regenerarse antes de emitir el certificado.
+        Regeneralo desde{' '}
+        <a href="/postulante/informe" className="font-semibold text-primary-600 underline">
+          Informe de personalidad
+        </a>
+        .
       </Alert>
     )
   }
