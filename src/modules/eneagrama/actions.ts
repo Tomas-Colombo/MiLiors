@@ -204,31 +204,13 @@ export async function guardarRespuesta(
   preguntaId: string,
   valorRespondido: number
 ): Promise<ActionResult> {
-  const session = await verifySession()
+  await verifySession()
   const supabase = await createClient()
 
-  // Verificar que el test pertenece al usuario
-  const { data: test } = await supabase
-    .from('test_eneagrama')
-    .select('id, postulante_id')
-    .eq('id', testId)
-    .single()
-
-  if (!test) return { success: false, error: 'Test no encontrado.' }
-
-  const testTyped = test as { id: string; postulante_id: string }
-
-  // Verificar ownership via perfil_postulante
-  const { data: perfil } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('id', testTyped.postulante_id)
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!perfil) return { success: false, error: 'Acceso denegado.' }
-
-  // Upsert de la respuesta
+  // Sin pre-chequeo de ownership: la política RLS `respuesta_write` ya exige que
+  // el test pertenezca a un perfil_postulante de auth.uid(), y un test ajeno o
+  // inexistente hace fallar el upsert. Leer test_eneagrama y perfil_postulante
+  // antes sumaba dos viajes a la base por cada una de las respuestas del test.
   const { error } = await supabase.from('respuesta_item_eneagrama').upsert(
     {
       test_eneagrama_id: testId,
