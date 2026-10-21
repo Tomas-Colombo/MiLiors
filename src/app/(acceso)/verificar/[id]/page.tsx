@@ -115,7 +115,7 @@ function CertificadoVerificado({ cert }: { cert: CertificadoVerificacion }) {
         <div className="vf-divider" />
 
         <div className="vf-signed">
-          <span className="vf-signed-label">Firmado digitalmente</span>
+          <span className="vf-signed-label">Emitido</span>
           <span className="vf-signed-date">el {fechaFirma}</span>
         </div>
 

@@ -76,7 +76,7 @@ export function AccesoChrome({
           {children}
         </div>
 
-        <div className="tid-copyright">© 2026 MiLiors · Firma criptográfica de cada certificado</div>
+        <div className="tid-copyright">© 2026 MiLiors · Certificados verificables</div>
       </div>
 
       {/* Columna derecha · manifiesto de marca sobre los trazos animados */}
@@ -89,7 +89,7 @@ export function AccesoChrome({
             potencial</em>.
           </h2>
           <p className="tid-doc-p">
-            Cada certificado que emite MiLiors lleva una firma única e irrepetible. Cualquiera
+            Cada certificado que emite MiLiors tiene un identificador único en nuestra plataforma. Cualquiera
             puede comprobar que es real: sin llamados de referencia, sin PDF editables, sin dudas.
           </p>
         </div>

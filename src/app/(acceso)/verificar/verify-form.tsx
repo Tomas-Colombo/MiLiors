@@ -41,14 +41,14 @@ export function VerifyForm() {
     <Papel>
       {/* El mismo token de navy que pinta el panel derecho de la pantalla de
           acceso (`--doc-bg`), para que los dos azules no compitan. */}
-      <PapelHeader titulo="Verificación criptográfica" bg="var(--doc-bg)" />
+      <PapelHeader titulo="Verificación de certificados" bg="var(--doc-bg)" />
 
       <form className="px-5 pb-6 pt-5" onSubmit={handleSubmit}>
         <h2 className="text-[21px] font-extrabold leading-tight" style={{ color: DOC.navy }}>
           Comprueba un certificado ahora.
         </h2>
         <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: DOC.soft }}>
-          Cada certificado que emite MiLiors lleva una firma única e irrepetible. Ingresá su ID y
+          Cada certificado que emite MiLiors tiene un identificador único en nuestra plataforma. Ingresá su ID y
           confirmá que es real: sin llamados de referencia, sin PDF editables, sin dudas.
         </p>
 
