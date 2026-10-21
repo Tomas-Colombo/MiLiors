@@ -29,20 +29,24 @@ export type FormularioPreselector = {
 export const getFormularioDePuesto = cache(async (puestoId: string): Promise<FormularioPreselector | null> => {
   const supabase = await createClient()
 
-  const { data: formulario } = await supabase
+  const { data: formulario, error: formularioError } = await supabase
     .from('formulario_preselector')
     .select('id, puesto_id')
     .eq('puesto_id', puestoId)
     .maybeSingle()
 
+  // Un error no equivale a "sin formulario": devolver null dejaría saltear el preselector.
+  if (formularioError) throw new Error('Error cargando el formulario preselector')
   if (!formulario) return null
   const f = formulario as { id: string; puesto_id: string }
 
-  const { data: preguntas } = await supabase
+  const { data: preguntas, error: preguntasError } = await supabase
     .from('pregunta_preselector')
     .select('id, texto, tipo, es_critica, orden, opcion_pregunta_preselector(id, texto, es_valida, orden)')
     .eq('formulario_id', f.id)
     .order('orden', { ascending: true })
+
+  if (preguntasError) throw new Error('Error cargando las preguntas del formulario preselector')
 
   const preguntasOrdenadas: PreguntaPreselector[] = ((preguntas ?? []) as unknown[]).map((row) => {
     const r = row as {

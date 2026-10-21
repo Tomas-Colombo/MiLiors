@@ -149,7 +149,10 @@ export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
 
   // Guard: a puesto with a pre-screening form can only be applied to via
   // postularAPuestoConFormulario (the form cannot be bypassed).
-  const formulario = await getFormularioDePuesto(puestoId)
+  const formulario = await getFormularioDePuesto(puestoId).catch(() => undefined)
+  if (formulario === undefined) {
+    return { success: false, error: 'No pudimos verificar el puesto. Intentá de nuevo en unos segundos.' }
+  }
   if (formulario) {
     return { success: false, error: 'Este puesto requiere completar el formulario de preselección para postularte.' }
   }
@@ -191,7 +194,10 @@ export async function postularAPuestoConFormulario(
   if (!guard.ok) return { success: false, error: guard.error }
 
   // The question set is always loaded server-side — never trusted from the client.
-  const formulario = await getFormularioDePuesto(puestoId)
+  const formulario = await getFormularioDePuesto(puestoId).catch(() => undefined)
+  if (formulario === undefined) {
+    return { success: false, error: 'No pudimos cargar el formulario. Intentá de nuevo en unos segundos.' }
+  }
   if (!formulario || formulario.preguntas.length === 0) {
     return { success: false, error: 'Este puesto no tiene formulario de preselección.' }
   }
