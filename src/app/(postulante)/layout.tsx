@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AppSidebar } from '@/components/shared/app-sidebar'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { FilterMemory } from '@/components/shared/filter-memory'
+import { getSidebarColapsada } from '@/lib/sidebar-prefs-server'
 import {
   HomeIcon,
   UserIcon,
@@ -59,16 +60,18 @@ async function getDesactualizadoFlags(userId: string) {
 
 export default async function PostulanteLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRol('POSTULANTE')
+  const sidebarColapsada = await getSidebarColapsada()
   const { informeDesactualizado, certDesactualizado, onboardingPendiente } = await getDesactualizadoFlags(session.id)
 
   const NAV_POSTULANTE = [
-    { href: '/postulante', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true },
-    { href: '/postulante/perfil', label: 'Mi perfil técnico', icon: <UserIcon size={18} /> },
+    // `primary`: los 4 destinos de la barra inferior en mobile; el resto va en "Más".
+    { href: '/postulante', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true, primary: true },
+    { href: '/postulante/perfil', label: 'Mi perfil técnico', shortLabel: 'Perfil', icon: <UserIcon size={18} />, primary: true },
     { href: '/postulante/personalidad', label: 'Perfil de personalidad', icon: <GridIcon size={18} /> },
     { href: '/postulante/informe', label: 'Informe de personalidad', icon: <FileIcon size={18} />, badge: informeDesactualizado },
     { href: '/postulante/certificado', label: 'Certificado', icon: <ShieldIcon size={18} />, badge: certDesactualizado },
-    { href: '/postulante/puestos', label: 'Buscar puestos', icon: <SearchIcon size={18} /> },
-    { href: '/postulante/postulaciones', label: 'Mis postulaciones', icon: <CheckCircleIcon size={18} /> },
+    { href: '/postulante/puestos', label: 'Buscar puestos', shortLabel: 'Puestos', icon: <SearchIcon size={18} />, primary: true },
+    { href: '/postulante/postulaciones', label: 'Mis postulaciones', shortLabel: 'Postulaciones', icon: <CheckCircleIcon size={18} />, primary: true },
   ]
 
   return (
@@ -78,12 +81,14 @@ export default async function PostulanteLayout({ children }: { children: React.R
         userEmail={session.email}
         rolLabel="Postulante"
         settingsHref="/postulante/mi-perfil"
+        defaultCollapsed={sidebarColapsada}
         // Mientras falte el perfil básico o el Eneagrama, cada sección del
         // sidebar renderiza en el servidor solo para redirigir de vuelta (con
         // su loading de por medio). Se bloquean los ítems en el cliente.
         navBloqueado={onboardingPendiente ? 'Completá tu perfil y el Eneagrama para habilitar esta sección' : undefined}
       />
-      <main className="flex-1 overflow-auto">
+      {/* En mobile el padding inferior deja pasar la barra de navegación fija. */}
+      <main className="w-full min-w-0 flex-1 overflow-auto pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         {/* El gate vive en el layout y no en cada page: así los Términos son lo
             primero que ve la persona al entrar al área, antes del onboarding y
             antes del Eneagrama, sin depender de que cada pantalla nueva se

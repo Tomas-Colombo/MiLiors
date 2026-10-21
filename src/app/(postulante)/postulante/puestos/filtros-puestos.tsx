@@ -82,14 +82,14 @@ export function FiltrosPuestos({
       {/* Buscador + toggle: lo único siempre visible. Todos los filtros (incluida
           la carrera) quedan ocultos hasta que el usuario abre "Mostrar filtros",
           para que el apartado quede simétrico. */}
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <SearchInput placeholder="Buscar por título…" className="flex-1" />
         {!hasFilters && (
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
             className={[
-              'flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors',
+              'flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors sm:w-auto',
               filtersOpen
                 ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
                 : 'border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50',

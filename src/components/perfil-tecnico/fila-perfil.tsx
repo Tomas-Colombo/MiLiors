@@ -34,18 +34,18 @@ export function FilaPerfil({
   return (
     <div
       className={cn(
-        'flex justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4',
-        align === 'center' ? 'items-center' : 'items-start',
+        'flex flex-col justify-between gap-2 rounded-xl border border-neutral-200 bg-surface p-4 sm:flex-row',
+        align === 'center' ? 'sm:items-center' : 'sm:items-start',
       )}
     >
-      <div>
+      <div className="min-w-0 break-words">
         <p className="text-sm font-semibold text-ink">{titulo}</p>
         {subtitulo && <p className="text-compact text-muted">{subtitulo}</p>}
         {meta && <p className="text-xs text-neutral-400">{meta}</p>}
         {children}
       </div>
 
-      <div className="flex flex-none gap-2">
+      <div className="flex flex-none flex-wrap gap-2">
         {onEditar && (
           <Button type="button" size="sm" variant="ghost" onClick={onEditar}>
             Editar

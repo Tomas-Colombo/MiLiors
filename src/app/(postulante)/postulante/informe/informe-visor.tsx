@@ -105,8 +105,8 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
         {actionError && <Alert tone="error" title="No se pudo actualizar">{actionError}</Alert>}
 
         {/* Status + descarga */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge tone={desactualizado ? 'warning' : formatoAnterior ? 'info' : 'success'} dot>
               {desactualizado ? 'Desactualizado' : formatoAnterior ? 'Formato anterior' : 'Generado'}
             </Badge>
@@ -115,7 +115,14 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
             )}
           </div>
           {!formatoAnterior && (
-            <Button variant="secondary" size="sm" onClick={() => window.open('/api/informe/descargar', '_blank')}>
+            // `!h-auto`: el botón sm tiene alto fijo (32px); en celular el texto largo
+            // puede partirse en dos líneas y no debe desbordarlo.
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full !h-auto min-h-8 py-1.5 text-center sm:w-auto"
+              onClick={() => window.open('/api/informe/descargar', '_blank')}
+            >
               Descargar informe de talentos
             </Button>
           )}
@@ -178,7 +185,7 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
     <div className="space-y-4">
       <Card padding="lg">
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             {estaGenerando ? (
               <Badge tone="info" dot>Generando...</Badge>
             ) : esFormatoViejo || quedoAtascado ? (

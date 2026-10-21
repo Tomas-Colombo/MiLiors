@@ -23,7 +23,7 @@ export default function LoadingPostulanteHome() {
       <div className="flex flex-wrap items-start gap-6 lg:flex-nowrap">
         <div className="min-w-0 flex-1">
           <div
-            className="rounded-xl bg-surface p-8"
+            className="rounded-xl bg-surface p-4 sm:p-6 lg:p-8"
             style={{ border: '1px solid var(--color-border-soft)' }}
           >
             <Skeleton className="h-3 w-40" />

@@ -3,15 +3,15 @@ import { cn } from "@/lib/utils";
 import { ChevronUpIcon, ChevronDownIcon } from "@/components/icons";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** Padding interno. Default "md" (24px). Escala de 4px: 20 · 24 · 28. */
+  /** Padding interno. Default "md" (24px). Escala de 4px: 20 · 24 · 28 desde `sm`; en celular se achica a 14 · 16 · 16. */
   padding?: "none" | "sm" | "md" | "lg";
 }
 
 const paddings = {
   none: "",
-  sm: "p-5",
-  md: "p-6",
-  lg: "p-7",
+  sm: "p-3.5 sm:p-5",
+  md: "p-4 sm:p-6",
+  lg: "p-4 sm:p-7",
 };
 
 /** Superficie base: vidrio, radio 16px, borde 1px y sombra de card. */

@@ -4,6 +4,7 @@ import { AppSidebar } from '@/components/shared/app-sidebar'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { FilterMemory } from '@/components/shared/filter-memory'
 import { getMisEmpresasBase } from '@/modules/empresas/queries'
+import { getSidebarColapsada } from '@/lib/sidebar-prefs-server'
 import {
   HomeIcon,
   BuildingIcon,
@@ -13,17 +14,19 @@ import {
   NotebookIcon,
 } from '@/components/icons'
 
+// `primary`: los 4 destinos de la barra inferior en mobile; el resto va en "Más".
 const NAV_RECLUTADOR = [
-  { href: '/reclutador', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true },
+  { href: '/reclutador', label: 'Inicio', icon: <HomeIcon size={18} />, exactMatch: true, primary: true },
   { href: '/reclutador/empresas', label: 'Mis empresas', icon: <BuildingIcon size={18} /> },
-  { href: '/reclutador/puestos', label: 'Mis puestos', icon: <GridIcon size={18} /> },
-  { href: '/reclutador/postulaciones', label: 'Postulaciones', icon: <FileIcon size={18} /> },
-  { href: '/reclutador/postulantes', label: 'Buscar candidatos', icon: <SearchIcon size={18} /> },
+  { href: '/reclutador/puestos', label: 'Mis puestos', shortLabel: 'Puestos', icon: <GridIcon size={18} />, primary: true },
+  { href: '/reclutador/postulaciones', label: 'Postulaciones', icon: <FileIcon size={18} />, primary: true },
+  { href: '/reclutador/postulantes', label: 'Buscar candidatos', shortLabel: 'Candidatos', icon: <SearchIcon size={18} />, primary: true },
   { href: '/reclutador/notas', label: 'Mis notas', icon: <NotebookIcon size={18} /> },
 ]
 
 export default async function ReclutadorLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRol('RECLUTADOR')
+  const sidebarColapsada = await getSidebarColapsada()
   // Mismo criterio que requireEmpresaCargada (guards.ts): sin empresa, cada
   // sección redirige al onboarding, así que se bloquean los ítems del sidebar.
   const empresas = await getMisEmpresasBase()
@@ -36,9 +39,11 @@ export default async function ReclutadorLayout({ children }: { children: React.R
         userEmail={session.email}
         rolLabel="Reclutador"
         settingsHref="/reclutador/mi-perfil"
+        defaultCollapsed={sidebarColapsada}
         navBloqueado={onboardingPendiente ? 'Cargá tu primera empresa para habilitar esta sección' : undefined}
       />
-      <main className="flex-1 overflow-auto">
+      {/* En mobile el padding inferior deja pasar la barra de navegación fija. */}
+      <main className="w-full min-w-0 flex-1 overflow-auto pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         {/* El gate vive en el layout y no en cada page: así los Términos son lo
             primero que ve la persona al entrar al área, antes del onboarding y
             antes del Eneagrama, sin depender de que cada pantalla nueva se

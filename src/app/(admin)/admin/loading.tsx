@@ -30,7 +30,7 @@ export default function LoadingAdminDashboard() {
       <SkeletonKpis count={6} columns={3} className="mt-8" />
 
       <h2 className="mt-10 text-md font-bold text-ink">Estado de informes</h2>
-      <div className="mt-4 grid grid-cols-3 gap-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {estados.map(e => (
           <Card key={e.label} padding="md" className="flex items-center gap-4">
             <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-lg ${e.bg}`}>

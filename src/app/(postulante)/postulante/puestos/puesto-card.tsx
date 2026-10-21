@@ -17,16 +17,19 @@ export function PuestoCard({ puesto, actions, tieneFormulario }: Props) {
   return (
     <Card padding="md" className="flex flex-col gap-3 h-full">
       {/* Cabecera */}
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-md font-bold text-ink leading-snug">
+      {/* En celular la cabecera se disuelve (`contents`): el título queda arriba y la
+          acción baja al pie de la tarjeta, a todo el ancho, sin pelear espacio con el
+          título. Desde `sm` vuelve a ser la fila título + acción. */}
+      <div className="contents sm:flex sm:items-start sm:gap-3">
+        <div className="min-w-0 sm:flex-1">
+          <h2 className="min-w-0 break-words text-md font-bold text-ink leading-snug">
             {puesto.titulo_puesto}
           </h2>
           {puesto.nombre_empresa && (
             <p className="mt-0.5 text-compact text-muted">{puesto.nombre_empresa}</p>
           )}
         </div>
-        <div className="flex-none">{actions}</div>
+        <div className="order-last max-sm:[&>button]:w-full sm:order-none sm:flex-none">{actions}</div>
       </div>
 
       {/* Badges */}

@@ -64,7 +64,7 @@ export default async function AdminDashboard() {
 
       {/* Estado de informes */}
       <h2 className="mt-10 text-md font-bold text-ink">Estado de informes</h2>
-      <div className="mt-4 grid grid-cols-3 gap-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card padding="md" className="flex items-center gap-4">
           <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-success-bg text-success-ink">
             <CheckCircleIcon size={20} />

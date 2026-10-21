@@ -61,7 +61,16 @@ export function Tabs({
   className?: string;
 }) {
   return (
-    <div className={cn("flex gap-6 border-b border-line", className)}>
+    // La línea de base va como sombra interna y no como borde: con `overflow-x-auto`
+    // el `-mb-px` del botón activo se recortaría y el subrayado quedaría a 1px.
+    // El botón activo (border-b-2) la tapa igual que antes. En celular la tira
+    // sangra hasta el borde de la pantalla y se desplaza si no entran todas.
+    <div
+      className={cn(
+        "no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 shadow-[inset_0_-1px_0_0_var(--color-line)] sm:mx-0 sm:gap-6 sm:px-0",
+        className,
+      )}
+    >
       {items.map((t) => {
         const active = t.id === value;
         return (
@@ -70,7 +79,9 @@ export function Tabs({
             type="button"
             onClick={() => onChange?.(t.id)}
             className={cn(
-              "-mb-px flex items-center gap-2 border-b-2 px-0.5 py-3.5 text-sm transition-colors",
+              // Anillo de foco hacia adentro: el contenedor con scroll recorta todo
+              // lo que sobresale del botón, incluido el `outline-offset` global.
+              "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-0.5 py-3.5 text-sm transition-colors focus-visible:-outline-offset-2",
               active
                 ? "border-primary-600 font-semibold text-primary-600"
                 : "border-transparent font-medium text-muted hover:border-neutral-300 hover:text-ink-soft",

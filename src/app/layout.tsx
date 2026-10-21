@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -23,6 +23,13 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// `cover` extiende la página bajo la muesca y el indicador de inicio; sin esto
+// `env(safe-area-inset-*)` vale 0 y la barra inferior de mobile (que suma ese
+// inset a su padding) quedaría pegada al borde en los iPhone.
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "MiLiors · Talentos al servicio del mundo",
@@ -37,7 +44,7 @@ export const metadata: Metadata = {
 // Se escribe en una sola línea para no romper el payload RSC de Next.js (JSONL).
 // suppressHydrationWarning en <html> le dice a React que el className puede
 // diferir entre servidor y cliente (la clase "dark" la agrega este script).
-const BOOT_SCRIPT = `(function(){try{if(localStorage.getItem('miliors-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}try{if(localStorage.getItem('miliors-sidebar-collapsed')==='true')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})()`;
+const BOOT_SCRIPT = `(function(){try{if(localStorage.getItem('miliors-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`;
 
 export default function RootLayout({
   children,

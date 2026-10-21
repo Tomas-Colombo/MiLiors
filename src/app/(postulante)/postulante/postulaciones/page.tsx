@@ -73,9 +73,9 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
           <div className="space-y-3">
             {postulaciones.map((p) => (
               <Card key={p.id} padding="md">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="flex-1 min-w-0 space-y-0.5">
-                    <p className="text-sm font-semibold text-ink truncate">
+                    <p className="text-sm font-semibold text-ink break-words sm:truncate">
                       {p.titulo_puesto ?? 'Puesto'}
                     </p>
                     {p.nombre_empresa && (
@@ -91,8 +91,8 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                     </p>
                   </div>
 
-                  <div className="flex flex-none items-center gap-4">
-                    <div className="flex w-24 justify-start">
+                  <div className="flex items-center justify-between gap-4 sm:flex-none">
+                    <div className="flex justify-start sm:w-24">
                       {p.puesto_id && (
                         <Link
                           href={`/postulante/puestos/${p.puesto_id}?from=postulaciones`}
@@ -103,11 +103,11 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                         </Link>
                       )}
                     </div>
-                    <div className="flex w-28 justify-end">
+                    <div className="flex justify-end sm:w-28">
                       <Badge
                         tone={estadoTone[p.estado] ?? 'neutral'}
                         dot
-                        className="w-full justify-center"
+                        className="sm:w-full sm:justify-center"
                       >
                         {estadoLabel[p.estado] ?? p.estado}
                       </Badge>
@@ -135,7 +135,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                 </span>
               )}
 
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-center gap-1">
                 {Array.from({ length: totalPages }).map((_, i) => (
                   <Link
                     key={i}

@@ -24,7 +24,7 @@ export function ExperienciaCampos({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Empresa" required error={errorDe(state, 'empresa')}>
           <Input
             name="empresa"
@@ -43,7 +43,7 @@ export function ExperienciaCampos({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Inicio" required error={errorDe(state, 'fecha_inicio')}>
           <MonthYearInput
             name="fecha_inicio"

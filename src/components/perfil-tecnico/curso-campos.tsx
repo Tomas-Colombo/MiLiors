@@ -17,7 +17,7 @@ export function CursoCampos({ item, state }: { item?: CursoItem; state: ActionRe
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Institución o plataforma" required error={errorDe(state, 'institucion')}>
           <Input
             name="institucion"
@@ -40,7 +40,7 @@ export function CursoCampos({ item, state }: { item?: CursoItem; state: ActionRe
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Duración (horas)" hint="Opcional" error={errorDe(state, 'duracion_horas')}>
           <Input
             name="duracion_horas"

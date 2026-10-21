@@ -16,6 +16,7 @@ import { useCallback, useRef, useState } from 'react'
 import { Input, FancySelect, SearchableSelect, Pagination, DateInput, Field, buttonClassName } from '@/components/ui'
 import type { SelectOption } from '@/components/ui'
 import { SearchIcon, TrashIcon } from '@/components/icons'
+import { cn } from '@/lib/utils'
 
 // ─── Hook base para escribir en la URL ────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export function SearchInput({
   }
 
   return (
-    <div className={className ?? 'w-full sm:w-64'}>
+    <div className={cn('min-w-0', className ?? 'w-full sm:w-64')}>
       <Input
         leftIcon={<SearchIcon size={15} />}
         placeholder={placeholder}
@@ -188,7 +189,7 @@ export function FiltroFechas({
   const hasta = searchParams.get(hastaKey) ?? ''
 
   return (
-    <div className="flex items-end gap-3">
+    <div className="flex flex-wrap items-end gap-3">
       <Field label="Desde" className="w-40">
         <DateInput
           value={desde}

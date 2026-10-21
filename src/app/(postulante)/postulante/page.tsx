@@ -101,7 +101,7 @@ export default async function PostulanteDashboard() {
         {/* ─── Columna principal: Perfil profesional ─── */}
         <div className="flex-1 min-w-0">
           <div
-            className="rounded-xl bg-surface p-8"
+            className="rounded-xl bg-surface p-4 sm:p-6 lg:p-8"
             style={{ border: '1px solid var(--color-border-soft)' }}
           >
             {perfilProfesional && principal ? (
@@ -147,7 +147,7 @@ export default async function PostulanteDashboard() {
                 <div className="mt-6 flex items-center gap-3 flex-wrap">
                   <Link
                     href="/postulante/puestos"
-                    className={buttonClassName()}
+                    className={buttonClassName({ className: 'w-full justify-center text-center sm:w-auto' })}
                   >
                     <SearchIcon size={15} />
                     Buscar puestos para tu perfil

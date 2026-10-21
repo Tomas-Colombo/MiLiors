@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useSyncExternalStore, useTransition } from 'react'
+import { useState } from 'react'
 import {
   LogOutIcon,
   SettingsIcon,
@@ -11,15 +11,11 @@ import {
 } from '@/components/icons'
 import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { BrandLogo } from '@/components/shared/brand-logo'
-import { cerrarSesion } from '@/modules/auth/actions'
+import { MobileNav } from '@/components/shared/mobile-nav'
+import { isNavActive, useCerrarSesion, type NavLinkItem } from '@/components/shared/nav-shared'
+import { SIDEBAR_COLLAPSED_COOKIE, SIDEBAR_COLLAPSED_MAX_AGE } from '@/lib/sidebar-prefs'
 
-export type NavLinkItem = {
-  href: string
-  label: string
-  icon: React.ReactNode
-  exactMatch?: boolean
-  badge?: boolean
-}
+export type { NavLinkItem }
 
 type Props = {
   items: NavLinkItem[]
@@ -28,66 +24,81 @@ type Props = {
   settingsHref?: string
   /** Si viene, los ítems del nav no navegan y este texto explica por qué. */
   navBloqueado?: string
+  /**
+   * Estado inicial de la barra retraída, leído de la cookie en el servidor.
+   * Servidor y primer render del cliente parten del mismo valor, así no hay
+   * salto de ancho al hidratar.
+   */
+  defaultCollapsed?: boolean
 }
 
-const COLLAPSE_STORAGE_KEY = 'miliors-sidebar-collapsed'
-const COLLAPSE_CHANGE_EVENT = 'miliors-sidebar-collapse-change'
-
-function subscribeCollapsed(callback: () => void) {
-  window.addEventListener(COLLAPSE_CHANGE_EVENT, callback)
-  return () => window.removeEventListener(COLLAPSE_CHANGE_EVENT, callback)
+/**
+ * Navegación de las áreas autenticadas. Desde `md` es la barra lateral fija
+ * (retraíble); por debajo de `md` esa barra se oculta y la reemplaza la barra
+ * inferior con la hoja "Más" (`MobileNav`). Los dos comparten ítems, criterio
+ * de ítem activo y cierre de sesión (`nav-shared`).
+ */
+export function AppSidebar({
+  items,
+  userEmail,
+  rolLabel,
+  settingsHref,
+  navBloqueado,
+  defaultCollapsed = false,
+}: Props) {
+  return (
+    <>
+      <DesktopSidebar
+        items={items}
+        userEmail={userEmail}
+        rolLabel={rolLabel}
+        settingsHref={settingsHref}
+        navBloqueado={navBloqueado}
+        defaultCollapsed={defaultCollapsed}
+      />
+      <MobileNav
+        items={items}
+        userEmail={userEmail}
+        rolLabel={rolLabel}
+        settingsHref={settingsHref}
+        navBloqueado={navBloqueado}
+      />
+    </>
+  )
 }
 
-function getCollapsedSnapshot() {
-  try {
-    return localStorage.getItem(COLLAPSE_STORAGE_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
-
-// La barra arranca expandida en el servidor; recién al montar en el cliente
-// se sincroniza con la preferencia guardada (sin necesidad de un efecto que
-// dispare setState).
-function getCollapsedServerSnapshot() {
-  return false
-}
-
-export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloqueado }: Props) {
+function DesktopSidebar({
+  items,
+  userEmail,
+  rolLabel,
+  settingsHref,
+  navBloqueado,
+  defaultCollapsed,
+}: Props & { defaultCollapsed: boolean }) {
   const pathname = usePathname()
-  const [isPending, startTransition] = useTransition()
-  const collapsed = useSyncExternalStore(subscribeCollapsed, getCollapsedSnapshot, getCollapsedServerSnapshot)
+  const { isPending, handleLogout } = useCerrarSesion()
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
 
   function toggleCollapsed() {
     const next = !collapsed
+    setCollapsed(next)
     try {
-      localStorage.setItem(COLLAPSE_STORAGE_KEY, String(next))
+      document.cookie = `${SIDEBAR_COLLAPSED_COOKIE}=${next}; path=/; max-age=${SIDEBAR_COLLAPSED_MAX_AGE}; samesite=lax`
     } catch {
-      // no-op
+      // Sin cookies la preferencia no persiste, pero la barra igual se retrae.
     }
-    window.dispatchEvent(new Event(COLLAPSE_CHANGE_EVENT))
-  }
-
-  function isActive(item: NavLinkItem) {
-    if (item.exactMatch) return pathname === item.href
-    return pathname === item.href || pathname.startsWith(item.href + '/')
-  }
-
-  function handleLogout() {
-    startTransition(async () => {
-      await cerrarSesion()
-    })
   }
 
   return (
     <aside
       className={[
-        'app-sidebar flex flex-none flex-col h-screen sticky top-0 py-5',
+        // Debajo de `md` la reemplaza la barra inferior (MobileNav).
+        'app-sidebar hidden flex-none flex-col h-screen sticky top-0 py-5 md:flex',
         collapsed ? 'w-[72px] px-2' : 'w-56 px-3',
       ].join(' ')}
     >
       {/* Brand + colapsar */}
-      <div className={['mb-6 flex items-center px-1', collapsed ? 'flex-col gap-3' : 'justify-between gap-2'].join(' ')}>
+      <div className={['mb-6 flex flex-none items-center px-1', collapsed ? 'flex-col gap-3' : 'justify-between gap-2'].join(' ')}>
         <div className="flex min-w-0 items-center gap-2.5 px-2">
           <BrandLogo size={40} />
           {!collapsed && (
@@ -112,15 +123,17 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
         </button>
       </div>
 
-      {/* Nav */}
-      <nav className="flex flex-col gap-0.5 flex-1">
+      {/* Nav. `min-h-0` + scroll propio: con los ~12 ítems del admin la lista
+          scrollea y el footer queda siempre a la vista. El `-m-1 p-1` deja
+          lugar al aro de foco, que el overflow recortaría. */}
+      <nav className="no-scrollbar -m-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-1">
         {navBloqueado && !collapsed && (
           <p className="app-sidebar__muted mb-2 px-3 text-2xs leading-snug">
             {navBloqueado}
           </p>
         )}
         {items.map((item) => {
-          const active = isActive(item)
+          const active = isNavActive(pathname, item)
           if (navBloqueado) {
             return (
               <span
@@ -173,7 +186,7 @@ export function AppSidebar({ items, userEmail, rolLabel, settingsHref, navBloque
 
       {/* Footer */}
       <div
-        className={['border-t border-[color:var(--sidebar-border)] pt-4 space-y-3', collapsed ? 'px-1' : 'px-3'].join(' ')}
+        className={['flex-none border-t border-[color:var(--sidebar-border)] pt-4 space-y-3', collapsed ? 'px-1' : 'px-3'].join(' ')}
       >
         {!collapsed && (
           <div>

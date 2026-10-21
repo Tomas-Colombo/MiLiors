@@ -158,7 +158,7 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
                 </span>
               )}
 
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-center gap-1">
                 {Array.from({ length: totalPages }).map((_, i) => (
                   <Link
                     key={i}

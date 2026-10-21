@@ -102,23 +102,27 @@ export function InformePapel({
         {/* Mapa de personalidad: lo dibuja el sistema, no el LLM. */}
         <section className="mt-5">
           <PapelSectionHead n={++n}>Mapa de personalidad</PapelSectionHead>
-          <div className="mt-2 space-y-1.5 rounded-lg px-4 py-3" style={{ backgroundColor: DOC.bg }}>
+          <div className="mt-2 space-y-2.5 rounded-lg px-4 py-3 sm:space-y-1.5" style={{ backgroundColor: DOC.bg }}>
             {[...data.mapaPersonalidad]
               .sort((a, b) => b.score - a.score)
               .map(m => (
-                <div key={m.eneatipo} className="flex items-center gap-3">
-                  <span className="w-40 shrink-0 text-[12.5px]" style={{ color: DOC.soft }}>
+                // En celular la etiqueta va arriba y la barra toma todo el ancho; desde
+                // `sm` vuelve a ser una fila con la etiqueta de 160px.
+                <div key={m.eneatipo} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                  <span className="text-[12.5px] sm:w-40 sm:flex-none" style={{ color: DOC.soft }}>
                     {m.eneatipo}. {m.nombre}
                   </span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ backgroundColor: DOC.line }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${(m.score / maxScore) * 100}%`, backgroundColor: DOC.gold }}
-                    />
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ backgroundColor: DOC.line }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${(m.score / maxScore) * 100}%`, backgroundColor: DOC.gold }}
+                      />
+                    </div>
+                    <span className="w-8 text-right text-[11.5px] tabular-nums" style={{ color: DOC.muted }}>
+                      {m.score}
+                    </span>
                   </div>
-                  <span className="w-8 text-right text-[11.5px] tabular-nums" style={{ color: DOC.muted }}>
-                    {m.score}
-                  </span>
                 </div>
               ))}
           </div>

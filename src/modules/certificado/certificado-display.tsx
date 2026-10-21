@@ -76,7 +76,7 @@ function ItemRow({ titulo, org, fecha, descripcion }: { titulo: string; org: str
   return (
     <div className="mt-2.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-[13.5px] font-bold" style={{ color: NAVY }}>
+        <p className="min-w-0 text-[13.5px] font-bold [overflow-wrap:anywhere]" style={{ color: NAVY }}>
           {titulo} <span style={{ color: GOLD_DARK }}>• {org}</span>
         </p>
         <span className="shrink-0 text-[11.5px] text-[#6b7085]">{fecha}</span>
@@ -229,23 +229,23 @@ export function CertificadoDisplay({
               {++n}. Cómo se comprueba este certificado
             </h3>
             <dl className="space-y-1 text-[12px]">
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-[10.5px] uppercase tracking-wide text-[#6b7085]">
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="text-[10.5px] uppercase tracking-wide text-[#6b7085] sm:w-32 sm:shrink-0">
                   ID de verificación
                 </dt>
-                <dd className="font-bold" style={{ color: GOLD_DARK }}>
+                <dd className="min-w-0 font-bold [overflow-wrap:anywhere]" style={{ color: GOLD_DARK }}>
                   {certificadoId}
                 </dd>
               </div>
               {emitidoEl && (
-                <div className="flex gap-3">
-                  <dt className="w-32 shrink-0 text-[10.5px] uppercase tracking-wide text-[#6b7085]">Emitido</dt>
+                <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                  <dt className="text-[10.5px] uppercase tracking-wide text-[#6b7085] sm:w-32 sm:shrink-0">Emitido</dt>
                   <dd className="font-bold text-[#1a1d29]">{emitidoEl}</dd>
                 </div>
               )}
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-[10.5px] uppercase tracking-wide text-[#6b7085]">Verificá en</dt>
-                <dd>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="text-[10.5px] uppercase tracking-wide text-[#6b7085] sm:w-32 sm:shrink-0">Verificá en</dt>
+                <dd className="min-w-0 [overflow-wrap:anywhere]">
                   <a
                     href={`/verificar/${certificadoId}`}
                     target="_blank"

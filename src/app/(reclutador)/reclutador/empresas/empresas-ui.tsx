@@ -71,7 +71,7 @@ export function EmpresaAcciones({ empresa }: { empresa: EmpresaDelReclutador }) 
           activa, y con `justify-center` los otros dos se recentraban fila por
           fila. Con tres columnas cada botón cae siempre en el mismo lugar y el
           slot vacío simplemente queda vacío. */}
-      <div className="grid grid-cols-3 items-center gap-1.5">
+      <div className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-3">
         <Link
           href={`/reclutador/postulaciones?empresa=${empresa.id}`}
           className={`${accion} border border-neutral-300 bg-surface text-ink-soft hover:bg-neutral-50`}

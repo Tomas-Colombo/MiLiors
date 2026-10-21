@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Alert } from "./feedback";
+import { useDialogo } from "./use-dialogo";
 import { CloseIcon, AlertTriangleIcon, HelpCircleIcon } from "@/components/icons";
 
 /* ============================ Tooltip ==================================== */
@@ -90,10 +91,6 @@ export function Menu({ children, className }: { children: ReactNode; className?:
 
 /* ============================ Modal ===================================== */
 
-/** Elementos que pueden recibir foco dentro del diálogo. */
-const FOCUSABLES =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 export interface ModalProps {
   open: boolean;
   onClose: () => void;
@@ -117,57 +114,7 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
   const dialogoRef = useRef<HTMLDivElement>(null);
   const tituloId = useId();
 
-  // El handler se guarda en una ref para que el efecto dependa sólo de `open`.
-  // Si dependiera de `onClose` —que casi siempre llega como arrow inline— se
-  // volvería a montar en cada render y robaría el foco mientras se escribe.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    const dialogo = dialogoRef.current;
-    if (!dialogo) return;
-
-    const enfocadoAntes = document.activeElement as HTMLElement | null;
-    const overflowAntes = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const inicial = dialogo.querySelector<HTMLElement>("[data-autofocus]") ?? dialogo;
-    inicial.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onCloseRef.current();
-        return;
-      }
-      if (e.key !== "Tab") return;
-
-      const lista = Array.from(dialogo!.querySelectorAll<HTMLElement>(FOCUSABLES));
-      if (lista.length === 0) {
-        e.preventDefault();
-        return;
-      }
-      const primero = lista[0];
-      const ultimo = lista[lista.length - 1];
-      if (e.shiftKey && document.activeElement === primero) {
-        e.preventDefault();
-        ultimo.focus();
-      } else if (!e.shiftKey && document.activeElement === ultimo) {
-        e.preventDefault();
-        primero.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = overflowAntes;
-      enfocadoAntes?.focus?.();
-    };
-  }, [open]);
+  useDialogo(open, dialogoRef, onClose);
 
   if (!open) return null;
 

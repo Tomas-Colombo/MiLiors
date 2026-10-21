@@ -71,16 +71,16 @@ export function PapelIdentidad({
   children?: ReactNode
 }) {
   return (
-    <div className="rounded-lg px-4 py-4" style={{ backgroundColor: DOC.bg }}>
-      <h2 className="text-[22px] font-extrabold leading-tight" style={{ color: DOC.navy }}>
+    <div className="min-w-0 rounded-lg px-4 py-4" style={{ backgroundColor: DOC.bg }}>
+      <h2 className="text-[22px] font-extrabold leading-tight [overflow-wrap:anywhere]" style={{ color: DOC.navy }}>
         {nombre}
       </h2>
       {subtitulo && (
-        <p className="mt-0.5 text-[13px] font-bold" style={{ color: DOC.goldDark }}>
+        <p className="mt-0.5 text-[13px] font-bold [overflow-wrap:anywhere]" style={{ color: DOC.goldDark }}>
           {subtitulo}
         </p>
       )}
-      {children && <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[12px]" style={{ color: DOC.soft }}>{children}</div>}
+      {children && <div className="mt-2 flex min-w-0 flex-wrap gap-x-5 gap-y-1 text-[12px] [overflow-wrap:anywhere]" style={{ color: DOC.soft }}>{children}</div>}
     </div>
   )
 }
