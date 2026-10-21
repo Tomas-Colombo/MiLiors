@@ -33,13 +33,16 @@ export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tiene
   const [isPending, startTransition] = useTransition()
   const [modalOpen, setModalOpen] = useState(false)
   const [respuestas, setRespuestas] = useState<Record<string, string>>({})
+  // Resultado de la postulación directa (sin formulario): sin esto un rechazo no se ve.
+  const [errorDirecto, setErrorDirecto] = useState<string | null>(null)
+  const [postuladoDirecto, setPostuladoDirecto] = useState(false)
 
   const boundAction = postularAPuestoConFormulario.bind(null, puestoId)
   const [state, action, isSubmitting] = useActionState(boundAction, initialState)
 
   const conPreguntas = !!preguntas && preguntas.length > 0
   const yaEnviado = conPreguntas && state.success
-  const yaPostuloEfectivo = yaPostulo || yaEnviado
+  const yaPostuloEfectivo = yaPostulo || yaEnviado || postuladoDirecto
   const todasRespondidas = !conPreguntas || preguntas!.every((p) => (respuestas[p.id] ?? '').trim().length > 0)
 
   function handleClick() {
@@ -54,22 +57,36 @@ export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tiene
       router.push(`/postulante/puestos/${puestoId}`)
       return
     }
+    setErrorDirecto(null)
     startTransition(async () => {
-      await postularAPuesto(puestoId)
+      const result = await postularAPuesto(puestoId)
+      if (result.success) {
+        setPostuladoDirecto(true)
+        router.refresh()
+      } else {
+        setErrorDirecto(result.error)
+      }
     })
   }
 
   return (
     <>
-      <Button
-        variant={yaPostuloEfectivo ? 'secondary' : 'primary'}
-        size="sm"
-        loading={isPending}
-        disabled={disabled || yaPostuloEfectivo}
-        onClick={handleClick}
-      >
-        {yaPostuloEfectivo ? 'Ya postulaste' : 'Postularme'}
-      </Button>
+      <div className="flex flex-col items-end gap-1.5">
+        <Button
+          variant={yaPostuloEfectivo ? 'secondary' : 'primary'}
+          size="sm"
+          loading={isPending}
+          disabled={disabled || yaPostuloEfectivo}
+          onClick={handleClick}
+        >
+          {yaPostuloEfectivo ? 'Ya postulaste' : 'Postularme'}
+        </Button>
+        {errorDirecto && (
+          <p role="alert" className="max-w-56 text-right text-xs text-error-ink">
+            {errorDirecto}
+          </p>
+        )}
+      </div>
 
       {conPreguntas && (
         <Modal
