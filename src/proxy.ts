@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { rolDeUsuario, rutaDeRol } from '@/lib/rol'
 import { getUsuarioAutenticado } from '@/lib/supabase/claims'
+import { checkSessionCacheado } from '@/lib/session/check-session-cache'
 
 // Rutas que NO requieren autenticación
 const PUBLIC_PATHS = [
@@ -76,17 +77,27 @@ export async function proxy(request: NextRequest) {
   }
 
   // ─── Política de sesión: revocación (todos) + inactividad (admin) ───────────
-  // Se omite en prefetch para no gastar una consulta por cada link precargado.
   // La actividad la actualiza el heartbeat del cliente, no el proxy, así los
   // prefetch/RSC no mantienen viva la sesión sin interacción real del usuario.
+  //
+  // Los prefetch de <Link> NO se pueden detectar acá: Next borra los headers
+  // RSC (`next-router-prefetch`, `rsc`, …) y el parámetro `_rsc` antes de
+  // ejecutar el proxy (next/dist/server/web/adapter.js). Un sidebar de 7 links
+  // dispara ~15 requests al cargar; los absorbe el cache de check_session.
+  // Sólo se omiten los prefetch del navegador (speculation rules / <link rel=prefetch>).
   const isPrefetch =
-    request.headers.get('next-router-prefetch') === '1' ||
     request.headers.get('purpose') === 'prefetch' ||
     (request.headers.get('sec-purpose')?.includes('prefetch') ?? false)
 
   if (!isPrefetch) {
     // check_session() devuelve el motivo de cierre ('revocada' | 'inactividad') o null.
-    const { data: motivo } = await supabase.rpc('check_session')
+    // Cacheado por usuario (ver check-session-cache.ts). Si la RPC falla se deja
+    // pasar, como antes, y no se cachea.
+    const motivo = await checkSessionCacheado(user.id, async () => {
+      const { data, error } = await supabase.rpc('check_session')
+      if (error) throw error
+      return data
+    }).catch(() => null)
     if (motivo) {
       await supabase.auth.signOut()
       const cierre = NextResponse.redirect(new URL(`/iniciar-sesion?motivo=${motivo}`, request.url))

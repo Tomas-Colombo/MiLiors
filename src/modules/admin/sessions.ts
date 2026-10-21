@@ -21,8 +21,9 @@ async function requireAdmin() {
  * Límite conocido de Supabase: un access token ya emitido no se puede invalidar
  * hasta que expira. Con el JWT global en 5 min, la ventana máxima de un token
  * vigente para llamadas directas a Supabase (RLS) que no pasan por el proxy es
- * de 5 min. El flag corta de inmediato todo lo que sí pasa por el proxy
- * (páginas y route handlers).
+ * de 5 min. El flag corta todo lo que sí pasa por el proxy (páginas y route
+ * handlers) en hasta 60 s: el proxy cachea check_session() por usuario (ver
+ * src/lib/session/check-session-cache.ts).
  */
 export async function revocarSesion(userId: string): Promise<ActionResult> {
   await requireAdmin()

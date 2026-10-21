@@ -16,7 +16,7 @@ export type UsuarioAutenticado = {
  * request y fue la llamada más frecuente durante la lentitud del 2026-10-20.
  *
  * Contrapartida: los claims son una foto del momento en que se emitió el token
- * (≤ 1 h). Un usuario borrado o baneado conserva un token válido hasta que
+ * (el JWT del proyecto dura 5 min). Un usuario borrado o baneado conserva un token válido hasta que
  * vence; la revocación la aplica aparte la RPC `check_session` del proxy.
  *
  * Igual que `getUser()`, `getClaims()` refresca una sesión vencida a través del
