@@ -40,18 +40,17 @@ function formatFecha(iso: string): string {
 }
 
 /**
- * Generación/actualización de la síntesis integrada — mismo patrón que el
- * informe: no se muestra nada cuando está LISTA y al día. El botón aparece solo
- * si nunca se generó (o dio error) o si el informe quedó más nuevo que ella.
+ * Generación de la síntesis integrada para un certificado ya emitido cuya
+ * síntesis nunca se generó o falló. La síntesis desactualizada la resuelve
+ * "Actualizar certificado", y en la primera emisión la genera el propio botón
+ * de emitir.
  */
 function SintesisPanel({
   sintesisEstado,
-  sintesisDesactualizada,
   tieneCompetencia,
   tieneObjetivo,
 }: {
   sintesisEstado: SintesisEstado
-  sintesisDesactualizada: boolean
   tieneCompetencia: boolean
   tieneObjetivo: boolean
 }) {
@@ -66,36 +65,10 @@ function SintesisPanel({
     })
   }
 
-  const nuncaGenerada = sintesisEstado !== 'LISTO' // PENDIENTE (nunca) o ERROR
-  const necesitaActualizar = sintesisEstado === 'LISTO' && sintesisDesactualizada
+  // Ya generada → sin cartel ni botón.
+  if (sintesisEstado === 'LISTO') return null
 
-  // Al día y ya generada → sin cartel ni botón.
-  if (!nuncaGenerada && !necesitaActualizar) return null
-
-  // Desactualizada: aviso + botón para actualizar (como el informe).
-  if (necesitaActualizar) {
-    return (
-      <>
-        <Alert tone="warning" title="Tu perfil integrado está desactualizado">
-          No refleja tus datos más recientes. Regeneralo para ponerlo al día.
-          <div className="mt-3">
-            <Button
-              variant="primary"
-              size="sm"
-              loading={isPending}
-              onClick={handleRegenerar}
-              disabled={isPending || !tieneCompetencia || !tieneObjetivo}
-            >
-              Actualizar perfil integrado
-            </Button>
-          </div>
-        </Alert>
-        {error && <Alert tone="error" title={error} />}
-      </>
-    )
-  }
-
-  // Nunca generada / error: botón para generar.
+  // Nunca generada (PENDIENTE) o ERROR: botón para generar.
   return (
     <div className="space-y-3">
       {sintesisEstado === 'ERROR' && (
@@ -157,11 +130,16 @@ export function CertificadoUI({
     })
   }
 
+  // Emisión en un solo paso: si la síntesis falta, falló o quedó vieja,
+  // `actualizarCertificado` la regenera antes de emitir. Si ya está al día se
+  // emite directo, sin gastar otra llamada al LLM.
+  const sintesisAlDia = sintesisEstado === 'LISTO' && !sintesisDesactualizada
+
   function handleGenerar() {
     setError(null)
     setExito(false)
     startTransition(async () => {
-      const result = await crearCertificado()
+      const result = sintesisAlDia ? await crearCertificado() : await actualizarCertificado()
       if (!result.success) {
         setError(result.error)
       } else {
@@ -170,9 +148,7 @@ export function CertificadoUI({
     })
   }
 
-  const sintesisLista = sintesisEstado === 'LISTO'
-  const puedeGenerar =
-    informeListo && !informeDesactualizado && tieneFormacion && tieneCompetencia && tieneObjetivo && sintesisLista
+  const puedeGenerar = informeListo && !informeDesactualizado && tieneFormacion && tieneCompetencia && tieneObjetivo
 
   if (!informeListo) {
     return (
@@ -237,7 +213,6 @@ export function CertificadoUI({
         {sintesisEstado !== 'LISTO' && (
           <SintesisPanel
             sintesisEstado={sintesisEstado}
-            sintesisDesactualizada={sintesisDesactualizada}
             tieneCompetencia={tieneCompetencia}
             tieneObjetivo={tieneObjetivo}
           />
@@ -290,7 +265,7 @@ export function CertificadoUI({
         )}
         {isPending && (
           <p className="text-center text-xs text-muted">
-            Regenerando tu perfil integrado y volviendo a firmar el PDF… esto puede tardar unos segundos.
+            Regenerando tu perfil integrado y volviendo a generar el PDF… esto puede tardar unos segundos.
           </p>
         )}
 
@@ -310,16 +285,9 @@ export function CertificadoUI({
     )
   }
 
-  // ── Sin certificado: síntesis + previsualización + emitir ────────────────────
+  // ── Sin certificado: emitir + previsualización ───────────────────────────────
   return (
     <div className="space-y-5">
-      <SintesisPanel
-        sintesisEstado={sintesisEstado}
-        sintesisDesactualizada={sintesisDesactualizada}
-        tieneCompetencia={tieneCompetencia}
-        tieneObjetivo={tieneObjetivo}
-      />
-
       <Card padding="lg">
         <div className="mb-3 flex items-center gap-2">
           <SparklesIcon size={16} className="text-primary-600" />
@@ -336,7 +304,6 @@ export function CertificadoUI({
           {[
             { label: 'Informe de personalidad generado', ok: informeListo && !informeDesactualizado },
             { label: '¿Qué estudiaste / qué buscás? cargado en tu perfil', ok: tieneObjetivo },
-            { label: 'Perfil profesional integrado generado', ok: sintesisLista },
             { label: 'Al menos una formación académica', ok: tieneFormacion },
             { label: 'Al menos una habilidad o tecnología', ok: tieneCompetencia },
           ].map(({ label, ok }) => (
@@ -357,7 +324,13 @@ export function CertificadoUI({
           {isPending ? 'Generando certificado...' : 'Generar certificado'}
         </Button>
 
-        {isPending && <p className="mt-2 text-center text-xs text-muted">Esto puede tardar unos segundos…</p>}
+        {isPending && (
+          <p className="mt-2 text-center text-xs text-muted">
+            {sintesisAlDia
+              ? 'Esto puede tardar unos segundos…'
+              : 'Generando tu perfil integrado y el certificado… esto puede tardar unos segundos.'}
+          </p>
+        )}
       </Card>
 
       {/* Previsualización de lo que se certificará */}
