@@ -115,7 +115,7 @@ clase `Usuario`:
 ### M1 — Autenticación, Cuenta y Consentimiento
 - Registro diferenciado (Postulante / Reclutador), login único con detección de rol y redirección.
 - Recuperación de contraseña por email.
-- Rutas protegidas por rol (middleware Next.js).
+- Rutas protegidas por rol (`proxy.ts` de Next.js 16).
 - Aceptación versionada de TyC; bloqueo hasta aceptar la versión vigente; re-prompt ante nueva versión.
 
 ### M2 — Onboarding y Eneagrama (barrera de entrada del Postulante)
@@ -208,7 +208,9 @@ clase `Usuario`:
 
 ### Patrón de capas
 1. **Presentación:** React Server/Client Components, layouts por rol, componentes de UI reutilizables.
-2. **Autorización:** middleware Next.js (protección de rutas por rol) + RLS en Postgres (defensa en profundidad).
+2. **Autorización:** `proxy.ts` de Next.js 16 (protección de rutas por rol) + RLS en Postgres (defensa en profundidad).
+   La identidad se obtiene del JWT (ES256) verificado localmente con `getClaims()`: no se consulta Supabase Auth
+   por request. Las lecturas de datos de un mismo render se comparten con React `cache()`.
 3. **Dominio/Servicios:** módulos de negocio (Eneagrama, Informe, Certificado, Puestos, Postulaciones, IA).
 4. **Acceso a datos:** cliente Supabase (server-side con service role solo en endpoints administrativos/IA).
 5. **Integraciones externas:** Claude API, Storage, email.
@@ -457,10 +459,15 @@ Login → dashboard métricas → gestionar sectores/competencias → moderar po
 - **RF-05** Aceptación versionada de TyC; bloqueo hasta aceptar la vigente; re-prompt ante versión nueva;
   se conserva la aceptación anterior registrada.
 - **RF-06** Eneagrama obligatorio y previo a cualquier otra acción del postulante.
-- **RF-07** Wizard de 135 preguntas paginadas, con progreso y guardado parcial.
+- **RF-07** Wizard de 135 preguntas paginadas, con progreso y guardado parcial. La retoma de respuestas guardadas
+  aplica solo al primer intento; ver RF-09.
 - **RF-08** Cálculo automático del Eneatipo por puntaje acumulado por tipo.
-- **RF-09** Rehacer el test sobrescribe el resultado (sin histórico de tests).
-- **RF-10** Completar Eneagrama dispara (re)generación del informe; primera vez ofrece cargar HD de entrada.
+- **RF-09** Rehacer el test sobrescribe el resultado (sin histórico de tests). Al iniciar el reintento se borran las
+  respuestas; el resultado anterior sigue vigente hasta completar uno nuevo. Abandonar a mitad pierde el avance.
+  Espera: 1 repetición inmediata (ajuste inicial), después cada 6 meses.
+- **RF-10** Completar el Eneagrama por primera vez dispara la generación automática del informe (y ofrece cargar HD).
+  Al rehacerlo, el informe y el certificado se marcan `desactualizado` y la regeneración es **manual** desde la
+  sección Informe (ahorro de créditos de IA, RNF-02). El certificado no se puede emitir con el informe desactualizado.
 - **RF-11** Human Design opcional, carga manual por selectores; editarlo regenera el informe sin rehacer el test.
 - **RF-12** Informe vía LLM (Eneagrama + HD si existe), 500–1.500 palabras, con estados PENDIENTE/LISTO/ERROR y
   reintento; un único informe vigente.
@@ -505,7 +512,13 @@ Login → dashboard métricas → gestionar sectores/competencias → moderar po
 - **RNF-10 Mantenibilidad:** seguir las convenciones de la versión instalada de Next.js
   (`node_modules/next/dist/docs/`), respetar deprecaciones.
 - **RNF-11 Internacionalización mínima:** UI en español (Argentina).
-- **RNF-12 Performance:** paginación del wizard del Eneagrama y de listados.
+- **RNF-12 Performance:** paginación del wizard del Eneagrama y de listados. Presupuesto de viajes a la base:
+  ninguna validación por request contra Supabase Auth; cada lectura una sola vez por render; una escritura por
+  respuesta del Eneagrama (la ownership la garantiza RLS). Meta: soportar una cohorte completa haciendo el test en
+  simultáneo con p95 < 1 s, validado con prueba de carga antes de cada lanzamiento de cohorte.
+- **RNF-13 Observabilidad:** alertas de p95 de latencia y tasa de errores 5xx; revisión periódica de los advisors
+  de Supabase y de las métricas de CPU / Disk IO del compute.
+- **RNF-14 Entornos:** base de datos de desarrollo separada de producción.
 
 ---
 
@@ -635,7 +648,7 @@ TyC v1, usuario ADMIN).
 - T1.1 Formulario de registro con selector de rol (Postulante/Reclutador).
 - T1.2 Login único + detección de rol + redirección.
 - T1.3 Recuperación de contraseña (Supabase).
-- T1.4 Middleware de protección de rutas por rol.
+- T1.4 Proxy (`proxy.ts`) de protección de rutas por rol.
 - T1.5 Aceptación de TyC versionada (bloqueo + re-prompt) y registro `aceptacion_tyc`.
 
 ### M2 — Onboarding + Eneagrama

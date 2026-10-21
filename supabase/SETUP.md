@@ -41,9 +41,13 @@ The role-based session policy expects a **short, global access-token lifetime**.
 **Why 5 minutes:** it aligns with the most sensitive role (admin) and keeps the exposure window of a leaked token — or of a revoked session hitting Supabase directly via RLS — small. Supabase's native auto-refresh keeps every role logged in seamlessly; a shorter access token only increases refresh frequency, it does **not** shorten the session.
 
 **What the app layer adds on top (no changes to Supabase Auth):**
-- Admin: forced logout after **1 hour of inactivity** (client watcher + `proxy` as server-side safety net; `sesion_actividad` table).
+- Admin: forced logout after **1 hour of inactivity** (client watcher + `proxy` as server-side safety net; `sesion_actividad` table). The proxy caches `check_session()` per user for 60 s, so the server-side cut can lag up to 60 s.
 - Recruiter / Applicant: native Supabase persistence, no inactivity logout.
-- Forced revocation of any session via the `revocada` flag (see `src/modules/admin/sessions.ts`).
+- Forced revocation of any session via the `revocada` flag (see `src/modules/admin/sessions.ts`). Takes effect within **60 s** (proxy cache, `src/lib/session/check-session-cache.ts`).
+
+**JWT signing keys must stay asymmetric (ES256).** The app identifies users with `auth.getClaims()`, which verifies the token locally against the JWKS. With a symmetric key (HS256) it falls back to a round trip to Supabase Auth on every request — the load pattern behind the 2026-10-20 outage.
+
+**Compute size:** the production project must not run on the smallest burstable compute. On 2026-10-20 sustained traffic exhausted its CPU / Disk IO budget and the whole API (auth + REST) degraded for ~14 h. Check **Reports → Database** (CPU, Disk IO budget) before onboarding a large cohort.
 
 The inactivity limit lives in `src/lib/session/policy.ts` and is mirrored as `interval '1 hour'` in migration `20260715000000_sesion_actividad.sql` — keep both in sync.
 

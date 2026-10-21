@@ -30,6 +30,7 @@
 | TC-AUTH-020 | RECLUTADOR intenta acceder a /admin → prohibido | 🔴 | ⬜ |
 | TC-AUTH-021 | TyC Gate — usuario sin TyC aceptado ve modal bloqueante | 🔴 | ✅ |
 | TC-AUTH-022 | TyC Gate — aceptar TyC dos veces seguidas → sin error (idempotente) | 🟡 | ⬜ |
+| TC-AUTH-023 | Admin revoca una sesión → el usuario es deslogueado en ≤ 60 s | 🔴 🔒 | ⬜ |
 
 ---
 
@@ -166,6 +167,9 @@
 | TC-ENE-005 | Calcular → eneatipo asignado y visible en dashboard | 🔴 | ⬜ |
 | TC-ENE-006 | Calcular → informe_personalidad creado con estado PENDIENTE | 🔴 | ⬜ |
 | TC-ENE-007 | Reiniciar test → respuestas anteriores eliminadas | 🟡 | ⬜ |
+| TC-ENE-008 | **Guardar respuesta en el test de otro usuario → rechazado por RLS** | 🔴 🔒 | ⬜ |
+| TC-ENE-009 | Rehacer y salir a mitad → avance perdido, resultado anterior vigente | 🟡 | ⬜ |
+| TC-ENE-010 | Rehacer y completar → informe y certificado marcados desactualizados, sin regeneración automática | 🔴 | ⬜ |
 
 ---
 
@@ -248,6 +252,7 @@
 | TC-CERT-005 | /verificar/[id] accesible sin autenticación | 🔴 | ⬜ |
 | TC-CERT-006 | /verificar/[id] con UUID inválido → 404 o mensaje apropiado | 🟡 | ⬜ |
 | TC-CERT-007 | URL de descarga expira después de 1 hora (signed URL) | 🟡 | ⬜ |
+| TC-CERT-008 | Informe desactualizado → el certificado bloquea la emisión e indica regenerar el informe | 🟡 | ⬜ |
 
 ---
 
@@ -276,6 +281,17 @@
 | TC-ADM-007 | Admin ve lista de empresas con reclutadores | 🟡 | ⬜ |
 | TC-ADM-008 | Monitor de informes muestra estados LISTO/PENDIENTE/ERROR | 🟡 | ⬜ |
 | TC-ADM-009 | **No-ADMIN intenta acceder a /admin → prohibido** | 🔴 🔒 | ⬜ |
+
+---
+
+## M19 — Performance y carga
+
+| ID | Caso | Pri | Estado |
+|----|------|-----|--------|
+| TC-PERF-001 | Carga del inicio del postulante → 0 llamadas a `/auth/v1/user` y ≤ 2 `check_session` en logs | 🔴 | ⬜ |
+| TC-PERF-002 | Responder una pregunta del Eneagrama → 1 sola escritura, sin lecturas previas | 🔴 | ⬜ |
+| TC-PERF-003 | Prueba de carga: cohorte de N postulantes haciendo el test en simultáneo → p95 < 1 s, sin 5xx | 🔴 | ⬜ |
+| TC-PERF-004 | JWT del proyecto firmado con ES256 (no HS256) | 🟡 | ⬜ |
 
 ---
 
