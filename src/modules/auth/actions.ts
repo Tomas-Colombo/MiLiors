@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
+import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 import { registroSchema, loginSchema, recuperarPasswordSchema, nuevaPasswordSchema } from './schema'
 import type { RegistroPendiente } from './schema'
 import { mensajeErrorPassword } from './password-error'
@@ -315,7 +316,7 @@ export async function establecerPasswordNueva(
 // ─── Aceptar TyC ─────────────────────────────────────────────────────────────
 export async function aceptarTyC(tycId: string): Promise<ActionResult> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUsuarioAutenticado(supabase)
 
   if (!user) {
     return { success: false, error: 'No autenticado.' }

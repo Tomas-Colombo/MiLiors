@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { rolDeUsuario, rutaDeRol } from '@/lib/rol'
+import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 
 // Rutas que NO requieren autenticación
 const PUBLIC_PATHS = [
@@ -45,10 +46,9 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Refrescar sesión (obligatorio con @supabase/ssr)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Refrescar sesión (obligatorio con @supabase/ssr). getClaims() verifica el
+  // JWT localmente: no consulta a Supabase Auth en cada request.
+  const user = await getUsuarioAutenticado(supabase)
 
   // Si la ruta es pública, continuar
   const isPublic = PUBLIC_PATHS.some(

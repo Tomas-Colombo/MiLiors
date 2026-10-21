@@ -1,5 +1,6 @@
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 import { generarInformePDFBuffer } from '@/modules/informe/generate-pdf'
 import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 
@@ -11,9 +12,7 @@ export const maxDuration = 60
  */
 export async function GET(_req: NextRequest) {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUsuarioAutenticado(supabase)
   if (!user) return new Response('No autorizado', { status: 401 })
 
   const { data: postulante } = await supabase

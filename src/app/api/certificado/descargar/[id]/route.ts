@@ -1,6 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { createClient } from '@/lib/supabase/server'
+import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 import { construirPropsCertificado } from '@/modules/certificado/pdf-props'
 import { generarPDFBuffer } from '@/modules/certificado/generate-pdf'
 
@@ -23,9 +24,7 @@ export async function GET(
 
   // Verify session
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUsuarioAutenticado(supabase)
   if (!user) {
     return new Response('No autorizado', { status: 401 })
   }

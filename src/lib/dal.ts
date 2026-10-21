@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { SessionUser } from '@/lib/types/domain'
 import { rolDeUsuario } from './rol'
+import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 
 /**
  * Verifica la sesión actual. Si no hay sesión, redirige a /iniciar-sesion.
@@ -11,7 +12,7 @@ import { rolDeUsuario } from './rol'
  */
 export const verifySession = cache(async (): Promise<SessionUser> => {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUsuarioAutenticado(supabase)
 
   if (!user) {
     redirect('/iniciar-sesion')
@@ -34,7 +35,7 @@ export const verifySession = cache(async (): Promise<SessionUser> => {
  */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUsuarioAutenticado(supabase)
 
   if (!user) return null
 
@@ -74,7 +75,7 @@ export const getTyCStatus = cache(async () => {
   if (!tycRaw) return null
   const tyc = tycRaw as unknown as TyCRow
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUsuarioAutenticado(supabase)
   if (!user) return { tyc, aceptada: false }
 
   const { data: aceptacion } = await supabase
