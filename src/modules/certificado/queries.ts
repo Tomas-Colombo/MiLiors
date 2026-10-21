@@ -3,6 +3,8 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
+import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
 import { fortalezasDelInforme, nivelTecnicoACert, primerParrafo, type NivelCert } from './niveles'
 import {
   clavesDescartadas,
@@ -23,28 +25,33 @@ export type CertificadoData = {
   desactualizado: boolean
 }
 
+/**
+ * Último certificado emitido para un postulante. Memoizada por React cache():
+ * el badge del layout y las pages que lo consultan comparten una sola lectura.
+ */
+export const getUltimoCertificadoDePostulante = cache(
+  async (postulanteId: string): Promise<CertificadoData | null> => {
+    const supabase = await createClient()
+
+    // maybeSingle: sin certificado devuelve null igual que .single(), pero sin el 406.
+    const { data } = await supabase
+      .from('certificado_pdf')
+      .select('id, postulante_id, timestamp_firma, created_at, desactualizado')
+      .eq('postulante_id', postulanteId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    return data ? (data as CertificadoData) : null
+  }
+)
+
 /** Último certificado del postulante actual */
 export const getUltimoCertificado = cache(async (): Promise<CertificadoData | null> => {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
+  const postulante = await getPerfilPostulanteActual()
   if (!postulante) return null
 
-  const { data } = await supabase
-    .from('certificado_pdf')
-    .select('id, postulante_id, timestamp_firma, created_at, desactualizado')
-    .eq('postulante_id', (postulante as { id: string }).id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  return data ? (data as CertificadoData) : null
+  return getUltimoCertificadoDePostulante(postulante.id)
 })
 
 /**
@@ -112,16 +119,8 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   const objetivo = postulanteTyped.carrera?.nombre ?? postulanteTyped.carrera_otra ?? null
 
   // Eneatipo dominante (requerido para el perfil de personalidad)
-  const { data: test } = await supabase
-    .from('test_eneagrama')
-    .select('test_eneagrama_dominante(puntaje_crudo, eneatipo(numero_eneatipo, nombre))')
-    .eq('postulante_id', postulanteTyped.id)
-    .single()
-
-  const testTyped = test as {
-    test_eneagrama_dominante: { puntaje_crudo: number; eneatipo: { numero_eneatipo: number; nombre: string } }[]
-  } | null
-  const dominante = testTyped?.test_eneagrama_dominante?.[0]?.eneatipo
+  const test = await getTestEneagramaDePostulante(postulanteTyped.id)
+  const dominante = test?.test_eneagrama_dominante?.[0]?.eneatipo
   if (!dominante) return null
 
   // Informe (para la síntesis) y perfil técnico

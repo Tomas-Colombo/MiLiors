@@ -1,6 +1,9 @@
 import { Suspense } from 'react'
 import { requireRol } from '@/lib/guards'
 import { createClient } from '@/lib/supabase/server'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
+import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
+import { getUltimoCertificadoDePostulante } from '@/modules/certificado/queries'
 import { AppSidebar } from '@/components/shared/app-sidebar'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { FilterMemory } from '@/components/shared/filter-memory'
@@ -15,53 +18,41 @@ import {
   CheckCircleIcon,
 } from '@/components/icons'
 
-async function getDesactualizadoFlags(userId: string) {
-  const supabase = await createClient()
-
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', userId)
-    .single()
+// Perfil, test y certificado salen de las lecturas memoizadas que también usan
+// requireEneagramaCompleto y las pages: en un mismo render se consultan una vez.
+async function getDesactualizadoFlags() {
+  const postulante = await getPerfilPostulanteActual()
 
   if (!postulante) return { informeDesactualizado: false, certDesactualizado: false, onboardingPendiente: true }
-  const pid = (postulante as { id: string }).id
+  const pid = postulante.id
 
-  const [{ data: informe }, { data: cert }, { data: test }] = await Promise.all([
+  const supabase = await createClient()
+
+  // El informe se lee aparte y solo con `desactualizado`: getInformeActual trae
+  // contenido_json, que es pesado para pedirlo en cada navegación del área.
+  const [{ data: informe }, cert, test] = await Promise.all([
     supabase
       .from('informe_personalidad')
       .select('desactualizado')
       .eq('postulante_id', pid)
       .single(),
-    supabase
-      .from('certificado_pdf')
-      .select('desactualizado')
-      .eq('postulante_id', pid)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single(),
-    supabase
-      .from('test_eneagrama')
-      .select('id, test_eneagrama_dominante(id)')
-      .eq('postulante_id', pid)
-      .single(),
+    getUltimoCertificadoDePostulante(pid),
+    getTestEneagramaDePostulante(pid),
   ])
 
   // Mismo criterio que requireEneagramaCompleto (guards.ts): sin al menos un
   // dominante, todas las secciones del sidebar redirigen al onboarding/eneagrama.
-  const testTyped = test as { test_eneagrama_dominante: { id: string }[] } | null
-
   return {
     informeDesactualizado: informe ? !!(informe as { desactualizado: boolean }).desactualizado : false,
-    certDesactualizado: cert ? !!(cert as { desactualizado: boolean }).desactualizado : false,
-    onboardingPendiente: !testTyped || testTyped.test_eneagrama_dominante.length === 0,
+    certDesactualizado: cert ? !!cert.desactualizado : false,
+    onboardingPendiente: !test || test.test_eneagrama_dominante.length === 0,
   }
 }
 
 export default async function PostulanteLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRol('POSTULANTE')
   const sidebarColapsada = await getSidebarColapsada()
-  const { informeDesactualizado, certDesactualizado, onboardingPendiente } = await getDesactualizadoFlags(session.id)
+  const { informeDesactualizado, certDesactualizado, onboardingPendiente } = await getDesactualizadoFlags()
 
   const NAV_POSTULANTE = [
     // `primary`: los 4 destinos de la barra inferior en mobile; el resto va en "Más".

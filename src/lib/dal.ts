@@ -75,7 +75,8 @@ export const getTyCStatus = cache(async () => {
   if (!tycRaw) return null
   const tyc = tycRaw as unknown as TyCRow
 
-  const user = await getUsuarioAutenticado(supabase)
+  // Reutiliza la sesión memoizada del render en lugar de volver a leer los claims.
+  const user = await getSessionUser()
   if (!user) return { tyc, aceptada: false }
 
   const { data: aceptacion } = await supabase

@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
-import { createClient } from '@/lib/supabase/server'
 import { PERFILES_PROFESIONALES } from '@/modules/eneagrama/perfiles-profesionales'
+import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { evaluarRehacer, formatearFecha, MESES_ESPERA_REHACER } from '@/modules/eneagrama/rehacer-policy'
 import { CheckIcon, ArrowRightIcon } from '@/components/icons'
 import { PageHeader, Alert, buttonClassName } from '@/components/ui'
@@ -19,23 +20,13 @@ type DominanteRow = {
   }
 }
 
+// Perfil y test vienen de las lecturas memoizadas que comparten el layout y
+// requireEneagramaCompleto: en este render no generan consultas nuevas.
 async function getTestConDominantes() {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: perfil } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
+  const perfil = await getPerfilPostulanteActual()
   if (!perfil) return null
 
-  const { data: test } = await supabase
-    .from('test_eneagrama')
-    .select('tiene_empate_dominante, dominantes_empate, veces_completado, fecha_realizacion, test_eneagrama_dominante(puntaje_crudo, porcentaje, eneatipo(numero_eneatipo, nombre, descripcion))')
-    .eq('postulante_id', (perfil as { id: string }).id)
-    .single()
+  const test = await getTestEneagramaDePostulante(perfil.id)
 
   return test as {
     tiene_empate_dominante: boolean

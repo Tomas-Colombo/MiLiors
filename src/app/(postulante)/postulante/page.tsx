@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { buttonClassName } from '@/components/ui'
 import { verifySession } from '@/lib/dal'
 import { requireEneagramaCompleto } from '@/lib/guards'
@@ -11,6 +10,8 @@ import {
 } from '@/components/icons'
 import Link from 'next/link'
 import { PERFILES_PROFESIONALES } from '@/modules/eneagrama/perfiles-profesionales'
+import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { QuickLinksPostulante } from './quick-links'
 
 export const metadata = { title: 'Inicio — MiLiors' }
@@ -31,48 +32,25 @@ export default async function PostulanteDashboard() {
   const session = await verifySession()
   await requireEneagramaCompleto()
 
-  const supabase = await createClient()
+  // Perfil y test son las lecturas memoizadas que ya hicieron el layout y el
+  // guard en este mismo render: no vuelven a ir a la base.
+  const perfil = await getPerfilPostulanteActual()
 
-  const { data: perfil } = await supabase
-    .from('perfil_postulante')
-    .select('id, nombre_completo, perfil_en_busqueda')
-    .eq('usuario_id', session.id)
-    .single()
-
-  const perfilTyped = perfil as {
-    id: string
-    nombre_completo: string
-    perfil_en_busqueda: boolean
-  } | null
-
-  const nombre = perfilTyped?.nombre_completo ?? session.email
-  const perfilEnBusqueda = perfilTyped?.perfil_en_busqueda ?? false
-  const perfilId = perfilTyped?.id
+  const nombre = perfil?.nombre_completo ?? session.email
+  const perfilEnBusqueda = perfil?.perfil_en_busqueda ?? false
+  const perfilId = perfil?.id
 
   let dominantes: { numero: number; nombre: string }[] = []
 
   if (perfilId) {
-    const { data: testData } = await supabase
-      .from('test_eneagrama')
-      .select('id')
-      .eq('postulante_id', perfilId)
-      .single()
+    const test = await getTestEneagramaDePostulante(perfilId)
 
-    if (testData) {
-      const testId = (testData as { id: string }).id
-
+    if (test) {
       // Misma fuente de verdad que el perfil de personalidad: todos los dominantes
       // (puede haber 1, 2 o 3 en caso de empate legítimo), sin recortar a uno solo.
-      const { data: dominantesData } = await supabase
-        .from('test_eneagrama_dominante')
-        .select('eneatipo:eneatipo_id(numero_eneatipo, nombre)')
-        .eq('test_eneagrama_id', testId)
-
-      if (dominantesData) {
-        dominantes = (dominantesData as { eneatipo: { numero_eneatipo: number; nombre: string } | null }[])
-          .filter((d): d is { eneatipo: { numero_eneatipo: number; nombre: string } } => d.eneatipo !== null)
-          .map((d) => ({ numero: d.eneatipo.numero_eneatipo, nombre: d.eneatipo.nombre }))
-      }
+      dominantes = test.test_eneagrama_dominante
+        .flatMap((d) => (d.eneatipo ? [d.eneatipo] : []))
+        .map((e) => ({ numero: e.numero_eneatipo, nombre: e.nombre }))
     }
   }
 

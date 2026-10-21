@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/dal'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { esFeedbackVigente, type InformePersonalidadJSON } from '@/lib/types/informe'
 
@@ -15,21 +16,14 @@ export type InformeData = {
 }
 
 export const getInformeActual = cache(async (): Promise<InformeData | null> => {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
+  const postulante = await getPerfilPostulanteActual()
   if (!postulante) return null
 
+  const supabase = await createClient()
   const { data } = await supabase
     .from('informe_personalidad')
     .select('id, contenido_json, estado_informe, fecha_generacion, updated_at, desactualizado')
-    .eq('postulante_id', (postulante as { id: string }).id)
+    .eq('postulante_id', postulante.id)
     .single()
 
   return data ? (data as unknown as InformeData) : null

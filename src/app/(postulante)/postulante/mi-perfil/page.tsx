@@ -1,5 +1,5 @@
 import { verifySession, getTyCVigente } from '@/lib/dal'
-import { createClient } from '@/lib/supabase/server'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { PageHeader, Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
 import { PerfilPostulanteForm } from './form'
@@ -10,36 +10,32 @@ import { getCarreras } from '@/modules/carreras/queries'
 
 export const metadata = { title: 'Mi perfil — MiLiors' }
 
-async function getPerfilPostulante(userId: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('perfil_postulante')
-    .select(
-      'id, nombre_completo, nombre_preferido, fecha_nacimiento, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, provincia_id, mostrar_personalidad_publico'
-    )
-    .eq('usuario_id', userId)
-    .single()
+// Proyecta las columnas del formulario sobre la lectura memoizada del perfil,
+// la misma que ya hizo el layout del área en este render.
+async function getPerfilPostulante() {
+  const perfil = await getPerfilPostulanteActual()
+  if (!perfil) return null
 
-  return data as {
-    id: string
-    nombre_completo: string
-    nombre_preferido: string | null
-    fecha_nacimiento: string | null
-    telefono: string | null
-    carrera_id: string | null
-    carrera_otra: string | null
-    enlace_linkedin: string | null
-    portfolio: string | null
-    localidad_id: string | null
-    provincia_id: string | null
-    mostrar_personalidad_publico: boolean
-  } | null
+  return {
+    id: perfil.id,
+    nombre_completo: perfil.nombre_completo,
+    nombre_preferido: perfil.nombre_preferido,
+    fecha_nacimiento: perfil.fecha_nacimiento,
+    telefono: perfil.telefono,
+    carrera_id: perfil.carrera_id,
+    carrera_otra: perfil.carrera_otra,
+    enlace_linkedin: perfil.enlace_linkedin,
+    portfolio: perfil.portfolio,
+    localidad_id: perfil.localidad_id,
+    provincia_id: perfil.provincia_id,
+    mostrar_personalidad_publico: perfil.mostrar_personalidad_publico,
+  }
 }
 
 export default async function MiPerfilPostulantePage() {
   const session = await verifySession()
   const [perfil, tyc, provincias, carreras] = await Promise.all([
-    getPerfilPostulante(session.id),
+    getPerfilPostulante(),
     getTyCVigente(),
     getProvincias(),
     getCarreras(),

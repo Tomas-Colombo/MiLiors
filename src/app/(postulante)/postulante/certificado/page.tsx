@@ -2,6 +2,7 @@ import { verifySession } from '@/lib/dal'
 import { PageHeader } from '@/components/ui'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { createClient } from '@/lib/supabase/server'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { getUltimoCertificado, getCertificadoContenido } from '@/modules/certificado/queries'
 import { getInformeActual } from '@/modules/informe/queries'
 import { SINTESIS_VERSION, type CertificadoSintesisJSON } from '@/lib/types/certificado'
@@ -10,7 +11,7 @@ import { CertificadoUI } from './certificado-ui'
 export const metadata = { title: 'Mi Certificado — MiLiors' }
 
 export default async function CertificadoPage() {
-  const session = await verifySession()
+  await verifySession()
   await requireEneagramaCompleto()
 
   const supabase = await createClient()
@@ -22,11 +23,7 @@ export default async function CertificadoPage() {
   ])
 
   // Fetch formación + competencia counts to drive requirements display
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
+  const postulante = await getPerfilPostulanteActual()
 
   let tieneFormacion = false
   let tieneCompetencia = false
@@ -35,7 +32,7 @@ export default async function CertificadoPage() {
   let pdfPrevioALaSintesis = false
 
   if (postulante) {
-    const pid = (postulante as { id: string }).id
+    const pid = postulante.id
     const { data: pt } = await supabase
       .from('perfil_tecnico')
       .select('id, sintesis_estado, sintesis_certificado')

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import {
   CARGA_HORARIA,
   ESTADO_POSTULACION,
@@ -593,16 +594,10 @@ export const getMisPostulaciones = async (filtros?: {
   busqueda?: string
   orden?: 'asc' | 'desc'
 }) => {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
+  const postulante = await getPerfilPostulanteActual()
   if (!postulante) return { items: [], total: 0 }
+
+  const supabase = await createClient()
 
   const page = filtros?.page ?? 0
   const from = page * POSTULACIONES_PER_PAGE
@@ -618,7 +613,7 @@ export const getMisPostulaciones = async (filtros?: {
       id, estado, fecha_postulacion, updated_at,
       ${puestoJoin}(id, titulo_puesto, empresa(nombre_empresa))
     `, { count: 'exact' })
-    .eq('postulante_id', (postulante as { id: string }).id)
+    .eq('postulante_id', postulante.id)
     .order('fecha_postulacion', { ascending: filtros?.orden === 'asc' })
     .range(from, to)
 
@@ -662,21 +657,15 @@ export const getMisPostulaciones = async (filtros?: {
  * es compuesta (id, puesto_id) y no vale la pena atarse a cómo PostgREST la resuelve.
  */
 export const getMisPostulacionesPuestoIds = cache(async (): Promise<Set<string>> => {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
+  const postulante = await getPerfilPostulanteActual()
   if (!postulante) return new Set()
+
+  const supabase = await createClient()
 
   const { data: postulaciones } = await supabase
     .from('postulacion')
     .select('puesto_id, historial_puesto_id')
-    .eq('postulante_id', (postulante as { id: string }).id)
+    .eq('postulante_id', postulante.id)
 
   const filas = (postulaciones ?? []) as { puesto_id: string; historial_puesto_id: string }[]
   if (filas.length === 0) return new Set()

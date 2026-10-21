@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { verifySession } from '@/lib/dal'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import type { NivelCompetencia } from '@/lib/constants/enums'
 
 // Base type for the full technical profile with all relations
@@ -57,17 +57,11 @@ export type CompetenciaItem = {
 
 /** Loads the full technical profile for the current applicant */
 export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCompleto | null> => {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
+  const postulante = await getPerfilPostulanteActual()
   if (!postulante) return null
-  const postulanteId = (postulante as { id: string }).id
+  const postulanteId = postulante.id
+
+  const supabase = await createClient()
 
   const { data: pt } = await supabase
     .from('perfil_tecnico')

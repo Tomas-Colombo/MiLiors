@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { verifySession } from '@/lib/dal'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 
 /**
  * Carga las 135 preguntas ordenadas por numero_pregunta.
@@ -33,84 +33,101 @@ export const getOpcionesRespuesta = cache(async () => {
   return data ?? []
 })
 
+/** Test de Eneagrama con la unión de columnas que leen sus consumidores. */
+export type TestEneagramaPostulante = {
+  id: string
+  fecha_realizacion: string
+  updated_at: string
+  veces_completado: number
+  tiene_empate_dominante: boolean
+  dominantes_empate: number[] | null
+  test_eneagrama_dominante: {
+    id: string
+    puntaje_crudo: number
+    porcentaje: number
+    eneatipo: { numero_eneatipo: number; nombre: string; descripcion: string | null } | null
+  }[]
+}
+
+/**
+ * Test de Eneagrama de un postulante con sus dominantes calculados, o null si
+ * todavía no lo empezó. Hay un único test por postulante.
+ *
+ * Selecciona la unión de lo que necesitan el layout, el guard de Eneagrama
+ * completo, el inicio, el perfil de personalidad, el wizard y el certificado:
+ * memoizada por React cache(), todos comparten una sola lectura por request.
+ */
+export const getTestEneagramaDePostulante = cache(
+  async (postulanteId: string): Promise<TestEneagramaPostulante | null> => {
+    const supabase = await createClient()
+
+    // maybeSingle: sin test devuelve null igual que .single(), pero sin el 406.
+    const { data } = await supabase
+      .from('test_eneagrama')
+      .select(
+        'id, fecha_realizacion, updated_at, veces_completado, tiene_empate_dominante, dominantes_empate, test_eneagrama_dominante(id, puntaje_crudo, porcentaje, eneatipo(numero_eneatipo, nombre, descripcion))'
+      )
+      .eq('postulante_id', postulanteId)
+      .maybeSingle()
+
+    return (data as unknown as TestEneagramaPostulante | null) ?? null
+  }
+)
+
 /**
  * Carga el test vigente del postulante (si existe) y sus respuestas guardadas.
  */
 export const getTestActual = cache(async () => {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  // Obtener perfil del postulante
-  const { data: perfil } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
+  const perfil = await getPerfilPostulanteActual()
   if (!perfil) return null
 
-  // Obtener test vigente. La completitud se determina por la presencia de
-  // dominantes calculados (test_eneagrama_dominante), no por la columna
-  // eneatipo_id, que quedó deprecada al pasar a soportar múltiples dominantes.
-  const { data: test } = await supabase
-    .from('test_eneagrama')
-    .select('id, fecha_realizacion, updated_at, veces_completado, test_eneagrama_dominante(id)')
-    .eq('postulante_id', (perfil as { id: string }).id)
-    .single()
+  // La completitud se determina por la presencia de dominantes calculados
+  // (test_eneagrama_dominante), no por la columna eneatipo_id, que quedó
+  // deprecada al pasar a soportar múltiples dominantes.
+  const test = await getTestEneagramaDePostulante(perfil.id)
 
-  if (!test) return { perfilId: (perfil as { id: string }).id, test: null, respuestas: [] }
+  if (!test) return { perfilId: perfil.id, test: null, respuestas: [] }
+
+  const supabase = await createClient()
 
   // Obtener respuestas guardadas
   const { data: respuestas } = await supabase
     .from('respuesta_item_eneagrama')
     .select('pregunta_id, valor_respondido')
-    .eq('test_eneagrama_id', (test as { id: string }).id)
-
-  const testTyped = test as {
-    id: string
-    fecha_realizacion: string
-    updated_at: string
-    veces_completado: number
-    test_eneagrama_dominante: { id: string }[]
-  }
+    .eq('test_eneagrama_id', test.id)
 
   return {
-    perfilId: (perfil as { id: string }).id,
+    perfilId: perfil.id,
     test: {
-      id: testTyped.id,
-      fecha_realizacion: testTyped.fecha_realizacion,
-      updated_at: testTyped.updated_at,
-      veces_completado: testTyped.veces_completado ?? 0,
-      completo: testTyped.test_eneagrama_dominante.length > 0,
+      id: test.id,
+      fecha_realizacion: test.fecha_realizacion,
+      updated_at: test.updated_at,
+      veces_completado: test.veces_completado ?? 0,
+      completo: test.test_eneagrama_dominante.length > 0,
     },
     respuestas: (respuestas ?? []) as { pregunta_id: string; valor_respondido: number }[],
   }
 })
 
 /**
- * Carga el perfil básico del postulante para el onboarding.
+ * Carga el perfil básico del postulante para el onboarding. Proyecta solo las
+ * columnas del formulario sobre la lectura compartida del perfil.
  */
 export const getPerfilPostulante = cache(async () => {
-  const session = await verifySession()
-  const supabase = await createClient()
+  const perfil = await getPerfilPostulanteActual()
+  if (!perfil) return null
 
-  const { data } = await supabase
-    .from('perfil_postulante')
-    .select('id, nombre_completo, nombre_preferido, fecha_nacimiento, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, provincia_id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  return data as {
-    id: string
-    nombre_completo: string
-    nombre_preferido: string | null
-    fecha_nacimiento: string | null
-    telefono: string | null
-    carrera_id: string | null
-    carrera_otra: string | null
-    enlace_linkedin: string | null
-    portfolio: string | null
-    localidad_id: string | null
-    provincia_id: string | null
-  } | null
+  return {
+    id: perfil.id,
+    nombre_completo: perfil.nombre_completo,
+    nombre_preferido: perfil.nombre_preferido,
+    fecha_nacimiento: perfil.fecha_nacimiento,
+    telefono: perfil.telefono,
+    carrera_id: perfil.carrera_id,
+    carrera_otra: perfil.carrera_otra,
+    enlace_linkedin: perfil.enlace_linkedin,
+    portfolio: perfil.portfolio,
+    localidad_id: perfil.localidad_id,
+    provincia_id: perfil.provincia_id,
+  }
 })
