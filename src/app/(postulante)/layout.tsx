@@ -8,6 +8,7 @@ import { AppSidebar } from '@/components/shared/app-sidebar'
 import { TyCGate } from '@/components/shared/tyc-gate'
 import { FilterMemory } from '@/components/shared/filter-memory'
 import { getSidebarColapsada } from '@/lib/sidebar-prefs-server'
+import { AvisoDesactualizado } from '@/components/shared/aviso-desactualizado'
 import {
   HomeIcon,
   UserIcon,
@@ -84,6 +85,9 @@ export default async function PostulanteLayout({ children }: { children: React.R
             primero que ve la persona al entrar al área, antes del onboarding y
             antes del Eneagrama, sin depender de que cada pantalla nueva se
             acuerde de envolverse. */}
+        {!onboardingPendiente && (
+          <AvisoDesactualizado informe={informeDesactualizado} certificado={certDesactualizado} />
+        )}
         <TyCGate>{children}</TyCGate>
       </main>
       <Suspense fallback={null}>
