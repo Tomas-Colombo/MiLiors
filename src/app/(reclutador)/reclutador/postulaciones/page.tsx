@@ -146,15 +146,17 @@ export default async function PostulacionesRecibidasPage({
 
   const { page, pageCount, slice } = paginar(filtered, pageParam)
 
-  // Only the visible page needs the "has preselector answers" flag for the button.
-  const conRespuestas = await getPostulacionesConRespuestas(slice.map((p) => p.id))
-
-  // Motivo del descarte manual (nota privada) para mostrarlo al pasar por "No avanza".
-  const motivosNoAvanzar = await getMotivosNoAvanzar(
-    slice
-      .filter((p) => p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO)
-      .map((p) => p.postulante_id),
-  )
+  // Both lookups only need the visible page, so they run in parallel:
+  // - the "has preselector answers" flag for the button;
+  // - el motivo del descarte manual (nota privada) para mostrarlo al pasar por "No avanza".
+  const [conRespuestas, motivosNoAvanzar] = await Promise.all([
+    getPostulacionesConRespuestas(slice.map((p) => p.id)),
+    getMotivosNoAvanzar(
+      slice
+        .filter((p) => p.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO)
+        .map((p) => p.postulante_id),
+    ),
+  ])
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">

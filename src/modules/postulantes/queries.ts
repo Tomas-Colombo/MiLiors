@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import type { AnexoReclutador, InformePersonalidadJSON } from '@/lib/types/informe'
 
 /** UUID v4-ish check — used to distinguish real carrera ids from the 'OTRAS' sentinel */
@@ -420,21 +421,15 @@ export const getMotivosNoAvanzar = cache(async (postulanteIds: string[]) => {
   const mapa = new Map<string, string>()
   if (postulanteIds.length === 0) return mapa
 
-  const session = await verifySession()
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return mapa
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return mapa
 
   const { data } = await supabase
     .from('nota_privada')
     .select('contenido, postulante_id, puesto_id, fecha_creacion')
-    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .eq('reclutador_id', reclutadorId)
     .in('postulante_id', postulanteIds)
     .like('contenido', `${PREFIJO_NO_AVANZAR}%`)
     .order('fecha_creacion', { ascending: false })

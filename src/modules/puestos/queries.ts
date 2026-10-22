@@ -5,6 +5,7 @@ import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import {
   CARGA_HORARIA,
   ESTADO_POSTULACION,
@@ -693,85 +694,83 @@ export const getMisPostulacionesPuestoIds = cache(async (): Promise<Set<string>>
  * un puesto no arrastre candidatos viejos al tablero.
  */
 export const getPostulacionesRecibidas = cache(async () => {
-  const session = await verifySession()
+  // Memoizado por request: el guard del área ya lo resolvió, no suma consulta.
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return []
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return []
 
   // Step 1: load the recruiter's job posts (excluding logically deleted ones)
   const { data: puestos } = await supabase
     .from('puesto')
     .select('id')
-    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .eq('reclutador_id', reclutadorId)
     .is('fecha_baja_puesto', null)
 
   const puestoIds = (puestos ?? []).map((p: unknown) => (p as { id: string }).id)
   if (puestoIds.length === 0) return []
 
-  const reclutadorId = (reclutador as { id: string }).id
-
-  // Step 2: load applications for those posts
+  // Step 2: applications and cycles of those posts. Both only need puestoIds,
+  // so they run in parallel instead of one after the other.
   const admin = createAdminClient()
-  const { data: postulaciones } = await admin
-    .from('postulacion')
-    .select(`
-      id, estado, marca, fecha_postulacion, updated_at, postulante_id, puesto_id,
-      historial_puesto_id, motivo_descarte,
-      puesto(id, titulo_puesto, activo, empresa_id, empresa(nombre_empresa)),
-      perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
-        carrera_otra, carrera:carrera_id(nombre), localidad_id, provincia_id,
-        provincia(nombre),
-        localidad(nombre, departamento_id, departamento(nombre)),
-        usuario(email))
-    `)
-    .in('puesto_id', puestoIds)
-    .order('fecha_postulacion', { ascending: false })
-
-  // Step 2b: ciclo vigente de cada puesto. Viene ordenado por fecha_inicio desc,
-  // así que el primero de cada puesto es el actual (esté abierto o cerrado: un
-  // puesto cerrado sigue teniendo su último ciclo como el relevante).
-  const { data: ciclos } = await admin
-    .from('historial_puesto')
-    .select('id, puesto_id, fecha_inicio')
-    .in('puesto_id', puestoIds)
-    .order('fecha_inicio', { ascending: false })
+  const [{ data: postulaciones }, { data: ciclos }] = await Promise.all([
+    admin
+      .from('postulacion')
+      .select(`
+        id, estado, marca, fecha_postulacion, updated_at, postulante_id, puesto_id,
+        historial_puesto_id, motivo_descarte,
+        puesto(id, titulo_puesto, activo, empresa_id, empresa(nombre_empresa)),
+        perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
+          carrera_otra, carrera:carrera_id(nombre), localidad_id, provincia_id,
+          provincia(nombre),
+          localidad(nombre, departamento_id, departamento(nombre)),
+          usuario(email))
+      `)
+      .in('puesto_id', puestoIds)
+      .order('fecha_postulacion', { ascending: false }),
+    // Step 2b: ciclo vigente de cada puesto. Viene ordenado por fecha_inicio desc,
+    // así que el primero de cada puesto es el actual (esté abierto o cerrado: un
+    // puesto cerrado sigue teniendo su último ciclo como el relevante).
+    admin
+      .from('historial_puesto')
+      .select('id, puesto_id, fecha_inicio')
+      .in('puesto_id', puestoIds)
+      .order('fecha_inicio', { ascending: false }),
+  ])
 
   const cicloActualPorPuesto = new Map<string, string>()
   for (const c of (ciclos ?? []) as { id: string; puesto_id: string }[]) {
     if (!cicloActualPorPuesto.has(c.puesto_id)) cicloActualPorPuesto.set(c.puesto_id, c.id)
   }
 
-  // Step 3: load note counts per applicant for this recruiter
-  const postulanteIds = (postulaciones ?? []).map(
-    (r: unknown) => (r as { postulante_id: string }).postulante_id,
-  )
+  // Step 3: note counts (3) and technical skills (3b) per applicant. Both only
+  // need postulanteIds, so they also run in parallel.
+  // Unique ids: someone who applied to several posts would repeat in the `in`
+  // filter, which travels in the URL and has a length limit.
+  const postulanteIds = [
+    ...new Set(
+      (postulaciones ?? []).map((r: unknown) => (r as { postulante_id: string }).postulante_id),
+    ),
+  ]
   const notaCountMap = new Map<string, number>()
+  const habilidadesPorPostulante = new Map<string, string[]>()
   if (postulanteIds.length > 0) {
-    const { data: notas } = await supabase
-      .from('nota_privada')
-      .select('postulante_id')
-      .eq('reclutador_id', reclutadorId)
-      .in('postulante_id', postulanteIds)
+    const [{ data: notas }, { data: perfilesTecnicos }] = await Promise.all([
+      supabase
+        .from('nota_privada')
+        .select('postulante_id')
+        .eq('reclutador_id', reclutadorId)
+        .in('postulante_id', postulanteIds),
+      admin
+        .from('perfil_tecnico')
+        .select('postulante_id, postulante_competencia(competencia(nombre))')
+        .in('postulante_id', postulanteIds),
+    ])
 
     for (const n of notas ?? []) {
       const row = n as { postulante_id: string }
       notaCountMap.set(row.postulante_id, (notaCountMap.get(row.postulante_id) ?? 0) + 1)
     }
-  }
-
-  // Step 3b: load technical skills per applicant
-  const habilidadesPorPostulante = new Map<string, string[]>()
-  if (postulanteIds.length > 0) {
-    const { data: perfilesTecnicos } = await admin
-      .from('perfil_tecnico')
-      .select('postulante_id, postulante_competencia(competencia(nombre))')
-      .in('postulante_id', postulanteIds)
 
     for (const pt of (perfilesTecnicos ?? []) as unknown[]) {
       const p = pt as {
