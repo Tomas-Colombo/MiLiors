@@ -26,7 +26,7 @@ function tiempoRelativo(fecha: string | null): string | null {
   return years === 1 ? 'hace 1 año' : `hace ${years} años`
 }
 import { getPostulanteDetalle, getNotasPrivadas } from '@/modules/postulantes/queries'
-import { avanzarEstadoPostulacion } from '@/modules/postulaciones/actions'
+import { marcarPostulacionVista } from '@/modules/postulaciones/estado'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { AnexoReclutadorDisplay, InformeDisplay } from '@/modules/informe/informe-display'
@@ -123,9 +123,10 @@ export default async function PostulanteDetallePage({
           // cuando la postulación ya estaba en VISTO y no cambia de estado.
           await marcarActividadPuesto(row.puesto_id)
 
-          // Auto-mark as VISTO when the recruiter opens the profile from the applications list
+          // Auto-mark as VISTO when the recruiter opens the profile from the applications list.
+          // Not the server action: it calls revalidatePath, which Next forbids during render.
           if (row.estado === ESTADO_POSTULACION.ENVIADA) {
-            await avanzarEstadoPostulacion(postulacionId, 'VISTO')
+            await marcarPostulacionVista(postulacionId)
           }
 
           const [formulario, respuestas] = await Promise.all([
