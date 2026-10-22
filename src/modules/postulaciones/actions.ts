@@ -293,33 +293,22 @@ export async function avanzarEstadoPostulacion(
   postulacionId: string,
   nuevoEstado: 'VISTO' | 'PROCESO_FINALIZADO'
 ): Promise<ActionResult> {
-  const session = await verifySession()
+  await verifySession()
   const supabase = await createClient()
 
-  // Verify the recruiter owns the post
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
-
-  const admin = createAdminClient()
-
-  const { error } = await admin.from('postulacion')
+  // Cliente del usuario a propósito: la política RLS postulacion_update solo deja
+  // actualizar al reclutador dueño del puesto, así que una postulación ajena no
+  // matchea ninguna fila. La fila devuelta trae además el puesto.
+  const { data: actualizadas, error } = await supabase.from('postulacion')
     .update({ estado: nuevoEstado })
     .eq('id', postulacionId)
+    .select('puesto_id')
 
   if (error) return { success: false, error: 'No se pudo actualizar el estado.' }
+  if (!actualizadas || actualizadas.length === 0) return { success: false, error: 'No autorizado.' }
 
   // Actividad del reclutador sobre el puesto (evita el cierre automático).
-  const { data: post } = await admin
-    .from('postulacion')
-    .select('puesto_id')
-    .eq('id', postulacionId)
-    .single()
-  if (post) await marcarActividadPuesto((post as { puesto_id: string }).puesto_id)
+  await marcarActividadPuesto((actualizadas[0] as { puesto_id: string }).puesto_id)
 
   // Aviso por mail al postulante: apagado por ahora (ver
   // EMAIL_POSTULACIONES_HABILITADO). La guarda envuelve también a la consulta
@@ -337,35 +326,22 @@ export async function avanzarEstadoPostulacion(
 }
 
 export async function revertirDescarte(postulacionId: string): Promise<ActionResult> {
-  const session = await verifySession()
+  await verifySession()
   const supabase = await createClient()
-
-  // Verify the recruiter owns the post
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
-
-  const admin = createAdminClient()
 
   // Vuelve a "Evaluada" (VISTO) y limpia el motivo (si no, un descarte manual posterior
   // heredaría el motivo del descarte automático anterior).
-  const { error } = await admin.from('postulacion')
+  // Cliente del usuario: RLS (postulacion_update) restringe al dueño del puesto.
+  const { data: actualizadas, error } = await supabase.from('postulacion')
     .update({ estado: 'VISTO', motivo_descarte: null })
     .eq('id', postulacionId)
+    .select('puesto_id')
 
   if (error) return { success: false, error: 'No se pudo revertir el descarte.' }
+  if (!actualizadas || actualizadas.length === 0) return { success: false, error: 'No autorizado.' }
 
   // Actividad del reclutador sobre el puesto (evita el cierre automático).
-  const { data: post } = await admin
-    .from('postulacion')
-    .select('puesto_id')
-    .eq('id', postulacionId)
-    .single()
-  if (post) await marcarActividadPuesto((post as { puesto_id: string }).puesto_id)
+  await marcarActividadPuesto((actualizadas[0] as { puesto_id: string }).puesto_id)
 
   revalidatePath('/reclutador/postulaciones')
   return { success: true, data: undefined }
@@ -375,25 +351,17 @@ export async function marcarPostulacion(
   postulacionId: string,
   marca: MarcaPostulacion | null,
 ): Promise<ActionResult> {
-  const session = await verifySession()
+  await verifySession()
   const supabase = await createClient()
 
-  // Verify the recruiter owns the application via their posts
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
-
-  const admin = createAdminClient()
-
-  const { error } = await admin.from('postulacion')
+  // Cliente del usuario: RLS (postulacion_update) restringe al dueño del puesto.
+  const { data: actualizadas, error } = await supabase.from('postulacion')
     .update({ marca })
     .eq('id', postulacionId)
+    .select('id')
 
   if (error) return { success: false, error: 'No se pudo actualizar la marca.' }
+  if (!actualizadas || actualizadas.length === 0) return { success: false, error: 'No autorizado.' }
 
   revalidatePath('/reclutador/postulaciones')
   return { success: true, data: undefined }

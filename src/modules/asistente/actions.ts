@@ -39,6 +39,19 @@ export async function consultarAsistente(
 
   if (!puesto) return { success: false, error: 'Puesto no encontrado o no autorizado.' }
 
+  // El candidato también tiene que ser del reclutador: mismo criterio que la
+  // página del asistente (se postuló a alguno de sus puestos). Sin esto, como los
+  // datos se leen con service role, cualquier id exponía el informe del candidato.
+  const { data: postulacionPropia } = await admin
+    .from('postulacion')
+    .select('id, puesto!inner(reclutador_id)')
+    .eq('postulante_id', postulanteId)
+    .eq('puesto.reclutador_id', reclutadorId)
+    .limit(1)
+    .maybeSingle()
+
+  if (!postulacionPropia) return { success: false, error: 'Postulante no encontrado o no autorizado.' }
+
   const puestoTyped = puesto as {
     titulo_puesto: string
     descripcion_texto: string | null

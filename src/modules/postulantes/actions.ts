@@ -51,7 +51,10 @@ export async function crearNota(
       .eq('id', puestoIdFinal)
       .eq('reclutador_id', reclutadorId)
       .maybeSingle()
-    tituloPuesto = (puesto as { titulo_puesto: string } | null)?.titulo_puesto ?? null
+    // Un puesto ajeno no se puede etiquetar en la nota ni marcarle actividad
+    // (eso le frenaría el cierre automático a otro reclutador).
+    if (!puesto) return { success: false, error: 'No autorizado.' }
+    tituloPuesto = (puesto as { titulo_puesto: string }).titulo_puesto
   }
 
   const { error } = await admin.from('nota_privada').insert({

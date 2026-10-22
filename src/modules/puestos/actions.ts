@@ -55,6 +55,21 @@ async function getReclutadorContext(): Promise<{ reclutadorId: string } | null> 
   return { reclutadorId: (data as { id: string }).id }
 }
 
+/** El puesto existe y es del reclutador (las acciones con service role no tienen RLS). */
+async function esPuestoPropio(
+  admin: ReturnType<typeof createAdminClient>,
+  puestoId: string,
+  reclutadorId: string,
+): Promise<boolean> {
+  const { data } = await admin
+    .from('puesto')
+    .select('id')
+    .eq('id', puestoId)
+    .eq('reclutador_id', reclutadorId)
+    .maybeSingle()
+  return !!data
+}
+
 /**
  * La empresa del puesto la elige el reclutador en el formulario: hay que probar
  * que sea una de las suyas antes de guardarla (el insert va con service role).
@@ -417,6 +432,12 @@ export async function cerrarPuesto(
 
   const admin = createAdminClient()
 
+  // Todo lo que sigue va con service role y filtra solo por puesto_id: la
+  // pertenencia se prueba antes de la primera escritura.
+  if (!(await esPuestoPropio(admin, puestoId, ctx.reclutadorId))) {
+    return { success: false, error: 'No autorizado.' }
+  }
+
   // Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
   if (contratacion) {
     const res = await registrarContratacion(admin, puestoId, contratacion)
@@ -457,6 +478,11 @@ export async function eliminarPuesto(
   if (!ctx) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
+
+  // Ver cerrarPuesto: la pertenencia se prueba antes de la primera escritura.
+  if (!(await esPuestoPropio(admin, puestoId, ctx.reclutadorId))) {
+    return { success: false, error: 'No autorizado.' }
+  }
 
   // Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
   if (contratacion) {
