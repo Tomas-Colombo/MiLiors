@@ -1,24 +1,18 @@
-import { recortarEnOracion } from '@/lib/recorte-texto'
+import {
+  formatearCandidato,
+  formatearPuesto,
+  type CandidatoContexto,
+  type PuestoContexto,
+} from '@/modules/seleccion/prompts'
+import { LECTURA_FUENTES, REGLAS_MOTOR, RUBRICA_COMPATIBILIDAD } from '@/modules/seleccion/criterio'
 
-export type AsistenteContext = {
-  // Candidate
-  nombrePostulante: string
-  eneatipoNumero: number | null
-  eneatipoNombre: string | null
-  competencias: string[]
-  formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[]
-  experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[]
-  // Personality report
-  informePersonalidad: string | null
-  // Position
-  tituloPuesto: string
-  descripcionPuesto: string | null
-  cargaHoraria: string
-  ubicacion: string
-  nivelExperiencia: string | null
-  perfilPsicologicoDeseado: string | null
-  // Recruiter private notes for this candidate
-  notasPrivadas: string[]
+/**
+ * Contexto del asistente 1-a-1. El candidato llega armado por
+ * `cargarContextoCandidato`, igual que en el informe de selección grupal: los dos
+ * flujos ven los mismos datos y aplican el mismo criterio de compatibilidad.
+ */
+export type AsistenteContext = PuestoContexto & {
+  candidato: CandidatoContexto
   // Recruiter's free-text query
   pregunta: string
 }
@@ -33,9 +27,9 @@ Tu función es ayudar a los reclutadores a analizar candidatos utilizando única
 
 La información disponible puede incluir:
 - Datos del puesto.
-- Informe de personalidad del candidato.
+- Perfil técnico del candidato (experiencia laboral, formación y competencias cargadas).
+- Informe de personalidad del candidato (datos del motor de competencias y narrativa).
 - Notas privadas del reclutador.
-- Información adicional escrita por el reclutador.
 - La consulta realizada por el usuario.
 
 REGLAS:
@@ -48,12 +42,19 @@ REGLAS:
 7. Considerá las notas privadas como contexto interno del reclutador y utilizalas cuando sean relevantes.
 8. Si existen contradicciones entre las distintas fuentes de información, indicalas claramente.
 
+${LECTURA_FUENTES}
+
+${REGLAS_MOTOR}
+
+${RUBRICA_COMPATIBILIDAD}
+
 ANÁLISIS:
-Cuando el usuario solicite evaluar un candidato:
-- Analizá la compatibilidad entre el candidato y el puesto.
+Cuando el usuario solicite evaluar un candidato o su compatibilidad con el puesto:
+- Asigná la compatibilidad con la rúbrica de COMPATIBILIDAD. Es la misma que usa el informe de selección grupal.
+- No sobrevalores las etiquetas de "Competencias:" si la "Experiencia laboral:" no respalda experiencia directa en el rol o rubro pedido en la descripción del puesto.
 - Fundamentá cada conclusión utilizando únicamente evidencia presente en la información recibida.
 - No exageres fortalezas ni debilidades.
-- Si detectás posibles riesgos o dudas, mencionálos.
+- "Riesgos o posibles desafíos" es obligatorio: incluí los focos de desarrollo del motor que afecten tareas del puesto y la falta de experiencia directa en el rubro cuando corresponda.
 - Si la información es insuficiente para emitir una conclusión, indicá qué información adicional sería útil.
 
 FORMATO (cuando aplique):
@@ -69,69 +70,15 @@ OPTIMIZACIÓN:
 - No repitas el informe de personalidad completo. Solo mencioná los fragmentos relevantes.
 - Evitá explicaciones innecesarias y repetir información.
 - Utilizá listas cuando sea posible.
-- Tus respuestas no deben superar las 200 palabras, salvo que el usuario solicite explícitamente un análisis detallado.
+- Tus respuestas no deben superar las 250 palabras, salvo que el usuario solicite explícitamente un análisis detallado.
 - Si la respuesta puede darse en menos palabras sin perder calidad, hacelo.
 
 Idioma de respuesta: Español.`
 
-  // --- Build user prompt sections ---
-
-  const eneatipo =
-    ctx.eneatipoNumero != null
-      ? `Eneatipo ${ctx.eneatipoNumero} — ${ctx.eneatipoNombre}`
-      : 'No disponible'
-
-  const perfilTecnico: string[] = []
-  if (ctx.competencias.length > 0) {
-    perfilTecnico.push(`Competencias: ${ctx.competencias.join(', ')}`)
-  }
-  if (ctx.formaciones.length > 0) {
-    const fList = ctx.formaciones
-      .map((f) => `  • ${f.titulo} — ${f.institucion}${f.fecha_graduacion ? ` (${f.fecha_graduacion.slice(0, 4)})` : ''}`)
-      .join('\n')
-    perfilTecnico.push(`Formación académica:\n${fList}`)
-  }
-  if (ctx.experiencias.length > 0) {
-    const eList = ctx.experiencias
-      .map((e) => {
-        const fin = e.fecha_fin ? e.fecha_fin.slice(0, 7) : 'actualidad'
-        return `  • ${e.puesto} en ${e.empresa} (${e.fecha_inicio.slice(0, 7)} – ${fin})`
-      })
-      .join('\n')
-    perfilTecnico.push(`Experiencia laboral:\n${eList}`)
-  }
-
-  const notasSection =
-    ctx.notasPrivadas.length > 0
-      ? ctx.notasPrivadas.map((n, i) => `  [${i + 1}] ${n}`).join('\n')
-      : 'Sin notas.'
-
-  const informeSection = ctx.informePersonalidad
-    ? recortarEnOracion(ctx.informePersonalidad, 1500)
-    : 'No disponible.'
-
-  const puestoLines: string[] = [
-    `Título: ${ctx.tituloPuesto}`,
-    `Modalidad: ${ctx.cargaHoraria} · ${ctx.ubicacion}`,
-  ]
-  if (ctx.nivelExperiencia) puestoLines.push(`Nivel requerido: ${ctx.nivelExperiencia}`)
-  if (ctx.descripcionPuesto) puestoLines.push(`Descripción: ${recortarEnOracion(ctx.descripcionPuesto, 2000)}`)
-  if (ctx.perfilPsicologicoDeseado) puestoLines.push(`Perfil psicológico buscado: ${ctx.perfilPsicologicoDeseado}`)
-
-  const userPrompt = `=== CANDIDATO: ${ctx.nombrePostulante} ===
-Eneatipo: ${eneatipo}
-
-PERFIL TÉCNICO:
-${perfilTecnico.length > 0 ? perfilTecnico.join('\n\n') : 'No disponible.'}
-
-INFORME DE PERSONALIDAD:
-${informeSection}
-
-NOTAS PRIVADAS DEL RECLUTADOR:
-${notasSection}
+  const userPrompt = `${formatearCandidato(ctx.candidato, `CANDIDATO: ${ctx.candidato.nombre}`)}
 
 === PUESTO ===
-${puestoLines.join('\n')}
+${formatearPuesto(ctx)}
 
 === CONSULTA DEL RECLUTADOR ===
 ${ctx.pregunta}`
