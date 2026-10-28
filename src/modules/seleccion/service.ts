@@ -2,6 +2,7 @@ import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { aiProvider } from '@/lib/ai'
 import { MAX_CANDIDATOS_SELECCION } from './constants'
 import { cargarContextoCandidato } from './contexto-candidato'
@@ -53,7 +54,7 @@ export async function generarInformeSeleccion(
   puestoId: string,
   postulanteIds: string[]
 ): Promise<ResultadoSeleccion> {
-  const session = await verifySession()
+  await verifySession()
   const supabase = await createClient()
   const admin = createAdminClient()
 
@@ -69,14 +70,8 @@ export async function generarInformeSeleccion(
   }
 
   // Ownership: el puesto debe pertenecer al reclutador autenticado
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.', status: 403 }
-  const reclutadorId = (reclutador as { id: string }).id
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return { success: false, error: 'No autorizado.', status: 403 }
 
   const { data: puesto } = await supabase
     .from('puesto')

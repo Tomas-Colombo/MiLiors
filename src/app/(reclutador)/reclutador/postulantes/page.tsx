@@ -5,7 +5,6 @@ import { buscarPostulantes } from '@/modules/postulantes/queries'
 import { getCompetenciasCatalogo } from '@/modules/perfil-tecnico/queries'
 import { getProvincias, getDepartamentosPorProvincia } from '@/modules/ubicacion/queries'
 import { getCarreras, getCarrerasOtras } from '@/modules/carreras/queries'
-import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosPostulantes } from './filtros-postulantes'
 import { requireEmpresaCargada } from '@/lib/guards'
@@ -30,7 +29,7 @@ export default async function BuscarPostulantesPage({
 }) {
   await requireEmpresaCargada()
   const sp = await searchParams
-  const [postulantes, competencias, provincias, departamentos, carreras, carrerasOtras] = await Promise.all([
+  const [{ items: postulantes, total, page, pageCount }, competencias, provincias, departamentos, carreras, carrerasOtras] = await Promise.all([
     buscarPostulantes({
       busqueda: sp.busqueda,
       competenciaId: sp.competencia,
@@ -38,6 +37,7 @@ export default async function BuscarPostulantesPage({
       departamentoId: sp.departamento,
       carrera: sp.carrera,
       carreraOtra: sp.carreraOtra,
+      page: sp.page,
     }),
     getCompetenciasCatalogo(),
     getProvincias(),
@@ -48,12 +48,10 @@ export default async function BuscarPostulantesPage({
 
   const competenciaOpts = competencias.map((c) => ({ value: c.id, label: c.nombre }))
 
-  const { page, pageCount, slice } = paginar(postulantes, sp.page, 12)
-
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       {/* Header */}
-      <PageHeader title="Buscar postulantes" description={<>{postulantes.length} candidato{postulantes.length !== 1 ? 's' : ''} en búsqueda activa</>} />
+      <PageHeader title="Buscar postulantes" description={<>{total} candidato{total !== 1 ? 's' : ''} en búsqueda activa</>} />
 
       {/* Filtros live (sin botón de buscar) — imitan la sección de postulaciones */}
       <FiltrosPostulantes
@@ -77,7 +75,7 @@ export default async function BuscarPostulantesPage({
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {slice.map((p) => (
+          {postulantes.map((p) => (
             <Link
               key={p.id}
               href={`/reclutador/postulantes/${p.id}`}

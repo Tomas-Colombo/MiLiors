@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import type { AnexoReclutador, InformePersonalidadJSON } from '@/lib/types/informe'
 
 /** UUID v4-ish check — used to distinguish real carrera ids from the 'OTRAS' sentinel */
@@ -55,7 +55,18 @@ export type PostulanteDetalle = PostulanteCard & {
 type LocalidadEmbed = { nombre: string }
 type ProvinciaEmbed = { nombre: string }
 
-/** Buscar postulantes con perfil_en_busqueda=true */
+/** Tamaño de página del buscador de postulantes. */
+export const POSTULANTES_POR_PAGINA = 12
+
+/** Página del buscador: misma forma que devuelve `paginar`, con `total` para el encabezado. */
+export type PaginaPostulantes = {
+  items: PostulanteCard[]
+  total: number
+  page: number
+  pageCount: number
+}
+
+/** Buscar postulantes con perfil_en_busqueda=true, paginado en SQL */
 export const buscarPostulantes = cache(async (filtros?: {
   competenciaId?: string
   busqueda?: string
@@ -63,7 +74,9 @@ export const buscarPostulantes = cache(async (filtros?: {
   departamentoId?: string
   carrera?: string
   carreraOtra?: string
-}): Promise<PostulanteCard[]> => {
+  /** Número de página tal cual viene de la URL; se normaliza igual que `paginar`. */
+  page?: string
+}): Promise<PaginaPostulantes> => {
   const supabase = await createClient()
 
   // Filtrar por departamento exige que el embed de localidad sea un JOIN
@@ -73,65 +86,130 @@ export const buscarPostulantes = cache(async (filtros?: {
     ? 'localidad!inner(nombre)'
     : 'localidad(nombre)'
 
-  // Query base: perfil_postulante en búsqueda con eneatipo
-  let query = supabase
-    .from('perfil_postulante')
-    .select(`
-      id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, localidad_id,
-      provincia(nombre), ${embedUbicacion},
-      test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
-    `)
-    .eq('perfil_en_busqueda', true)
+  // Filtrar por competencia también es un JOIN interno, pero sólo para filtrar:
+  // los chips de la tarjeta se cargan aparte, para los candidatos de la página,
+  // así que acá no se trae nada más que la clave. Los embeds se agregan como JSON
+  // en PostgREST, por lo que el JOIN no duplica filas del perfil.
+  const embedCompetencia = filtros?.competenciaId
+    ? ', perfil_tecnico!inner(postulante_competencia!inner(competencia_id))'
+    : ''
 
-  // `regexIMatch` y no `ilike`: ilike distingue tildes, así que buscar "gonzalez"
-  // no encontraba a "González". El patrón acepta la vocal con y sin acento.
-  if (filtros?.busqueda) {
-    query = query.regexIMatch('nombre_completo', patronSinTildes(filtros.busqueda))
+  // Mismo criterio que `paginar`: entero >= 1, y lo que no sea un número es la 1.
+  const pedida = Math.floor(Number(filtros?.page))
+  // NaN no pasa el `>= 1`; Infinity queda topeado y termina en la última página.
+  const paginaPedida = pedida >= 1 ? Math.min(pedida, 1_000_000_000) : 1
+
+  // Una función y no una query armada una vez: si la página pedida está fuera de
+  // rango hay que repetirla con otra, y un builder de PostgREST no se reutiliza.
+  const consultarPagina = (pagina: number) => {
+    const desde = (pagina - 1) * POSTULANTES_POR_PAGINA
+
+    let query = supabase
+      .from('perfil_postulante')
+      .select(`
+        id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, localidad_id,
+        provincia(nombre), ${embedUbicacion}${embedCompetencia}
+      `, { count: 'exact' })
+      .eq('perfil_en_busqueda', true)
+
+    // `regexIMatch` y no `ilike`: ilike distingue tildes, así que buscar "gonzalez"
+    // no encontraba a "González". El patrón acepta la vocal con y sin acento.
+    if (filtros?.busqueda) {
+      query = query.regexIMatch('nombre_completo', patronSinTildes(filtros.busqueda))
+    }
+    // La provincia se filtra por la columna del perfil; el departamento, sobre el
+    // embed, porque cuelga de la localidad.
+    if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
+    if (filtros?.departamentoId) query = query.eq('localidad.departamento_id', filtros.departamentoId)
+    if (filtros?.carrera && UUID_RE.test(filtros.carrera)) {
+      query = query.eq('carrera_id', filtros.carrera)
+    }
+    if (filtros?.carreraOtra) {
+      query = query.regexIMatch('carrera_otra', patronSinTildes(filtros.carreraOtra))
+    }
+    if (filtros?.competenciaId) {
+      query = query.eq('perfil_tecnico.postulante_competencia.competencia_id', filtros.competenciaId)
+    }
+
+    // Sin un orden total, range() puede repetir u omitir filas entre páginas:
+    // el nombre no es único, así que el id desempata.
+    return query
+      .order('nombre_completo', { ascending: true })
+      .order('id', { ascending: true })
+      .range(desde, desde + POSTULANTES_POR_PAGINA - 1)
   }
-  // La provincia se filtra por la columna del perfil; el departamento, sobre el
-  // embed, porque cuelga de la localidad.
-  if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
-  if (filtros?.departamentoId) query = query.eq('localidad.departamento_id', filtros.departamentoId)
-  if (filtros?.carrera && UUID_RE.test(filtros.carrera)) {
-    query = query.eq('carrera_id', filtros.carrera)
+
+  const vacia: PaginaPostulantes = { items: [], total: 0, page: 1, pageCount: 1 }
+
+  let page = paginaPedida
+  let respuesta = await consultarPagina(page)
+
+  // Página más allá de la última: `paginar` la llevaba a la última página, así
+  // que se hace lo mismo. PostgREST responde 416 (PGRST103) cuando el offset
+  // supera el total, o una página vacía; en ambos casos se pide la 1ª para
+  // conocer el total y, si hace falta, la última. Sólo ocurre con URLs a mano.
+  const fueraDeRango =
+    respuesta.error?.code === 'PGRST103' ||
+    (!respuesta.error && page > 1 && (respuesta.data?.length ?? 0) === 0)
+  if (fueraDeRango) {
+    const primera = await consultarPagina(1)
+    const ultima = Math.max(1, Math.ceil((primera.count ?? 0) / POSTULANTES_POR_PAGINA))
+    page = ultima
+    respuesta = ultima === 1 ? primera : await consultarPagina(ultima)
   }
-  if (filtros?.carreraOtra) {
-    query = query.regexIMatch('carrera_otra', patronSinTildes(filtros.carreraOtra))
+
+  const { data: postulantes, count, error } = respuesta
+  if (error) {
+    console.error('[buscarPostulantes] No se pudo leer la página de postulantes:', error)
+    return vacia
   }
+  if (!postulantes || postulantes.length === 0) return { ...vacia, page }
 
-  const { data: postulantes } = await query
-
-  if (!postulantes || postulantes.length === 0) return []
-
-  // Cargar competencias en paralelo para cada postulante
+  const total = count ?? postulantes.length
   const postulanteIds = (postulantes as unknown[]).map((p) => (p as { id: string }).id)
 
-  const { data: perfilesTecnicos } = await supabase
-    .from('perfil_tecnico')
-    .select('postulante_id, postulante_competencia(competencia(id, nombre))')
-    .in('postulante_id', postulanteIds)
+  // Competencias (chips) y eneatipo, sólo para los candidatos de esta página.
+  // El eneatipo va con el cliente admin: las políticas RLS de test_eneagrama y
+  // test_eneagrama_dominante sólo dejan leer al dueño, así que con el cliente del
+  // reclutador el embed siempre volvía vacío. Es seguro porque los ids ya pasaron
+  // por la query de arriba, que sí corre bajo RLS y filtra perfil_en_busqueda.
+  const admin = createAdminClient()
+  const [{ data: perfilesTecnicos, error: errorCompetencias }, { data: tests, error: errorEneatipo }] =
+    await Promise.all([
+      supabase
+        .from('perfil_tecnico')
+        .select('postulante_id, postulante_competencia(competencia(nombre))')
+        .in('postulante_id', postulanteIds),
+      admin
+        .from('test_eneagrama')
+        .select('postulante_id, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre))')
+        .in('postulante_id', postulanteIds),
+    ])
+  // Si alguna falla la lista se muestra igual, sólo que sin chips o sin eneatipo.
+  if (errorCompetencias) console.error('[buscarPostulantes] No se pudieron leer las competencias:', errorCompetencias)
+  if (errorEneatipo) console.error('[buscarPostulantes] No se pudo leer el eneatipo:', errorEneatipo)
 
-  const competenciasPorPostulante: Record<string, { id: string; nombre: string }[]> = {}
+  const competenciasPorPostulante: Record<string, { nombre: string }[]> = {}
   for (const pt of (perfilesTecnicos ?? []) as unknown[]) {
     const p = pt as {
       postulante_id: string
-      postulante_competencia: { competencia: { id: string; nombre: string } | null }[]
+      postulante_competencia: { competencia: { nombre: string } | null }[]
     }
     competenciasPorPostulante[p.postulante_id] = p.postulante_competencia
       .map((pc) => pc.competencia)
-      .filter((c): c is { id: string; nombre: string } => c !== null)
+      .filter((c): c is { nombre: string } => c !== null)
   }
 
-  // Filtro por competencia: sólo candidatos que tienen esa competencia cargada
-  const filtrados = filtros?.competenciaId
-    ? (postulantes as unknown[]).filter((row) =>
-        (competenciasPorPostulante[(row as { id: string }).id] ?? []).some(
-          (c) => c.id === filtros.competenciaId,
-        ),
-      )
-    : (postulantes as unknown[])
+  const eneatipoPorPostulante: Record<string, { numero_eneatipo: number; nombre: string } | null> = {}
+  for (const t of (tests ?? []) as unknown[]) {
+    const r = t as {
+      postulante_id: string
+      test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
+    }
+    eneatipoPorPostulante[r.postulante_id] = r.test_eneagrama_dominante[0]?.eneatipo ?? null
+  }
 
-  return filtrados.map((row) => {
+  const items = (postulantes as unknown[]).map((row) => {
     const r = row as {
       id: string
       nombre_completo: string
@@ -140,12 +218,8 @@ export const buscarPostulantes = cache(async (filtros?: {
       perfil_en_busqueda: boolean
       localidad: LocalidadEmbed | null
       provincia: ProvinciaEmbed | null
-      test_eneagrama: {
-        tiene_empate_dominante: boolean
-        test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
-      } | null
     }
-    const primerDominante = r.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo ?? null
+    const primerDominante = eneatipoPorPostulante[r.id] ?? null
     return {
       id: r.id,
       nombre_completo: r.nombre_completo,
@@ -153,63 +227,74 @@ export const buscarPostulantes = cache(async (filtros?: {
       perfil_en_busqueda: r.perfil_en_busqueda,
       eneatipo_numero: primerDominante?.numero_eneatipo ?? null,
       eneatipo_nombre: primerDominante?.nombre ?? null,
-      competencias: (competenciasPorPostulante[r.id] ?? []).map((c) => ({ nombre: c.nombre })),
+      competencias: competenciasPorPostulante[r.id] ?? [],
       nombre_provincia: r.provincia?.nombre ?? null,
       nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
+
+  return { items, total, page, pageCount: Math.max(1, Math.ceil(total / POSTULANTES_POR_PAGINA)) }
 })
 
 /** Detalle de un postulante — con lógica de contacto */
 export async function getPostulanteDetalle(postulanteId: string): Promise<PostulanteDetalle | null> {
-  const session = await verifySession()
-  const supabase = await createClient()
+  // Sin reclutadorId no hay puestos propios a los que el postulante pudiera aplicar
+  const reclutadorId = await getReclutadorId()
   const admin = createAdminClient()
 
-  // Load the recruiter's profile first to check if the applicant posted to one of their jobs
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  const reclutadorId = reclutador ? (reclutador as { id: string }).id : null
-
-  // Check if this applicant posted to one of the recruiter's jobs
-  let postuloAlReclutador = false
-  if (reclutadorId) {
-    const { data: puestosRec } = await supabase
-      .from('puesto')
-      .select('id')
-      .eq('reclutador_id', reclutadorId)
-    const puestoIds = (puestosRec ?? []).map((r: unknown) => (r as { id: string }).id)
-
-    if (puestoIds.length > 0) {
-      const { data: postulacion } = await admin
-        .from('postulacion')
-        .select('id')
-        .eq('postulante_id', postulanteId)
-        .in('puesto_id', puestoIds)
-        .limit(1)
-        .maybeSingle()
-      if (postulacion) postuloAlReclutador = true
-    }
-  }
-
-  // Visible if: actively searching OR posted to one of the recruiter's jobs
-  // Use admin to bypass RLS when reading another user's profile
-  const { data: postulante } = await admin
-    .from('perfil_postulante')
-    .select(`
-      id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda,
-      telefono, enlace_linkedin, portfolio, ultima_conexion,
-      usuario(email), provincia(nombre), localidad(nombre, departamento(nombre)),
-      test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
-    `)
-    .eq('id', postulanteId)
-    .single()
+  // Una sola ronda: perfil, perfil técnico con sus hijos, informe con su anexo y
+  // si el postulante aplicó a un puesto de este reclutador. El acceso (en búsqueda
+  // o postuló) se decide en memoria. Admin en todo: lee el perfil de otro usuario.
+  const [{ data: postulante }, { data: pt }, { data: informe }, { data: postulacionPropia }] = await Promise.all([
+    admin
+      .from('perfil_postulante')
+      .select(`
+        id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda,
+        telefono, enlace_linkedin, portfolio, ultima_conexion,
+        usuario(email), provincia(nombre), localidad(nombre, departamento(nombre)),
+        test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
+      `)
+      .eq('id', postulanteId)
+      .single(),
+    // `descripcion` (experiencia_laboral) son las tareas del puesto: es lo que deja ver
+    // qué hizo realmente el candidato, y el perfil propio del postulante ya la muestra.
+    admin
+      .from('perfil_tecnico')
+      .select(`
+        id,
+        formacion_academica(titulo, institucion, fecha_graduacion),
+        curso(nombre, institucion, fecha_fin, duracion_horas, url_credencial),
+        experiencia_laboral(puesto, empresa, fecha_inicio, fecha_fin, descripcion),
+        idioma(nombre, nivel_idioma),
+        postulante_competencia(competencia(nombre))
+      `)
+      .eq('postulante_id', postulanteId)
+      .order('fecha_graduacion', { referencedTable: 'formacion_academica', ascending: false, nullsFirst: false })
+      .order('fecha_fin', { referencedTable: 'curso', ascending: false })
+      .order('fecha_inicio', { referencedTable: 'experiencia_laboral', ascending: false })
+      .maybeSingle(),
+    // informe_anexo.informe_id es UNIQUE: el embed vuelve como objeto (o null), no array
+    admin
+      .from('informe_personalidad')
+      .select('id, contenido_json, estado_informe, informe_anexo(contenido)')
+      .eq('postulante_id', postulanteId)
+      .eq('estado_informe', 'LISTO')
+      .maybeSingle(),
+    // ¿Aplicó a algún puesto de este reclutador? Sin filtro de baja, como antes.
+    reclutadorId
+      ? admin
+          .from('postulacion')
+          .select('id, puesto!inner(reclutador_id)')
+          .eq('postulante_id', postulanteId)
+          .eq('puesto.reclutador_id', reclutadorId)
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
 
   if (!postulante) return null
+
+  const postuloAlReclutador = !!postulacionPropia
 
   const p = postulante as {
     id: string
@@ -236,84 +321,28 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
   // Contact is released if searching actively or if they applied to this recruiter's jobs
   const contactoLiberado = p.perfil_en_busqueda || postuloAlReclutador
 
-  // Perfil técnico — admin to bypass RLS
-  const { data: pt } = await admin
-    .from('perfil_tecnico')
-    .select('id')
-    .eq('postulante_id', postulanteId)
-    .maybeSingle()
+  const tecnico = pt as {
+    formacion_academica: PostulanteDetalle['formaciones']
+    curso: PostulanteDetalle['cursos']
+    experiencia_laboral: PostulanteDetalle['experiencias']
+    idioma: PostulanteDetalle['idiomas']
+    postulante_competencia: { competencia: { nombre: string } | null }[]
+  } | null
+  const formaciones = tecnico?.formacion_academica ?? []
+  const cursos = tecnico?.curso ?? []
+  const experiencias = tecnico?.experiencia_laboral ?? []
+  const idiomas = tecnico?.idioma ?? []
+  const competencias = (tecnico?.postulante_competencia ?? [])
+    .map((c) => c.competencia)
+    .filter((c): c is { nombre: string } => c !== null)
 
-  let formaciones: PostulanteDetalle['formaciones'] = []
-  let cursos: PostulanteDetalle['cursos'] = []
-  let experiencias: PostulanteDetalle['experiencias'] = []
-  let idiomas: PostulanteDetalle['idiomas'] = []
-
-  if (pt) {
-    const ptId = (pt as { id: string }).id
-    const [f, cu, e, i] = await Promise.all([
-      admin
-        .from('formacion_academica')
-        .select('titulo, institucion, fecha_graduacion')
-        .eq('perfil_tecnico_id', ptId)
-        .order('fecha_graduacion', { ascending: false, nullsFirst: false }),
-      admin
-        .from('curso')
-        .select('nombre, institucion, fecha_fin, duracion_horas, url_credencial')
-        .eq('perfil_tecnico_id', ptId)
-        .order('fecha_fin', { ascending: false }),
-      // `descripcion` son las tareas del puesto: es lo que deja ver qué hizo
-      // realmente el candidato, y el perfil propio del postulante ya la muestra.
-      admin
-        .from('experiencia_laboral')
-        .select('puesto, empresa, fecha_inicio, fecha_fin, descripcion')
-        .eq('perfil_tecnico_id', ptId)
-        .order('fecha_inicio', { ascending: false }),
-      admin
-        .from('idioma')
-        .select('nombre, nivel_idioma')
-        .eq('perfil_tecnico_id', ptId),
-    ])
-    formaciones = (f.data ?? []) as typeof formaciones
-    cursos = (cu.data ?? []) as typeof cursos
-    experiencias = (e.data ?? []) as typeof experiencias
-    idiomas = (i.data ?? []) as typeof idiomas
-  }
-
-  // Informe: visible if searchable OR applied to this recruiter's jobs — admin to bypass RLS
-  let informeContenido: InformePersonalidadJSON | null = null
-  let anexo: AnexoReclutador | null = null
-  if (p.perfil_en_busqueda || postuloAlReclutador) {
-    const { data: informe } = await admin
-      .from('informe_personalidad')
-      .select('id, contenido_json, estado_informe')
-      .eq('postulante_id', postulanteId)
-      .eq('estado_informe', 'LISTO')
-      .maybeSingle()
-    const informeTyped = informe as { id: string; contenido_json: InformePersonalidadJSON | null } | null
-    informeContenido = informeTyped?.contenido_json ?? null
-
-    if (informeTyped) {
-      const { data: filaAnexo } = await admin
-        .from('informe_anexo')
-        .select('contenido')
-        .eq('informe_id', informeTyped.id)
-        .maybeSingle()
-      anexo = (filaAnexo?.contenido as AnexoReclutador | undefined) ?? null
-    }
-  }
-
-  // Competencias del postulante — admin to bypass RLS
-  let competencias: { nombre: string }[] = []
-  if (pt) {
-    const ptId = (pt as { id: string }).id
-    const { data: comps } = await admin
-      .from('postulante_competencia')
-      .select('competencia(nombre)')
-      .eq('perfil_tecnico_id', ptId)
-    competencias = (comps ?? [])
-      .map((c: unknown) => (c as { competencia: { nombre: string } | null }).competencia)
-      .filter((c): c is { nombre: string } => c !== null)
-  }
+  // Informe: el gate de arriba ya garantiza que es visible (en búsqueda o postuló)
+  const informeTyped = informe as {
+    contenido_json: InformePersonalidadJSON | null
+    informe_anexo: { contenido: AnexoReclutador } | null
+  } | null
+  const informeContenido: InformePersonalidadJSON | null = informeTyped?.contenido_json ?? null
+  const anexo: AnexoReclutador | null = informeTyped?.informe_anexo?.contenido ?? null
 
   return {
     id: p.id,
@@ -355,19 +384,10 @@ export type NotaReclutador = {
 export const getTodasLasNotasReclutador = cache(async (filters?: {
   candidatoId?: string
 }): Promise<NotaReclutador[]> => {
-  const session = await verifySession()
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return []
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return []
-
-  const reclutadorId = (reclutador as { id: string }).id
-
   let query = supabase
     .from('nota_privada')
     .select(`
@@ -420,21 +440,14 @@ export const getMotivosNoAvanzar = cache(async (postulanteIds: string[]) => {
   const mapa = new Map<string, string>()
   if (postulanteIds.length === 0) return mapa
 
-  const session = await verifySession()
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return mapa
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return mapa
-
   const { data } = await supabase
     .from('nota_privada')
     .select('contenido, postulante_id, puesto_id, fecha_creacion')
-    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .eq('reclutador_id', reclutadorId)
     .in('postulante_id', postulanteIds)
     .like('contenido', `${PREFIJO_NO_AVANZAR}%`)
     .order('fecha_creacion', { ascending: false })
@@ -454,21 +467,14 @@ export const getMotivosNoAvanzar = cache(async (postulanteIds: string[]) => {
 
 /** Notas privadas del reclutador para un postulante */
 export const getNotasPrivadas = cache(async (postulanteId: string) => {
-  const session = await verifySession()
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return []
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return []
-
   const { data } = await supabase
     .from('nota_privada')
     .select('id, contenido, fecha_creacion, updated_at, puesto_id, puesto(titulo_puesto)')
-    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .eq('reclutador_id', reclutadorId)
     .eq('postulante_id', postulanteId)
     .order('updated_at', { ascending: false })
 

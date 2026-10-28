@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { getNotasPrivadas } from './queries'
 import type { ActionResult } from '@/lib/types/domain'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
@@ -15,17 +15,6 @@ export type NotaData = {
   updated_at: string
   puesto_id: string | null
   titulo_puesto: string | null
-}
-
-async function getReclutadorId(): Promise<string | null> {
-  const session = await verifySession()
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-  return data ? (data as { id: string }).id : null
 }
 
 export async function crearNota(

@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import {
   CARGA_HORARIA,
@@ -54,6 +54,13 @@ type LocalidadEmbed = {
   departamento: DepartamentoEmbed | null
 }
 
+/** Embeds de getPuestoById: además de los nombres, los ids de la cadena. */
+type DepartamentoConIds = DepartamentoEmbed & { id: string; provincia_id: string }
+type LocalidadConIds = { nombre: string; departamento: DepartamentoConIds | null }
+
+/** Provincia y departamento desde los que se arma el selector de ubicación al editar. */
+export type UbicacionRef = { provinciaId: string; departamentoId: string }
+
 /** Fila embebida de puesto_carrera con el nombre de la carrera resuelto. */
 type PuestoCarreraRow = { carrera_id: string; carrera: { nombre: string } | null }
 
@@ -75,33 +82,45 @@ export type PuestoConContacto = PuestoItem & {
  *
  * El ciclo vigente es el `historial_puesto` más reciente, esté abierto o cerrado
  * (mismo criterio que `es_ciclo_actual` en getPostulacionesRecibidas).
+ *
+ * Si el llamador ya resolvió los ciclos (getCiclosVigentes), los pasa en `ciclos`
+ * y se evita releer historial_puesto. Los puestos sin ciclo en el mapa no cuentan.
  */
 export async function getConteoPostulacionesCicloActual(
   puestoIds: string[],
+  ciclos?: Map<string, Pick<CicloVigente, 'id'>>,
 ): Promise<Map<string, number>> {
   const conteo = new Map<string, number>()
   if (puestoIds.length === 0) return conteo
 
   const admin = createAdminClient()
 
-  const { data: ciclos } = await admin
-    .from('historial_puesto')
-    .select('id, puesto_id, fecha_inicio')
-    .in('puesto_id', puestoIds)
-    .order('fecha_inicio', { ascending: false })
+  let cicloIds: string[]
+  if (ciclos) {
+    cicloIds = puestoIds.flatMap((id) => ciclos.get(id)?.id ?? [])
+  } else {
+    const { data } = await admin
+      .from('historial_puesto')
+      .select('id, puesto_id, fecha_inicio')
+      .in('puesto_id', puestoIds)
+      .order('fecha_inicio', { ascending: false })
 
-  const cicloActualPorPuesto = new Map<string, string>()
-  for (const c of (ciclos ?? []) as { id: string; puesto_id: string }[]) {
-    if (!cicloActualPorPuesto.has(c.puesto_id)) cicloActualPorPuesto.set(c.puesto_id, c.id)
+    const cicloActualPorPuesto = new Map<string, string>()
+    for (const c of (data ?? []) as { id: string; puesto_id: string }[]) {
+      if (!cicloActualPorPuesto.has(c.puesto_id)) cicloActualPorPuesto.set(c.puesto_id, c.id)
+    }
+    cicloIds = [...cicloActualPorPuesto.values()]
   }
+  if (cicloIds.length === 0) return conteo
 
+  // La FK compuesta (historial_puesto_id, puesto_id) garantiza que cada ciclo
+  // pertenece a su puesto: filtrar por ciclo basta, sin cruzar en JS.
   const { data: postulaciones } = await admin
     .from('postulacion')
-    .select('puesto_id, historial_puesto_id')
-    .in('puesto_id', puestoIds)
+    .select('puesto_id')
+    .in('historial_puesto_id', cicloIds)
 
-  for (const p of (postulaciones ?? []) as { puesto_id: string; historial_puesto_id: string }[]) {
-    if (cicloActualPorPuesto.get(p.puesto_id) !== p.historial_puesto_id) continue
+  for (const p of (postulaciones ?? []) as { puesto_id: string }[]) {
     conteo.set(p.puesto_id, (conteo.get(p.puesto_id) ?? 0) + 1)
   }
 
@@ -109,7 +128,7 @@ export async function getConteoPostulacionesCicloActual(
 }
 
 /** Ciclo vigente de un puesto: el más reciente, esté abierto (`fin: null`) o cerrado. */
-export type CicloVigente = { inicio: string; fin: string | null }
+export type CicloVigente = { id: string; inicio: string; fin: string | null }
 
 /**
  * Último ciclo de cada puesto, en una sola consulta.
@@ -125,88 +144,61 @@ export async function getCiclosVigentes(puestoIds: string[]): Promise<Map<string
   const admin = createAdminClient()
   const { data } = await admin
     .from('historial_puesto')
-    .select('puesto_id, fecha_inicio, fecha_fin')
+    .select('id, puesto_id, fecha_inicio, fecha_fin')
     .in('puesto_id', puestoIds)
     .order('fecha_inicio', { ascending: false })
 
-  for (const c of (data ?? []) as { puesto_id: string; fecha_inicio: string; fecha_fin: string | null }[]) {
+  for (const c of (data ?? []) as { id: string; puesto_id: string; fecha_inicio: string; fecha_fin: string | null }[]) {
     if (vigentes.has(c.puesto_id)) continue
-    vigentes.set(c.puesto_id, { inicio: c.fecha_inicio, fin: c.fecha_fin })
+    vigentes.set(c.puesto_id, { id: c.id, inicio: c.fecha_inicio, fin: c.fecha_fin })
   }
 
   return vigentes
 }
 
+/**
+ * Fila liviana de la lista "Mis puestos": sólo lo que leen la tabla de puestos y
+ * el selector del asistente. El detalle completo sale de getPuestoById.
+ */
+export type PuestoLista = Pick<
+  PuestoItem,
+  | 'id' | 'titulo_puesto' | 'activo' | 'empresa_id' | 'fecha_publicacion'
+  | 'fecha_ultima_actividad' | 'nombre_empresa' | 'nombre_sector'
+>
+
 /** Puestos publicados por el reclutador actual (incluye activos e inactivos) */
-export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psicologico_deseado: string | null })[]> => {
-  const session = await verifySession()
+export const getMisPuestos = cache(async (): Promise<PuestoLista[]> => {
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return []
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return []
-
   const { data } = await supabase
     .from('puesto')
     .select(`
-      id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
-      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, departamento_id, localidad_id, perfil_psicologico_deseado,
-      empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      departamento(nombre, provincia(nombre)),
-      localidad(nombre, departamento(nombre, provincia(nombre)))
+      id, titulo_puesto, activo, fecha_publicacion, fecha_ultima_actividad, empresa_id,
+      empresa(nombre_empresa), sector_industrial(nombre_sector)
     `)
-    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .eq('reclutador_id', reclutadorId)
     .is('fecha_baja_puesto', null)
     .order('fecha_publicacion', { ascending: false })
 
   return (data ?? []).map((row: unknown) => {
     const r = row as {
-      id: string; titulo_puesto: string; descripcion_texto: string | null
-      idioma: string; carga_horaria: string; ubicacion: string
-      nivel_experiencia: string | null; activo: boolean
-      fecha_publicacion: string; fecha_baja_puesto: string | null
-      fecha_ultima_actividad: string
-      empresa_id: string; sector_id: string | null
-      departamento_id: string | null
-      localidad_id: string | null
-      perfil_psicologico_deseado: string | null
+      id: string; titulo_puesto: string; activo: boolean
+      fecha_publicacion: string; fecha_ultima_actividad: string
+      empresa_id: string
       empresa: { nombre_empresa: string } | null
       sector_industrial: { nombre_sector: string } | null
-      puesto_carrera: PuestoCarreraRow[] | null
-      departamento: DepartamentoEmbed | null
-      localidad: LocalidadEmbed | null
     }
     return {
       id: r.id,
       titulo_puesto: r.titulo_puesto,
-      descripcion_texto: r.descripcion_texto,
-      idioma: r.idioma,
-      carga_horaria: r.carga_horaria,
-      ubicacion: r.ubicacion,
-      nivel_experiencia: r.nivel_experiencia,
       activo: r.activo,
       fecha_publicacion: r.fecha_publicacion,
-      fecha_baja_puesto: r.fecha_baja_puesto,
       fecha_ultima_actividad: r.fecha_ultima_actividad,
       empresa_id: r.empresa_id,
-      sector_id: r.sector_id,
-      departamento_id: r.departamento_id,
-      localidad_id: r.localidad_id,
-      perfil_psicologico_deseado: r.perfil_psicologico_deseado,
       nombre_empresa: r.empresa?.nombre_empresa,
       nombre_sector: r.sector_industrial?.nombre_sector,
-      carreras: mapCarreras(r.puesto_carrera),
-      // La cadena de la localidad manda cuando está cargada; si el puesto se
-      // detuvo en el departamento, sale de ahí.
-      nombre_provincia:
-        r.localidad?.departamento?.provincia?.nombre ?? r.departamento?.provincia?.nombre ?? null,
-      nombre_departamento: r.localidad?.departamento?.nombre ?? r.departamento?.nombre ?? null,
-      nombre_localidad: r.localidad?.nombre ?? null,
     }
   })
 })
@@ -214,18 +206,11 @@ export const getMisPuestos = cache(async (): Promise<(PuestoItem & { perfil_psic
 /** Detalle de un puesto propio del reclutador actual (incluye perfil_psicologico_deseado) */
 export const getPuestoById = cache(async (
   puestoId: string
-): Promise<(PuestoItem & { perfil_psicologico_deseado: string | null }) | null> => {
-  const session = await verifySession()
+): Promise<(PuestoItem & { perfil_psicologico_deseado: string | null; ubicacion_ref: UbicacionRef | null }) | null> => {
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return null
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return null
-
   const { data } = await supabase
     .from('puesto')
     .select(`
@@ -233,11 +218,11 @@ export const getPuestoById = cache(async (
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
       empresa_id, sector_id, departamento_id, localidad_id, perfil_psicologico_deseado,
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      departamento(nombre, provincia(nombre)),
-      localidad(nombre, departamento(nombre, provincia(nombre)))
+      departamento(id, nombre, provincia_id, provincia(nombre)),
+      localidad(nombre, departamento(id, nombre, provincia_id, provincia(nombre)))
     `)
     .eq('id', puestoId)
-    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .eq('reclutador_id', reclutadorId)
     .is('fecha_baja_puesto', null)
     .maybeSingle()
 
@@ -256,9 +241,16 @@ export const getPuestoById = cache(async (
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
     puesto_carrera: PuestoCarreraRow[] | null
-    departamento: DepartamentoEmbed | null
-    localidad: LocalidadEmbed | null
+    departamento: DepartamentoConIds | null
+    localidad: LocalidadConIds | null
   }
+
+  // Mismo criterio que getUbicacionInicial: manda la cadena de la localidad;
+  // sin localidad, el departamento guardado.
+  const depRef = r.localidad_id ? r.localidad?.departamento : r.departamento
+  const ubicacion_ref: UbicacionRef | null = depRef
+    ? { provinciaId: depRef.provincia_id, departamentoId: depRef.id }
+    : null
 
   return {
     id: r.id,
@@ -286,6 +278,7 @@ export const getPuestoById = cache(async (
       r.localidad?.departamento?.provincia?.nombre ?? r.departamento?.provincia?.nombre ?? null,
     nombre_departamento: r.localidad?.departamento?.nombre ?? r.departamento?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
+    ubicacion_ref,
   }
 })
 
@@ -315,25 +308,10 @@ export type ContratacionHistorial = {
 export const getContratacionesDePuesto = cache(async (
   puestoId: string,
 ): Promise<ContratacionHistorial[]> => {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return []
-
-  // Verificar propiedad del puesto
-  const { data: puesto } = await supabase
-    .from('puesto')
-    .select('id')
-    .eq('id', puestoId)
-    .eq('reclutador_id', (reclutador as { id: string }).id)
-    .maybeSingle()
-
+  // Única autorización antes de leer con el cliente admin: getPuestoById valida
+  // propiedad y está cacheado por request (el detalle del puesto ya lo pidió).
+  // Como getPuestoById excluye las bajas lógicas, un puesto eliminado devuelve [].
+  const puesto = await getPuestoById(puestoId)
   if (!puesto) return []
 
   const admin = createAdminClient()
@@ -693,85 +671,81 @@ export const getMisPostulacionesPuestoIds = cache(async (): Promise<Set<string>>
  * un puesto no arrastre candidatos viejos al tablero.
  */
 export const getPostulacionesRecibidas = cache(async () => {
-  const session = await verifySession()
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return []
+
   const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return []
 
   // Step 1: load the recruiter's job posts (excluding logically deleted ones)
   const { data: puestos } = await supabase
     .from('puesto')
     .select('id')
-    .eq('reclutador_id', (reclutador as { id: string }).id)
+    .eq('reclutador_id', reclutadorId)
     .is('fecha_baja_puesto', null)
 
   const puestoIds = (puestos ?? []).map((p: unknown) => (p as { id: string }).id)
   if (puestoIds.length === 0) return []
 
-  const reclutadorId = (reclutador as { id: string }).id
-
-  // Step 2: load applications for those posts
+  // Step 2: load applications for those posts and, in parallel, the ciclos
+  // (historial_puesto sólo depende de puestoIds).
   const admin = createAdminClient()
-  const { data: postulaciones } = await admin
-    .from('postulacion')
-    .select(`
-      id, estado, marca, fecha_postulacion, updated_at, postulante_id, puesto_id,
-      historial_puesto_id, motivo_descarte,
-      puesto(id, titulo_puesto, activo, empresa_id, empresa(nombre_empresa)),
-      perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
-        carrera_otra, carrera:carrera_id(nombre), localidad_id, provincia_id,
-        provincia(nombre),
-        localidad(nombre, departamento_id, departamento(nombre)),
-        usuario(email))
-    `)
-    .in('puesto_id', puestoIds)
-    .order('fecha_postulacion', { ascending: false })
-
-  // Step 2b: ciclo vigente de cada puesto. Viene ordenado por fecha_inicio desc,
-  // así que el primero de cada puesto es el actual (esté abierto o cerrado: un
-  // puesto cerrado sigue teniendo su último ciclo como el relevante).
-  const { data: ciclos } = await admin
-    .from('historial_puesto')
-    .select('id, puesto_id, fecha_inicio')
-    .in('puesto_id', puestoIds)
-    .order('fecha_inicio', { ascending: false })
+  const [{ data: postulaciones }, { data: ciclos }] = await Promise.all([
+    admin
+      .from('postulacion')
+      .select(`
+        id, estado, marca, fecha_postulacion, updated_at, postulante_id, puesto_id,
+        historial_puesto_id, motivo_descarte,
+        puesto(id, titulo_puesto, activo, empresa_id, empresa(nombre_empresa)),
+        perfil_postulante(id, nombre_completo, perfil_en_busqueda, telefono, ultima_conexion,
+          carrera_otra, carrera:carrera_id(nombre), localidad_id, provincia_id,
+          provincia(nombre),
+          localidad(nombre, departamento_id, departamento(nombre)),
+          usuario(email))
+      `)
+      .in('puesto_id', puestoIds)
+      .order('fecha_postulacion', { ascending: false }),
+    // Step 2b: ciclo vigente de cada puesto. Viene ordenado por fecha_inicio desc,
+    // así que el primero de cada puesto es el actual (esté abierto o cerrado: un
+    // puesto cerrado sigue teniendo su último ciclo como el relevante).
+    admin
+      .from('historial_puesto')
+      .select('id, puesto_id, fecha_inicio')
+      .in('puesto_id', puestoIds)
+      .order('fecha_inicio', { ascending: false }),
+  ])
 
   const cicloActualPorPuesto = new Map<string, string>()
   for (const c of (ciclos ?? []) as { id: string; puesto_id: string }[]) {
     if (!cicloActualPorPuesto.has(c.puesto_id)) cicloActualPorPuesto.set(c.puesto_id, c.id)
   }
 
-  // Step 3: load note counts per applicant for this recruiter
-  const postulanteIds = (postulaciones ?? []).map(
-    (r: unknown) => (r as { postulante_id: string }).postulante_id,
+  // Step 3: note counts per applicant for this recruiter (user client, RLS) and
+  // technical skills per applicant, in parallel. Un postulante con varias
+  // postulaciones se pide una sola vez.
+  const postulanteIds = Array.from(
+    new Set(
+      (postulaciones ?? []).map((r: unknown) => (r as { postulante_id: string }).postulante_id),
+    ),
   )
   const notaCountMap = new Map<string, number>()
+  const habilidadesPorPostulante = new Map<string, string[]>()
   if (postulanteIds.length > 0) {
-    const { data: notas } = await supabase
-      .from('nota_privada')
-      .select('postulante_id')
-      .eq('reclutador_id', reclutadorId)
-      .in('postulante_id', postulanteIds)
+    const [{ data: notas }, { data: perfilesTecnicos }] = await Promise.all([
+      supabase
+        .from('nota_privada')
+        .select('postulante_id')
+        .eq('reclutador_id', reclutadorId)
+        .in('postulante_id', postulanteIds),
+      admin
+        .from('perfil_tecnico')
+        .select('postulante_id, postulante_competencia(competencia(nombre))')
+        .in('postulante_id', postulanteIds),
+    ])
 
     for (const n of notas ?? []) {
       const row = n as { postulante_id: string }
       notaCountMap.set(row.postulante_id, (notaCountMap.get(row.postulante_id) ?? 0) + 1)
     }
-  }
-
-  // Step 3b: load technical skills per applicant
-  const habilidadesPorPostulante = new Map<string, string[]>()
-  if (postulanteIds.length > 0) {
-    const { data: perfilesTecnicos } = await admin
-      .from('perfil_tecnico')
-      .select('postulante_id, postulante_competencia(competencia(nombre))')
-      .in('postulante_id', postulanteIds)
 
     for (const pt of (perfilesTecnicos ?? []) as unknown[]) {
       const p = pt as {
@@ -850,6 +824,106 @@ export const getPostulacionesRecibidas = cache(async () => {
     }
   })
 })
+
+/** Postulación marcada ("Avanza" o "En duda") de un puesto, con lo justo para el asistente IA. */
+export type PreseleccionadoItem = {
+  id: string
+  postulante_id: string
+  nombre_completo: string | undefined
+  contacto: { email: string | null }
+  fecha_postulacion: string
+  marca: MarcaPostulacion
+  estado: string
+}
+
+/**
+ * Postulaciones marcadas de un puesto del reclutador actual. Mismas filas que
+ * `getPostulacionesRecibidas` filtradas por puesto y marca (incluye ciclos
+ * anteriores), pero sin traer el resto del tablero. El inner join con `puesto`
+ * reemplaza el paso "puestos del reclutador, sin baja lógica": un puesto ajeno
+ * o dado de baja devuelve [].
+ */
+export const getPreseleccionadosDePuesto = cache(
+  async (puestoId: string): Promise<PreseleccionadoItem[]> => {
+    const reclutadorId = await getReclutadorId()
+    if (!reclutadorId) return []
+
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('postulacion')
+      .select(`
+        id, estado, marca, fecha_postulacion, postulante_id,
+        puesto!inner(id),
+        perfil_postulante(nombre_completo, usuario(email))
+      `)
+      .eq('puesto_id', puestoId)
+      .eq('puesto.reclutador_id', reclutadorId)
+      .is('puesto.fecha_baja_puesto', null)
+      .not('marca', 'is', null)
+      .order('fecha_postulacion', { ascending: false })
+
+    return ((data ?? []) as unknown[]).map((row) => {
+      const r = row as {
+        id: string; estado: string; marca: MarcaPostulacion
+        fecha_postulacion: string; postulante_id: string
+        perfil_postulante: {
+          nombre_completo: string
+          usuario: { email: string } | null
+        } | null
+      }
+      return {
+        id: r.id,
+        postulante_id: r.postulante_id,
+        nombre_completo: r.perfil_postulante?.nombre_completo,
+        contacto: { email: r.perfil_postulante?.usuario?.email ?? null },
+        fecha_postulacion: r.fecha_postulacion,
+        marca: r.marca,
+        estado: r.estado,
+      }
+    })
+  },
+)
+
+/** Postulación mínima del reclutador, para vincular notas con el puesto al que se postuló el candidato. */
+export type PostulacionResumen = {
+  id: string
+  puesto_id: string
+  postulante_id: string
+  titulo_puesto: string
+}
+
+/**
+ * Misma cobertura que `getPostulacionesRecibidas` (todas las postulaciones de los
+ * puestos del reclutador sin baja lógica, de todos los ciclos, más nuevas primero)
+ * pero sólo con los campos que necesita la vista de notas.
+ */
+export const getPostulacionesResumenReclutador = cache(
+  async (): Promise<PostulacionResumen[]> => {
+    const reclutadorId = await getReclutadorId()
+    if (!reclutadorId) return []
+
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('postulacion')
+      .select('id, puesto_id, postulante_id, puesto!inner(titulo_puesto)')
+      .eq('puesto.reclutador_id', reclutadorId)
+      .is('puesto.fecha_baja_puesto', null)
+      .order('fecha_postulacion', { ascending: false })
+
+    return ((data ?? []) as unknown[]).map((row) => {
+      const r = row as {
+        id: string; puesto_id: string; postulante_id: string
+        puesto: { titulo_puesto: string }
+      }
+      return {
+        id: r.id,
+        puesto_id: r.puesto_id,
+        postulante_id: r.postulante_id,
+        titulo_puesto: r.puesto.titulo_puesto,
+      }
+    })
+  },
+)
 
 // ─── Perfil público del reclutador ───────────────────────────────────────────
 

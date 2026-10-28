@@ -4,7 +4,7 @@ import { SparklesIcon } from '@/components/icons'
 import { getMisPuestos } from '@/modules/puestos/queries'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { AsistenteChat } from './asistente-chat'
 import { requireEmpresaCargada } from '@/lib/guards'
 
@@ -38,25 +38,16 @@ export default async function AsistentePage({
     titulo_puesto: p.titulo_puesto,
   }))
 
-  // Verify session (redirects to login if unauthenticated)
-  const session = await verifySession()
-  void session
+  // Verifies the session too (redirects to login if unauthenticated)
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) redirect('/reclutador/postulantes')
 
   const supabase = await createClient()
   const admin = createAdminClient()
 
   // Verify the recruiter owns at least one job this candidate applied to.
   // Using admin client to bypass RLS — we do our own authorization check below.
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) redirect('/reclutador/postulantes')
-
-  const reclutadorId = (reclutador as { id: string }).id
-
+  // Unlike getMisPuestos, this does not filter soft-deleted jobs.
   const { data: puestosRec } = await supabase
     .from('puesto')
     .select('id')

@@ -32,8 +32,7 @@ import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import { AnexoReclutadorDisplay, InformeDisplay } from '@/modules/informe/informe-display'
 import { esFormatoAnterior } from '@/lib/types/informe'
 import { ubicacionLabel } from '@/lib/ubicacion'
-import { verifySession } from '@/lib/dal'
-import { createClient } from '@/lib/supabase/server'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { getFormularioDePuesto, getRespuestasDePostulacion } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas } from '@/modules/preselector/evaluador'
 import { NotasPanel } from './notas-panel'
@@ -51,6 +50,80 @@ type SearchParams = Promise<{ postulacion?: string; from?: string; puesto?: stri
 const ORIGENES: Record<string, { href: string; label: string }> = {
   notas: { href: '/reclutador/notas', label: 'Volver a mis notas' },
   postulaciones: { href: '/reclutador/postulaciones', label: 'Volver a las postulaciones' },
+}
+
+type ContextoPostulacion = {
+  motivoDescarte: string | null
+  respuestasFormulario: { preguntaTexto: string; respuestaTexto: string; fallidaCritica: boolean }[]
+}
+
+// Postulación-scoped data (motivo de descarte + respuestas del formulario preselector).
+// Guarded by ownership: the postulación must belong to this applicant AND to a job post
+// owned by the current recruiter — otherwise an arbitrary ?postulacion= id could leak
+// another candidate's confidential answers.
+async function cargarContextoPostulacion(
+  postulanteId: string,
+  postulacionId: string,
+): Promise<ContextoPostulacion> {
+  const vacio: ContextoPostulacion = { motivoDescarte: null, respuestasFormulario: [] }
+
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return vacio
+
+  const admin = (await import('@/lib/supabase/server-admin')).createAdminClient()
+  const { data: p } = await admin
+    .from('postulacion')
+    .select('estado, motivo_descarte, puesto_id, postulante_id, puesto(reclutador_id)')
+    .eq('id', postulacionId)
+    .maybeSingle()
+
+  if (!p) return vacio
+
+  const row = p as {
+    estado: string
+    motivo_descarte: string | null
+    puesto_id: string
+    postulante_id: string
+    puesto: { reclutador_id: string | null } | null
+  }
+  const pertenece = row.postulante_id === postulanteId && row.puesto?.reclutador_id === reclutadorId
+  if (!pertenece) return vacio
+
+  // Las dos escrituras y las lecturas del formulario son independientes: van juntas.
+  // - Ver el detalle cuenta como actividad del reclutador sobre el puesto (evita el
+  //   cierre automático), incluso si la postulación ya estaba en VISTO.
+  // - Auto-mark as VISTO when the recruiter opens the profile from the applications list.
+  //   Not the server action: it calls revalidatePath, which Next forbids during render.
+  const [, , formulario, respuestas] = await Promise.all([
+    marcarActividadPuesto(row.puesto_id),
+    row.estado === ESTADO_POSTULACION.ENVIADA ? marcarPostulacionVista(postulacionId) : undefined,
+    getFormularioDePuesto(row.puesto_id),
+    getRespuestasDePostulacion(postulacionId),
+  ])
+
+  if (!formulario || respuestas.length === 0) return { ...vacio, motivoDescarte: row.motivo_descarte }
+
+  const evaluacion = evaluarRespuestasCriticas(
+    formulario.preguntas.map((preg) => ({
+      id: preg.id,
+      texto: preg.texto,
+      esCritica: preg.esCritica,
+      opciones: preg.opciones.map((o) => ({ id: o.id, esValida: o.esValida })),
+    })),
+    respuestas.map((r) => ({ preguntaId: r.preguntaId, opcionId: r.opcionId })),
+  )
+  const falladas = new Set(
+    evaluacion.aprobado ? [] : evaluacion.preguntasFalladas.map((f) => f.preguntaId),
+  )
+
+  return {
+    motivoDescarte: row.motivo_descarte,
+    respuestasFormulario: respuestas.map((r) => ({
+      preguntaTexto: r.preguntaTexto,
+      respuestaTexto: r.opcionTexto ?? r.textoLibre ?? '—',
+      fallidaCritica: falladas.has(r.preguntaId),
+    })),
+  }
 }
 
 export default async function PostulanteDetallePage({
@@ -74,90 +147,15 @@ export default async function PostulanteDetallePage({
           label: 'Volver a la búsqueda',
         })
 
-  const [postulante, notas] = await Promise.all([
+  // El contexto de la postulación solo depende del id de la URL y del reclutador,
+  // no del postulante: corre en paralelo con el detalle y las notas.
+  const [postulante, notas, { motivoDescarte, respuestasFormulario }] = await Promise.all([
     getPostulanteDetalle(id),
     getNotasPrivadas(id),
+    postulacionId
+      ? cargarContextoPostulacion(id, postulacionId)
+      : Promise.resolve<ContextoPostulacion>({ motivoDescarte: null, respuestasFormulario: [] }),
   ])
-
-  // Postulación-scoped data (motivo de descarte + respuestas del formulario preselector).
-  // Guarded by ownership: the postulación must belong to this applicant AND to a job post
-  // owned by the current recruiter — otherwise an arbitrary ?postulacion= id could leak
-  // another candidate's confidential answers.
-  let motivoDescarte: string | null = null
-  let respuestasFormulario: { preguntaTexto: string; respuestaTexto: string; fallidaCritica: boolean }[] = []
-
-  if (postulacionId) {
-    const session = await verifySession()
-    const supabase = await createClient()
-    const admin = (await import('@/lib/supabase/server-admin')).createAdminClient()
-
-    const { data: reclutador } = await supabase
-      .from('perfil_reclutador')
-      .select('id')
-      .eq('usuario_id', session.id)
-      .single()
-
-    if (reclutador) {
-      const reclutadorId = (reclutador as { id: string }).id
-      const { data: p } = await admin
-        .from('postulacion')
-        .select('estado, motivo_descarte, puesto_id, postulante_id, puesto(reclutador_id)')
-        .eq('id', postulacionId)
-        .maybeSingle()
-
-      if (p) {
-        const row = p as {
-          estado: string
-          motivo_descarte: string | null
-          puesto_id: string
-          postulante_id: string
-          puesto: { reclutador_id: string | null } | null
-        }
-        const pertenece = row.postulante_id === id && row.puesto?.reclutador_id === reclutadorId
-
-        if (pertenece) {
-          motivoDescarte = row.motivo_descarte
-
-          // Ver el detalle de una postulación cuenta como actividad del
-          // reclutador sobre el puesto (evita el cierre automático), incluso
-          // cuando la postulación ya estaba en VISTO y no cambia de estado.
-          await marcarActividadPuesto(row.puesto_id)
-
-          // Auto-mark as VISTO when the recruiter opens the profile from the applications list.
-          // Not the server action: it calls revalidatePath, which Next forbids during render.
-          if (row.estado === ESTADO_POSTULACION.ENVIADA) {
-            await marcarPostulacionVista(postulacionId)
-          }
-
-          const [formulario, respuestas] = await Promise.all([
-            getFormularioDePuesto(row.puesto_id),
-            getRespuestasDePostulacion(postulacionId),
-          ])
-
-          if (formulario && respuestas.length > 0) {
-            const evaluacion = evaluarRespuestasCriticas(
-              formulario.preguntas.map((preg) => ({
-                id: preg.id,
-                texto: preg.texto,
-                esCritica: preg.esCritica,
-                opciones: preg.opciones.map((o) => ({ id: o.id, esValida: o.esValida })),
-              })),
-              respuestas.map((r) => ({ preguntaId: r.preguntaId, opcionId: r.opcionId })),
-            )
-            const falladas = new Set(
-              evaluacion.aprobado ? [] : evaluacion.preguntasFalladas.map((f) => f.preguntaId),
-            )
-
-            respuestasFormulario = respuestas.map((r) => ({
-              preguntaTexto: r.preguntaTexto,
-              respuestaTexto: r.opcionTexto ?? r.textoLibre ?? '—',
-              fallidaCritica: falladas.has(r.preguntaId),
-            }))
-          }
-        }
-      }
-    }
-  }
 
   if (!postulante) notFound()
 

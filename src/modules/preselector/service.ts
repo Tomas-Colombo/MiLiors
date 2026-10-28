@@ -59,39 +59,41 @@ export async function persistirFormularioPreselector(
 
   const formularioId = (formulario as { id: string }).id
 
-  for (let i = 0; i < input.preguntas.length; i++) {
-    const pregunta = input.preguntas[i]
+  // Los ids de las preguntas se generan acá (la tabla tiene DEFAULT
+  // gen_random_uuid(), pero así las opciones se enlazan sin esperar el
+  // `.select('id')` de cada insert): 2 inserts en lugar de hasta 1 + N.
+  const preguntas = input.preguntas.map((pregunta, i) => ({
+    id: crypto.randomUUID(),
+    formulario_id: formularioId,
+    texto: pregunta.texto,
+    tipo: pregunta.tipo,
+    es_critica: pregunta.esCritica,
+    orden: i,
+  }))
 
-    const { data: preguntaRow, error: preguntaError } = await supabase.from('pregunta_preselector')
-      .insert({
-        formulario_id: formularioId,
-        texto: pregunta.texto,
-        tipo: pregunta.tipo,
-        es_critica: pregunta.esCritica,
-        orden: i,
-      })
-      .select('id')
-      .single()
+  // El schema exige >= 1 pregunta; si no hubiera, antes tampoco se insertaba nada.
+  if (preguntas.length === 0) return { ok: true }
 
-    if (preguntaError || !preguntaRow) {
-      return { ok: false, error: 'No se pudo guardar una pregunta del formulario.' }
-    }
+  const { error: preguntasError } = await supabase.from('pregunta_preselector').insert(preguntas)
 
-    if (pregunta.opciones && pregunta.opciones.length > 0) {
-      const preguntaId = (preguntaRow as { id: string }).id
+  if (preguntasError) {
+    return { ok: false, error: 'No se pudo guardar una pregunta del formulario.' }
+  }
 
-      const { error: opcionesError } = await supabase.from('opcion_pregunta_preselector').insert(
-        pregunta.opciones.map((opcion, idx) => ({
-          pregunta_id: preguntaId,
-          texto: opcion.texto,
-          es_valida: opcion.esValida,
-          orden: idx,
-        }))
-      )
+  const opciones = input.preguntas.flatMap((pregunta, i) =>
+    (pregunta.opciones ?? []).map((opcion, idx) => ({
+      pregunta_id: preguntas[i].id,
+      texto: opcion.texto,
+      es_valida: opcion.esValida,
+      orden: idx,
+    }))
+  )
 
-      if (opcionesError) {
-        return { ok: false, error: 'No se pudieron guardar las opciones de una pregunta.' }
-      }
+  if (opciones.length > 0) {
+    const { error: opcionesError } = await supabase.from('opcion_pregunta_preselector').insert(opciones)
+
+    if (opcionesError) {
+      return { ok: false, error: 'No se pudieron guardar las opciones de una pregunta.' }
     }
   }
 

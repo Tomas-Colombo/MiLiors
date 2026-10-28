@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { puestoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 import type { TablesInsert } from '@/lib/types/database.types'
@@ -42,17 +42,8 @@ function parseCarreraIds(raw: FormDataEntryValue | null): string[] {
 
 // Helper: get reclutador_id for the current user
 async function getReclutadorContext(): Promise<{ reclutadorId: string } | null> {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!data) return null
-  return { reclutadorId: (data as { id: string }).id }
+  const reclutadorId = await getReclutadorId()
+  return reclutadorId ? { reclutadorId } : null
 }
 
 /**
@@ -93,18 +84,18 @@ async function registrarApertura(puestoId: string, empresaId: string, tituloPues
   const unAñoAtras = new Date()
   unAñoAtras.setFullYear(unAñoAtras.getFullYear() - 1)
 
+  // The company filter runs in SQL so only this company's openings are fetched.
+  // The title stays compared in JS: an ilike would treat % _ * in the title as wildcards.
   const { data: historiales } = await admin
     .from('historial_puesto')
-    .select('id, puesto(titulo_puesto, empresa_id)')
+    .select('id, puesto!inner(titulo_puesto)')
+    .eq('puesto.empresa_id', empresaId)
     .gte('fecha_inicio', unAñoAtras.toISOString())
 
   if (historiales) {
     const aperturasEmpresa = (historiales as unknown[]).filter((h) => {
-      const row = h as { puesto: { titulo_puesto: string; empresa_id: string } | null }
-      return (
-        row.puesto?.empresa_id === empresaId &&
-        row.puesto?.titulo_puesto?.toLowerCase() === tituloPuesto.toLowerCase()
-      )
+      const row = h as { puesto: { titulo_puesto: string } | null }
+      return row.puesto?.titulo_puesto?.toLowerCase() === tituloPuesto.toLowerCase()
     })
     if (aperturasEmpresa.length >= 3) {
       console.warn(
@@ -405,6 +396,9 @@ export async function editarPuesto(
 
   revalidatePath(`/reclutador/puestos/${puestoId}`)
   revalidatePath('/reclutador/puestos')
+  // El form sigue montado tras guardar: refrescar /editar actualiza el formulario
+  // de referencia del editor del preselector, que decide si hay cambios que enviar.
+  revalidatePath(`/reclutador/puestos/${puestoId}/editar`)
   return { success: true, data: undefined }
 }
 

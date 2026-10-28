@@ -1,9 +1,7 @@
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui'
-import { createClient } from '@/lib/supabase/server'
-import { verifySession } from '@/lib/dal'
 import { redirect } from 'next/navigation'
-import { getMisEmpresasBase } from '@/modules/empresas/queries'
+import { getMisEmpresasBase, getPerfilReclutador } from '@/modules/empresas/queries'
 import { QuickLinksReclutador } from './quick-links'
 import { MetricasSection } from './metricas-section'
 import { MetricasSkeleton } from './metricas-skeleton'
@@ -11,22 +9,14 @@ import { MetricasSkeleton } from './metricas-skeleton'
 export const metadata = { title: 'Inicio — MiLiors Reclutador' }
 
 export default async function ReclutadorDashboard() {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id, nombre_reclutador')
-    .eq('usuario_id', session.id)
-    .maybeSingle()
+  const rec = await getPerfilReclutador()
 
   // Sin ninguna empresa cargada no hay nada que gestionar: va al onboarding.
   const empresas = await getMisEmpresasBase()
-  if (!reclutador || empresas.length === 0) {
+  if (!rec || empresas.length === 0) {
     redirect('/reclutador/onboarding')
   }
 
-  const rec = reclutador as { id: string; nombre_reclutador: string }
   const empresasActivas = empresas.filter((e) => e.activa)
   const subtitulo =
     empresasActivas.length === 1

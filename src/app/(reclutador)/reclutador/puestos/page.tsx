@@ -80,8 +80,11 @@ export default async function MisPuestosPage({
 
   const { page, pageCount, slice } = paginar(visibles, pageParam)
 
-  // Sólo la página visible necesita el conteo de postulaciones.
-  const conteoPostulaciones = await getConteoPostulacionesCicloActual(slice.map((p) => p.id))
+  // Sólo la página visible necesita el conteo; reusa los ciclos ya resueltos.
+  const conteoPostulaciones = await getConteoPostulacionesCicloActual(
+    slice.map((p) => p.id),
+    ciclos,
+  )
 
   type Puesto = (typeof visibles)[number]
 

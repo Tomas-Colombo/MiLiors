@@ -1,8 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import type { ActionResult } from '@/lib/types/domain'
 
 export type RespuestaParaReclutador = {
@@ -20,17 +19,8 @@ export type RespuestaParaReclutador = {
 export async function getRespuestasParaReclutador(
   postulacionId: string,
 ): Promise<ActionResult<RespuestaParaReclutador[]>> {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
-  const reclutadorId = (reclutador as { id: string }).id
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
   const { data: postulacion } = await admin

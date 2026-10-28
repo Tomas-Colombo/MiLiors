@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { aiProvider } from '@/lib/ai'
 import { buildAsistentePrompts } from './prompts'
 import { cargarContextoCandidato } from '@/modules/seleccion/contexto-candidato'
@@ -14,21 +15,15 @@ export async function consultarAsistente(
   puestoId: string,
   pregunta: string
 ): Promise<ActionResult<{ respuesta: string }>> {
-  const session = await verifySession()
+  await verifySession()
   const supabase = await createClient()
   const admin = createAdminClient()
 
   if (!pregunta.trim()) return { success: false, error: 'Ingresá una pregunta.' }
 
   // Verify the recruiter owns the given position
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
-  const reclutadorId = (reclutador as { id: string }).id
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return { success: false, error: 'No autorizado.' }
 
   const { data: puesto } = await supabase
     .from('puesto')
