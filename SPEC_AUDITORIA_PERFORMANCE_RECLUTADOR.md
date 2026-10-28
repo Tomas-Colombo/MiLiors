@@ -3,7 +3,7 @@
 - **Proyecto:** MiLiors
 - **Alcance:** Zona del Reclutador (`src/app/(reclutador)/reclutador/**` y módulos asociados en `src/modules/**`, `src/lib/**`, `supabase/migrations/**`)
 - **Fecha:** 27 de Octubre de 2026
-- **Estado:** Propuesta técnica para revisión (Fase 1 — Diagnóstico y Especificación de Cambios)
+- **Estado:** Cerrada el 28 de Octubre de 2026 — ver [J. Estado Final de la Implementación](#j-estado-final-de-la-implementación)
 
 ---
 
@@ -805,12 +805,48 @@ function createMeasuredFetch() {
 
 Puedes usar esta lista como guía de verificación para aprobar o descartar cada punto antes de pasar al código:
 
-- [ ] **Paso 1 (`F-01` — P0):** Optimizar `registrarApertura` en `src/modules/puestos/actions.ts`.
-- [ ] **Paso 2 (`F-02` — P1):** Validar propiedad del reclutador en `src/modules/postulaciones/actions.ts` y unificar las llamadas en serie de `src/components/shared/marca-postulacion.tsx`.
-- [ ] **Paso 3 (`F-06` — P1):** Unificar lecturas cacheadas de `usuario` y `perfil_reclutador` en `src/lib/dal.ts` y reemplazar consultas duplicadas en `dashboard`, `puestos`, `postulantes` y `asistente`.
-- [ ] **Paso 4 (`F-03` — P1):** Paralelizar `getPostulacionesRecibidas`, deduplicar `postulanteIds` y separar queries ligeras para `PuestoAsistentePage` y `MisNotasPage`.
-- [ ] **Paso 5 (`F-05` — P1):** Aplanar el waterfall de `getPostulanteDetalle` y `PostulanteDetallePage`.
-- [ ] **Paso 6 (`F-07` — P2):** Batch inserts en `persistirFormularioPreselector` y detección de formulario sin cambios en `FormularioPreselectorEditor`.
-- [ ] **Paso 7 (`F-08`, `F-09`, `F-12` — P2/P3):** Optimizar `MisPuestosPage`, `getConteoPostulacionesCicloActual`, `getMisEmpresas`, `getDashboardMetrics`, `getContratacionesDePuesto` y `EditarPuestoPage`.
-- [ ] **Paso 8 (`F-04` — P1):** Paginación en SQL y corrección de `test_eneagrama` en `buscarPostulantes` (`src/modules/postulantes/queries.ts` y `reclutador/postulantes/page.tsx`).
-- [ ] **Paso 9 (`F-10`, `F-11` — P2):** Caché de catálogos estáticos, RPC `get_carreras_otras_unicas` y migración de índices compuestos.
+- [x] **Paso 1 (`F-01` — P0):** Optimizar `registrarApertura` en `src/modules/puestos/actions.ts`.
+- [x] **Paso 2 (`F-02` — P1):** Validar propiedad del reclutador en `src/modules/postulaciones/actions.ts` y unificar las llamadas en serie de `src/components/shared/marca-postulacion.tsx`.
+- [x] **Paso 3 (`F-06` — P1):** Unificar lecturas cacheadas de `usuario` y `perfil_reclutador` en `src/lib/dal.ts` y reemplazar consultas duplicadas en `dashboard`, `puestos`, `postulantes` y `asistente`.
+- [x] **Paso 4 (`F-03` — P1):** Paralelizar `getPostulacionesRecibidas`, deduplicar `postulanteIds` y separar queries ligeras para `PuestoAsistentePage` y `MisNotasPage`.
+- [x] **Paso 5 (`F-05` — P1):** Aplanar el waterfall de `getPostulanteDetalle` y `PostulanteDetallePage`.
+- [x] **Paso 6 (`F-07` — P2):** Batch inserts en `persistirFormularioPreselector` y detección de formulario sin cambios en `FormularioPreselectorEditor`.
+- [x] **Paso 7 (`F-08`, `F-09`, `F-12` — P2/P3):** Optimizar `MisPuestosPage`, `getConteoPostulacionesCicloActual`, `getMisEmpresas`, `getDashboardMetrics`, `getContratacionesDePuesto` y `EditarPuestoPage`.
+- [x] **Paso 8 (`F-04` — P1):** Paginación en SQL y corrección de `test_eneagrama` en `buscarPostulantes` (`src/modules/postulantes/queries.ts` y `reclutador/postulantes/page.tsx`).
+- [ ] **Paso 9 (`F-10`, `F-11` — P2):** ~~Caché de catálogos estáticos, RPC `get_carreras_otras_unicas` y migración de índices compuestos.~~ Descartado / pospuesto (ver sección J).
+
+---
+
+## J. Estado Final de la Implementación
+
+> Al implementar se verificó cada hallazgo contra el código y la base reales. Esta spec cita mal el código en varias secciones (umbrales, nombres de funciones, columnas y políticas que no existen); donde difiere, manda el código. Las correcciones quedaron aplicadas en la implementación.
+
+| ID | Estado | Commit | Nota |
+| :--- | :--- | :--- | :--- |
+| F-01 | Implementado | `45908e1` | Umbral real `>= 3` (la spec citaba `> 5`). El título se compara en JS: `ilike` trataría `%`, `_` y `*` como comodines. |
+| F-02 | Implementado | `31f9914` | — |
+| F-03 | Implementado | `45908e1` | La query de Notas corre en paralelo con las notas, no después. |
+| F-04 | Implementado | `45908e1` | Además corrige un bug funcional: el RLS de `test_eneagrama` ocultaba el eneatipo en el buscador. |
+| F-05 | Implementado | `45908e1` | `postulante_competencia.es_destacada` no existe; cada lista conserva su propio orden. |
+| F-06 | Implementado | `45908e1` | `dal.ts` no consulta `usuario` (usa claims del JWT): sólo aplicaba a `perfil_reclutador`. |
+| F-07 | Implementado | `45908e1` | `orden` es base 0. `editarPuesto` revalida `/editar` para que el editor compare contra lo guardado. |
+| F-08 | Implementado | `45908e1` | — |
+| F-09 | Implementado | `45908e1` | — |
+| F-10 | Descartado | — | Los catálogos ya usan `React.cache`. En Next 16 `unstable_cache` está reemplazado por `use cache`, que exige `cacheComponents` (cambio de semántica en toda la app). Poca ganancia para el riesgo. |
+| F-11 | Pospuesto | — | Ver abajo. |
+| F-12 | Implementado | `45908e1` | **No** se quitó el chequeo de propiedad de `getContratacionesDePuesto` (lee con el cliente admin: sería un IDOR); se reutiliza `getPuestoById`. |
+
+Todas las consultas nuevas de lectura se compararon contra las viejas en la base real, en solo lectura, con resultados idénticos.
+
+### F-11: por qué se pospone (medido el 28/10/2026)
+
+- **Volumen:** la tabla más grande es `respuesta_item_eneagrama` (~14k filas, 3 MB); las del reclutador tienen decenas o cientos de filas. Los índices compuestos propuestos no producen una ganancia medible a este tamaño, e `idx_postulacion_historial` ya existía.
+- **Advisors de performance:**
+  - `auth_rls_initplan`: 71 políticas en 31 tablas llaman a `auth.uid()` / `get_my_rol()` por fila. Es el arreglo con más valor a futuro (envolver en `(select ...)`), pero reescribe 71 políticas de autorización en producción.
+  - `unindexed_foreign_keys`: 9; los relevantes para el reclutador son `nota_privada.puesto_id`, la FK compuesta de `postulacion`, `idioma.perfil_tecnico_id` y `perfil_postulante.carrera_id`.
+  - `multiple_permissive_policies`: 16. `unused_index`: 8.
+- **Retomar cuando** crezca el volumen o la latencia de la base lo justifique, empezando por `auth_rls_initplan` y midiendo con `EXPLAIN (ANALYZE, BUFFERS)`.
+
+### Hallazgo de seguridad relacionado (fuera de alcance, resuelto)
+
+Los advisors de seguridad mostraron funciones `SECURITY DEFINER` ejecutables por `anon` (entre ellas `cerrar_puestos_inactivos()`) y con `search_path` mutable. Se corrigió en la migración `20261028000000_endurecer_funciones_security_definer.sql` (commit `2cfeb81`), ya aplicada y verificada. Pendiente manual: activar *Leaked password protection* en Supabase Auth.
