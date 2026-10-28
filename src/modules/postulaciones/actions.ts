@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import type { ActionResult } from '@/lib/types/domain'
 import {
+  ESTADO_POSTULACION,
   ESTADO_POSTULACION_LABEL,
   TIPO_PREGUNTA_PRESELECTOR,
   type MarcaPostulacion,
@@ -14,6 +15,7 @@ import { getFormularioDePuesto } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/preselector/evaluador'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { getCicloAbierto } from '@/modules/puestos/ciclos'
+import { getReclutadorId } from '@/modules/empresas/queries'
 
 /**
  * Interruptor de los avisos por mail de las postulaciones.
@@ -289,21 +291,53 @@ export async function postularAPuestoConFormulario(
   return { success: true, data: { descartada } }
 }
 
+type PostulacionPropia = {
+  estado: string
+  puesto_id: string
+  postulante_id: string
+  reclutador_id: string
+  titulo_puesto: string
+}
+
+/**
+ * La postulación, sólo si es de un puesto del reclutador actual; null si no
+ * existe o es de otro. Las actions de abajo escriben con el service role (sin
+ * RLS), así que la propiedad se prueba acá antes de tocar nada.
+ */
+async function getPostulacionPropia(postulacionId: string): Promise<PostulacionPropia | null> {
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return null
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('postulacion')
+    .select('estado, puesto_id, postulante_id, puesto!inner(reclutador_id, titulo_puesto)')
+    .eq('id', postulacionId)
+    .eq('puesto.reclutador_id', reclutadorId)
+    .maybeSingle()
+
+  if (!data) return null
+  const row = data as {
+    estado: string
+    puesto_id: string
+    postulante_id: string
+    puesto: { reclutador_id: string; titulo_puesto: string }
+  }
+  return {
+    estado: row.estado,
+    puesto_id: row.puesto_id,
+    postulante_id: row.postulante_id,
+    reclutador_id: row.puesto.reclutador_id,
+    titulo_puesto: row.puesto.titulo_puesto,
+  }
+}
+
 export async function avanzarEstadoPostulacion(
   postulacionId: string,
   nuevoEstado: 'VISTO' | 'PROCESO_FINALIZADO'
 ): Promise<ActionResult> {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  // Verify the recruiter owns the post
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
+  const postulacion = await getPostulacionPropia(postulacionId)
+  if (!postulacion) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
 
@@ -314,12 +348,7 @@ export async function avanzarEstadoPostulacion(
   if (error) return { success: false, error: 'No se pudo actualizar el estado.' }
 
   // Actividad del reclutador sobre el puesto (evita el cierre automático).
-  const { data: post } = await admin
-    .from('postulacion')
-    .select('puesto_id')
-    .eq('id', postulacionId)
-    .single()
-  if (post) await marcarActividadPuesto((post as { puesto_id: string }).puesto_id)
+  await marcarActividadPuesto(postulacion.puesto_id)
 
   // Aviso por mail al postulante: apagado por ahora (ver
   // EMAIL_POSTULACIONES_HABILITADO). La guarda envuelve también a la consulta
@@ -337,17 +366,8 @@ export async function avanzarEstadoPostulacion(
 }
 
 export async function revertirDescarte(postulacionId: string): Promise<ActionResult> {
-  const session = await verifySession()
-  const supabase = await createClient()
-
-  // Verify the recruiter owns the post
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
+  const postulacion = await getPostulacionPropia(postulacionId)
+  if (!postulacion) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
 
@@ -360,12 +380,7 @@ export async function revertirDescarte(postulacionId: string): Promise<ActionRes
   if (error) return { success: false, error: 'No se pudo revertir el descarte.' }
 
   // Actividad del reclutador sobre el puesto (evita el cierre automático).
-  const { data: post } = await admin
-    .from('postulacion')
-    .select('puesto_id')
-    .eq('id', postulacionId)
-    .single()
-  if (post) await marcarActividadPuesto((post as { puesto_id: string }).puesto_id)
+  await marcarActividadPuesto(postulacion.puesto_id)
 
   revalidatePath('/reclutador/postulaciones')
   return { success: true, data: undefined }
@@ -375,26 +390,78 @@ export async function marcarPostulacion(
   postulacionId: string,
   marca: MarcaPostulacion | null,
 ): Promise<ActionResult> {
-  const session = await verifySession()
-  const supabase = await createClient()
+  const postulacion = await getPostulacionPropia(postulacionId)
+  if (!postulacion) return { success: false, error: 'No autorizado.' }
 
-  // Verify the recruiter owns the application via their posts
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
+  // Elegir Avanzar o Duda sobre un candidato descartado cancela el descarte en
+  // el mismo UPDATE: vuelve a VISTO y limpia el motivo, como revertirDescarte.
+  const revierte =
+    marca !== null && postulacion.estado === ESTADO_POSTULACION.PROCESO_FINALIZADO
 
   const admin = createAdminClient()
 
   const { error } = await admin.from('postulacion')
-    .update({ marca })
+    .update(revierte ? { marca, estado: ESTADO_POSTULACION.VISTO, motivo_descarte: null } : { marca })
     .eq('id', postulacionId)
 
   if (error) return { success: false, error: 'No se pudo actualizar la marca.' }
 
+  if (revierte) await marcarActividadPuesto(postulacion.puesto_id)
+
   revalidatePath('/reclutador/postulaciones')
   return { success: true, data: undefined }
+}
+
+/**
+ * "No avanzar": cierra el proceso del candidato y limpia la marca en un solo
+ * UPDATE. El motivo es opcional; si viene, queda como nota privada etiquetada
+ * con el puesto. La nota se guarda después del cambio de estado para no dejar
+ * el motivo de un descarte que no ocurrió.
+ */
+export async function noAvanzarPostulacion(
+  postulacionId: string,
+  motivo: string,
+): Promise<ActionResult<{ notaGuardada: boolean }>> {
+  const postulacion = await getPostulacionPropia(postulacionId)
+  if (!postulacion) return { success: false, error: 'No autorizado.' }
+
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('postulacion')
+    .update({ estado: ESTADO_POSTULACION.PROCESO_FINALIZADO, marca: null })
+    .eq('id', postulacionId)
+
+  if (error) return { success: false, error: 'No se pudo actualizar el estado.' }
+
+  const texto = motivo.trim()
+  const guardarNota = texto
+    ? admin.from('nota_privada')
+        .insert({
+          reclutador_id: postulacion.reclutador_id,
+          postulante_id: postulacion.postulante_id,
+          puesto_id: postulacion.puesto_id,
+          contenido: `Motivo de no avanzar en "${postulacion.titulo_puesto}": ${texto}`,
+        })
+        .then(({ error: notaError }) => !notaError)
+    : Promise.resolve(false)
+
+  // Actividad del reclutador sobre el puesto (evita el cierre automático).
+  const [notaGuardada] = await Promise.all([
+    guardarNota,
+    marcarActividadPuesto(postulacion.puesto_id),
+  ])
+
+  // Aviso por mail al postulante: apagado por ahora (ver EMAIL_POSTULACIONES_HABILITADO).
+  if (EMAIL_POSTULACIONES_HABILITADO) {
+    const datos = await getDatosEmail(postulacionId)
+    if (datos?.email) {
+      await enviarEmailCambioEstado(
+        datos.email, datos.nombre, datos.titulo, datos.empresa, ESTADO_POSTULACION.PROCESO_FINALIZADO,
+      )
+    }
+  }
+
+  revalidatePath('/reclutador/postulaciones')
+  if (texto) revalidatePath(`/reclutador/postulantes/${postulacion.postulante_id}`)
+  return { success: true, data: { notaGuardada } }
 }

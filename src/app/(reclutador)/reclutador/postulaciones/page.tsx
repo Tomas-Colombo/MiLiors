@@ -364,8 +364,6 @@ export default async function PostulacionesRecibidasPage({
                   {p.estado !== ESTADO_POSTULACION.CERRADA && (
                     <MarcaPostulacionBtns
                       postulacionId={p.id}
-                      postulanteId={p.postulante_id}
-                      puestoId={p.puesto_id}
                       tituloPuesto={p.titulo_puesto}
                       marca={p.marca}
                       estadoActual={p.estado}
