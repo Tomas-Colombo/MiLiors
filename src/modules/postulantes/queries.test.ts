@@ -39,6 +39,7 @@ function makeChainableBuilder(result: MockResult) {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue(result),
+    maybeSingle: vi.fn().mockResolvedValue(result),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue(result),
   }

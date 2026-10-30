@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { VolverLink } from '@/components/shared/volver-link'
 import { ChevronLeftIcon, SparklesIcon } from '@/components/icons'
-import { getPuestoById, getPostulacionesRecibidas } from '@/modules/puestos/queries'
+import { getPuestoById, getPreseleccionadosDePuesto } from '@/modules/puestos/queries'
 import { AsistenteCandidatos, type CandidatoItem } from './asistente-candidatos'
 import { ComoFunciona } from './como-funciona'
 import { requireEmpresaCargada } from '@/lib/guards'
@@ -16,16 +16,19 @@ export default async function PuestoAsistentePage({ params }: { params: Params }
   const { id } = await params
 
   // getPuestoById enforces ownership (recruiter must own the post) and returns
-  // null for foreign or deleted posts.
-  const puesto = await getPuestoById(id)
-  if (!puesto) notFound()
-
-  // La lista sale de las postulaciones recibidas, con la misma marca que muestra
+  // null for foreign or deleted posts. La lista de marcados se pide en paralelo:
+  // también filtra por dueño, así que un puesto ajeno no llega a renderizar nada.
+  //
+  // La lista sale de las postulaciones del puesto, con la misma marca que muestra
   // la vista de Postulaciones. "En duda" avanza igual que "Avanza": entra a la
   // consulta, sólo que señalada.
-  const postulaciones = await getPostulacionesRecibidas()
+  const [puesto, postulaciones] = await Promise.all([
+    getPuestoById(id),
+    getPreseleccionadosDePuesto(id),
+  ])
+  if (!puesto) notFound()
+
   const candidatos: CandidatoItem[] = postulaciones
-    .filter((p) => p.puesto_id === id && p.marca !== null)
     .map((p) => ({
       postulacionId: p.id,
       postulanteId: p.postulante_id,

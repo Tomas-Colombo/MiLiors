@@ -205,8 +205,6 @@ export function AsistenteCandidatos({ puestoId, tituloPuesto, candidatos }: Prop
                 <div className="w-full sm:w-[280px]">
                   <MarcaPostulacionBtns
                     postulacionId={f.postulacionId}
-                    postulanteId={f.postulanteId}
-                    puestoId={puestoId}
                     tituloPuesto={tituloPuesto}
                     marca={f.marca}
                     estadoActual={f.estadoActual}

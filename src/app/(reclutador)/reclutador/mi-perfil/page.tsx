@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { verifySession, getTyCVigente } from '@/lib/dal'
-import { createClient } from '@/lib/supabase/server'
+import { getTyCVigente } from '@/lib/dal'
+import { getPerfilReclutador } from '@/modules/empresas/queries'
 import { PageHeader, Card } from '@/components/ui'
 import { TyCLector } from '@/components/shared/tyc-lector'
 import { CambiarPasswordForm } from '@/components/shared/cambiar-password-form'
@@ -8,22 +8,9 @@ import { PerfilReclutadorForm } from './form'
 
 export const metadata = { title: 'Mi perfil — MiLiors' }
 
-type PerfilReclutadorData = { nombre_reclutador: string } | null
-
-async function getPerfilReclutador(userId: string): Promise<PerfilReclutadorData> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('perfil_reclutador')
-    .select('nombre_reclutador')
-    .eq('usuario_id', userId)
-    .maybeSingle()
-
-  return data as PerfilReclutadorData
-}
-
 export default async function MiPerfilReclutadorPage() {
-  const session = await verifySession()
-  const [perfil, tyc] = await Promise.all([getPerfilReclutador(session.id), getTyCVigente()])
+  const [perfilActual, tyc] = await Promise.all([getPerfilReclutador(), getTyCVigente()])
+  const perfil = perfilActual ? { nombre_reclutador: perfilActual.nombre_reclutador } : null
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { PageHeader, Card, Badge, EmptyState, buttonClassName } from '@/components/ui'
 import { NotebookIcon } from '@/components/icons'
 import { getTodasLasNotasReclutador } from '@/modules/postulantes/queries'
-import { getPostulacionesRecibidas } from '@/modules/puestos/queries'
+import { getPostulacionesResumenReclutador } from '@/modules/puestos/queries'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosNotas } from './filtros-notas'
@@ -71,7 +71,7 @@ export default async function MisNotasPage({
   // postulación (puesto + postulante) a la que corresponde.
   const [todasLasNotas, postulaciones] = await Promise.all([
     getTodasLasNotasReclutador(),
-    getPostulacionesRecibidas(),
+    getPostulacionesResumenReclutador(),
   ])
 
   // Mapa postulante → sus postulaciones a mis puestos, para rastrear a qué
@@ -81,7 +81,7 @@ export default async function MisNotasPage({
     const ref: PostulacionRef = {
       id: p.id,
       puesto_id: p.puesto_id,
-      titulo_puesto: p.titulo_puesto ?? null,
+      titulo_puesto: p.titulo_puesto,
     }
     const lista = postulacionesPorPostulante.get(p.postulante_id)
     if (lista) lista.push(ref)

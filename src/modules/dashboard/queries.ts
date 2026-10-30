@@ -1,8 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 
 /** Días sin cambio de estado a partir de los cuales una postulación ENVIADA se
  *  considera "sin acción" (pendiente de revisar). */
@@ -63,39 +62,48 @@ const EMPTY: DashboardMetrics = {
  * `getPostulacionesRecibidas`.
  */
 export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => {
-  const session = await verifySession()
-  const supabase = await createClient()
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return EMPTY
 
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
+  const admin = createAdminClient()
 
-  if (!reclutador) return EMPTY
-  const reclutadorId = (reclutador as { id: string }).id
-
-  // Puestos vigentes del reclutador (excluye los dados de baja lógicamente).
-  const { data: puestosData } = await supabase
+  // Todos los puestos del reclutador en una sola consulta: los vigentes (sin baja
+  // lógica) alimentan las métricas y todos, incluidos los eliminados, las
+  // contrataciones.
+  const { data: puestosData } = await admin
     .from('puesto')
-    .select('id, titulo_puesto, activo')
+    .select('id, titulo_puesto, activo, fecha_baja_puesto')
     .eq('reclutador_id', reclutadorId)
-    .is('fecha_baja_puesto', null)
 
-  const puestos = (puestosData ?? []) as { id: string; titulo_puesto: string; activo: boolean }[]
+  const todosLosPuestos = (puestosData ?? []) as {
+    id: string
+    titulo_puesto: string
+    activo: boolean
+    fecha_baja_puesto: string | null
+  }[]
+  const puestos = todosLosPuestos.filter((p) => !p.fecha_baja_puesto)
   if (puestos.length === 0) return EMPTY
 
   const puestoIds = puestos.map((p) => p.id)
+  const allPuestoIds = todosLosPuestos.map((p) => p.id)
   const activos = puestos.filter((p) => p.activo)
   const activosSet = new Set(activos.map((p) => p.id))
   const tituloPorId = new Map(puestos.map((p) => [p.id, p.titulo_puesto]))
 
-  // Postulaciones de todos los puestos vigentes.
-  const admin = createAdminClient()
-  const { data: postsData } = await admin
-    .from('postulacion')
-    .select('estado, fecha_postulacion, updated_at, puesto_id')
-    .in('puesto_id', puestoIds)
+  // Postulaciones de los puestos vigentes y contrataciones, en paralelo.
+  // La métrica de tiempo de contratación se mide sobre ciclos ya concluidos,
+  // por lo que abarca TODOS los puestos del reclutador (incluidos los cerrados
+  // y los eliminados), no sólo los vigentes.
+  const [{ data: postsData }, { data: contrData }] = await Promise.all([
+    admin
+      .from('postulacion')
+      .select('estado, fecha_postulacion, updated_at, puesto_id')
+      .in('puesto_id', puestoIds),
+    admin
+      .from('contratacion')
+      .select('fecha_contratacion, historial_puesto!inner(puesto_id, fecha_inicio)')
+      .in('historial_puesto.puesto_id', allPuestoIds),
+  ])
 
   const posts = (postsData ?? []) as {
     estado: string
@@ -105,39 +113,22 @@ export const getDashboardMetrics = cache(async (): Promise<DashboardMetrics> => 
   }[]
 
   // Contrataciones ────────────────────────────────────────────────────────
-  // La métrica de tiempo de contratación se mide sobre ciclos ya concluidos,
-  // por lo que abarca TODOS los puestos del reclutador (incluidos los cerrados
-  // y los eliminados), no sólo los vigentes.
-  const { data: allPuestosData } = await admin
-    .from('puesto')
-    .select('id')
-    .eq('reclutador_id', reclutadorId)
-  const allPuestoIds = (allPuestosData ?? []).map((p) => (p as { id: string }).id)
-
-  let contrataciones: ContratacionMetrica[] = []
-  if (allPuestoIds.length > 0) {
-    const { data: contrData } = await admin
-      .from('contratacion')
-      .select('fecha_contratacion, historial_puesto!inner(puesto_id, fecha_inicio)')
-      .in('historial_puesto.puesto_id', allPuestoIds)
-
-    contrataciones = ((contrData ?? []) as unknown[]).flatMap((row) => {
-      const r = row as {
-        fecha_contratacion: string
-        historial_puesto: { puesto_id: string; fecha_inicio: string } | null
-      }
-      if (!r.historial_puesto) return []
-      const dias = Math.max(
-        0,
-        Math.round(
-          (new Date(r.fecha_contratacion).getTime() -
-            new Date(r.historial_puesto.fecha_inicio).getTime()) /
-            86_400_000,
-        ),
-      )
-      return [{ puesto_id: r.historial_puesto.puesto_id, dias }]
-    })
-  }
+  const contrataciones: ContratacionMetrica[] = ((contrData ?? []) as unknown[]).flatMap((row) => {
+    const r = row as {
+      fecha_contratacion: string
+      historial_puesto: { puesto_id: string; fecha_inicio: string } | null
+    }
+    if (!r.historial_puesto) return []
+    const dias = Math.max(
+      0,
+      Math.round(
+        (new Date(r.fecha_contratacion).getTime() -
+          new Date(r.historial_puesto.fecha_inicio).getTime()) /
+          86_400_000,
+      ),
+    )
+    return [{ puesto_id: r.historial_puesto.puesto_id, dias }]
+  })
 
   // Bloque 1 ─────────────────────────────────────────────────────────────
   const puestosActivos = activos.length

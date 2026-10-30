@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
-import type { EmpresaOption } from './queries'
+import { getReclutadorId, type EmpresaOption } from './queries'
 
 const empresaSchema = z.object({
   nombre_empresa: z.string().min(2, { message: 'Ingresá el nombre de la empresa.' }).max(200).trim(),
@@ -158,7 +158,7 @@ export async function actualizarEmpresa(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await verifySession()
+  await verifySession()
   const parsed = parseEmpresa(formData)
 
   if (!parsed.success) {
@@ -169,16 +169,10 @@ export async function actualizarEmpresa(
     }
   }
 
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return { success: false, error: 'No autorizado.' }
+
   const admin = adminClient()
-  const { data: perfil } = await admin
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .maybeSingle()
-
-  if (!perfil) return { success: false, error: 'No autorizado.' }
-  const reclutadorId = (perfil as { id: string }).id
-
   if (!(await empresaDelReclutador(admin, reclutadorId, empresaId))) {
     return { success: false, error: 'No autorizado.' }
   }

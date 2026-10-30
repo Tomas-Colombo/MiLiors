@@ -3,12 +3,7 @@
 import { useTransition, useState } from 'react'
 import { Alert, Button, Field, Modal, Textarea, Tooltip } from '@/components/ui'
 import { CheckCircleIcon, HelpCircleIcon, CloseIcon } from '@/components/icons'
-import {
-  marcarPostulacion,
-  avanzarEstadoPostulacion,
-  revertirDescarte,
-} from '@/modules/postulaciones/actions'
-import { crearNota } from '@/modules/postulantes/actions'
+import { marcarPostulacion, noAvanzarPostulacion } from '@/modules/postulaciones/actions'
 import { MARCA_POSTULACION, ESTADO_POSTULACION, type MarcaPostulacion } from '@/lib/constants/enums'
 
 const MAX_MOTIVO = 1000
@@ -18,8 +13,6 @@ type Seleccion = MarcaPostulacion | 'NO_AVANZA' | null
 
 type Props = {
   postulacionId: string
-  postulanteId: string
-  puestoId: string | null
   tituloPuesto?: string | null
   marca: MarcaPostulacion | null
   estadoActual: string
@@ -54,8 +47,6 @@ const estilos = {
 
 export function MarcaPostulacionBtns({
   postulacionId,
-  postulanteId,
-  puestoId,
   tituloPuesto,
   marca: marcaInicial,
   estadoActual,
@@ -88,16 +79,7 @@ export function MarcaPostulacionBtns({
     setDescartado(false)
 
     startTransition(async () => {
-      if (descarteAnterior) {
-        const revertido = await revertirDescarte(postulacionId)
-        if (!revertido.success) {
-          setMarca(marcaAnterior)
-          setDescartado(true)
-          setError(revertido.error)
-          return
-        }
-      }
-
+      // Sobre un descartado, la misma action revierte el descarte.
       const result = await marcarPostulacion(postulacionId, next)
       if (!result.success) {
         setMarca(marcaAnterior)
@@ -110,34 +92,25 @@ export function MarcaPostulacionBtns({
   }
 
   // El motivo es opcional: si se confirma sin texto, sólo cambia el estado.
-  // Si hay texto, se guarda antes como nota privada del candidato.
+  // Si hay texto, el server lo guarda como nota privada del candidato.
   function noAvanzar() {
     setError(null)
     startTransition(async () => {
       const texto = motivo.trim()
-      if (texto) {
-        const contenido = tituloPuesto
-          ? `Motivo de no avanzar en "${tituloPuesto}": ${texto}`
-          : `Motivo de no avanzar: ${texto}`
-        const nota = await crearNota(postulanteId, contenido, puestoId ?? undefined)
-        if (!nota.success) {
-          setError(nota.error)
-          return
-        }
-      }
-
-      const result = await avanzarEstadoPostulacion(postulacionId, 'PROCESO_FINALIZADO')
+      const result = await noAvanzarPostulacion(postulacionId, texto)
       if (!result.success) {
         setError(result.error)
         return
       }
 
       // Sólo una opción puede quedar activa: al descartar se limpia la marca.
-      if (marca) await marcarPostulacion(postulacionId, null)
       setMarca(null)
       setDescartado(true)
       setConfirmando(false)
       setMotivo('')
+      if (texto && !result.data.notaGuardada) {
+        setError('El candidato no avanza, pero no se pudo guardar el motivo como nota.')
+      }
       onNoAvanza?.()
     })
   }

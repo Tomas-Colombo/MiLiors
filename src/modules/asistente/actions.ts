@@ -3,32 +3,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getReclutadorId } from '@/modules/empresas/queries'
 import { aiProvider } from '@/lib/ai'
 import { buildAsistentePrompts } from './prompts'
-import { informeToPlainText } from '@/modules/informe/format'
+import { cargarContextoCandidato } from '@/modules/seleccion/contexto-candidato'
+import type { CandidatoContexto } from '@/modules/seleccion/prompts'
 import type { ActionResult } from '@/lib/types/domain'
-import type { InformePersonalidadJSON } from '@/lib/types/informe'
 
 export async function consultarAsistente(
   postulanteId: string,
   puestoId: string,
   pregunta: string
 ): Promise<ActionResult<{ respuesta: string }>> {
-  const session = await verifySession()
+  await verifySession()
   const supabase = await createClient()
   const admin = createAdminClient()
 
   if (!pregunta.trim()) return { success: false, error: 'Ingresá una pregunta.' }
 
   // Verify the recruiter owns the given position
-  const { data: reclutador } = await supabase
-    .from('perfil_reclutador')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-
-  if (!reclutador) return { success: false, error: 'No autorizado.' }
-  const reclutadorId = (reclutador as { id: string }).id
+  const reclutadorId = await getReclutadorId()
+  if (!reclutadorId) return { success: false, error: 'No autorizado.' }
 
   const { data: puesto } = await supabase
     .from('puesto')
@@ -61,95 +56,24 @@ export async function consultarAsistente(
     perfil_psicologico_deseado: string | null
   }
 
-  // --- Load all candidate data via admin client (bypasses RLS; candidate may not be actively searching) ---
-
-  // Load all candidate data via admin client (bypasses RLS — candidate may not be actively searching)
-  const { data: postulanteRaw } = await admin
-    .from('perfil_postulante')
-    .select(`
-      nombre_completo,
-      test_eneagrama(test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
-    `)
-    .eq('id', postulanteId)
-    .single()
-
-  if (!postulanteRaw) return { success: false, error: 'Postulante no encontrado.' }
-
-  const postulanteTyped = postulanteRaw as {
-    nombre_completo: string
-    test_eneagrama: {
-      test_eneagrama_dominante: { eneatipo: { numero_eneatipo: number; nombre: string } }[]
-    } | null
+  // Mismo contexto que el informe de selección grupal: perfil técnico, bloque de
+  // personalidad (motor V2 + narrativa) y notas de este puesto o generales.
+  let candidato: CandidatoContexto
+  try {
+    candidato = await cargarContextoCandidato(admin, supabase, reclutadorId, puestoId, postulanteId)
+  } catch (err) {
+    console.error('[asistente] Error cargando el contexto del postulante:', err)
+    return { success: false, error: 'No se pudo cargar la información del postulante.' }
   }
 
-  const { data: ptRaw } = await admin
-    .from('perfil_tecnico')
-    .select('id')
-    .eq('postulante_id', postulanteId)
-    .maybeSingle()
-
-  const { data: informeRaw } = await admin
-    .from('informe_personalidad')
-    .select('contenido_json')
-    .eq('postulante_id', postulanteId)
-    .eq('estado_informe', 'LISTO')
-    .maybeSingle()
-
-  const notasRes = await supabase
-    .from('nota_privada')
-    .select('contenido')
-    .eq('reclutador_id', reclutadorId)
-    .eq('postulante_id', postulanteId)
-    .order('updated_at', { ascending: false })
-    .limit(10)
-
-  // Load technical profile details if a perfil_tecnico exists
-  let competencias: string[] = []
-  let formaciones: { titulo: string; institucion: string; fecha_graduacion: string | null }[] = []
-  let experiencias: { puesto: string; empresa: string; fecha_inicio: string; fecha_fin: string | null }[] = []
-
-  if (ptRaw) {
-    const ptId = (ptRaw as { id: string }).id
-    const [compsRes, formRes, expRes] = await Promise.all([
-      admin.from('postulante_competencia').select('competencia(nombre)').eq('perfil_tecnico_id', ptId),
-      admin.from('formacion_academica').select('titulo, institucion, fecha_graduacion').eq('perfil_tecnico_id', ptId),
-      admin.from('experiencia_laboral').select('puesto, empresa, fecha_inicio, fecha_fin').eq('perfil_tecnico_id', ptId).order('fecha_inicio', { ascending: false }),
-    ])
-
-    competencias = (compsRes.data ?? [])
-      .map((c: unknown) => (c as { competencia: { nombre: string } | null }).competencia?.nombre)
-      .filter((n: unknown): n is string => Boolean(n))
-
-    formaciones = (formRes.data ?? []) as typeof formaciones
-    experiencias = (expRes.data ?? []) as typeof experiencias
-  }
-
-  const informePersonalidad = informeRaw
-    ? informeToPlainText((informeRaw as { contenido_json: InformePersonalidadJSON | null }).contenido_json)
-    : null
-
-  const notasPrivadas = (notasRes.data ?? []).map(
-    (n: unknown) => (n as { contenido: string }).contenido
-  )
-
-  // Build prompts and call AI
   const ctx = {
-    nombrePostulante: postulanteTyped.nombre_completo,
-    eneatipoNumero:
-      postulanteTyped.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ?? null,
-    eneatipoNombre:
-      postulanteTyped.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,
-    competencias,
-    formaciones,
-    experiencias,
-    informePersonalidad,
+    candidato,
     tituloPuesto: puestoTyped.titulo_puesto,
     descripcionPuesto: puestoTyped.descripcion_texto,
     cargaHoraria: puestoTyped.carga_horaria,
     ubicacion: puestoTyped.ubicacion,
     nivelExperiencia: puestoTyped.nivel_experiencia,
     perfilPsicologicoDeseado: puestoTyped.perfil_psicologico_deseado,
-    notasPrivadas,
     pregunta: pregunta.trim(),
   }
 

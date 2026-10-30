@@ -4,7 +4,12 @@ import { PageHeader, Card } from '@/components/ui'
 import { ChevronLeftIcon } from '@/components/icons'
 import { getPuestoById, getSectores } from '@/modules/puestos/queries'
 import { getFormularioDePuesto, formularioTieneRespuestas } from '@/modules/preselector/queries'
-import { getProvincias, getUbicacionInicial } from '@/modules/ubicacion/queries'
+import {
+  getProvincias,
+  getDepartamentosPorProvincia,
+  getLocalidadesPorDepartamento,
+  type UbicacionInicial,
+} from '@/modules/ubicacion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
 import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { EditarPuestoForm } from './editar-puesto-form'
@@ -30,12 +35,21 @@ export default async function EditarPuestoPage({ params }: { params: Params }) {
   ])
   if (!puesto) notFound()
 
-  // Sin localidad, el departamento es el nivel más profundo que se guardó.
-  const ubicacionInicial = await getUbicacionInicial(
-    puesto.localidad_id,
-    null,
-    puesto.departamento_id,
-  )
+  // getPuestoById ya trae la provincia y el departamento de la cadena guardada
+  // (localidad o, sin ella, departamento): sólo faltan las listas del selector.
+  const ref = puesto.ubicacion_ref
+  const ubicacionInicial: UbicacionInicial | null = ref
+    ? await Promise.all([
+        getDepartamentosPorProvincia(ref.provinciaId),
+        getLocalidadesPorDepartamento(ref.departamentoId),
+      ]).then(([departamentos, localidades]) => ({
+        provinciaId: ref.provinciaId,
+        departamentoId: ref.departamentoId,
+        localidadId: puesto.localidad_id ?? '',
+        departamentos,
+        localidades,
+      }))
+    : null
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">

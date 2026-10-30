@@ -22,18 +22,32 @@ export type EmpresaDelReclutador = EmpresaOption & {
   postulaciones_activas: number
 }
 
-/** id de perfil_reclutador del usuario actual, o null si todavía no lo tiene. */
-export const getReclutadorId = cache(async (): Promise<string | null> => {
+export type PerfilReclutadorActual = {
+  id: string
+  nombre_reclutador: string
+}
+
+/**
+ * perfil_reclutador del usuario actual, o null si todavía no lo tiene.
+ * Una sola consulta por request: `getReclutadorId` y las páginas que necesitan el
+ * nombre comparten este resultado.
+ */
+export const getPerfilReclutador = cache(async (): Promise<PerfilReclutadorActual | null> => {
   const session = await verifySession()
   const supabase = await createClient()
 
   const { data } = await supabase
     .from('perfil_reclutador')
-    .select('id')
+    .select('id, nombre_reclutador')
     .eq('usuario_id', session.id)
     .maybeSingle()
 
-  return data ? (data as { id: string }).id : null
+  return (data as PerfilReclutadorActual | null) ?? null
+})
+
+/** id de perfil_reclutador del usuario actual, o null si todavía no lo tiene. */
+export const getReclutadorId = cache(async (): Promise<string | null> => {
+  return (await getPerfilReclutador())?.id ?? null
 })
 
 /** Empresas vinculadas al reclutador actual (incluye las dadas de baja). */
@@ -120,14 +134,17 @@ export const getMisEmpresas = cache(async (): Promise<EmpresaDelReclutador[]> =>
       if (!cicloActualPorPuesto.has(c.puesto_id)) cicloActualPorPuesto.set(c.puesto_id, c.id)
     }
 
-    const { data: postulaciones } = await admin
-      .from('postulacion')
-      .select('puesto_id, historial_puesto_id, estado')
-      .in('puesto_id', puestoIds)
-      .in('estado', [ESTADO_POSTULACION.ENVIADA, ESTADO_POSTULACION.VISTO])
+    // El ciclo vigente se filtra en SQL: las postulaciones de ciclos viejos no se traen.
+    const cicloIds = [...cicloActualPorPuesto.values()]
+    const { data: postulaciones } = cicloIds.length === 0
+      ? { data: [] }
+      : await admin
+          .from('postulacion')
+          .select('puesto_id')
+          .in('historial_puesto_id', cicloIds)
+          .in('estado', [ESTADO_POSTULACION.ENVIADA, ESTADO_POSTULACION.VISTO])
 
-    for (const p of (postulaciones ?? []) as { puesto_id: string; historial_puesto_id: string }[]) {
-      if (cicloActualPorPuesto.get(p.puesto_id) !== p.historial_puesto_id) continue
+    for (const p of (postulaciones ?? []) as { puesto_id: string }[]) {
       const empresaId = empresaPorPuesto.get(p.puesto_id)
       if (!empresaId) continue
       postulacionesActivas.set(empresaId, (postulacionesActivas.get(empresaId) ?? 0) + 1)

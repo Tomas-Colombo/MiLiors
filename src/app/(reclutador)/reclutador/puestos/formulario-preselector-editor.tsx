@@ -47,6 +47,27 @@ function desdeFormulario(formulario?: FormularioPreselector | null): PreguntaEdi
   }))
 }
 
+/**
+ * Contrato del hidden input (ver doc del componente). Solo incluye texto, tipo,
+ * criticidad y opciones: las `key` de UI (UUID random) no se serializan, así que
+ * la serialización del formulario original es determinista y comparable.
+ */
+function serializarPreguntas(preguntas: PreguntaEditable[], teniaFormulario: boolean): string | null {
+  if (preguntas.length > 0) {
+    return JSON.stringify({
+      preguntas: preguntas.map((p) => ({
+        texto: p.texto,
+        tipo: p.tipo,
+        esCritica: p.esCritica,
+        ...(p.tipo === TIPO_PREGUNTA_PRESELECTOR.OPCIONES
+          ? { opciones: p.opciones.map((o) => ({ texto: o.texto, esValida: o.esValida })) }
+          : {}),
+      })),
+    })
+  }
+  return teniaFormulario ? '' : null
+}
+
 type Props = {
   /** Formulario existente (edición). `null`/`undefined` = puesto sin formulario (o alta nueva). */
   initialFormulario?: FormularioPreselector | null
@@ -65,6 +86,7 @@ type Props = {
  * Serializa el estado en un <input type="hidden" name="formulario_preselector">
  * según el contrato de src/modules/preselector/schema.ts:
  *  - sin preguntas y nunca hubo formulario → el input NO se renderiza (campo ausente).
+ *  - formulario sin cambios respecto del original → el input NO se renderiza (campo ausente).
  *  - sin preguntas pero había un formulario → se envía "" (señal de borrado).
  *  - con preguntas → JSON de { preguntas }.
  */
@@ -77,21 +99,21 @@ export function FormularioPreselectorEditor({ initialFormulario, fieldErrors, re
     ...(fieldErrors?.preguntas ?? []),
   ]
 
-  const serialized = useMemo(() => {
-    if (preguntas.length > 0) {
-      return JSON.stringify({
-        preguntas: preguntas.map((p) => ({
-          texto: p.texto,
-          tipo: p.tipo,
-          esCritica: p.esCritica,
-          ...(p.tipo === TIPO_PREGUNTA_PRESELECTOR.OPCIONES
-            ? { opciones: p.opciones.map((o) => ({ texto: o.texto, esValida: o.esValida })) }
-            : {}),
-        })),
-      })
-    }
-    return teniaFormularioInicial ? '' : null
-  }, [preguntas, teniaFormularioInicial])
+  const serialized = useMemo(
+    () => serializarPreguntas(preguntas, teniaFormularioInicial),
+    [preguntas, teniaFormularioInicial],
+  )
+
+  // Serialización del formulario tal como llegó del servidor, con la misma función.
+  const serializedInicial = useMemo(
+    () => serializarPreguntas(desdeFormulario(initialFormulario), teniaFormularioInicial),
+    [initialFormulario, teniaFormularioInicial],
+  )
+
+  // Sin cambios respecto del original: no se envía el campo (ausente = no tocar)
+  // y editarPuesto evita borrar y reinsertar todo el formulario. El '' (borrado)
+  // siempre se envía, también si el formulario guardado estuviera vacío.
+  const sinCambios = serialized !== '' && serialized === serializedInicial
 
   function actualizarPregunta(key: string, patch: Partial<PreguntaEditable>) {
     setPreguntas((prev) => prev.map((p) => (p.key === key ? { ...p, ...patch } : p)))
@@ -160,7 +182,7 @@ export function FormularioPreselectorEditor({ initialFormulario, fieldErrors, re
 
   return (
     <div className="space-y-4">
-      {!readOnly && serialized !== null && (
+      {!readOnly && serialized !== null && !sinCambios && (
         <input type="hidden" name="formulario_preselector" value={serialized} />
       )}
 
