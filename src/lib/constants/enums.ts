@@ -24,6 +24,30 @@ export const ESTADO_POSTULACION_LABEL: Record<string, string> = {
   CERRADA: 'La vacante ha sido concluida',
 }
 
+export type EstadoPostulacionKey = keyof typeof ESTADO_POSTULACION
+export type EstadoPostulacionTone = 'info' | 'primary' | 'error' | 'warning'
+
+export const ESTADO_POSTULACION_BADGE_POSTULANTE: Record<EstadoPostulacionKey, string> = {
+  ENVIADA: 'Enviada',
+  VISTO: 'Vista',
+  PROCESO_FINALIZADO: 'No avanza',
+  CERRADA: 'Cerrada',
+} as const
+
+export const ESTADO_POSTULACION_BADGE_RECLUTADOR: Record<EstadoPostulacionKey, string> = {
+  ENVIADA: 'Sin evaluar',
+  VISTO: 'Evaluada',
+  PROCESO_FINALIZADO: 'No avanza',
+  CERRADA: 'Cerrada',
+} as const
+
+export const ESTADO_POSTULACION_TONE: Record<EstadoPostulacionKey, EstadoPostulacionTone> = {
+  ENVIADA: 'info',
+  VISTO: 'primary',
+  PROCESO_FINALIZADO: 'error',
+  CERRADA: 'warning',
+} as const
+
 /** Marca del reclutador sobre una postulación. DUDA avanza igual que AVANZA. */
 export const MARCA_POSTULACION = {
   AVANZA: 'AVANZA',

@@ -20,3 +20,9 @@ export type SessionUser = {
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string; fieldErrors?: Record<string, string[]> }
+
+/**
+ * Estado inicial canónico para useActionState y useFormAccion.
+ * Idéntico al estado inicial del perfil técnico ({ success: false, error: '' }).
+ */
+export const INITIAL_ACTION_STATE: ActionResult = { success: false, error: '' }

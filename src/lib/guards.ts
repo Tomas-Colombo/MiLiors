@@ -75,3 +75,23 @@ export async function requireEneagramaCompleto() {
     redirect('/postulante/eneagrama')
   }
 }
+
+/**
+ * Guard para operaciones administrativas (Server Actions y queries de admin).
+ *
+ * A diferencia de `requireRol`, este guard NO usa `redirect()`. Dentro de una
+ * Server Action invocada mediante `useActionState`, una redirección lanza una
+ * excepción interna de Next.js (`NEXT_REDIRECT`) que altera el ciclo de control
+ * del cliente en lugar de devolver un resultado estructurado `ActionResult`.
+ * Lanzar un Error permite que la Server Action capture la excepción o falle
+ * limpiamente según corresponda.
+ *
+ * Mismo comportamiento canónico que en `modules/admin/actions.ts` y `modules/admin/sessions.ts`.
+ */
+export async function requireAdmin(): Promise<SessionUser> {
+  const session = await verifySession()
+  if (session.rol !== 'ADMIN') {
+    throw new Error('Acceso denegado.')
+  }
+  return session
+}
