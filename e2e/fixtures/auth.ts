@@ -1,19 +1,46 @@
 import { Page } from '@playwright/test'
 
+const ENV_VARS = {
+  postulante: {
+    emailKey: 'E2E_POSTULANTE_EMAIL',
+    passwordKey: 'E2E_POSTULANTE_PASSWORD',
+  },
+  reclutador: {
+    emailKey: 'E2E_RECLUTADOR_EMAIL',
+    passwordKey: 'E2E_RECLUTADOR_PASSWORD',
+  },
+  admin: {
+    emailKey: 'E2E_ADMIN_EMAIL',
+    passwordKey: 'E2E_ADMIN_PASSWORD',
+  },
+} as const
+
 export const USERS = {
   postulante: {
-    email: 'tomycolombo2009@hotmail.com',
-    password: 'Colombocapo2000',
+    get email() {
+      return process.env.E2E_POSTULANTE_EMAIL ?? ''
+    },
+    get password() {
+      return process.env.E2E_POSTULANTE_PASSWORD ?? ''
+    },
     dashboard: '/postulante',
   },
   reclutador: {
-    email: 'reclutador@gmail.com',
-    password: 'Admin1234!',
+    get email() {
+      return process.env.E2E_RECLUTADOR_EMAIL ?? ''
+    },
+    get password() {
+      return process.env.E2E_RECLUTADOR_PASSWORD ?? ''
+    },
     dashboard: '/reclutador',
   },
   admin: {
-    email: 'admin@admin.com',
-    password: 'Admin1234!',
+    get email() {
+      return process.env.E2E_ADMIN_EMAIL ?? ''
+    },
+    get password() {
+      return process.env.E2E_ADMIN_PASSWORD ?? ''
+    },
     dashboard: '/admin',
   },
 } as const
@@ -22,6 +49,17 @@ export type Role = keyof typeof USERS
 
 /** Logs in as the given role and waits for the dashboard to load. */
 export async function loginAs(page: Page, role: Role): Promise<void> {
+  const envConfig = ENV_VARS[role]
+  const email = process.env[envConfig.emailKey]
+  if (!email) {
+    throw new Error(`Falta la variable de entorno obligatoria para E2E: ${envConfig.emailKey}`)
+  }
+
+  const password = process.env[envConfig.passwordKey]
+  if (!password) {
+    throw new Error(`Falta la variable de entorno obligatoria para E2E: ${envConfig.passwordKey}`)
+  }
+
   const user = USERS[role]
 
   // Navigate to login; if an active session redirects us away, log out first
@@ -40,8 +78,8 @@ export async function loginAs(page: Page, role: Role): Promise<void> {
     }
   }
 
-  await page.locator('[name="email"]').fill(user.email)
-  await page.locator('[name="password"]').fill(user.password)
+  await page.locator('[name="email"]').fill(email)
+  await page.locator('[name="password"]').fill(password)
   await page.getByRole('button', { name: 'Ingresar' }).click()
   await page.waitForURL(`**${user.dashboard}**`)
 }
