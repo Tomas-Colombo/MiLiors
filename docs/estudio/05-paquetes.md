@@ -36,7 +36,7 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
    - [H-205](hallazgos.md): Tabla `competencia_sugerida`, panel de moderación en `/admin/competencias`, índice insensible a mayúsculas y corrección de reactivación de competencias desactivadas.
    - [H-207](hallazgos.md): Función SQL transaccional en PostgreSQL para el guardado atómico de puntajes y dominantes del eneatipo.
    - [H-302](hallazgos.md): Implementación técnica de consentimiento informado para evaluación psicométrica en registro, flujo de derecho de supresión (borrado de cuenta) y exportación completa de datos (Ley 25.326).
-   - [H-230](hallazgos.md): Estado de moderación propio del admin (columna nueva en base de datos) para que un postulante desactivado por el admin no pueda reactivarse por sí mismo con su switch de visibilidad.
+   - [H-230](hallazgos.md): Estado de moderación propio del admin (columna nueva en base de datos) para que un postulante desactivado por el admin no pueda reactivarse por sí mismo con su switch de visibilidad. Además, el perfil se crea con perfil_en_busqueda = true antes del test (eneagrama/actions.ts ~110) y la búsqueda del reclutador no excluye a quien no tiene test ni informe: definir la regla de visibilidad inicial en la etapa B.
 5. **Optimización de políticas RLS:** [H-009](hallazgos.md) y [H-010](hallazgos.md) mediante la migración `20261102020000_rls_advisors.sql` (envoltura de subqueries escalares y consolidación de políticas permisivas múltiples).
 6. **Verificación integral pre-deploy:** Ejecución de la suite completa de Playwright en staging y repetición exhaustiva de la Fase 0 contra la línea base.
 
@@ -316,7 +316,7 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
 ### PQ-05: Postulante — Eneagrama, informe y certificados
 - **Objetivo en una línea:** Asegurar consistencia atómica en el cálculo de eneatipo, respetar el período de 6 meses para rehacer el test y corregir la hidratación en el informe.
 - **Hallazgos que aborda:** [H-107](hallazgos.md), [H-112](hallazgos.md), [H-115](hallazgos.md), [H-207](hallazgos.md), [H-209](hallazgos.md), [H-222](hallazgos.md).
-- **Hallazgos que cierra de forma definitiva:** [H-207](hallazgos.md), [H-209](hallazgos.md), [H-222](hallazgos.md).
+- **Hallazgos que cierra de forma definitiva:** [H-209](hallazgos.md), [H-222](hallazgos.md). ([H-207](hallazgos.md) se completa en Etapa B).
 - **Archivos que toca:**
   - `src/modules/eneagrama/actions.ts`
   - `src/modules/eneagrama/rehacer-policy.ts`

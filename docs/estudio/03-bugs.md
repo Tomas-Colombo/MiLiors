@@ -239,7 +239,7 @@
 ### 3. Test de Eneagrama y Calidad
 - **Estados:** `Test iniciado` → `Respuestas guardadas` → `Dominantes y puntajes calculados` (`completado = true`).
 - **Anomalías detectadas:**
-  - `calcularEneatipo`: no evalúa la regla de espera de 6 meses (`evaluarRehacer`), la cual solo se comprueba en `iniciarTest`. Un postulante puede invocar `calcularEneatipo` directamente y saltear la restricción de espera (**H-209**).
+  - `calcularEneatipo`: no evalúa la regla de espera de 6 meses (`evaluarRehacer`), la cual solo se comprueba en `iniciarTest`. Un postulante puede invocar `calcularEneatipo` directamente y saltear la restricción de espera (**H-209**, resuelto en A3b).
   - Modificación de respuestas en test completado: `guardarRespuesta` y la política `respuesta_write` no comprueban que el test no esté completado, permitiendo alterar respuestas históricas post-cálculo.
 
 ---
@@ -452,7 +452,7 @@ WHERE proname = 'cerrar_puestos_inactivos';
 - **Propuesta:** Agregar `import 'server-only'` en la línea 1 de `src/lib/supabase/server-admin.ts`.
 
 ### 2. Error de hidratación en React por evaluación impura de `Date.now()` en Client Component (Hallazgo H-222, P2)
-- **Veredicto:** **Confirmado** (Hallazgo **H-222**, P2).
+- **Veredicto:** **Confirmado** (Hallazgo **H-222**, P2; resuelto en A3b).
 - **Archivo y línea:** `src/app/(postulante)/postulante/informe/informe-visor.tsx:40`
 - **Fragmento de código:**
   ```tsx
