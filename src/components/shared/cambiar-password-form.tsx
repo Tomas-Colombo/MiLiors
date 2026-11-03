@@ -4,12 +4,10 @@ import { useActionState, useState } from 'react'
 import { cambiarPassword } from '@/modules/perfil/actions'
 import { Button, Field, Input, Alert } from '@/components/ui'
 import { LockIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
-import type { ActionResult } from '@/lib/types/domain'
-
-const initialState: ActionResult = { success: false, error: '' }
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
 export function CambiarPasswordForm() {
-  const [state, action, pending] = useActionState(cambiarPassword, initialState)
+  const [state, action, pending] = useActionState(cambiarPassword, INITIAL_ACTION_STATE)
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -29,14 +27,14 @@ export function CambiarPasswordForm() {
           recién al enviar y parece arbitrario. */}
       <Field
         label="Nueva contraseña"
-        htmlFor="nueva_password"
+        htmlFor="password"
         required
         hint="Mínimo 8 caracteres, una mayúscula y un número."
-        error={fieldErrors.nueva_password?.[0]}
+        error={fieldErrors.password?.[0]}
       >
         <Input
-          id="nueva_password"
-          name="nueva_password"
+          id="password"
+          name="password"
           type={showNew ? 'text' : 'password'}
           placeholder="Elegí una contraseña nueva"
           leftIcon={<LockIcon size={17} />}
@@ -50,19 +48,19 @@ export function CambiarPasswordForm() {
               {showNew ? <EyeOffIcon size={17} /> : <EyeIcon size={17} />}
             </button>
           }
-          status={fieldErrors.nueva_password ? 'error' : 'default'}
+          status={fieldErrors.password ? 'error' : 'default'}
         />
       </Field>
 
       <Field
         label="Confirmar nueva contraseña"
-        htmlFor="confirmar_password"
+        htmlFor="confirmPassword"
         required
-        error={fieldErrors.confirmar_password?.[0]}
+        error={fieldErrors.confirmPassword?.[0]}
       >
         <Input
-          id="confirmar_password"
-          name="confirmar_password"
+          id="confirmPassword"
+          name="confirmPassword"
           type={showConfirm ? 'text' : 'password'}
           placeholder="Repetí la nueva contraseña"
           leftIcon={<LockIcon size={17} />}
@@ -76,7 +74,7 @@ export function CambiarPasswordForm() {
               {showConfirm ? <EyeOffIcon size={17} /> : <EyeIcon size={17} />}
             </button>
           }
-          status={fieldErrors.confirmar_password ? 'error' : 'default'}
+          status={fieldErrors.confirmPassword ? 'error' : 'default'}
         />
       </Field>
 

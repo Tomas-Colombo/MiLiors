@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { onboardingPostulanteSchema } from '@/modules/eneagrama/schema'
-import { passwordSchema } from '@/modules/auth/schema'
+import { nuevaPasswordSchema } from '@/modules/auth/schema'
 import { mensajeErrorPassword } from '@/modules/auth/password-error'
 import type { ActionResult } from '@/lib/types/domain'
 
@@ -144,21 +144,8 @@ export async function actualizarPerfilReclutador(
 
 // ─── Cambiar contraseña ───────────────────────────────────────────────────────
 
-// Las reglas son las mismas del alta y del restablecimiento por mail
-// (`passwordSchema` en @/modules/auth/schema). Acá antes se pedía sólo el
-// mínimo de 8 caracteres: quien entraba por "mi perfil" podía bajarse la
-// contraseña por debajo de lo que la app exige en la puerta, y la barrera real
-// pasaba a ser la más floja de las tres.
-const cambiarPasswordSchema = z
-  .object({
-    nueva_password: passwordSchema,
-    confirmar_password: z.string(),
-  })
-  .refine((d) => d.nueva_password === d.confirmar_password, {
-    message: 'Las contraseñas no coinciden.',
-    path: ['confirmar_password'],
-  })
-
+// Utiliza el schema canónico unificado `nuevaPasswordSchema` de `@/modules/auth/schema` (H-109),
+// garantizando consistencia de campos (`password`, `confirmPassword`) y reglas de seguridad.
 export async function cambiarPassword(
   _prevState: ActionResult,
   formData: FormData
@@ -166,11 +153,11 @@ export async function cambiarPassword(
   await verifySession()
 
   const raw = {
-    nueva_password: formData.get('nueva_password'),
-    confirmar_password: formData.get('confirmar_password'),
+    password: formData.get('password'),
+    confirmPassword: formData.get('confirmPassword'),
   }
 
-  const parsed = cambiarPasswordSchema.safeParse(raw)
+  const parsed = nuevaPasswordSchema.safeParse(raw)
   if (!parsed.success) {
     return {
       success: false,
@@ -181,7 +168,7 @@ export async function cambiarPassword(
 
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({
-    password: parsed.data.nueva_password,
+    password: parsed.data.password,
   })
 
   if (error) {
