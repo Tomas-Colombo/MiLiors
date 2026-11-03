@@ -22,27 +22,16 @@ type Props = {
    * solo.
    */
   formatoAnterior?: boolean
+  /**
+   * El informe está PENDIENTE y se está generando ahora mismo. Lo calcula el
+   * server component (ver `seEstaGenerando` en page.tsx): depende de la hora
+   * actual, y calcularlo acá durante el render daba un valor distinto en el
+   * servidor y en el navegador (error de hidratación, H-222).
+   */
+  generandoEnFondo?: boolean
 }
 
-/**
- * Ventana en la que un informe PENDIENTE se considera "generándose ahora" y no
- * "interrumpido".
- *
- * El enum de la base sólo tiene PENDIENTE / LISTO / ERROR, así que no hay un
- * estado GENERANDO que distinguir. Pero sí hay una diferencia observable: la
- * auto-generación que dispara el Eneagrama deja el registro en PENDIENTE y le
- * toca `updated_at` justo antes de llamar al LLM. Un PENDIENTE recién tocado
- * está corriendo; uno de hace horas se cortó a la mitad.
- */
-const MINUTOS_GENERACION = 5
-
-function seEstaGenerando(informe: InformeData | null): boolean {
-  if (informe?.estado_informe !== 'PENDIENTE' || !informe.updated_at) return false
-  const transcurrido = Date.now() - new Date(informe.updated_at).getTime()
-  return transcurrido >= 0 && transcurrido < MINUTOS_GENERACION * 60_000
-}
-
-export function InformeVisor({ informe, feedback, email, formatoAnterior = false }: Props) {
+export function InformeVisor({ informe, feedback, email, formatoAnterior = false, generandoEnFondo = false }: Props) {
   const [isPending, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
   const router = useRouter()
@@ -50,17 +39,8 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
   // La generación corre en el servidor, fuera de esta pestaña: nada nos avisa
   // cuando termina. Mientras dure la ventana, se vuelve a pedir la página cada
   // tanto; cuando el informe pasa a LISTO el componente sale por arriba y el
-  // efecto se limpia solo.
-  // H-222: `seEstaGenerando` usa `Date.now()`. Invocarlo durante el render sincrónico
-  // hace que el servidor y el cliente evalúen marcas temporales distintas, disparando
-  // error de hidratación en React. Se inicializa en `false` para que el HTML inicial del
-  // servidor y del primer render en el cliente coincidan exactamente, y se calcula en un
-  // efecto post-montaje (y cada vez que cambie `informe`).
-  const [generandoEnFondo, setGenerandoEnFondo] = useState(false)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setGenerandoEnFondo(seEstaGenerando(informe))
-  }, [informe])
+  // efecto se limpia solo. Cada refresh vuelve a calcular `generandoEnFondo` en
+  // el servidor, así que el polling se corta solo cuando se vence la ventana.
   useEffect(() => {
     if (!generandoEnFondo) return
     const id = setInterval(() => router.refresh(), 8000)
