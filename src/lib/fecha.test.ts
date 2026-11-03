@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatFecha } from './fecha'
+import { formatFecha, formatMesAnioCertificado } from './fecha'
 
 describe('formatFecha', () => {
   it('formatea string de solo fecha (YYYY-MM-DD) preservando el día civil (1 de marzo)', () => {
@@ -48,5 +48,16 @@ describe('formatFecha', () => {
     expect(formatFecha(ts, { formato: 'larga', timeZone: 'UTC' })).toBe('1 de marzo de 2026')
     // Con Argentina explícito, cae en el 28 de febrero
     expect(formatFecha(ts, { formato: 'larga', timeZone: 'America/Argentina/Buenos_Aires' })).toBe('28 de febrero de 2026')
+  })
+})
+
+describe('formatMesAnioCertificado', () => {
+  it('reproduce el formato del certificado: mes capitalizado y "Sep"', () => {
+    expect(formatMesAnioCertificado('2026-03-15')).toBe('Mar 2026')
+    expect(formatMesAnioCertificado('2025-09-01')).toBe('Sep 2025')
+  })
+
+  it('devuelve el texto original si no tiene forma de fecha', () => {
+    expect(formatMesAnioCertificado('sin fecha')).toBe('sin fecha')
   })
 })

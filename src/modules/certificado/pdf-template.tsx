@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
 import { agruparPorNivel, type NivelCert } from './niveles'
-import { formatFecha } from '@/lib/fecha'
+import { formatFecha, formatMesAnioCertificado } from '@/lib/fecha'
 import { verificarLabel } from '@/lib/app-url'
 
 /**
@@ -409,7 +409,7 @@ export function CertificadoPDF({
                     {c.nombre} <Text style={styles.itemOrg}>• {c.institucion}</Text>
                   </Text>
                   <Text style={styles.itemFecha}>
-                    {[c.fecha_fin ? formatFecha(c.fecha_fin, 'mes-anio-corto') : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
+                    {[c.fecha_fin ? formatMesAnioCertificado(c.fecha_fin) : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
                       .filter(Boolean)
                       .join(' · ')}
                   </Text>

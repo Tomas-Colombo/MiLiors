@@ -87,3 +87,19 @@ export function formatFecha(
     return '—'
   }
 }
+
+const MESES_ABREVIADOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+/**
+ * Mes y año de una columna DATE, como los muestra el certificado: "Mar 2026".
+ *
+ * No pasa por Intl a propósito: es-AR abrevia en minúscula y septiembre como
+ * "sept" ("mar 2026", "sept 2026"), y el certificado es un documento que la
+ * persona ya descargó con este formato. Trabaja sobre el texto 'YYYY-MM-DD',
+ * así que tampoco tiene corrimiento de zona horaria.
+ */
+export function formatMesAnioCertificado(fecha: string): string {
+  const [anio, mes] = fecha.split('-')
+  const nombre = MESES_ABREVIADOS[Number(mes) - 1]
+  return nombre && anio ? `${nombre} ${anio}` : fecha
+}

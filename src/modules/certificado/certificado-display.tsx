@@ -1,6 +1,6 @@
 import type { CertificadoContenido } from './queries'
 import { agruparPorNivel, type NivelCert } from './niveles'
-import { formatFecha } from '@/lib/fecha'
+import { formatMesAnioCertificado } from '@/lib/fecha'
 import { DOC } from '@/lib/constants/documento'
 import { verificarLabel } from '@/lib/app-url'
 import { Papel, PapelHeader, PapelIdentidad, PapelSectionHead } from '@/components/shared/documento-papel'
@@ -206,7 +206,7 @@ export function CertificadoDisplay({
                 key={`c${i}`}
                 titulo={c.nombre}
                 org={c.institucion}
-                fecha={[c.fecha_fin ? formatFecha(c.fecha_fin, 'mes-anio-corto') : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
+                fecha={[c.fecha_fin ? formatMesAnioCertificado(c.fecha_fin) : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
                   .filter(Boolean)
                   .join(' · ')}
               />
