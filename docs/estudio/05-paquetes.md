@@ -782,3 +782,11 @@ Los siguientes ítems quedan expresamente fuera del plan de ejecución de la Fas
   - *Justificación técnica:* En el bloque A7 se integran schemas unificados y manejo de estados; en la Etapa B se implementan las Server Actions de consentimiento explícito, derecho de supresión de cuenta y exportación de datos en formato portable conforme a la Ley 25.326 ([H-302](hallazgos.md)).
 - **`src/components/shared/cambiar-password-form.tsx`:** Pasa del bloque A7 al bloque A3a.
   - *Justificación técnica:* Se unifica junto con `src/modules/perfil/actions.ts` en el bloque A3a para adoptar atómicamente el schema canónico `nuevaPasswordSchema` ([H-109](hallazgos.md)), garantizando que los nombres de los campos de entrada (`password`, `confirmPassword`) coincidan con la Server Action y los errores por campo se muestren correctamente.
+- **Excepciones incorporadas en el bloque A4:**
+  - `src/modules/empresas/actions.ts`: Cascada de baja de empresa asegurando la verificación de errores en cada mutación previa a la baja lógica de la empresa ([H-210](hallazgos.md)).
+  - `src/modules/seleccion/prompts.ts`: La función `formatearCandidato` es compartida por el asistente y el módulo de selección; se encapsulan los datos en tags `<datos_candidato>` y se sanitizan directivas libres ([H-220](hallazgos.md)).
+  - `src/app/(reclutador)/reclutador/onboarding/page.tsx`: Migración del segundo `h1` al componente estándar `PageHeader` ([H-113](hallazgos.md)).
+  - `src/components/ui/page-header.tsx`: Adición de la prop opcional `icon` para soportar encabezados estándar con íconos decorativos ([H-113](hallazgos.md)).
+  - `src/app/(reclutador)/reclutador/puestos/puesto-acciones.tsx`: Consumidor cliente del modal de acciones de puesto adaptado al retorno de `ActionResult<T>` ([H-105](hallazgos.md)).
+  - `src/lib/ai/port.ts`: Opción `timeoutMs` en `GenerateOptions` y categoría de error `'tiempo_agotado'` en `AIErrorKind` ([H-227](hallazgos.md)).
+  - Tests unitarios nuevos y adaptados: `src/modules/puestos/actions.test.ts`, `src/modules/asistente/actions.test.ts`, `src/modules/asistente/prompts.test.ts`, `src/lib/ai/adapters/gemini.test.ts`, `src/modules/seleccion/service.test.ts` y `src/modules/seleccion/prompts.test.ts`.
