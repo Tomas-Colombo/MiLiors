@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { reactivarPuesto, cerrarPuesto, eliminarPuesto } from './actions'
+import {
+  reactivarPuesto,
+  cerrarPuesto,
+  eliminarPuesto,
+  getPostulantesDePuesto,
+  contarPostulacionesDelUltimoCiclo,
+} from './actions'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { revalidatePath } from 'next/cache'
+import { getCicloMasReciente } from './ciclos'
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
@@ -14,6 +21,10 @@ vi.mock('@/modules/empresas/queries', () => ({
 
 vi.mock('@/lib/supabase/server-admin', () => ({
   createAdminClient: vi.fn(),
+}))
+
+vi.mock('./ciclos', () => ({
+  getCicloMasReciente: vi.fn(),
 }))
 
 describe('puestos/actions — reactivarPuesto (H-204)', () => {
@@ -348,5 +359,120 @@ describe('puestos/actions — cascadas de cierre y eliminación (H-210)', () => 
     const res = await eliminarPuesto('puesto-1')
     expect(res).toEqual({ success: true, data: undefined })
     expect(callOrder).toEqual(['historial_puesto.update', 'postulacion.update', 'puesto.baja'])
+  })
+})
+
+describe('puestos/actions — lecturas del modal como ActionResult (H-105)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('getPostulantesDePuesto devuelve error si no está autorizado', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce(null)
+    const res = await getPostulantesDePuesto('puesto-1')
+    expect(res).toEqual({ success: false, error: 'No autorizado.' })
+  })
+
+  it('getPostulantesDePuesto devuelve postulantes únicos del último ciclo', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce('rec-1')
+    vi.mocked(getCicloMasReciente).mockResolvedValueOnce('ciclo-1')
+
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'puesto') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'puesto-1' } }),
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'postulacion') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  { postulante_id: 'post-1', perfil_postulante: { nombre_completo: 'Ana Pérez' } },
+                  { postulante_id: 'post-1', perfil_postulante: { nombre_completo: 'Ana Pérez' } },
+                  { postulante_id: 'post-2', perfil_postulante: null },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createAdminClient).mockReturnValue({ from: mockFrom } as unknown as ReturnType<typeof createAdminClient>)
+
+    const res = await getPostulantesDePuesto('puesto-1')
+    expect(res).toEqual({
+      success: true,
+      data: [
+        { postulanteId: 'post-1', nombre: 'Ana Pérez' },
+        { postulanteId: 'post-2', nombre: 'Sin nombre' },
+      ],
+    })
+  })
+
+  it('contarPostulacionesDelUltimoCiclo devuelve error si el puesto no es propio', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce('rec-1')
+
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'puesto') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createAdminClient).mockReturnValue({ from: mockFrom } as unknown as ReturnType<typeof createAdminClient>)
+
+    const res = await contarPostulacionesDelUltimoCiclo('puesto-1')
+    expect(res).toEqual({ success: false, error: 'No autorizado.' })
+  })
+
+  it('contarPostulacionesDelUltimoCiclo devuelve el conteo exacto del ciclo', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce('rec-1')
+    vi.mocked(getCicloMasReciente).mockResolvedValueOnce('ciclo-1')
+
+    const mockFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'puesto') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'puesto-1' }, error: null }),
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'postulacion') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ count: 5, error: null }),
+          }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createAdminClient).mockReturnValue({ from: mockFrom } as unknown as ReturnType<typeof createAdminClient>)
+
+    const res = await contarPostulacionesDelUltimoCiclo('puesto-1')
+    expect(res).toEqual({ success: true, data: 5 })
   })
 })

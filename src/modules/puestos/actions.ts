@@ -203,29 +203,39 @@ async function registrarContratacion(
  */
 export async function getPostulantesDePuesto(
   puestoId: string,
-): Promise<{ postulanteId: string; nombre: string }[]> {
+): Promise<ActionResult<{ postulanteId: string; nombre: string }[]>> {
   const ctx = await getReclutadorContext()
-  if (!ctx) return []
+  if (!ctx) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
 
   // Verificar propiedad del puesto
-  const { data: puesto } = await admin
+  const { data: puesto, error: puestoError } = await admin
     .from('puesto')
     .select('id')
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
     .maybeSingle()
-  if (!puesto) return []
+
+  if (puestoError) {
+    console.error('[puestos/actions] Error al verificar puesto en getPostulantesDePuesto:', puestoError)
+    return { success: false, error: 'No se pudo verificar el puesto.' }
+  }
+  if (!puesto) return { success: false, error: 'No autorizado.' }
 
   const cicloId = await getCicloMasReciente(puestoId)
-  if (!cicloId) return []
+  if (!cicloId) return { success: true, data: [] }
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from('postulacion')
     .select('postulante_id, perfil_postulante(nombre_completo)')
     .eq('historial_puesto_id', cicloId)
     .order('fecha_postulacion', { ascending: false })
+
+  if (error) {
+    console.error('[puestos/actions] Error al obtener postulantes del puesto:', error)
+    return { success: false, error: 'No se pudieron cargar los postulantes.' }
+  }
 
   const seen = new Set<string>()
   const out: { postulanteId: string; nombre: string }[] = []
@@ -235,7 +245,7 @@ export async function getPostulantesDePuesto(
     seen.add(r.postulante_id)
     out.push({ postulanteId: r.postulante_id, nombre: r.perfil_postulante?.nombre_completo ?? 'Sin nombre' })
   }
-  return out
+  return { success: true, data: out }
 }
 
 export async function publicarPuesto(
@@ -571,29 +581,41 @@ export async function eliminarPuesto(
  * Cuántas postulaciones quedan archivadas si se reactiva el puesto: las del ciclo
  * que se está por dejar atrás. Alimenta el aviso del modal de reactivación.
  */
-export async function contarPostulacionesDelUltimoCiclo(puestoId: string): Promise<number> {
+export async function contarPostulacionesDelUltimoCiclo(
+  puestoId: string,
+): Promise<ActionResult<number>> {
   const ctx = await getReclutadorContext()
-  if (!ctx) return 0
+  if (!ctx) return { success: false, error: 'No autorizado.' }
 
   const admin = createAdminClient()
 
-  const { data: puesto } = await admin
+  const { data: puesto, error: puestoError } = await admin
     .from('puesto')
     .select('id')
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
     .maybeSingle()
-  if (!puesto) return 0
+
+  if (puestoError) {
+    console.error('[puestos/actions] Error al verificar puesto en contarPostulacionesDelUltimoCiclo:', puestoError)
+    return { success: false, error: 'No se pudo verificar el puesto.' }
+  }
+  if (!puesto) return { success: false, error: 'No autorizado.' }
 
   const cicloId = await getCicloMasReciente(puestoId)
-  if (!cicloId) return 0
+  if (!cicloId) return { success: true, data: 0 }
 
-  const { count } = await admin
+  const { count, error } = await admin
     .from('postulacion')
     .select('id', { count: 'exact', head: true })
     .eq('historial_puesto_id', cicloId)
 
-  return count ?? 0
+  if (error) {
+    console.error('[puestos/actions] Error al contar postulaciones del ciclo:', error)
+    return { success: false, error: 'No se pudo consultar el historial de postulaciones.' }
+  }
+
+  return { success: true, data: count ?? 0 }
 }
 
 /**

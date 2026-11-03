@@ -32,27 +32,46 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
   const [nombreExterno, setNombreExterno] = useState('')
   const [postulantes, setPostulantes] = useState<{ postulanteId: string; nombre: string }[] | null>(null)
   const [archivadas, setArchivadas] = useState<number | null>(null)
+  const [conteoError, setConteoError] = useState(false)
+  const [postulantesError, setPostulantesError] = useState(false)
 
   const registraContratacion = modo === 'cerrar' || modo === 'eliminar'
 
   // Cargar los datos del modal al abrirlo (una sola vez cada uno)
   useEffect(() => {
-    if (registraContratacion && postulantes === null) {
-      getPostulantesDePuesto(puestoId).then(setPostulantes)
+    if (registraContratacion && postulantes === null && !postulantesError) {
+      getPostulantesDePuesto(puestoId).then((res) => {
+        if (res.success) {
+          setPostulantes(res.data)
+        } else {
+          setError(res.error)
+          setPostulantesError(true)
+        }
+      })
     }
-    if (modo === 'reactivar' && archivadas === null) {
-      contarPostulacionesDelUltimoCiclo(puestoId).then(setArchivadas)
+    if (modo === 'reactivar' && archivadas === null && !conteoError) {
+      contarPostulacionesDelUltimoCiclo(puestoId).then((res) => {
+        if (res.success) {
+          setArchivadas(res.data)
+        } else {
+          setError(res.error)
+          setConteoError(true)
+        }
+      })
     }
-  }, [modo, registraContratacion, postulantes, archivadas, puestoId])
+  }, [modo, registraContratacion, postulantes, postulantesError, archivadas, conteoError, puestoId])
 
   function abrirModal(m: Modo) {
     setError(null)
+    setConteoError(false)
+    setPostulantesError(false)
     setOrigen('ninguna')
     setPostulanteId('')
     setNombreExterno('')
     // El conteo depende del ciclo vigente: si el puesto se cerró y reactivó sin
     // remontar el componente, el valor cacheado sería de otro ciclo.
     setArchivadas(null)
+    setPostulantes(null)
     setModo(m)
   }
 
@@ -60,6 +79,8 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
     if (!isPending) {
       setModo(null)
       setError(null)
+      setConteoError(false)
+      setPostulantesError(false)
     }
   }
 
@@ -111,7 +132,7 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
     })
   }
 
-  const sinPostulantes = postulantes !== null && postulantes.length === 0
+  const sinPostulantes = postulantes !== null && !postulantesError && postulantes.length === 0
 
   return (
     <div className="flex flex-col gap-2 items-center">
@@ -222,9 +243,11 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
               Vuelve a aparecer en el listado y a <strong>recibir postulaciones</strong>.
             </p>
             {archivadas === null ? (
-              <p className="flex items-center gap-2 text-xs text-neutral-400">
-                <Spinner size={13} /> Revisando las postulaciones del ciclo anterior…
-              </p>
+              conteoError ? null : (
+                <p className="flex items-center gap-2 text-xs text-neutral-400">
+                  <Spinner size={13} /> Revisando las postulaciones del ciclo anterior…
+                </p>
+              )
             ) : archivadas > 0 ? (
               <p>
                 <strong>
@@ -275,9 +298,13 @@ export function PuestoAcciones({ puestoId, activo }: Props) {
               {origen === 'plataforma' && (
                 <div className="mt-2 pl-8">
                   {postulantes === null ? (
-                    <div className="flex items-center gap-2 text-xs text-neutral-400">
-                      <Spinner size={13} /> Cargando postulantes…
-                    </div>
+                    postulantesError ? (
+                      <p className="text-xs text-error-ink">No se pudieron cargar los postulantes.</p>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-neutral-400">
+                        <Spinner size={13} /> Cargando postulantes…
+                      </div>
+                    )
                   ) : (
                     <SearchableSelect
                       name={`postulante-${puestoId}`}
