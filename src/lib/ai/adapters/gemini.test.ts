@@ -64,6 +64,25 @@ describe('clasificarErrorGemini', () => {
     expect(clasificarErrorGemini(new Error(raw)).message).toBe(raw)
   })
 
+  it('un error por AbortError o timeout es tiempo_agotado y es transitorio (H-227)', () => {
+    const abortErr = new Error('This operation was aborted')
+    abortErr.name = 'AbortError'
+    const err = clasificarErrorGemini(abortErr)
+    expect(err.kind).toBe('tiempo_agotado')
+    expect(err.transitorio).toBe(true)
+
+    const timeoutErr = new Error('The operation timed out')
+    timeoutErr.name = 'TimeoutError'
+    const errTimeout = clasificarErrorGemini(timeoutErr)
+    expect(errTimeout.kind).toBe('tiempo_agotado')
+    expect(errTimeout.transitorio).toBe(true)
+
+    const domAbort = new DOMException('The user aborted a request.', 'AbortError')
+    const errDom = clasificarErrorGemini(domAbort)
+    expect(errDom.kind).toBe('tiempo_agotado')
+    expect(errDom.transitorio).toBe(true)
+  })
+
   it('no explota con algo que no es Error', () => {
     const err = clasificarErrorGemini('se cayó todo')
     expect(err).toBeInstanceOf(AIError)

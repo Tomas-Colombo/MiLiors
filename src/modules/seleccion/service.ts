@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import { aiProvider } from '@/lib/ai'
+import { AIError } from '@/lib/ai/port'
 import { MAX_CANDIDATOS_SELECCION } from './constants'
 import { cargarContextoCandidato } from './contexto-candidato'
 import {
@@ -142,25 +143,44 @@ export async function generarInformeSeleccion(
     candidatos,
   })
 
-  let raw: string
-  try {
-    const result = await aiProvider.generate({
-      systemPrompt,
-      userPrompt,
-      responseFormat: 'json',
-      maxTokens: 6000,
-      temperature: 0.4,
-    })
-    raw = result.content
-    console.info(
-      `[seleccion] Tokens: ${result.usage.inputTokens} in + ${result.usage.outputTokens} out (${result.model})`
-    )
-  } catch (err) {
-    console.error('[seleccion] Error IA:', err)
-    return {
-      success: false,
-      error: 'El asistente no está disponible en este momento. Intentá más tarde.',
-      status: 502,
+  let raw = ''
+  const MAX_INTENTOS = 2
+  const TIMEOUT_MS = 120_000
+  const ESPERA_REINTENTO_MS = 2_000
+
+  for (let intento = 1; intento <= MAX_INTENTOS; intento++) {
+    try {
+      const result = await aiProvider.generate({
+        systemPrompt,
+        userPrompt,
+        responseFormat: 'json',
+        maxTokens: 6000,
+        temperature: 0.4,
+        timeoutMs: TIMEOUT_MS,
+      })
+      raw = result.content
+      console.info(
+        `[seleccion] Intento ${intento}/${MAX_INTENTOS} — Tokens: ${result.usage.inputTokens} in + ${result.usage.outputTokens} out (${result.model})`
+      )
+      break
+    } catch (err) {
+      const esTransitorio = err instanceof AIError && err.transitorio
+      console.error(
+        `[seleccion] Intento ${intento}/${MAX_INTENTOS} — Error IA (${err instanceof AIError ? err.kind : 'no-AIError'}):`,
+        err
+      )
+
+      if (esTransitorio && intento < MAX_INTENTOS) {
+        console.info(`[seleccion] Reintentando tras ${ESPERA_REINTENTO_MS}ms por error transitorio...`)
+        await new Promise((resolve) => setTimeout(resolve, ESPERA_REINTENTO_MS))
+        continue
+      }
+
+      return {
+        success: false,
+        error: 'El asistente no está disponible en este momento. Intentá más tarde.',
+        status: 502,
+      }
     }
   }
 

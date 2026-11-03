@@ -147,6 +147,7 @@ export async function consultarAsistente(
       maxTokens: 1200,
       temperature: 0.4,
       responseFormat: 'text',
+      timeoutMs: 45_000,
     })
     respuesta = result.content
     console.info(

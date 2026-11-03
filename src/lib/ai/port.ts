@@ -22,6 +22,8 @@ export interface GenerateOptions {
    * 'text' → texto plano (por defecto para el asistente conversacional).
    */
   responseFormat?: 'json' | 'text'
+  /** Timeout en milisegundos para la llamada al proveedor (default 90_000 en Gemini) */
+  timeoutMs?: number
 }
 
 export interface GenerateResult {
@@ -48,6 +50,8 @@ export type AIErrorKind =
   | 'limite'
   /** Cualquier otro 5xx del proveedor. Transitorio. */
   | 'servidor'
+  /** El pedido superó el tiempo máximo de espera configurado. Transitorio. */
+  | 'tiempo_agotado'
   /** La respuesta no entró en el presupuesto de tokens. No lo arregla un reintento. */
   | 'truncado'
   /** Falta la credencial, o el modelo/pedido es inválido. No lo arregla un reintento. */

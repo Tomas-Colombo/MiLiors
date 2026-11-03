@@ -28,7 +28,19 @@ function getClient(): GoogleGenAI {
 export function clasificarErrorGemini(err: unknown): AIError {
   if (err instanceof AIError) return err
 
+  if (
+    (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')) ||
+    (typeof err === 'object' && err !== null && 'name' in err && (err as { name: string }).name === 'AbortError')
+  ) {
+    const raw = err instanceof Error ? err.message : String(err)
+    return new AIError('tiempo_agotado', true, raw || 'Tiempo de espera agotado.')
+  }
+
   const raw = err instanceof Error ? err.message : String(err)
+  if (/aborted|abort/i.test(raw) && !raw.includes('"code"')) {
+    return new AIError('tiempo_agotado', true, raw)
+  }
+
   const code = Number(raw.match(/"code"\s*:\s*(\d+)/)?.[1] ?? NaN)
   const status = raw.match(/"status"\s*:\s*"([A-Z_]+)"/)?.[1] ?? ''
 
@@ -40,9 +52,19 @@ export function clasificarErrorGemini(err: unknown): AIError {
 }
 
 export const geminiAdapter: AIProvider = {
-  async generate({ systemPrompt, userPrompt, maxTokens = 2000, temperature = 0.7, responseFormat = 'json' }: GenerateOptions): Promise<GenerateResult> {
+  async generate({
+    systemPrompt,
+    userPrompt,
+    maxTokens = 2000,
+    temperature = 0.7,
+    responseFormat = 'json',
+    timeoutMs = 90_000,
+  }: GenerateOptions): Promise<GenerateResult> {
     const ai = getClient()
     const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
 
     let response
     try {
@@ -53,6 +75,7 @@ export const geminiAdapter: AIProvider = {
           systemInstruction: systemPrompt,
           maxOutputTokens: maxTokens,
           temperature,
+          abortSignal: controller.signal,
           // Only use JSON mode for structured outputs (e.g. personality report).
           // The conversational assistant returns plain text — JSON mode wastes tokens and may break formatting.
           ...(responseFormat === 'json' ? { responseMimeType: 'application/json' } : {}),
@@ -63,7 +86,12 @@ export const geminiAdapter: AIProvider = {
         },
       })
     } catch (err) {
+      if (controller.signal.aborted) {
+        throw new AIError('tiempo_agotado', true, `Tiempo de espera agotado (${timeoutMs}ms).`)
+      }
       throw clasificarErrorGemini(err)
+    } finally {
+      clearTimeout(timer)
     }
 
     const candidate = response.candidates?.[0]
