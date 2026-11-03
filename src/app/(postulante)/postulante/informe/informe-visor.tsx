@@ -58,7 +58,16 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
   // cuando termina. Mientras dure la ventana, se vuelve a pedir la página cada
   // tanto; cuando el informe pasa a LISTO el componente sale por arriba y el
   // efecto se limpia solo.
-  const generandoEnFondo = seEstaGenerando(informe)
+  // H-222: `seEstaGenerando` usa `Date.now()`. Invocarlo durante el render sincrónico
+  // hace que el servidor y el cliente evalúen marcas temporales distintas, disparando
+  // error de hidratación en React. Se inicializa en `false` para que el HTML inicial del
+  // servidor y del primer render en el cliente coincidan exactamente, y se calcula en un
+  // efecto post-montaje (y cada vez que cambie `informe`).
+  const [generandoEnFondo, setGenerandoEnFondo] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGenerandoEnFondo(seEstaGenerando(informe))
+  }, [informe])
   useEffect(() => {
     if (!generandoEnFondo) return
     const id = setInterval(() => router.refresh(), 8000)
