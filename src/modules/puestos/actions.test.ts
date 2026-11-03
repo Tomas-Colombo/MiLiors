@@ -130,6 +130,10 @@ describe('puestos/actions — reactivarPuesto (H-204)', () => {
       })
     )
     expect(revalidatePath).toHaveBeenCalledWith('/reclutador/puestos')
+    expect(revalidatePath).toHaveBeenCalledWith('/reclutador/puestos/puesto-1')
+    expect(revalidatePath).toHaveBeenCalledWith('/reclutador/postulaciones')
+    expect(revalidatePath).toHaveBeenCalledWith('/postulante/puestos')
+    expect(revalidatePath).toHaveBeenCalledWith('/postulante/postulaciones')
   })
 
   it('mantiene la reactivación idempotente si el puesto ya estaba activo', async () => {

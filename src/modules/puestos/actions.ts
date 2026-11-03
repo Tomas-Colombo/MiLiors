@@ -46,6 +46,15 @@ async function getReclutadorContext(): Promise<{ reclutadorId: string } | null> 
   return reclutadorId ? { reclutadorId } : null
 }
 
+/** Revalida de forma simétrica las vistas de reclutador y postulante afectadas por un puesto (H-103, H-223). */
+function revalidarPuesto(puestoId: string) {
+  revalidatePath('/reclutador/puestos')
+  revalidatePath(`/reclutador/puestos/${puestoId}`)
+  revalidatePath('/reclutador/postulaciones')
+  revalidatePath('/postulante/puestos')
+  revalidatePath('/postulante/postulaciones')
+}
+
 /** El puesto existe y es del reclutador (las acciones con service role no tienen RLS). */
 async function esPuestoPropio(
   admin: ReturnType<typeof createAdminClient>,
@@ -309,7 +318,7 @@ export async function publicarPuesto(
 
   await registrarApertura(puestoId, parsed.data.empresa_id, parsed.data.titulo_puesto)
 
-  revalidatePath('/reclutador/puestos')
+  revalidarPuesto(puestoId)
   // No redirigimos: el cliente muestra el modal de advertencia (cierre por
   // inactividad) y navega al puesto cuando el reclutador lo confirma.
   return { success: true, data: { puestoId } }
@@ -412,8 +421,7 @@ export async function editarPuesto(
   // Editar el puesto cuenta como actividad del reclutador.
   await marcarActividadPuesto(puestoId)
 
-  revalidatePath(`/reclutador/puestos/${puestoId}`)
-  revalidatePath('/reclutador/puestos')
+  revalidarPuesto(puestoId)
   // El form sigue montado tras guardar: refrescar /editar actualiza el formulario
   // de referencia del editor del preselector, que decide si hay cambios que enviar.
   revalidatePath(`/reclutador/puestos/${puestoId}/editar`)
@@ -463,8 +471,7 @@ export async function cerrarPuesto(
 
   if (postulacionError) {
     console.error('[puestos/actions] Error al cerrar postulaciones en cerrarPuesto:', postulacionError)
-    revalidatePath('/reclutador/puestos')
-    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    revalidarPuesto(puestoId)
     return {
       success: false,
       error: 'No se pudieron cerrar las postulaciones asociadas. Podés reintentar la operación.',
@@ -480,16 +487,14 @@ export async function cerrarPuesto(
 
   if (puestoError) {
     console.error('[puestos/actions] Error al desactivar puesto en cerrarPuesto:', puestoError)
-    revalidatePath('/reclutador/puestos')
-    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    revalidarPuesto(puestoId)
     return {
       success: false,
       error: 'No se pudo cerrar el puesto. Podés reintentar la operación.',
     }
   }
 
-  revalidatePath('/reclutador/puestos')
-  revalidatePath(`/reclutador/puestos/${puestoId}`)
+  revalidarPuesto(puestoId)
   return { success: true, data: undefined }
 }
 
@@ -535,9 +540,7 @@ export async function eliminarPuesto(
 
   if (postulacionError) {
     console.error('[puestos/actions] Error al cerrar postulaciones en eliminarPuesto:', postulacionError)
-    revalidatePath('/reclutador/puestos')
-    revalidatePath('/reclutador/postulaciones')
-    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    revalidarPuesto(puestoId)
     return {
       success: false,
       error: 'No se pudieron cerrar las postulaciones asociadas. Podés reintentar la operación.',
@@ -553,18 +556,14 @@ export async function eliminarPuesto(
 
   if (puestoError) {
     console.error('[puestos/actions] Error al dar de baja el puesto en eliminarPuesto:', puestoError)
-    revalidatePath('/reclutador/puestos')
-    revalidatePath('/reclutador/postulaciones')
-    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    revalidarPuesto(puestoId)
     return {
       success: false,
       error: 'No se pudo eliminar el puesto. Podés reintentar la operación.',
     }
   }
 
-  revalidatePath('/reclutador/puestos')
-  revalidatePath('/reclutador/postulaciones')
-  revalidatePath(`/reclutador/puestos/${puestoId}`)
+  revalidarPuesto(puestoId)
   return { success: true, data: undefined }
 }
 
@@ -653,7 +652,6 @@ export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
     await registrarApertura(puestoId, empresaId, titulo_puesto)
   }
 
-  revalidatePath('/reclutador/puestos')
-  revalidatePath('/reclutador/postulaciones')
+  revalidarPuesto(puestoId)
   return { success: true, data: undefined }
 }
