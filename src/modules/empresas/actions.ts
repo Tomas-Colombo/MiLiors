@@ -218,15 +218,10 @@ export async function darDeBajaEmpresa(empresaId: string): Promise<ActionResult>
     return { success: false, error: 'No autorizado.' }
   }
 
-  const { error: bajaError } = await admin
-    .from('empresa')
-    .update({ fecha_baja: new Date().toISOString() })
-    .eq('id', empresaId)
-
-  if (bajaError) return { success: false, error: 'No se pudo dar de baja la empresa.' }
-
-  // Cascada de cierre sobre los puestos abiertos de esa empresa.
-  const { data: puestos } = await admin
+  // 1. Cascada de cierre sobre los puestos abiertos de esa empresa:
+  // Se ejecutan primero las escrituras internas para que, ante cualquier fallo,
+  // la empresa no quede dada de baja parcialmente sin posibilidad de reintento.
+  const { data: puestos, error: puestosError } = await admin
     .from('puesto')
     .select('id')
     .eq('reclutador_id', reclutadorId)
@@ -234,39 +229,101 @@ export async function darDeBajaEmpresa(empresaId: string): Promise<ActionResult>
     .eq('activo', true)
     .is('fecha_baja_puesto', null)
 
+  if (puestosError) {
+    console.error('[empresas/actions] Error al consultar puestos de la empresa en darDeBajaEmpresa:', puestosError)
+    return { success: false, error: 'No se pudieron consultar los puestos de la empresa. Podés reintentar la operación.' }
+  }
+
   const puestoIds = ((puestos ?? []) as { id: string }[]).map((p) => p.id)
 
   if (puestoIds.length > 0) {
-    await admin.from('puesto').update({ activo: false }).in('id', puestoIds)
-
-    await admin
+    // 1a. Cerrar ciclos activos en historial_puesto
+    const { error: historialError } = await admin
       .from('historial_puesto')
       .update({ fecha_fin: new Date().toISOString() })
       .in('puesto_id', puestoIds)
       .is('fecha_fin', null)
 
-    await admin
+    if (historialError) {
+      console.error('[empresas/actions] Error al cerrar historial_puesto en darDeBajaEmpresa:', historialError)
+      return { success: false, error: 'No se pudieron cerrar los ciclos de los puestos. Podés reintentar la operación.' }
+    }
+
+    // 1b. Cascada: postulaciones ENVIADA/VISTO -> CERRADA
+    const { error: postulacionError } = await admin
       .from('postulacion')
       .update({ estado: ESTADO_POSTULACION.CERRADA })
       .in('puesto_id', puestoIds)
       .in('estado', [ESTADO_POSTULACION.ENVIADA, ESTADO_POSTULACION.VISTO])
+
+    if (postulacionError) {
+      console.error('[empresas/actions] Error al cerrar postulaciones en darDeBajaEmpresa:', postulacionError)
+      revalidatePath('/reclutador/empresas')
+      revalidatePath('/reclutador/puestos')
+      revalidatePath('/reclutador/postulaciones')
+      return { success: false, error: 'No se pudieron cerrar las postulaciones de los puestos. Podés reintentar la operación.' }
+    }
+
+    // 1c. Desactivar los puestos
+    const { error: puestoError } = await admin
+      .from('puesto')
+      .update({ activo: false })
+      .in('id', puestoIds)
+
+    if (puestoError) {
+      console.error('[empresas/actions] Error al desactivar puestos en darDeBajaEmpresa:', puestoError)
+      revalidatePath('/reclutador/empresas')
+      revalidatePath('/reclutador/puestos')
+      revalidatePath('/reclutador/postulaciones')
+      return { success: false, error: 'No se pudieron desactivar los puestos de la empresa. Podés reintentar la operación.' }
+    }
   }
 
-  // La empresa principal no puede quedar apuntando a una empresa de baja.
+  // 2. La empresa principal no puede quedar apuntando a una empresa de baja.
   if (empresaPrincipal === empresaId) {
-    const { data: vinculos } = await admin
+    const { data: vinculos, error: vinculosError } = await admin
       .from('reclutador_empresa')
       .select('empresa(id, fecha_baja)')
       .eq('reclutador_id', reclutadorId)
+
+    if (vinculosError) {
+      console.error('[empresas/actions] Error al consultar vinculos en darDeBajaEmpresa:', vinculosError)
+      revalidatePath('/reclutador/empresas')
+      revalidatePath('/reclutador/puestos')
+      revalidatePath('/reclutador/postulaciones')
+      return { success: false, error: 'No se pudo actualizar el perfil del reclutador. Podés reintentar la operación.' }
+    }
 
     const reemplazo = ((vinculos ?? []) as unknown[])
       .map((v) => (v as { empresa: { id: string; fecha_baja: string | null } | null }).empresa)
       .find((e) => e && !e.fecha_baja && e.id !== empresaId)
 
-    await admin
+    const { error: perfilError } = await admin
       .from('perfil_reclutador')
       .update({ empresa_id: reemplazo?.id ?? null })
       .eq('id', reclutadorId)
+
+    if (perfilError) {
+      console.error('[empresas/actions] Error al actualizar empresa principal en darDeBajaEmpresa:', perfilError)
+      revalidatePath('/reclutador/empresas')
+      revalidatePath('/reclutador/puestos')
+      revalidatePath('/reclutador/postulaciones')
+      return { success: false, error: 'No se pudo reasignar la empresa principal. Podés reintentar la operación.' }
+    }
+  }
+
+  // 3. AL FINAL: Cambio visible del estado de la empresa (fecha_baja)
+  const { error: bajaError } = await admin
+    .from('empresa')
+    .update({ fecha_baja: new Date().toISOString() })
+    .eq('id', empresaId)
+
+  if (bajaError) {
+    console.error('[empresas/actions] Error al registrar fecha_baja de empresa:', bajaError)
+    revalidatePath('/reclutador/empresas')
+    revalidatePath('/reclutador/puestos')
+    revalidatePath('/reclutador/postulaciones')
+    return { success: false, error: 'No se pudo dar de baja la empresa. Podés reintentar la operación.' }
   }
 
   revalidatePath('/reclutador/empresas')

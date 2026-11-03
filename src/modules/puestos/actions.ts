@@ -90,10 +90,13 @@ async function empresaHabilitada(
 async function registrarApertura(puestoId: string, empresaId: string, tituloPuesto: string) {
   const admin = createAdminClient()
 
-  await admin.from('historial_puesto').insert({
+  const { error: aperturaError } = await admin.from('historial_puesto').insert({
     puesto_id: puestoId,
     fecha_inicio: new Date().toISOString(),
   })
+  if (aperturaError) {
+    console.error('[puestos/actions] Error al registrar apertura en historial_puesto:', aperturaError)
+  }
 
   // Analytics alert: ≥3 openings of the same title in the last year
   const unAñoAtras = new Date()
@@ -432,32 +435,58 @@ export async function cerrarPuesto(
     return { success: false, error: 'No autorizado.' }
   }
 
-  // Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
+  // 1. Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
   if (contratacion) {
     const res = await registrarContratacion(admin, puestoId, contratacion)
     if (!res.ok) return { success: false, error: res.error }
   }
 
-  // Cierre reversible: el puesto se desactiva pero sigue visible para el
-  // reclutador y puede reactivarse. No se da de baja (fecha_baja_puesto).
+  // 2. Cascada: cerrar ciclo activo en historial_puesto
+  const { error: historialError } = await admin.from('historial_puesto')
+    .update({ fecha_fin: new Date().toISOString() })
+    .eq('puesto_id', puestoId)
+    .is('fecha_fin', null)
+
+  if (historialError) {
+    console.error('[puestos/actions] Error al cerrar historial_puesto en cerrarPuesto:', historialError)
+    return {
+      success: false,
+      error: 'No se pudo cerrar el ciclo del puesto. Podés reintentar la operación.',
+    }
+  }
+
+  // 3. Cascada: ENVIADA/VISTO applications → CERRADA
+  const { error: postulacionError } = await admin.from('postulacion')
+    .update({ estado: 'CERRADA' })
+    .eq('puesto_id', puestoId)
+    .in('estado', ['ENVIADA', 'VISTO'])
+
+  if (postulacionError) {
+    console.error('[puestos/actions] Error al cerrar postulaciones en cerrarPuesto:', postulacionError)
+    revalidatePath('/reclutador/puestos')
+    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    return {
+      success: false,
+      error: 'No se pudieron cerrar las postulaciones asociadas. Podés reintentar la operación.',
+    }
+  }
+
+  // 4. AL FINAL: Cierre visible del puesto (activo: false). Si algo falló antes,
+  // el puesto sigue activo en la UI permitiendo el reintento.
   const { error: puestoError } = await admin.from('puesto')
     .update({ activo: false })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
 
-  if (puestoError) return { success: false, error: 'No se pudo cerrar el puesto.' }
-
-  // Close active historial_puesto entry
-  await admin.from('historial_puesto')
-    .update({ fecha_fin: new Date().toISOString() })
-    .eq('puesto_id', puestoId)
-    .is('fecha_fin', null)
-
-  // Cascade: ENVIADA/VISTO applications → CERRADA
-  await admin.from('postulacion')
-    .update({ estado: 'CERRADA' })
-    .eq('puesto_id', puestoId)
-    .in('estado', ['ENVIADA', 'VISTO'])
+  if (puestoError) {
+    console.error('[puestos/actions] Error al desactivar puesto en cerrarPuesto:', puestoError)
+    revalidatePath('/reclutador/puestos')
+    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    return {
+      success: false,
+      error: 'No se pudo cerrar el puesto. Podés reintentar la operación.',
+    }
+  }
 
   revalidatePath('/reclutador/puestos')
   revalidatePath(`/reclutador/puestos/${puestoId}`)
@@ -478,33 +507,60 @@ export async function eliminarPuesto(
     return { success: false, error: 'No autorizado.' }
   }
 
-  // Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
+  // 1. Registrar contratación (si la hubo) sobre el ciclo abierto, antes de cerrarlo.
   if (contratacion) {
     const res = await registrarContratacion(admin, puestoId, contratacion)
     if (!res.ok) return { success: false, error: res.error }
   }
 
-  // Baja lógica: se registra fecha_baja_puesto. El puesto y sus postulaciones
-  // desaparecen de las vistas del reclutador, pero se conservan en la base
-  // para las métricas del admin. No es reversible desde el perfil.
+  // 2. Cascada: cerrar ciclo activo en historial_puesto
+  const { error: historialError } = await admin.from('historial_puesto')
+    .update({ fecha_fin: new Date().toISOString() })
+    .eq('puesto_id', puestoId)
+    .is('fecha_fin', null)
+
+  if (historialError) {
+    console.error('[puestos/actions] Error al cerrar historial_puesto en eliminarPuesto:', historialError)
+    return {
+      success: false,
+      error: 'No se pudo cerrar el ciclo del puesto. Podés reintentar la operación.',
+    }
+  }
+
+  // 3. Cascada: ENVIADA/VISTO applications → CERRADA
+  const { error: postulacionError } = await admin.from('postulacion')
+    .update({ estado: 'CERRADA' })
+    .eq('puesto_id', puestoId)
+    .in('estado', ['ENVIADA', 'VISTO'])
+
+  if (postulacionError) {
+    console.error('[puestos/actions] Error al cerrar postulaciones en eliminarPuesto:', postulacionError)
+    revalidatePath('/reclutador/puestos')
+    revalidatePath('/reclutador/postulaciones')
+    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    return {
+      success: false,
+      error: 'No se pudieron cerrar las postulaciones asociadas. Podés reintentar la operación.',
+    }
+  }
+
+  // 4. AL FINAL: Baja lógica visible (activo: false, fecha_baja_puesto: now).
+  // Si algo falló antes, el puesto sigue visible permitiendo el reintento.
   const { error: puestoError } = await admin.from('puesto')
     .update({ activo: false, fecha_baja_puesto: new Date().toISOString() })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
 
-  if (puestoError) return { success: false, error: 'No se pudo eliminar el puesto.' }
-
-  // Close active historial_puesto entry
-  await admin.from('historial_puesto')
-    .update({ fecha_fin: new Date().toISOString() })
-    .eq('puesto_id', puestoId)
-    .is('fecha_fin', null)
-
-  // Cascade: ENVIADA/VISTO applications → CERRADA
-  await admin.from('postulacion')
-    .update({ estado: 'CERRADA' })
-    .eq('puesto_id', puestoId)
-    .in('estado', ['ENVIADA', 'VISTO'])
+  if (puestoError) {
+    console.error('[puestos/actions] Error al dar de baja el puesto en eliminarPuesto:', puestoError)
+    revalidatePath('/reclutador/puestos')
+    revalidatePath('/reclutador/postulaciones')
+    revalidatePath(`/reclutador/puestos/${puestoId}`)
+    return {
+      success: false,
+      error: 'No se pudo eliminar el puesto. Podés reintentar la operación.',
+    }
+  }
 
   revalidatePath('/reclutador/puestos')
   revalidatePath('/reclutador/postulaciones')
