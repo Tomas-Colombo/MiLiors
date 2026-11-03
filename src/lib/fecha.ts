@@ -19,7 +19,9 @@
 
 export type FormatoFecha =
   | 'larga'          // Ej: "1 de marzo de 2026" (predeterminado)
+  | 'larga-dos-digitos' // Ej: "01 de marzo de 2026" (certificados, PDFs y verificación)
   | 'corta'          // Ej: "01/03/2026"
+  | 'numerica'       // Ej: "1/3/2026" (formato por defecto de es-AR, sin ceros)
   | 'abreviada'      // Ej: "1 de mar de 2026"
   | 'con-hora'       // Ej: "01/03/2026, 12:30"
   | 'mes-anio'       // Ej: "marzo de 2026"
@@ -32,7 +34,9 @@ export interface OpcionesFecha {
 
 const OPCIONES_FORMATO: Record<FormatoFecha, Intl.DateTimeFormatOptions> = {
   larga: { day: 'numeric', month: 'long', year: 'numeric' },
+  'larga-dos-digitos': { day: '2-digit', month: 'long', year: 'numeric' },
   corta: { day: '2-digit', month: '2-digit', year: 'numeric' },
+  numerica: { day: 'numeric', month: 'numeric', year: 'numeric' },
   abreviada: { day: 'numeric', month: 'short', year: 'numeric' },
   'con-hora': {
     day: '2-digit',

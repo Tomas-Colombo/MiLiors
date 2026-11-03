@@ -30,6 +30,16 @@ describe('formatFecha', () => {
     expect(formatFecha(fecha, 'corta')).toBe('01/03/2026')
     expect(formatFecha(fecha, 'mes-anio')).toBe('marzo de 2026')
     expect(formatFecha(fecha, 'mes-anio-corto')).toBe('mar 2026')
+    expect(formatFecha(fecha, 'larga-dos-digitos')).toBe('01 de marzo de 2026')
+    expect(formatFecha(fecha, 'numerica')).toBe('1/3/2026')
+    expect(formatFecha(fecha, 'abreviada')).toBe('1 de mar de 2026')
+  })
+
+  it('la variante con hora usa la hora argentina', () => {
+    // 15:05Z son las 12:05 en UTC-3. Intl separa "p. m." con espacios no
+    // separables, así que se normalizan antes de comparar.
+    const texto = formatFecha('2026-03-01T15:05:00Z', 'con-hora').replace(/\s/g, ' ')
+    expect(texto).toBe('01/03/2026, 12:05 p. m.')
   })
 
   it('permite sobreescribir la zona horaria explícitamente', () => {
