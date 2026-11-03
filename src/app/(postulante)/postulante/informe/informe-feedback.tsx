@@ -5,7 +5,8 @@ import { Alert, Button, Textarea } from '@/components/ui'
 import { guardarFeedbackInforme, valorarSeccion } from '@/modules/informe/actions'
 import type { FeedbackInforme } from '@/modules/informe/queries'
 import type { SeccionFeedbackKey } from '@/lib/types/informe'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
+import { formatFecha } from '@/lib/fecha'
 
 /**
  * Feedback del postulante sobre su informe. Dos piezas:
@@ -71,18 +72,8 @@ export function ReconocimientoSeccionControl({
   )
 }
 
-const INITIAL_STATE: ActionResult = { success: false, error: '' }
-
 /** 10 niveles expresados en porcentaje: es lo que se guarda tal cual. */
 const PORCENTAJES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-
-function formatFecha(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
-  } catch {
-    return iso
-  }
-}
 
 /** Cuadro cerrado: la opinión ya está dada y todavía no se reabre. */
 function FeedbackCerrado({ reabreAt }: { reabreAt: string | null }) {
@@ -91,7 +82,7 @@ function FeedbackCerrado({ reabreAt }: { reabreAt: string | null }) {
       <p className="text-compact font-semibold text-ink">Gracias, ya registramos tu opinión.</p>
       <p className="mt-0.5 text-xs text-muted">
         {reabreAt
-          ? `Vas a poder opinar de nuevo a partir del ${formatFecha(reabreAt)}.`
+          ? `Vas a poder opinar de nuevo a partir del ${formatFecha(reabreAt, 'larga-dos-digitos')}.`
           : 'Vas a poder opinar de nuevo más adelante.'}
       </p>
     </div>
@@ -108,7 +99,7 @@ export function FeedbackGlobalForm({
   reabreAt: string | null
 }) {
   const [puntaje, setPuntaje] = useState<number | null>(inicial?.representatividad ?? null)
-  const [state, action, pending] = useActionState(guardarFeedbackInforme, INITIAL_STATE)
+  const [state, action, pending] = useActionState(guardarFeedbackInforme, INITIAL_ACTION_STATE)
 
   // Cerrado si el período de reactivación sigue corriendo, o apenas se envía:
   // dejar el formulario abierto invitaría a responder de nuevo algo ya guardado.

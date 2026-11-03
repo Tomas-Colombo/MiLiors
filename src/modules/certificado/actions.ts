@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { generarPDFBuffer } from './generate-pdf'
 import { generarSintesisCertificado } from './sintesis-service'
 import { construirPropsCertificado } from './pdf-props'
@@ -12,18 +13,13 @@ import { EJES_COMO_TRABAJA, esFormatoAnterior, type InformePersonalidadJSON } fr
 import type { CertificadoSintesisJSON } from '@/lib/types/certificado'
 
 export async function crearCertificado(): Promise<ActionResult<{ certificadoId: string }>> {
-  const session = await verifySession()
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  const { data: postulante } = await supabase
-    .from('perfil_postulante')
-    .select('id, nombre_completo')
-    .eq('usuario_id', session.id)
-    .single()
-
+  // H-107: Reutiliza la lectura memoizada del perfil del postulante actual.
+  const postulante = await getPerfilPostulanteActual()
   if (!postulante) return { success: false, error: 'Perfil no encontrado.' }
-  const postulanteTyped = postulante as { id: string; nombre_completo: string }
+  const postulanteTyped = postulante
 
   // El informe desactualizado bloquea la EMISIÓN (no la descarga de uno ya emitido).
   const { data: informe } = await supabase
@@ -107,6 +103,7 @@ export async function regenerarSintesisCertificado(): Promise<ActionResult> {
   const supabase = await createClient()
   const admin = createAdminClient()
 
+  // Conserva consulta directa porque requiere la relación carrera:carrera_id(nombre) que getPerfilPostulanteActual no incluye.
   const { data: postulante } = await supabase
     .from('perfil_postulante')
     .select('id, nombre_completo, carrera_otra, mostrar_personalidad_publico, carrera:carrera_id(nombre)')

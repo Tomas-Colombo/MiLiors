@@ -1,5 +1,6 @@
 import type { CertificadoContenido } from './queries'
 import { agruparPorNivel, type NivelCert } from './niveles'
+import { formatFecha } from '@/lib/fecha'
 import { DOC } from '@/lib/constants/documento'
 import { verificarLabel } from '@/lib/app-url'
 import { Papel, PapelHeader, PapelIdentidad, PapelSectionHead } from '@/components/shared/documento-papel'
@@ -13,8 +14,6 @@ import { Papel, PapelHeader, PapelIdentidad, PapelSectionHead } from '@/componen
  * postulante ve y lo que descarga deben ser lo mismo.
  */
 
-const MESES = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
 const NAVY = DOC.navy
 const GOLD = DOC.gold
 const GOLD_DARK = DOC.goldDark
@@ -23,13 +22,6 @@ const nivelColor: Record<NivelCert, string> = {
   Avanzado: GOLD_DARK,
   Medio: NAVY,
   Básico: DOC.muted,
-}
-
-function formatFecha(iso: string | null): string {
-  if (!iso) return 'Actualidad'
-  const parts = iso.split('-')
-  if (parts.length >= 2) return `${MESES[parseInt(parts[1])]} ${parts[0]}`
-  return iso
 }
 
 function anio(iso: string | null): string {
@@ -214,7 +206,7 @@ export function CertificadoDisplay({
                 key={`c${i}`}
                 titulo={c.nombre}
                 org={c.institucion}
-                fecha={[c.fecha_fin ? formatFecha(c.fecha_fin) : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
+                fecha={[c.fecha_fin ? formatFecha(c.fecha_fin, 'mes-anio-corto') : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
                   .filter(Boolean)
                   .join(' · ')}
               />

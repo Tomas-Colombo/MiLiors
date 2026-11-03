@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Alert, Badge, Button, Card } from '@/components/ui'
 import { actualizarCertificado, crearCertificado, regenerarSintesisCertificado } from '@/modules/certificado/actions'
+import { formatFecha } from '@/lib/fecha'
 import type { CertificadoData, CertificadoContenido } from '@/modules/certificado/queries'
 import type { SintesisEstado } from '@/lib/types/certificado'
 import { CertificadoDisplay } from '@/modules/certificado/certificado-display'
@@ -30,14 +31,6 @@ type Props = {
 const ACCION_CLASS =
   'h-auto min-h-10 w-full py-2 text-center leading-tight ' +
   'enabled:hover:border-primary-300 enabled:hover:bg-primary-tint enabled:hover:text-primary-600'
-
-function formatFecha(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
-  } catch {
-    return iso
-  }
-}
 
 /**
  * Generación de la síntesis integrada para un certificado ya emitido cuya
@@ -223,7 +216,7 @@ export function CertificadoUI({
           <Badge tone={certificado.desactualizado ? 'warning' : 'success'} dot>
             {certificado.desactualizado ? 'Desactualizado' : 'Verificado'}
           </Badge>
-          <span className="text-xs text-muted">Emitido el {formatFecha(certificado.timestamp_firma)}</span>
+          <span className="text-xs text-muted">Emitido el {formatFecha(certificado.timestamp_firma, 'larga-dos-digitos')}</span>
         </div>
 
         {/* Botonera: tres acciones equivalentes, repartidas en partes iguales. */}
@@ -274,7 +267,7 @@ export function CertificadoUI({
           <CertificadoDisplay
             data={contenido}
             certificadoId={certificado.id}
-            emitidoEl={formatFecha(certificado.timestamp_firma)}
+            emitidoEl={formatFecha(certificado.timestamp_firma, 'larga-dos-digitos')}
           />
         )}
 

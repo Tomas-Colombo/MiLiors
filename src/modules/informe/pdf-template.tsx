@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
 import type { InformePersonalidadJSON } from '@/lib/types/informe'
+import { formatFecha } from '@/lib/fecha'
 import { LEYENDA_INFORME } from './competencias'
 import { seccionesInforme, type BloqueInforme, type SeccionInforme } from './secciones'
 import { DOC } from '@/lib/constants/documento'
@@ -150,7 +151,7 @@ function Bloque({ b }: { b: BloqueInforme }) {
 export function InformePDF({ informe, email, fechaGeneracion, logoBase64 }: InformePDFProps) {
   const [sintesis, ...resto] = seccionesInforme(informe)
   const fecha = fechaGeneracion
-    ? new Date(fechaGeneracion).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+    ? formatFecha(fechaGeneracion, 'larga-dos-digitos')
     : null
 
   const maxScore = Math.max(1, ...informe.mapaPersonalidad.map(m => m.score))

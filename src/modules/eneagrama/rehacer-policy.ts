@@ -1,3 +1,5 @@
+import { formatFecha } from '@/lib/fecha'
+
 /**
  * Regla de negocio: cada cuánto se puede rehacer el Eneagrama.
  *
@@ -62,6 +64,6 @@ export function evaluarRehacer(
 }
 
 /** Formato corto de fecha para los avisos al postulante. */
-export function formatearFecha(fecha: Date): string {
-  return fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+export function formatearFecha(fecha: Date | string): string {
+  return formatFecha(fecha, 'corta')
 }

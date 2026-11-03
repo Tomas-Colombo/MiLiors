@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
 import { agruparPorNivel, type NivelCert } from './niveles'
+import { formatFecha } from '@/lib/fecha'
 import { verificarLabel } from '@/lib/app-url'
 
 /**
@@ -201,15 +202,6 @@ export type CertificadoPDFProps = {
   logoBase64: string // isotipo dorado en base64
 }
 
-const MESES = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
-function formatFecha(iso: string | null): string {
-  if (!iso) return 'Actualidad'
-  const parts = iso.split('-')
-  if (parts.length >= 2) return `${MESES[parseInt(parts[1])]} ${parts[0]}`
-  return iso
-}
-
 function anio(iso: string | null): string {
   return iso ? iso.split('-')[0] : ''
 }
@@ -273,11 +265,7 @@ export function CertificadoPDF({
   qrBase64,
   logoBase64,
 }: CertificadoPDFProps) {
-  const fechaFirma = new Date(timestampFirma).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
+  const fechaFirma = formatFecha(timestampFirma, 'larga-dos-digitos')
   // Numeramos en runtime: idiomas y cursos van dentro de sus secciones, pero
   // cualquier bloque vacío no debe dejar un hueco en la numeración.
   let n = 0
@@ -421,7 +409,7 @@ export function CertificadoPDF({
                     {c.nombre} <Text style={styles.itemOrg}>• {c.institucion}</Text>
                   </Text>
                   <Text style={styles.itemFecha}>
-                    {[c.fecha_fin ? formatFecha(c.fecha_fin) : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
+                    {[c.fecha_fin ? formatFecha(c.fecha_fin, 'mes-anio-corto') : null, c.duracion_horas ? `${c.duracion_horas} h` : null]
                       .filter(Boolean)
                       .join(' · ')}
                   </Text>

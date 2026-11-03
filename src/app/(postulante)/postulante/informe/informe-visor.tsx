@@ -4,6 +4,7 @@ import { useTransition, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Alert, Skeleton, Card, Badge, Button } from '@/components/ui'
 import { generarInforme } from '@/modules/informe/actions'
+import { formatFecha } from '@/lib/fecha'
 import type { InformeData, FeedbackInforme } from '@/modules/informe/queries'
 import { InformePapel } from '@/modules/informe/informe-papel'
 import { FeedbackGlobalForm, ReconocimientoSeccionControl } from './informe-feedback'
@@ -39,14 +40,6 @@ function seEstaGenerando(informe: InformeData | null): boolean {
   if (informe?.estado_informe !== 'PENDIENTE' || !informe.updated_at) return false
   const transcurrido = Date.now() - new Date(informe.updated_at).getTime()
   return transcurrido >= 0 && transcurrido < MINUTOS_GENERACION * 60_000
-}
-
-function formatFecha(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
-  } catch {
-    return iso
-  }
 }
 
 export function InformeVisor({ informe, feedback, email, formatoAnterior = false }: Props) {
@@ -120,7 +113,7 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
               {desactualizado ? 'Desactualizado' : formatoAnterior ? 'Formato anterior' : 'Generado'}
             </Badge>
             {informe.fecha_generacion && (
-              <span className="text-xs text-muted">{formatFecha(informe.fecha_generacion)}</span>
+              <span className="text-xs text-muted">{formatFecha(informe.fecha_generacion, 'larga-dos-digitos')}</span>
             )}
           </div>
           {!formatoAnterior && (
@@ -143,7 +136,7 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
           <InformePapel
             data={data}
             email={email}
-            fechaGeneracion={informe.fecha_generacion ? formatFecha(informe.fecha_generacion) : undefined}
+            fechaGeneracion={informe.fecha_generacion ? formatFecha(informe.fecha_generacion, 'larga-dos-digitos') : undefined}
             renderSeccionExtra={
               feedback
                 ? seccion => <ReconocimientoSeccionControl seccion={seccion} inicial={feedback.secciones[seccion]} />
@@ -203,7 +196,7 @@ export function InformeVisor({ informe, feedback, email, formatoAnterior = false
               <Badge tone="neutral">Sin generar</Badge>
             )}
             {informe?.updated_at && (
-              <span className="text-xs text-muted">Última actividad: {formatFecha(informe.updated_at)}</span>
+              <span className="text-xs text-muted">Última actividad: {formatFecha(informe.updated_at, 'larga-dos-digitos')}</span>
             )}
           </div>
 
