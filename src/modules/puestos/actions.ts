@@ -558,14 +558,15 @@ export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
   // empresa es justamente lo que cerró sus puestos.
   const { data: puestoActual } = await admin
     .from('puesto')
-    .select('empresa_id, empresa(fecha_baja)')
+    .select('empresa_id, fecha_baja_puesto, empresa(fecha_baja)')
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
     .maybeSingle()
 
   if (!puestoActual) return { success: false, error: 'No autorizado.' }
-  const { empresa_id: empresaId, empresa } = puestoActual as {
+  const { empresa_id: empresaId, fecha_baja_puesto: fechaBajaPuesto, empresa } = puestoActual as {
     empresa_id: string
+    fecha_baja_puesto: string | null
     empresa: { fecha_baja: string | null } | null
   }
   if (empresa?.fecha_baja) {
@@ -576,16 +577,22 @@ export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
   // activo (doble click), no matchea ninguna fila y no abrimos un segundo ciclo.
   // Dos ciclos abiertos partirían las postulaciones en dos tableros y contarían
   // como reapertura en la analítica.
+  // El .is('fecha_baja_puesto', null) evita reactivar puestos eliminados lógicamente (H-204).
   const { data: actualizados, error } = await admin.from('puesto')
-    .update({ activo: true, fecha_baja_puesto: null })
+    .update({ activo: true })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
     .eq('activo', false)
+    .is('fecha_baja_puesto', null)
     .select('titulo_puesto')
 
   if (error) return { success: false, error: 'No se pudo reactivar el puesto.' }
 
-  if (actualizados && actualizados.length > 0) {
+  if (!actualizados || actualizados.length === 0) {
+    if (fechaBajaPuesto) {
+      return { success: false, error: 'Un puesto eliminado no se puede reactivar.' }
+    }
+  } else {
     const { titulo_puesto } = actualizados[0] as { titulo_puesto: string }
     await registrarApertura(puestoId, empresaId, titulo_puesto)
   }
