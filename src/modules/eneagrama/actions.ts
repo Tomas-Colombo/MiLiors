@@ -233,13 +233,18 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
   // Verificar ownership
   const { data: test } = await supabase
     .from('test_eneagrama')
-    .select('id, postulante_id, veces_completado')
+    .select('id, postulante_id, veces_completado, fecha_realizacion')
     .eq('id', testId)
     .single()
 
   if (!test) return { success: false, error: 'Test no encontrado.' }
 
-  const testTyped = test as { id: string; postulante_id: string; veces_completado: number | null }
+  const testTyped = test as {
+    id: string
+    postulante_id: string
+    veces_completado: number | null
+    fecha_realizacion: string | null
+  }
 
   const { data: perfil } = await supabase
     .from('perfil_postulante')
@@ -249,6 +254,17 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     .single()
 
   if (!perfil) return { success: false, error: 'Acceso denegado.' }
+
+  // Regla de espera entre repeticiones: si el postulante ya completó el test dos
+  // o más veces y aún rige el período de enfriamiento, no se recalculan ni
+  // sobrescriben sus resultados aunque lograra llamar a esta acción directamente.
+  const estado = evaluarRehacer(testTyped.veces_completado ?? 0, testTyped.fecha_realizacion)
+  if (!estado.puedeRehacer && estado.disponibleDesde) {
+    return {
+      success: false,
+      error: `Vas a poder rehacer el Eneagrama a partir del ${formatearFecha(estado.disponibleDesde)}.`,
+    }
+  }
 
   // Cargar preguntas activas para validar completitud
   const { data: preguntasActivas, error: errPreguntas } = await supabase
