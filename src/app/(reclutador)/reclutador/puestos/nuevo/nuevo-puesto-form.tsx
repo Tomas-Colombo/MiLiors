@@ -12,7 +12,7 @@ import { publicarPuesto } from '@/modules/puestos/actions'
 import { cn } from '@/lib/utils'
 import { DESCRIPCION_MAX } from '@/modules/puestos/schema'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE, type ActionResult } from '@/lib/types/domain'
 import type { CarreraOption } from '@/modules/carreras/queries'
 import type { EmpresaOption } from '@/modules/empresas/queries'
 import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
@@ -27,12 +27,12 @@ type Props = {
   diasInactividad: number
 }
 
-// publicarPuesto returns ActionResult<{ puestoId: string }> — match the generic
-const initialState: ActionResult<{ puestoId: string }> = { success: false, error: '' }
-
 export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, diasInactividad }: Props) {
   const router = useRouter()
-  const [state, action, isPending] = useActionState(publicarPuesto, initialState)
+  const [state, action, isPending] = useActionState(
+    publicarPuesto,
+    INITIAL_ACTION_STATE as ActionResult<{ puestoId: string }>
+  )
   const [modalidad, setModalidad] = useState('')
   const [empresaModalAbierto, setEmpresaModalAbierto] = useState(false)
   // Empresas dadas de alta desde el modal. Se suman al select en el acto para

@@ -6,10 +6,8 @@ import { Button, Alert, Modal, buttonClassName } from '@/components/ui'
 import { PlusIcon, AlertTriangleIcon } from '@/components/icons'
 import { CamposEmpresa, NuevaEmpresaModal } from '@/components/shared/nueva-empresa-modal'
 import { actualizarEmpresa, darDeBajaEmpresa } from '@/modules/empresas/actions'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 import type { EmpresaDelReclutador } from '@/modules/empresas/queries'
-
-const initialState: ActionResult = { success: false, error: '' }
 
 // ─── Alta ─────────────────────────────────────────────────────────────────────
 
@@ -46,7 +44,7 @@ export function EmpresaAcciones({ empresa }: { empresa: EmpresaDelReclutador }) 
   const [errorBaja, setErrorBaja] = useState<string | null>(null)
 
   const boundActualizar = actualizarEmpresa.bind(null, empresa.id)
-  const [state, action, pending] = useActionState(boundActualizar, initialState)
+  const [state, action, pending] = useActionState(boundActualizar, INITIAL_ACTION_STATE)
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
 
   // Guardar con éxito cierra el modal de edición (ver nota en NuevaEmpresaBtn).

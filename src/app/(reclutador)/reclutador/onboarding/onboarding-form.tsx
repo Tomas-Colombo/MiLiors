@@ -3,12 +3,10 @@
 import { useActionState } from 'react'
 import { Field, Input, Textarea, Button, Alert } from '@/components/ui'
 import { crearEmpresaYAsociar } from '@/modules/empresas/actions'
-import type { ActionResult } from '@/lib/types/domain'
-
-const initialState: ActionResult = { success: false, error: '' }
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
 export function OnboardingEmpresaForm() {
-  const [state, action, isPending] = useActionState(crearEmpresaYAsociar, initialState)
+  const [state, action, isPending] = useActionState(crearEmpresaYAsociar, INITIAL_ACTION_STATE)
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
 
   return (

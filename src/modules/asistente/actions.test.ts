@@ -137,7 +137,9 @@ describe('asistente/actions — consultarAsistente rate limiting (H-221)', () =>
 
     const res = await consultarAsistente('cand-1', 'puesto-1', '¿Cómo rinde?')
     expect(res.success).toBe(false)
-    expect(res.error).toContain('20 por hora')
+    if (!res.success) {
+      expect(res.error).toContain('20 por hora')
+    }
     expect(aiProvider.generate).not.toHaveBeenCalled()
   })
 
@@ -203,7 +205,9 @@ describe('asistente/actions — consultarAsistente rate limiting (H-221)', () =>
 
     const res = await consultarAsistente('cand-1', 'puesto-1', '¿Pregunta?')
     expect(res.success).toBe(false)
-    expect(res.error).toBe('No se pudo verificar el límite de consultas. Intentá más tarde.')
+    if (!res.success) {
+      expect(res.error).toBe('No se pudo verificar el límite de consultas. Intentá más tarde.')
+    }
     expect(aiProvider.generate).not.toHaveBeenCalled()
   })
 })

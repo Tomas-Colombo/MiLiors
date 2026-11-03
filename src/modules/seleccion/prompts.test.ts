@@ -47,7 +47,8 @@ describe('buildSeleccionPrompts — criterio de compatibilidad', () => {
 describe('formatearCandidato', () => {
   it('conserva el formato de la sección del candidato', () => {
     expect(formatearCandidato(candidato, 'CANDIDATO 1: Renata Oviedo Funes')).toBe(
-      `=== CANDIDATO 1: Renata Oviedo Funes ===
+      `<datos_candidato>
+=== CANDIDATO 1: Renata Oviedo Funes ===
 Eneatipo: Eneatipo 3 — El Triunfador
 
 PERFIL TÉCNICO:
@@ -65,7 +66,8 @@ Datos del motor de competencias (mismo criterio para todos los candidatos):
 
 NOTAS PRIVADAS DEL RECLUTADOR:
   [1] Nota 1
-  [2] Nota 2`
+  [2] Nota 2
+</datos_candidato>`
     )
   })
 

@@ -11,6 +11,8 @@ import { parseFormularioPreselectorField } from '@/modules/preselector/schema'
 import { persistirFormularioPreselector, eliminarFormularioPreselector } from '@/modules/preselector/service'
 import { marcarActividadPuesto } from './actividad'
 import { getCicloMasReciente } from './ciclos'
+import { isUuid } from '@/lib/utils'
+import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 
 /**
  * Contratación opcional al cerrar/eliminar un puesto.
@@ -21,7 +23,6 @@ export type ContratacionInput =
   | { tipo: 'plataforma'; postulanteId: string }
   | { tipo: 'externo'; nombre: string }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_CARRERAS_POR_PUESTO = 10
 
 /**
@@ -33,7 +34,7 @@ function parseCarreraIds(raw: FormDataEntryValue | null): string[] {
   try {
     const arr = JSON.parse(raw)
     if (!Array.isArray(arr)) return []
-    const validas = arr.filter((v): v is string => typeof v === 'string' && UUID_RE.test(v))
+    const validas = arr.filter((v): v is string => typeof v === 'string' && isUuid(v))
     return Array.from(new Set(validas)).slice(0, MAX_CARRERAS_POR_PUESTO)
   } catch {
     return []
@@ -475,9 +476,9 @@ export async function cerrarPuesto(
 
   // 3. Cascada: ENVIADA/VISTO applications → CERRADA
   const { error: postulacionError } = await admin.from('postulacion')
-    .update({ estado: 'CERRADA' })
+    .update({ estado: ESTADO_POSTULACION.CERRADA })
     .eq('puesto_id', puestoId)
-    .in('estado', ['ENVIADA', 'VISTO'])
+    .in('estado', [ESTADO_POSTULACION.ENVIADA, ESTADO_POSTULACION.VISTO])
 
   if (postulacionError) {
     console.error('[puestos/actions] Error al cerrar postulaciones en cerrarPuesto:', postulacionError)
@@ -544,9 +545,9 @@ export async function eliminarPuesto(
 
   // 3. Cascada: ENVIADA/VISTO applications → CERRADA
   const { error: postulacionError } = await admin.from('postulacion')
-    .update({ estado: 'CERRADA' })
+    .update({ estado: ESTADO_POSTULACION.CERRADA })
     .eq('puesto_id', puestoId)
-    .in('estado', ['ENVIADA', 'VISTO'])
+    .in('estado', [ESTADO_POSTULACION.ENVIADA, ESTADO_POSTULACION.VISTO])
 
   if (postulacionError) {
     console.error('[puestos/actions] Error al cerrar postulaciones en eliminarPuesto:', postulacionError)

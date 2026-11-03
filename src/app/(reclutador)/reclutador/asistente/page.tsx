@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { Alert } from '@/components/ui'
+import { Alert, PageHeader } from '@/components/ui'
 import { SparklesIcon } from '@/components/icons'
 import { getMisPuestos } from '@/modules/puestos/queries'
 import { createClient } from '@/lib/supabase/server'
@@ -80,17 +80,11 @@ export default async function AsistentePage({
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-tint text-primary-600">
-          <SparklesIcon size={22} />
-        </span>
-        <div>
-          <h1 className="text-balance text-2xl font-extrabold leading-tight tracking-tight text-ink">Asistente IA</h1>
-          <p className="text-compact text-muted">
-            Consultá la compatibilidad candidato-puesto usando el Eneagrama.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<SparklesIcon size={22} />}
+        title="Asistente IA"
+        description="Consultá la compatibilidad candidato-puesto usando el Eneagrama."
+      />
 
       {puestosOptions.length === 0 && (
         <Alert tone="warning" title="Sin puestos publicados">

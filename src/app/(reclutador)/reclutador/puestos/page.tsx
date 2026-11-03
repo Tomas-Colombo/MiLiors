@@ -17,6 +17,7 @@ import { normalizarTexto } from '@/lib/texto'
 import { PuestoAcciones } from './puesto-acciones'
 import { FiltrosPuestos } from './filtros-puestos'
 import { requireEmpresaCargada } from '@/lib/guards'
+import { formatFecha } from '@/lib/fecha'
 
 export const metadata = { title: 'Mis puestos — MiLiors' }
 
@@ -153,11 +154,7 @@ export default async function MisPuestosPage({
       header: 'Apertura',
       cell: (p) => (
         <span className="text-compact text-neutral-400">
-          {new Date(apertura(p)).toLocaleDateString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-          })}
+          {formatFecha(apertura(p), 'corta')}
         </span>
       ),
     },
@@ -170,11 +167,7 @@ export default async function MisPuestosPage({
         if (!fin) return <span className="text-compact text-neutral-300">—</span>
         return (
           <span className="text-compact text-neutral-400">
-            {new Date(fin).toLocaleDateString('es-AR', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-            })}
+            {formatFecha(fin, 'corta')}
           </span>
         )
       },

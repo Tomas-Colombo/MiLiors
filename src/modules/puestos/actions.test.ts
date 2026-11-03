@@ -238,7 +238,9 @@ describe('puestos/actions — cascadas de cierre y eliminación (H-210)', () => 
 
     const res = await cerrarPuesto('puesto-1')
     expect(res.success).toBe(false)
-    expect(res.error).toContain('reintentar')
+    if (!res.success) {
+      expect(res.error).toContain('reintentar')
+    }
     // El puesto NO debe haber sido desactivado antes de que la cascada termine
     expect(updatePuesto).not.toHaveBeenCalled()
   })

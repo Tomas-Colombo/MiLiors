@@ -13,7 +13,7 @@ import { editarPuesto } from '@/modules/puestos/actions'
 import { cn } from '@/lib/utils'
 import { DESCRIPCION_MAX } from '@/modules/puestos/schema'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
 import type { FormularioPreselector } from '@/modules/preselector/queries'
 import type { CarreraOption } from '@/modules/carreras/queries'
@@ -34,12 +34,10 @@ type Props = {
   ubicacionInicial: UbicacionInicial | null
 }
 
-const initialState: ActionResult = { success: false, error: '' }
-
 export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carreras, formularioPreselector, formularioBloqueado, provincias, ubicacionInicial }: Props) {
   // editarPuesto signature is (puestoId, prevState, formData) — bind the id
   const boundAction = editarPuesto.bind(null, puestoId)
-  const [state, action, isPending] = useActionState(boundAction, initialState)
+  const [state, action, isPending] = useActionState(boundAction, INITIAL_ACTION_STATE)
   const [modalidad, setModalidad] = useState(puesto.ubicacion)
   // Campos controlados: al fallar el guardado, React 19 resetea los <input> no
   // controlados a su defaultValue y se perderían los cambios sin guardar. El

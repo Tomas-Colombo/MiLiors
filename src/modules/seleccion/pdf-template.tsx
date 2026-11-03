@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import type { InformeSeleccionJSON } from './prompts'
+import { formatFecha } from '@/lib/fecha'
 
 const colors = {
   primary: '#2f6fed',
@@ -73,11 +74,7 @@ export function InformeSeleccionPDF({
   fechaGeneracion,
 }: InformeSeleccionPDFProps) {
   const fecha = fechaGeneracion
-    ? new Date(fechaGeneracion).toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      })
+    ? formatFecha(fechaGeneracion, 'larga-dos-digitos')
     : null
 
   return (

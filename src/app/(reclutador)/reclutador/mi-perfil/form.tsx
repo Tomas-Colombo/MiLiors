@@ -3,14 +3,12 @@
 import { useActionState } from 'react'
 import { actualizarPerfilReclutador } from '@/modules/perfil/actions'
 import { Button, Field, Input, Alert } from '@/components/ui'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
 type Perfil = { nombre_reclutador: string } | null
 
-const initialState: ActionResult = { success: false, error: '' }
-
 export function PerfilReclutadorForm({ perfil }: { perfil: Perfil }) {
-  const [state, action, pending] = useActionState(actualizarPerfilReclutador, initialState)
+  const [state, action, pending] = useActionState(actualizarPerfilReclutador, INITIAL_ACTION_STATE)
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
 
   return (

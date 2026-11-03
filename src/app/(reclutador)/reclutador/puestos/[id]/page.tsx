@@ -13,6 +13,7 @@ import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 import { ubicacionLabel } from '@/lib/ubicacion'
 import { requireEmpresaCargada } from '@/lib/guards'
+import { formatFecha } from '@/lib/fecha'
 
 export const metadata = { title: 'Detalle del puesto — MiLiors' }
 
@@ -97,12 +98,7 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
                 </Badge>
               )}
               <span className="text-xs text-neutral-400">
-                Publicado el{' '}
-                {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
+                Publicado el {formatFecha(puesto.fecha_publicacion, 'larga')}
               </span>
             </div>
           </div>
@@ -214,11 +210,7 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
                   )}
                 </div>
                 <span className="shrink-0 text-xs text-neutral-400">
-                  {new Date(c.fecha_contratacion).toLocaleDateString('es-AR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {formatFecha(c.fecha_contratacion, 'larga')}
                 </span>
               </li>
             ))}

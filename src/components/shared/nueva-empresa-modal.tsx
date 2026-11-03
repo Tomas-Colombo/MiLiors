@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from 'react'
 import { Alert, Button, Field, Input, Modal, Textarea } from '@/components/ui'
 import { crearEmpresa } from '@/modules/empresas/actions'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE, type ActionResult } from '@/lib/types/domain'
 import type { EmpresaOption } from '@/modules/empresas/queries'
 
 /** Lo que precarga los campos en modo edición. */
@@ -67,8 +67,6 @@ export function CamposEmpresa({ fieldErrors, empresa }: CamposProps) {
   )
 }
 
-const initialState: ActionResult<EmpresaOption> = { success: false, error: '' }
-
 type Props = {
   open: boolean
   onClose: () => void
@@ -84,7 +82,10 @@ type Props = {
  * dentro— del formulario de la pantalla que lo abre.
  */
 export function NuevaEmpresaModal({ open, onClose, onCreada }: Props) {
-  const [state, action, pending] = useActionState(crearEmpresa, initialState)
+  const [state, action, pending] = useActionState(
+    crearEmpresa,
+    INITIAL_ACTION_STATE as ActionResult<EmpresaOption>
+  )
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
 
   // Los callbacks van por ref para que el efecto dependa sólo del estado de la
