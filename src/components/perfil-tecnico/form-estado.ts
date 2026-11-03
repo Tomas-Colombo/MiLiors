@@ -1,6 +1,11 @@
 import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
-export const INITIAL_STATE: ActionResult = { success: false, error: '' }
+/**
+ * Reexportación retrocompatible de `INITIAL_ACTION_STATE` para mantener
+ * compatibilidad durante la migración canónica.
+ */
+export const INITIAL_STATE: ActionResult = INITIAL_ACTION_STATE
 
 /**
  * Error de un campo puntual, o undefined.

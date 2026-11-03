@@ -3,6 +3,7 @@ import { Card, Badge } from '@/components/ui'
 import { CalendarIcon, ArrowRightIcon } from '@/components/icons'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
 import { ubicacionLabel } from '@/lib/ubicacion'
+import { formatFecha } from '@/lib/fecha'
 import type { PuestoItem } from '@/modules/puestos/queries'
 
 type Props = {
@@ -66,11 +67,7 @@ export function PuestoCard({ puesto, actions, tieneFormulario }: Props) {
       <div className="mt-auto flex items-center justify-between pt-1">
         <span className="flex items-center gap-1.5 text-2xs text-neutral-400">
           <CalendarIcon size={11} />
-          {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          })}
+          {formatFecha(puesto.fecha_publicacion, 'abreviada')}
         </span>
         <Link
           href={`/postulante/puestos/${puesto.id}`}

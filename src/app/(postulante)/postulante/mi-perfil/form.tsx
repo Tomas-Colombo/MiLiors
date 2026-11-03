@@ -10,7 +10,7 @@ import {
 } from '@/components/shared/ubicacion-selector'
 import { CarreraSelector, type CarreraOption } from '@/components/shared/carrera-selector'
 import { UserIcon, MailIcon } from '@/components/icons'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
 type Perfil = {
   id: string
@@ -26,8 +26,6 @@ type Perfil = {
   provincia_id: string | null
 } | null
 
-const initialState: ActionResult = { success: false, error: '' }
-
 export function PerfilPostulanteForm({
   perfil,
   email,
@@ -41,7 +39,7 @@ export function PerfilPostulanteForm({
   carreras: CarreraOption[]
   ubicacionInicial: UbicacionInicial | null
 }) {
-  const [state, action, pending] = useActionState(actualizarPerfilPostulante, initialState)
+  const [state, action, pending] = useActionState(actualizarPerfilPostulante, INITIAL_ACTION_STATE)
   const fieldErrors = !state.success && state.fieldErrors ? state.fieldErrors : {}
 
   return (

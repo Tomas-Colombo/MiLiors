@@ -6,6 +6,7 @@ import { Card, Badge, buttonClassName } from '@/components/ui'
 import { ChevronLeftIcon, BuildingIcon, UserIcon, CalendarIcon, ArrowRightIcon } from '@/components/icons'
 import { getReclutadorPublico } from '@/modules/puestos/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
+import { formatFecha } from '@/lib/fecha'
 import { paginar } from '@/lib/pagination'
 import { Paginador } from '@/components/shared/list-controls'
 
@@ -107,11 +108,7 @@ export default async function ReclutadorPublicoPage({ params, searchParams }: Pr
                   </p>
                   <span className="shrink-0 flex items-center gap-1 text-2xs text-neutral-400 mt-0.5">
                     <CalendarIcon size={11} />
-                    {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {formatFecha(puesto.fecha_publicacion, 'abreviada')}
                   </span>
                 </div>
 

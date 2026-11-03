@@ -6,7 +6,7 @@ import { Button, Modal, Radio, Textarea, Field, Alert } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { postularAPuesto, postularAPuestoConFormulario } from '@/modules/postulaciones/actions'
 import { TIPO_PREGUNTA_PRESELECTOR } from '@/lib/constants/enums'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE, type ActionResult } from '@/lib/types/domain'
 
 // Sanitized shape for the applicant: no esCritica / esValida — the applicant
 // must never be able to read which answers are "correct" from the page payload.
@@ -26,8 +26,6 @@ type Props = {
   tieneFormulario?: boolean
 }
 
-const initialState: ActionResult<{ descartada: boolean }> = { success: false, error: '' }
-
 export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tieneFormulario }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -35,7 +33,10 @@ export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tiene
   const [respuestas, setRespuestas] = useState<Record<string, string>>({})
 
   const boundAction = postularAPuestoConFormulario.bind(null, puestoId)
-  const [state, action, isSubmitting] = useActionState(boundAction, initialState)
+  const [state, action, isSubmitting] = useActionState(
+    boundAction,
+    INITIAL_ACTION_STATE as ActionResult<{ descartada: boolean }>
+  )
 
   const conPreguntas = !!preguntas && preguntas.length > 0
   const yaEnviado = conPreguntas && state.success

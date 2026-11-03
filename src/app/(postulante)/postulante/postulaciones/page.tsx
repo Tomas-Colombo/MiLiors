@@ -3,27 +3,15 @@ import { requireEneagramaCompleto } from '@/lib/guards'
 import { PageHeader, Card, Badge, EmptyState } from '@/components/ui'
 import { FileIcon, ChevronLeftIcon, ChevronRightIcon, ArrowRightIcon } from '@/components/icons'
 import { getMisPostulaciones, POSTULACIONES_PER_PAGE } from '@/modules/puestos/queries'
-import { ESTADO_POSTULACION } from '@/lib/constants/enums'
-import type { BadgeProps } from '@/components/ui/badge'
+import {
+  ESTADO_POSTULACION_BADGE_POSTULANTE,
+  ESTADO_POSTULACION_TONE,
+  type EstadoPostulacionKey,
+} from '@/lib/constants/enums'
+import { formatFecha } from '@/lib/fecha'
 import { FiltrosPostulaciones } from './filtros-postulaciones'
 
 export const metadata = { title: 'Mis postulaciones — MiLiors' }
-
-type Tone = NonNullable<BadgeProps['tone']>
-
-const estadoTone: Record<string, Tone> = {
-  [ESTADO_POSTULACION.ENVIADA]: 'info',
-  [ESTADO_POSTULACION.VISTO]: 'primary',
-  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'error',
-  [ESTADO_POSTULACION.CERRADA]: 'warning',
-}
-
-const estadoLabel: Record<string, string> = {
-  [ESTADO_POSTULACION.ENVIADA]: 'Enviada',
-  [ESTADO_POSTULACION.VISTO]: 'Vista',
-  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'No avanza',
-  [ESTADO_POSTULACION.CERRADA]: 'Cerrada',
-}
 
 type SearchParams = Promise<Record<string, string>>
 
@@ -82,12 +70,7 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                       <p className="text-compact text-muted">{p.nombre_empresa}</p>
                     )}
                     <p className="text-xs text-neutral-400">
-                      Postulado el{' '}
-                      {new Date(p.fecha_postulacion).toLocaleDateString('es-AR', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
+                      Postulado el {formatFecha(p.fecha_postulacion, 'larga')}
                     </p>
                   </div>
 
@@ -105,11 +88,11 @@ export default async function MisPostulacionesPage({ searchParams }: { searchPar
                     </div>
                     <div className="flex justify-end sm:w-28">
                       <Badge
-                        tone={estadoTone[p.estado] ?? 'neutral'}
+                        tone={ESTADO_POSTULACION_TONE[p.estado as EstadoPostulacionKey] ?? 'neutral'}
                         dot
                         className="sm:w-full sm:justify-center"
                       >
-                        {estadoLabel[p.estado] ?? p.estado}
+                        {ESTADO_POSTULACION_BADGE_POSTULANTE[p.estado as EstadoPostulacionKey] ?? p.estado}
                       </Badge>
                     </div>
                   </div>

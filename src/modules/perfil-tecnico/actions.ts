@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { getPostulanteId } from '@/modules/perfil/queries'
 import { formacionSchema, experienciaSchema, idiomaSchema, cursoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 import { NIVEL_COMPETENCIA, type NivelCompetencia } from '@/lib/constants/enums'
@@ -35,17 +35,6 @@ async function getOrCreatePerfilTecnico(postulanteId: string): Promise<string> {
   return (created as { id: string }).id
 }
 
-// Helper: get postulante_id for the current user
-async function getPostulanteId(): Promise<string | null> {
-  const session = await verifySession()
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('perfil_postulante')
-    .select('id')
-    .eq('usuario_id', session.id)
-    .single()
-  return data ? (data as { id: string }).id : null
-}
 
 /**
  * El certificado emitido es una foto firmada del perfil tecnico: cualquier

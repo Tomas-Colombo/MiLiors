@@ -46,3 +46,13 @@ export const getPerfilPostulanteActual = cache(async (): Promise<PerfilPostulant
 
   return (data as PerfilPostulanteActual | null) ?? null
 })
+
+/**
+ * Retorna el id del postulante autenticado, o null si todavía no lo cargó.
+ *
+ * Memoizada con cache() y reutilizando la lectura de `getPerfilPostulanteActual`
+ * para no repetir consultas por request (H-107).
+ */
+export const getPostulanteId = cache(async (): Promise<string | null> => {
+  return (await getPerfilPostulanteActual())?.id ?? null
+})

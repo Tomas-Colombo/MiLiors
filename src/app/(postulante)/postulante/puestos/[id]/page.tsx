@@ -10,6 +10,7 @@ import { getUltimoCertificado } from '@/modules/certificado/queries'
 import { getFormularioDePuesto } from '@/modules/preselector/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
 import { ubicacionLabel } from '@/lib/ubicacion'
+import { formatFecha } from '@/lib/fecha'
 import { PostularButton } from '../postular-button'
 
 type Props = {
@@ -127,11 +128,7 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
           <dt className="text-muted font-medium">Publicado</dt>
           <dd className="flex items-center gap-1.5 text-ink">
             <CalendarIcon size={13} className="text-neutral-400" />
-            {new Date(puesto.fecha_publicacion).toLocaleDateString('es-AR', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
+            {formatFecha(puesto.fecha_publicacion, 'larga')}
           </dd>
         </dl>
 
