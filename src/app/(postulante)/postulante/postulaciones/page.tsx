@@ -18,7 +18,8 @@ type SearchParams = Promise<Record<string, string>>
 export default async function MisPostulacionesPage({ searchParams }: { searchParams: SearchParams }) {
   await requireEneagramaCompleto()
   const sp = await searchParams
-  const page = Math.max(0, parseInt(sp.page ?? '0', 10))
+  const rawPage = parseInt(sp.page ?? '0', 10)
+  const page = Number.isNaN(rawPage) || rawPage < 0 ? 0 : rawPage
   const q = sp.q ?? ''
   const estado = sp.estado ?? ''
   const orden = sp.orden === 'asc' ? 'asc' : 'desc'

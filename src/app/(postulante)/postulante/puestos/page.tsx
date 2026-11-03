@@ -34,7 +34,8 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
   await requireEneagramaCompleto()
   const sp = await searchParams
 
-  const page = Math.max(0, parseInt(sp.page ?? '0', 10))
+  const rawPage = parseInt(sp.page ?? '0', 10)
+  const page = Number.isNaN(rawPage) || rawPage < 0 ? 0 : rawPage
   const diasDesde = sp.dias ? parseInt(sp.dias, 10) : undefined
   // Default to "todos" (undefined) so the first view shows every job. The user narrows
   // down explicitly with 'postulados' / 'no_postulados'.
