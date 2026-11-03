@@ -36,6 +36,7 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
    - [H-205](hallazgos.md): Tabla `competencia_sugerida`, panel de moderación en `/admin/competencias`, índice insensible a mayúsculas y corrección de reactivación de competencias desactivadas.
    - [H-207](hallazgos.md): Función SQL transaccional en PostgreSQL para el guardado atómico de puntajes y dominantes del eneatipo.
    - [H-302](hallazgos.md): Implementación técnica de consentimiento informado para evaluación psicométrica en registro, flujo de derecho de supresión (borrado de cuenta) y exportación completa de datos (Ley 25.326).
+   - [H-230](hallazgos.md): Estado de moderación propio del admin (columna nueva en base de datos) para que un postulante desactivado por el admin no pueda reactivarse por sí mismo con su switch de visibilidad.
 5. **Optimización de políticas RLS:** [H-009](hallazgos.md) y [H-010](hallazgos.md) mediante la migración `20261102020000_rls_advisors.sql` (envoltura de subqueries escalares y consolidación de políticas permisivas múltiples).
 6. **Verificación integral pre-deploy:** Ejecución de la suite completa de Playwright en staging y repetición exhaustiva de la Fase 0 contra la línea base.
 
@@ -779,3 +780,5 @@ Los siguientes ítems quedan expresamente fuera del plan de ejecución de la Fas
   - *Justificación técnica:* En el bloque A3 se incorpora la validación de ventana temporal de 6 meses de `evaluarRehacer` ([H-209](hallazgos.md)); en la Etapa B se modifica para invocar la nueva función transaccional de PostgreSQL que persiste atómicamente los resultados del test ([H-207](hallazgos.md)).
 - **`src/modules/auth/actions.ts`:** Se modifica en la Etapa A (bloque A7) y se vuelve a modificar en la Etapa B.
   - *Justificación técnica:* En el bloque A7 se integran schemas unificados y manejo de estados; en la Etapa B se implementan las Server Actions de consentimiento explícito, derecho de supresión de cuenta y exportación de datos en formato portable conforme a la Ley 25.326 ([H-302](hallazgos.md)).
+- **`src/components/shared/cambiar-password-form.tsx`:** Pasa del bloque A7 al bloque A3a.
+  - *Justificación técnica:* Se unifica junto con `src/modules/perfil/actions.ts` en el bloque A3a para adoptar atómicamente el schema canónico `nuevaPasswordSchema` ([H-109](hallazgos.md)), garantizando que los nombres de los campos de entrada (`password`, `confirmPassword`) coincidan con la Server Action y los errores por campo se muestren correctamente.
