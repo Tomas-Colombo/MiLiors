@@ -15,6 +15,7 @@ export const MENSAJE_POR_ERROR: Record<AIErrorKind, string> = {
   sobrecargado: 'El servicio de IA está sobrecargado en este momento. Probá de nuevo en unos minutos.',
   limite: 'Se alcanzó el límite de pedidos al servicio de IA. Esperá un momento y probá de nuevo.',
   servidor: 'El servicio de IA tuvo un problema momentáneo. Probá de nuevo en unos minutos.',
+  tiempo_agotado: 'El servicio de IA tardó demasiado en responder. Probá de nuevo en unos minutos.',
   truncado: 'El texto quedó demasiado largo para generarse de una vez. Avisale al equipo de MiLiors.',
   configuracion: 'El servicio de IA no está configurado correctamente. Avisale al equipo de MiLiors.',
   desconocido: 'El servicio de IA no respondió como se esperaba. Probá de nuevo.',

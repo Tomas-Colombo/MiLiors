@@ -37,10 +37,6 @@ export function clasificarErrorGemini(err: unknown): AIError {
   }
 
   const raw = err instanceof Error ? err.message : String(err)
-  if (/aborted|abort/i.test(raw) && !raw.includes('"code"')) {
-    return new AIError('tiempo_agotado', true, raw)
-  }
-
   const code = Number(raw.match(/"code"\s*:\s*(\d+)/)?.[1] ?? NaN)
   const status = raw.match(/"status"\s*:\s*"([A-Z_]+)"/)?.[1] ?? ''
 

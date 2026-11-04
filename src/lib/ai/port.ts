@@ -51,8 +51,7 @@ export type AIErrorKind =
   /** Cualquier otro 5xx del proveedor. Transitorio. */
   | 'servidor'
   /** El pedido superó el tiempo máximo de espera configurado. Transitorio. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  | ('tiempo_agotado' & any)
+  | 'tiempo_agotado'
   /** La respuesta no entró en el presupuesto de tokens. No lo arregla un reintento. */
   | 'truncado'
   /** Falta la credencial, o el modelo/pedido es inválido. No lo arregla un reintento. */
