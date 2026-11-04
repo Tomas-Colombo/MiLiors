@@ -108,7 +108,7 @@ ${c.informePersonalidad ?? 'No disponible.'}
 NOTAS PRIVADAS DEL RECLUTADOR:
 ${notasSection}`
 
-  const contenidoSanitizado = contenido.replace(/<\/?\s*datos_candidato[^>]*>/gi, '')
+  const contenidoSanitizado = contenido.replace(/<\/?\s*datos_candidato[^>]*>?/gi, '')
 
   return `<datos_candidato>\n${contenidoSanitizado}\n</datos_candidato>`
 }
