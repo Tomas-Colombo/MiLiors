@@ -789,4 +789,6 @@ Los siguientes ítems quedan expresamente fuera del plan de ejecución de la Fas
   - `src/components/ui/page-header.tsx`: Adición de la prop opcional `icon` para soportar encabezados estándar con íconos decorativos ([H-113](hallazgos.md)).
   - `src/app/(reclutador)/reclutador/puestos/puesto-acciones.tsx`: Consumidor cliente del modal de acciones de puesto adaptado al retorno de `ActionResult<T>` ([H-105](hallazgos.md)).
   - `src/lib/ai/port.ts`: Opción `timeoutMs` en `GenerateOptions` y categoría de error `'tiempo_agotado'` en `AIErrorKind` ([H-227](hallazgos.md)).
+  - `src/lib/ai/errores.ts`: Mensaje para el usuario de `'tiempo_agotado'` en `MENSAJE_POR_ERROR`. Sin esa entrada, un timeout en el informe o el certificado mostraba un motivo vacío ([H-227](hallazgos.md)).
+  - `src/modules/asistente/cuota.ts`: Regla pura de la cuota del asistente. Va fuera de `actions.ts` porque todo lo que exporta un archivo `'use server'` queda publicado como server action ([H-221](hallazgos.md)).
   - Tests unitarios nuevos y adaptados: `src/modules/puestos/actions.test.ts`, `src/modules/asistente/actions.test.ts`, `src/modules/asistente/prompts.test.ts`, `src/lib/ai/adapters/gemini.test.ts`, `src/modules/seleccion/service.test.ts` y `src/modules/seleccion/prompts.test.ts`.
