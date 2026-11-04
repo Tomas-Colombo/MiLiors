@@ -9,35 +9,7 @@ import { buildAsistentePrompts } from './prompts'
 import { cargarContextoCandidato } from '@/modules/seleccion/contexto-candidato'
 import type { CandidatoContexto } from '@/modules/seleccion/prompts'
 import type { ActionResult } from '@/lib/types/domain'
-
-const LIMITE_CONSULTAS_HORA = 20
-const LIMITE_CONSULTAS_DIA = 100
-
-export type CuotaAsistenteResultado =
-  | { permitida: true }
-  | { permitida: false; error: string }
-
-/**
- * Evalúa si el reclutador superó la cuota de consultas al asistente en la última hora o día (H-221).
- */
-export async function evaluarCuotaAsistente(
-  conteoHora: number,
-  conteoDia: number
-): Promise<CuotaAsistenteResultado> {
-  if (conteoHora >= LIMITE_CONSULTAS_HORA) {
-    return {
-      permitida: false,
-      error: 'Alcanzaste el límite de consultas al asistente (20 por hora). Probá de nuevo más tarde.',
-    }
-  }
-  if (conteoDia >= LIMITE_CONSULTAS_DIA) {
-    return {
-      permitida: false,
-      error: 'Alcanzaste el límite de consultas al asistente (100 por día). Probá de nuevo más tarde.',
-    }
-  }
-  return { permitida: true }
-}
+import { evaluarCuotaAsistente } from './cuota'
 
 export async function consultarAsistente(
   postulanteId: string,
@@ -76,6 +48,38 @@ export async function consultarAsistente(
 
   if (!postulacionPropia) return { success: false, error: 'Postulante no encontrado o no autorizado.' }
 
+  // Control de cuota por reclutador (H-221). Va antes de cargar el contexto del
+  // candidato: si la consulta no se puede hacer, no tiene sentido leer todo eso.
+  const ahora = Date.now()
+  const unaHoraAtras = new Date(ahora - 60 * 60 * 1000).toISOString()
+  const unDiaAtras = new Date(ahora - 24 * 60 * 60 * 1000).toISOString()
+
+  const [resHora, resDia] = await Promise.all([
+    admin
+      .from('consulta_asistente_ia')
+      .select('id', { count: 'exact', head: true })
+      .eq('reclutador_id', reclutadorId)
+      .gte('fecha_consulta', unaHoraAtras),
+    admin
+      .from('consulta_asistente_ia')
+      .select('id', { count: 'exact', head: true })
+      .eq('reclutador_id', reclutadorId)
+      .gte('fecha_consulta', unDiaAtras),
+  ])
+
+  if (resHora.error || resDia.error) {
+    console.error('[asistente] Error verificando cuota de consultas:', resHora.error || resDia.error)
+    return {
+      success: false,
+      error: 'No se pudo verificar el límite de consultas. Intentá más tarde.',
+    }
+  }
+
+  const cuota = evaluarCuotaAsistente(resHora.count ?? 0, resDia.count ?? 0)
+  if (!cuota.permitida) {
+    return { success: false, error: cuota.error }
+  }
+
   const puestoTyped = puesto as {
     titulo_puesto: string
     descripcion_texto: string | null
@@ -107,37 +111,6 @@ export async function consultarAsistente(
   }
 
   const { systemPrompt, userPrompt } = buildAsistentePrompts(ctx)
-
-  // Control de cuota por reclutador (H-221): 20 consultas/hora, 100 consultas/día
-  const ahora = new Date()
-  const unaHoraAtras = new Date(ahora.getTime() - 60 * 60 * 1000).toISOString()
-  const unDiaAtras = new Date(ahora.getTime() - 24 * 60 * 60 * 1000).toISOString()
-
-  const [resHora, resDia] = await Promise.all([
-    admin
-      .from('consulta_asistente_ia')
-      .select('id', { count: 'exact', head: true })
-      .eq('reclutador_id', reclutadorId)
-      .gte('fecha_consulta', unaHoraAtras),
-    admin
-      .from('consulta_asistente_ia')
-      .select('id', { count: 'exact', head: true })
-      .eq('reclutador_id', reclutadorId)
-      .gte('fecha_consulta', unDiaAtras),
-  ])
-
-  if (resHora.error || resDia.error) {
-    console.error('[asistente] Error verificando cuota de consultas:', resHora.error || resDia.error)
-    return {
-      success: false,
-      error: 'No se pudo verificar el límite de consultas. Intentá más tarde.',
-    }
-  }
-
-  const cuota = await evaluarCuotaAsistente(resHora.count ?? 0, resDia.count ?? 0)
-  if (!cuota.permitida) {
-    return { success: false, error: cuota.error }
-  }
 
   let respuesta: string
   try {

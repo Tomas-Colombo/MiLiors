@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  evaluarCuotaAsistente,
-  consultarAsistente,
-} from './actions'
-
-const LIMITE_CONSULTAS_HORA = 20
-const LIMITE_CONSULTAS_DIA = 100
+import { consultarAsistente } from './actions'
+import { evaluarCuotaAsistente, LIMITE_CONSULTAS_HORA, LIMITE_CONSULTAS_DIA } from './cuota'
 import { verifySession } from '@/lib/dal'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
@@ -39,16 +34,16 @@ vi.mock('@/lib/ai', () => ({
   },
 }))
 
-describe('asistente/actions — evaluarCuotaAsistente (H-221)', () => {
+describe('asistente/cuota — evaluarCuotaAsistente (H-221)', () => {
   it('permite consultas si los conteos están por debajo de los límites', async () => {
-    expect(await evaluarCuotaAsistente(0, 0)).toEqual({ permitida: true })
-    expect(await evaluarCuotaAsistente(LIMITE_CONSULTAS_HORA - 1, LIMITE_CONSULTAS_DIA - 1)).toEqual({
+    expect(evaluarCuotaAsistente(0, 0)).toEqual({ permitida: true })
+    expect(evaluarCuotaAsistente(LIMITE_CONSULTAS_HORA - 1, LIMITE_CONSULTAS_DIA - 1)).toEqual({
       permitida: true,
     })
   })
 
   it('bloquea cuando se alcanza o supera el límite por hora', async () => {
-    const res = await evaluarCuotaAsistente(LIMITE_CONSULTAS_HORA, 50)
+    const res = evaluarCuotaAsistente(LIMITE_CONSULTAS_HORA, 50)
     expect(res.permitida).toBe(false)
     if (!res.permitida) {
       expect(res.error).toBe(
@@ -58,7 +53,7 @@ describe('asistente/actions — evaluarCuotaAsistente (H-221)', () => {
   })
 
   it('bloquea cuando se alcanza o supera el límite por día', async () => {
-    const res = await evaluarCuotaAsistente(5, LIMITE_CONSULTAS_DIA)
+    const res = evaluarCuotaAsistente(5, LIMITE_CONSULTAS_DIA)
     expect(res.permitida).toBe(false)
     if (!res.permitida) {
       expect(res.error).toBe(
