@@ -16,6 +16,11 @@ import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/pr
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { getCicloAbierto } from '@/modules/puestos/ciclos'
 import { getReclutadorId } from '@/modules/empresas/queries'
+import {
+  esOrigenValidoVisto,
+  esOrigenValidoNoAvanzar,
+  esOrigenValidoRevertirDescarte,
+} from './transiciones'
 
 /**
  * Interruptor de los avisos por mail de las postulaciones.
@@ -291,12 +296,23 @@ export async function postularAPuestoConFormulario(
   return { success: true, data: { descartada } }
 }
 
+const ERROR_CICLO_CERRADO = 'Esta postulación pertenece a un ciclo del puesto que ya terminó.'
+const ERROR_ESTADO_INVALIDO = 'El estado actual de la postulación no permite este cambio.'
+
+function revalidarPostulacion(postulanteId: string) {
+  revalidatePath('/reclutador/postulaciones')
+  revalidatePath(`/reclutador/postulantes/${postulanteId}`)
+}
+
 type PostulacionPropia = {
+  id: string
   estado: string
   puesto_id: string
   postulante_id: string
   reclutador_id: string
   titulo_puesto: string
+  historial_puesto_id: string
+  cicloAbierto: boolean
 }
 
 /**
@@ -309,43 +325,91 @@ async function getPostulacionPropia(postulacionId: string): Promise<PostulacionP
   if (!reclutadorId) return null
 
   const admin = createAdminClient()
-  const { data } = await admin
+  const { data, error } = await admin
     .from('postulacion')
-    .select('estado, puesto_id, postulante_id, puesto!inner(reclutador_id, titulo_puesto)')
+    .select('id, estado, puesto_id, postulante_id, historial_puesto_id, puesto!inner(reclutador_id, titulo_puesto)')
     .eq('id', postulacionId)
     .eq('puesto.reclutador_id', reclutadorId)
     .maybeSingle()
 
-  if (!data) return null
+  if (error || !data) {
+    if (error) console.error('[postulaciones] Error al obtener postulacion:', error)
+    return null
+  }
+
   const row = data as {
+    id: string
     estado: string
     puesto_id: string
     postulante_id: string
+    historial_puesto_id: string
     puesto: { reclutador_id: string; titulo_puesto: string }
   }
+
+  let cicloAbierto = false
+  if (row.historial_puesto_id) {
+    const { data: cicloData, error: cicloError } = await admin
+      .from('historial_puesto')
+      .select('fecha_fin')
+      .eq('id', row.historial_puesto_id)
+      .maybeSingle()
+
+    if (cicloError || !cicloData) {
+      console.error('[postulaciones] Error al consultar historial_puesto:', cicloError)
+      cicloAbierto = false
+    } else {
+      cicloAbierto = (cicloData as { fecha_fin: string | null }).fecha_fin === null
+    }
+  } else {
+    console.error('[postulaciones] Postulacion sin historial_puesto_id:', postulacionId)
+    cicloAbierto = false
+  }
+
   return {
+    id: row.id,
     estado: row.estado,
     puesto_id: row.puesto_id,
     postulante_id: row.postulante_id,
     reclutador_id: row.puesto.reclutador_id,
     titulo_puesto: row.puesto.titulo_puesto,
+    historial_puesto_id: row.historial_puesto_id,
+    cicloAbierto,
   }
 }
 
 export async function avanzarEstadoPostulacion(
   postulacionId: string,
-  nuevoEstado: 'VISTO' | 'PROCESO_FINALIZADO'
 ): Promise<ActionResult> {
   const postulacion = await getPostulacionPropia(postulacionId)
   if (!postulacion) return { success: false, error: 'No autorizado.' }
 
+  if (!postulacion.cicloAbierto) {
+    return { success: false, error: ERROR_CICLO_CERRADO }
+  }
+
+  if (postulacion.estado === ESTADO_POSTULACION.VISTO) {
+    return { success: true, data: undefined }
+  }
+
+  if (!esOrigenValidoVisto(postulacion.estado)) {
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
+
   const admin = createAdminClient()
 
-  const { error } = await admin.from('postulacion')
-    .update({ estado: nuevoEstado })
+  const { data: updated, error } = await admin
+    .from('postulacion')
+    .update({ estado: ESTADO_POSTULACION.VISTO })
     .eq('id', postulacionId)
+    .eq('estado', ESTADO_POSTULACION.ENVIADA)
+    .select('id')
 
   if (error) return { success: false, error: 'No se pudo actualizar el estado.' }
+
+  if (!updated || updated.length === 0) {
+    revalidarPostulacion(postulacion.postulante_id)
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
 
   // Actividad del reclutador sobre el puesto (evita el cierre automático).
   await marcarActividadPuesto(postulacion.puesto_id)
@@ -357,11 +421,17 @@ export async function avanzarEstadoPostulacion(
   if (EMAIL_POSTULACIONES_HABILITADO) {
     const datos = await getDatosEmail(postulacionId)
     if (datos?.email) {
-      await enviarEmailCambioEstado(datos.email, datos.nombre, datos.titulo, datos.empresa, nuevoEstado)
+      await enviarEmailCambioEstado(
+        datos.email,
+        datos.nombre,
+        datos.titulo,
+        datos.empresa,
+        ESTADO_POSTULACION.VISTO,
+      )
     }
   }
 
-  revalidatePath('/reclutador/postulaciones')
+  revalidarPostulacion(postulacion.postulante_id)
   return { success: true, data: undefined }
 }
 
@@ -369,20 +439,36 @@ export async function revertirDescarte(postulacionId: string): Promise<ActionRes
   const postulacion = await getPostulacionPropia(postulacionId)
   if (!postulacion) return { success: false, error: 'No autorizado.' }
 
+  if (!postulacion.cicloAbierto) {
+    return { success: false, error: ERROR_CICLO_CERRADO }
+  }
+
+  if (!esOrigenValidoRevertirDescarte(postulacion.estado)) {
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
+
   const admin = createAdminClient()
 
   // Vuelve a "Evaluada" (VISTO) y limpia el motivo (si no, un descarte manual posterior
   // heredaría el motivo del descarte automático anterior).
-  const { error } = await admin.from('postulacion')
-    .update({ estado: 'VISTO', motivo_descarte: null })
+  const { data: updated, error } = await admin
+    .from('postulacion')
+    .update({ estado: ESTADO_POSTULACION.VISTO, motivo_descarte: null })
     .eq('id', postulacionId)
+    .eq('estado', ESTADO_POSTULACION.PROCESO_FINALIZADO)
+    .select('id')
 
   if (error) return { success: false, error: 'No se pudo revertir el descarte.' }
+
+  if (!updated || updated.length === 0) {
+    revalidarPostulacion(postulacion.postulante_id)
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
 
   // Actividad del reclutador sobre el puesto (evita el cierre automático).
   await marcarActividadPuesto(postulacion.puesto_id)
 
-  revalidatePath('/reclutador/postulaciones')
+  revalidarPostulacion(postulacion.postulante_id)
   return { success: true, data: undefined }
 }
 
@@ -393,6 +479,14 @@ export async function marcarPostulacion(
   const postulacion = await getPostulacionPropia(postulacionId)
   if (!postulacion) return { success: false, error: 'No autorizado.' }
 
+  if (!postulacion.cicloAbierto) {
+    return { success: false, error: ERROR_CICLO_CERRADO }
+  }
+
+  if (postulacion.estado === ESTADO_POSTULACION.CERRADA) {
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
+
   // Elegir Avanzar o Duda sobre un candidato descartado cancela el descarte en
   // el mismo UPDATE: vuelve a VISTO y limpia el motivo, como revertirDescarte.
   const revierte =
@@ -400,15 +494,34 @@ export async function marcarPostulacion(
 
   const admin = createAdminClient()
 
-  const { error } = await admin.from('postulacion')
-    .update(revierte ? { marca, estado: ESTADO_POSTULACION.VISTO, motivo_descarte: null } : { marca })
-    .eq('id', postulacionId)
+  const query = revierte
+    ? admin
+        .from('postulacion')
+        .update({ estado: ESTADO_POSTULACION.VISTO, marca, motivo_descarte: null })
+        .eq('id', postulacionId)
+        .eq('estado', ESTADO_POSTULACION.PROCESO_FINALIZADO)
+    : admin
+        .from('postulacion')
+        .update({ marca })
+        .eq('id', postulacionId)
+        .in('estado', [
+          ESTADO_POSTULACION.ENVIADA,
+          ESTADO_POSTULACION.VISTO,
+          ESTADO_POSTULACION.PROCESO_FINALIZADO,
+        ])
+
+  const { data: updated, error } = await query.select('id')
 
   if (error) return { success: false, error: 'No se pudo actualizar la marca.' }
 
+  if (!updated || updated.length === 0) {
+    revalidarPostulacion(postulacion.postulante_id)
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
+
   if (revierte) await marcarActividadPuesto(postulacion.puesto_id)
 
-  revalidatePath('/reclutador/postulaciones')
+  revalidarPostulacion(postulacion.postulante_id)
   return { success: true, data: undefined }
 }
 
@@ -425,17 +538,35 @@ export async function noAvanzarPostulacion(
   const postulacion = await getPostulacionPropia(postulacionId)
   if (!postulacion) return { success: false, error: 'No autorizado.' }
 
+  if (!postulacion.cicloAbierto) {
+    return { success: false, error: ERROR_CICLO_CERRADO }
+  }
+
+  if (!esOrigenValidoNoAvanzar(postulacion.estado)) {
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
+
+  const texto = motivo.trim()
+
   const admin = createAdminClient()
 
-  const { error } = await admin.from('postulacion')
+  const { data: updated, error } = await admin
+    .from('postulacion')
     .update({ estado: ESTADO_POSTULACION.PROCESO_FINALIZADO, marca: null })
     .eq('id', postulacionId)
+    .in('estado', [ESTADO_POSTULACION.ENVIADA, ESTADO_POSTULACION.VISTO])
+    .select('id')
 
   if (error) return { success: false, error: 'No se pudo actualizar el estado.' }
 
-  const texto = motivo.trim()
+  if (!updated || updated.length === 0) {
+    revalidarPostulacion(postulacion.postulante_id)
+    return { success: false, error: ERROR_ESTADO_INVALIDO }
+  }
+
   const guardarNota = texto
-    ? admin.from('nota_privada')
+    ? admin
+        .from('nota_privada')
         .insert({
           reclutador_id: postulacion.reclutador_id,
           postulante_id: postulacion.postulante_id,
@@ -456,12 +587,15 @@ export async function noAvanzarPostulacion(
     const datos = await getDatosEmail(postulacionId)
     if (datos?.email) {
       await enviarEmailCambioEstado(
-        datos.email, datos.nombre, datos.titulo, datos.empresa, ESTADO_POSTULACION.PROCESO_FINALIZADO,
+        datos.email,
+        datos.nombre,
+        datos.titulo,
+        datos.empresa,
+        ESTADO_POSTULACION.PROCESO_FINALIZADO,
       )
     }
   }
 
-  revalidatePath('/reclutador/postulaciones')
-  if (texto) revalidatePath(`/reclutador/postulantes/${postulacion.postulante_id}`)
+  revalidarPostulacion(postulacion.postulante_id)
   return { success: true, data: { notaGuardada } }
 }

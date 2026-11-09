@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { EyeIcon } from '@/components/icons'
 import { Tooltip, buttonClassName } from '@/components/ui'
@@ -14,50 +14,62 @@ type Props = {
 }
 
 export function VerPerfilBtn({ postulacionId, postulanteId, estadoActual }: Props) {
+  const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function marcarEvaluado() {
+    setError(null)
     startTransition(async () => {
-      await avanzarEstadoPostulacion(postulacionId, 'VISTO')
+      const result = await avanzarEstadoPostulacion(postulacionId)
+      if (!result.success && result.error) {
+        setError(result.error)
+      }
     })
   }
 
   return (
-    <div className="flex items-center gap-1.5">
-      <Tooltip
-        className="flex-1"
-        content={
-          <span className="block w-44 whitespace-normal leading-snug">
-            Abre el perfil completo del candidato y lo marca como evaluado.
-          </span>
-        }
-      >
-        <Link
-          href={`/reclutador/postulantes/${postulanteId}?postulacion=${postulacionId}&from=postulaciones`}
-          className={buttonClassName({ variant: 'tonal', size: 'sm', className: 'w-full whitespace-nowrap' })}
-        >
-          Evaluar perfil
-        </Link>
-      </Tooltip>
-      {estadoActual === ESTADO_POSTULACION.ENVIADA && (
+    <>
+      <div className="flex items-center gap-1.5">
         <Tooltip
+          className="flex-1"
           content={
             <span className="block w-44 whitespace-normal leading-snug">
-              Marca la postulación como evaluada sin abrir el perfil.
+              Abre el perfil completo del candidato y lo marca como evaluado.
             </span>
           }
         >
-          <button
-            type="button"
-            onClick={marcarEvaluado}
-            disabled={isPending}
-            aria-label="Marcar como evaluado"
-            className="inline-flex items-center justify-center w-8 h-8 flex-none rounded-md bg-primary-tint text-primary-600 hover:bg-primary-tint-hover transition-colors disabled:opacity-50"
+          <Link
+            href={`/reclutador/postulantes/${postulanteId}?postulacion=${postulacionId}&from=postulaciones`}
+            className={buttonClassName({ variant: 'tonal', size: 'sm', className: 'w-full whitespace-nowrap' })}
           >
-            <EyeIcon size={15} />
-          </button>
+            Evaluar perfil
+          </Link>
         </Tooltip>
+        {estadoActual === ESTADO_POSTULACION.ENVIADA && (
+          <Tooltip
+            content={
+              <span className="block w-44 whitespace-normal leading-snug">
+                Marca la postulación como evaluada sin abrir el perfil.
+              </span>
+            }
+          >
+            <button
+              type="button"
+              onClick={marcarEvaluado}
+              disabled={isPending}
+              aria-label="Marcar como evaluado"
+              className="inline-flex items-center justify-center w-8 h-8 flex-none rounded-md bg-primary-tint text-primary-600 hover:bg-primary-tint-hover transition-colors disabled:opacity-50"
+            >
+              <EyeIcon size={15} />
+            </button>
+          </Tooltip>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="text-2xs text-error-ink">
+          {error}
+        </p>
       )}
-    </div>
+    </>
   )
 }
