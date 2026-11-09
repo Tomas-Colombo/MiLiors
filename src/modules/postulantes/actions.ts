@@ -7,6 +7,7 @@ import { getReclutadorId } from '@/modules/empresas/queries'
 import { getNotasPrivadas } from './queries'
 import type { ActionResult } from '@/lib/types/domain'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
+import { notaContenidoSchema } from './schema'
 
 export type NotaData = {
   id: string
@@ -24,7 +25,12 @@ export async function crearNota(
 ): Promise<ActionResult<{ titulo_puesto: string | null }>> {
   const reclutadorId = await getReclutadorId()
   if (!reclutadorId) return { success: false, error: 'No autorizado.' }
-  if (!contenido.trim()) return { success: false, error: 'La nota no puede estar vacía.' }
+
+  const parseResult = notaContenidoSchema.safeParse(contenido)
+  if (!parseResult.success) {
+    return { success: false, error: parseResult.error.issues[0]?.message ?? 'La nota no puede estar vacía.' }
+  }
+  const contenidoValido = parseResult.data
 
   const admin = createAdminClient()
 
@@ -50,7 +56,7 @@ export async function crearNota(
     reclutador_id: reclutadorId,
     postulante_id: postulanteId,
     puesto_id: puestoIdFinal,
-    contenido: contenido.trim(),
+    contenido: contenidoValido,
   })
 
   if (error) return { success: false, error: 'No se pudo guardar la nota.' }
@@ -77,11 +83,16 @@ export async function getNotasDePostulante(
 export async function editarNota(notaId: string, contenido: string): Promise<ActionResult> {
   const reclutadorId = await getReclutadorId()
   if (!reclutadorId) return { success: false, error: 'No autorizado.' }
-  if (!contenido.trim()) return { success: false, error: 'La nota no puede estar vacía.' }
+
+  const parseResult = notaContenidoSchema.safeParse(contenido)
+  if (!parseResult.success) {
+    return { success: false, error: parseResult.error.issues[0]?.message ?? 'La nota no puede estar vacía.' }
+  }
+  const contenidoValido = parseResult.data
 
   const supabase = await createClient()
   const { data, error } = await supabase.from('nota_privada')
-    .update({ contenido: contenido.trim() })
+    .update({ contenido: contenidoValido })
     .eq('id', notaId)
     .eq('reclutador_id', reclutadorId)
     .select('postulante_id')

@@ -5,8 +5,7 @@ import { Alert, Button, Field, Modal, Textarea, Tooltip } from '@/components/ui'
 import { CheckCircleIcon, HelpCircleIcon, CloseIcon } from '@/components/icons'
 import { marcarPostulacion, noAvanzarPostulacion } from '@/modules/postulaciones/actions'
 import { MARCA_POSTULACION, ESTADO_POSTULACION, type MarcaPostulacion } from '@/lib/constants/enums'
-
-const MAX_MOTIVO = 1000
+import { MAX_MOTIVO_NO_AVANZAR } from '@/modules/postulantes/schema'
 
 /** Selección visible del grupo: la marca del reclutador o el descarte. */
 type Seleccion = MarcaPostulacion | 'NO_AVANZA' | null
@@ -217,14 +216,14 @@ export function MarcaPostulacionBtns({
           <Field
             label="Motivo"
             htmlFor="motivo-no-avanzar"
-            hint={`${motivo.length}/${MAX_MOTIVO} caracteres. Se guarda como nota privada${
+            hint={`${motivo.length}/${MAX_MOTIVO_NO_AVANZAR} caracteres. Se guarda como nota privada${
               tituloPuesto ? ` del puesto "${tituloPuesto}"` : ''
             }.`}
           >
             <Textarea
               id="motivo-no-avanzar"
               value={motivo}
-              maxLength={MAX_MOTIVO}
+              maxLength={MAX_MOTIVO_NO_AVANZAR}
               onChange={(e) => setMotivo(e.target.value)}
               rows={4}
               placeholder="Ej.: no cumple con la experiencia requerida en el stack del puesto."

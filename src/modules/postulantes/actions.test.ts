@@ -28,9 +28,15 @@ describe('postulantes/actions — notas privadas y revalidación (H-102, H-228)'
   })
 
   describe('crearNota', () => {
-    it('rechaza notas vacías', async () => {
+    it('valida el contenido con notaContenidoSchema', async () => {
       const resVacia = await crearNota('post-1', '   ')
       expect(resVacia).toEqual({ success: false, error: 'La nota no puede estar vacía.' })
+
+      const resExcedida = await crearNota('post-1', 'a'.repeat(2001))
+      expect(resExcedida).toEqual({
+        success: false,
+        error: 'La nota no puede superar los 2000 caracteres.',
+      })
     })
 
     it('al crear nota revalida postulante, postulaciones y notas', async () => {
@@ -54,9 +60,15 @@ describe('postulantes/actions — notas privadas y revalidación (H-102, H-228)'
   })
 
   describe('editarNota', () => {
-    it('rechaza notas vacías', async () => {
+    it('valida el contenido con notaContenidoSchema', async () => {
       const resVacia = await editarNota('nota-1', '')
       expect(resVacia).toEqual({ success: false, error: 'La nota no puede estar vacía.' })
+
+      const resExcedida = await editarNota('nota-1', 'a'.repeat(2001))
+      expect(resExcedida).toEqual({
+        success: false,
+        error: 'La nota no puede superar los 2000 caracteres.',
+      })
     })
 
     it('devuelve error si no se encuentra la nota a editar', async () => {

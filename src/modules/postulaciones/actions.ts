@@ -21,6 +21,7 @@ import {
   esOrigenValidoNoAvanzar,
   esOrigenValidoRevertirDescarte,
 } from './transiciones'
+import { motivoNoAvanzarSchema } from '@/modules/postulantes/schema'
 
 /**
  * Interruptor de los avisos por mail de las postulaciones.
@@ -547,7 +548,11 @@ export async function noAvanzarPostulacion(
     return { success: false, error: ERROR_ESTADO_INVALIDO }
   }
 
-  const texto = motivo.trim()
+  const parseResult = motivoNoAvanzarSchema.safeParse(motivo)
+  if (!parseResult.success) {
+    return { success: false, error: parseResult.error.issues[0]?.message ?? 'Motivo inválido.' }
+  }
+  const texto = parseResult.data
 
   const admin = createAdminClient()
 
