@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { TrashIcon } from '@/components/icons'
 import { ConfirmDialog } from '@/components/ui'
 import { eliminarNota } from '@/modules/postulantes/actions'
+import { NotaIconButton } from '@/components/shared/notas-candidato'
 
 /**
  * Botón para eliminar una nota desde la lista global. Confirma antes de borrar
@@ -35,16 +36,15 @@ export function EliminarNotaBtn({
 
   return (
     <>
-      <button
-        type="button"
+      <NotaIconButton
+        tono="peligro"
         onClick={() => setConfirmando(true)}
         disabled={isPending}
-        className="p-1.5 rounded-md text-muted hover:text-error-ink hover:bg-error-bg transition-colors disabled:opacity-50"
         aria-label="Eliminar nota"
         title="Eliminar nota"
       >
         <TrashIcon size={14} />
-      </button>
+      </NotaIconButton>
 
       <ConfirmDialog
         open={confirmando}

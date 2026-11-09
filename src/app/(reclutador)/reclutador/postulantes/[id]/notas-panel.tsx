@@ -1,97 +1,18 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Card, Alert } from '@/components/ui'
-import { Button } from '@/components/ui'
-import { Textarea, Field } from '@/components/ui'
-import { EditIcon, TrashIcon, PlusIcon } from '@/components/icons'
-import { crearNota, editarNota, eliminarNota } from '@/modules/postulantes/actions'
-import { NotaTexto } from '@/components/shared/nota-texto'
-
-type Nota = {
-  id: string
-  contenido: string
-  fecha_creacion: string
-  updated_at: string
-  puesto_id: string | null
-  titulo_puesto: string | null
-}
+import { useState } from 'react'
+import { Card } from '@/components/ui'
+import type { NotaData } from '@/modules/postulantes/actions'
+import { NotasCandidato } from '@/components/shared/notas-candidato'
 
 type Props = {
   postulanteId: string
-  notasIniciales: Nota[]
+  notasIniciales: NotaData[]
 }
 
 export function NotasPanel({ postulanteId, notasIniciales }: Props) {
   // Local optimistic state — Server Actions with revalidatePath handle the source of truth
-  const [notas, setNotas] = useState(notasIniciales)
-  const [nuevaNota, setNuevaNota] = useState('')
-  const [editandoId, setEditandoId] = useState<string | null>(null)
-  const [editContenido, setEditContenido] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
-
-  function handleCrear() {
-    setError(null)
-    if (!nuevaNota.trim()) return
-    startTransition(async () => {
-      const result = await crearNota(postulanteId, nuevaNota)
-      if (!result.success) {
-        setError(result.error)
-        return
-      }
-      // Optimistic: add a temp note; revalidatePath will sync from server on next navigation
-      setNotas((prev) => [
-        {
-          id: crypto.randomUUID(),
-          contenido: nuevaNota.trim(),
-          fecha_creacion: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          puesto_id: null,
-          titulo_puesto: result.data.titulo_puesto,
-        },
-        ...prev,
-      ])
-      setNuevaNota('')
-    })
-  }
-
-  function startEdit(nota: Nota) {
-    setEditandoId(nota.id)
-    setEditContenido(nota.contenido)
-    setError(null)
-  }
-
-  function handleEditar(notaId: string) {
-    setError(null)
-    startTransition(async () => {
-      const result = await editarNota(notaId, editContenido)
-      if (!result.success) {
-        setError(result.error)
-        return
-      }
-      setNotas((prev) =>
-        prev.map((n) =>
-          n.id === notaId
-            ? { ...n, contenido: editContenido.trim(), updated_at: new Date().toISOString() }
-            : n
-        )
-      )
-      setEditandoId(null)
-    })
-  }
-
-  function handleEliminar(notaId: string) {
-    setError(null)
-    startTransition(async () => {
-      const result = await eliminarNota(notaId, postulanteId)
-      if (!result.success) {
-        setError(result.error)
-        return
-      }
-      setNotas((prev) => prev.filter((n) => n.id !== notaId))
-    })
-  }
+  const [notas, setNotas] = useState<NotaData[]>(notasIniciales)
 
   return (
     <Card>
@@ -104,106 +25,12 @@ export function NotasPanel({ postulanteId, notasIniciales }: Props) {
         )}
       </div>
 
-      {/* New note form */}
-      <div className="space-y-2 mb-6">
-        <Field label="Nueva nota">
-          <Textarea
-            value={nuevaNota}
-            onChange={(e) => setNuevaNota(e.target.value)}
-            placeholder="Escribí tus observaciones sobre este candidato…"
-            rows={3}
-          />
-        </Field>
-        {error && <Alert tone="error">{error}</Alert>}
-        <Button
-          size="sm"
-          variant="tonal"
-          leftIcon={<PlusIcon size={14} />}
-          loading={isPending}
-          onClick={handleCrear}
-          disabled={!nuevaNota.trim()}
-        >
-          Guardar nota
-        </Button>
-      </div>
-
-      {/* Notes list */}
-      {notas.length === 0 ? (
-        <p className="text-compact text-muted text-center py-4">
-          Todavía no escribiste notas sobre este candidato.
-        </p>
-      ) : (
-        /* La columna vive al lado del perfil: sin tope, veinte notas estiraban
-           la tarjeta muy por debajo del contenido principal. Con altura acotada
-           la lista scrollea sola y la columna deja de crecer. El scroll aparece
-           recién cuando hace falta: con pocas notas la tarjeta se ve igual. */
-        <ul className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
-          {notas.map((nota) => (
-            <li key={nota.id} className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-              {editandoId === nota.id ? (
-                <div className="space-y-2">
-                  <Textarea
-                    value={editContenido}
-                    onChange={(e) => setEditContenido(e.target.value)}
-                    rows={3}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      loading={isPending}
-                      onClick={() => handleEditar(nota.id)}
-                    >
-                      Guardar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setEditandoId(null)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <NotaTexto contenido={nota.contenido} />
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-2xs text-neutral-400">
-                      {nota.titulo_puesto && (
-                        <span className="mr-2">📌 {nota.titulo_puesto}</span>
-                      )}
-                      {new Date(nota.updated_at).toLocaleDateString('es-AR', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </div>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(nota)}
-                        className="p-1.5 rounded-md text-muted hover:text-ink hover:bg-neutral-200 transition-colors"
-                        aria-label="Editar nota"
-                      >
-                        <EditIcon size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEliminar(nota.id)}
-                        disabled={isPending}
-                        className="p-1.5 rounded-md text-muted hover:text-error-ink hover:bg-error-bg transition-colors disabled:opacity-50"
-                        aria-label="Eliminar nota"
-                      >
-                        <TrashIcon size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <NotasCandidato
+        postulanteId={postulanteId}
+        notas={notas}
+        onNotasChange={(actualizar) => setNotas((prev) => actualizar(prev))}
+        listaClassName="max-h-[420px]"
+      />
     </Card>
   )
 }
