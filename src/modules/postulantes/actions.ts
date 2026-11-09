@@ -60,6 +60,7 @@ export async function crearNota(
 
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
   revalidatePath('/reclutador/postulaciones')
+  revalidatePath('/reclutador/notas')
   return { success: true, data: { titulo_puesto: tituloPuesto } }
 }
 
@@ -79,13 +80,20 @@ export async function editarNota(notaId: string, contenido: string): Promise<Act
   if (!contenido.trim()) return { success: false, error: 'La nota no puede estar vacía.' }
 
   const supabase = await createClient()
-  const { error } = await supabase.from('nota_privada')
+  const { data, error } = await supabase.from('nota_privada')
     .update({ contenido: contenido.trim() })
     .eq('id', notaId)
     .eq('reclutador_id', reclutadorId)
+    .select('postulante_id')
+    .maybeSingle()
 
-  if (error) return { success: false, error: 'No se pudo actualizar la nota.' }
+  if (error || !data) return { success: false, error: 'No se pudo actualizar la nota.' }
+
+  const postulanteId = (data as { postulante_id: string }).postulante_id
   revalidatePath('/reclutador/postulantes')
+  revalidatePath(`/reclutador/postulantes/${postulanteId}`)
+  revalidatePath('/reclutador/postulaciones')
+  revalidatePath('/reclutador/notas')
   return { success: true, data: undefined }
 }
 
