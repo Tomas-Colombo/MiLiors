@@ -11,6 +11,7 @@ import { NotaTexto } from '@/components/shared/nota-texto'
 import { normalizarTexto } from '@/lib/texto'
 import { EliminarNotaBtn } from './eliminar-nota-btn'
 import { requireEmpresaCargada } from '@/lib/guards'
+import { formatFecha } from '@/lib/fecha'
 
 export const metadata = { title: 'Mis notas — MiLiors' }
 
@@ -43,15 +44,6 @@ function postulacionesDeNota(
   return delCandidato
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatFecha(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-AR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 

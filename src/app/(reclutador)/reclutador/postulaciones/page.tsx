@@ -7,7 +7,14 @@ import { getPostulacionesConRespuestas } from '@/modules/preselector/queries'
 import { getMotivosNoAvanzar } from '@/modules/postulantes/queries'
 import { getMisEmpresasBase } from '@/modules/empresas/queries'
 import { getProvincias, getDepartamentosPorProvincia } from '@/modules/ubicacion/queries'
-import { ESTADO_POSTULACION, MARCA_POSTULACION } from '@/lib/constants/enums'
+import {
+  ESTADO_POSTULACION,
+  ESTADO_POSTULACION_BADGE_RECLUTADOR,
+  ESTADO_POSTULACION_TONE,
+  MARCA_POSTULACION,
+  type EstadoPostulacionKey,
+} from '@/lib/constants/enums'
+import { formatFecha } from '@/lib/fecha'
 import { VerPerfilBtn } from './ver-perfil-btn'
 import { VerRespuestasBtn } from './ver-respuestas-btn'
 import { NotasModalBtn } from './notas-modal-btn'
@@ -17,26 +24,10 @@ import { FiltrosPostulaciones } from './filtros-postulaciones'
 import { paginar } from '@/lib/pagination'
 import { normalizarTexto } from '@/lib/texto'
 import { Paginador } from '@/components/shared/list-controls'
-import type { BadgeProps } from '@/components/ui/badge'
 import { requireEmpresaCargada } from '@/lib/guards'
 
 export const metadata = { title: 'Postulaciones recibidas — MiLiors' }
 
-type Tone = NonNullable<BadgeProps['tone']>
-
-const estadoTone: Record<string, Tone> = {
-  [ESTADO_POSTULACION.ENVIADA]: 'info',
-  [ESTADO_POSTULACION.VISTO]: 'primary',
-  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'error',
-  [ESTADO_POSTULACION.CERRADA]: 'warning',
-}
-
-const estadoLabel: Record<string, string> = {
-  [ESTADO_POSTULACION.ENVIADA]: 'Sin evaluar',
-  [ESTADO_POSTULACION.VISTO]: 'Evaluada',
-  [ESTADO_POSTULACION.PROCESO_FINALIZADO]: 'No avanza',
-  [ESTADO_POSTULACION.CERRADA]: 'Cerrada',
-}
 
 type SearchParams = Promise<{
   puesto?: string; empresa?: string; estado?: string; marca?: string; q?: string; page?: string; ciclos?: string
@@ -245,12 +236,15 @@ export default async function PostulacionesRecibidasPage({
                         }
                       >
                         <Badge tone="error" dot className="cursor-help">
-                          {estadoLabel[p.estado] ?? p.estado}
+                          {ESTADO_POSTULACION_BADGE_RECLUTADOR[p.estado as EstadoPostulacionKey] ?? p.estado}
                         </Badge>
                       </Tooltip>
                     ) : (
-                      <Badge tone={estadoTone[p.estado] ?? 'neutral'} dot>
-                        {estadoLabel[p.estado] ?? p.estado}
+                      <Badge
+                        tone={ESTADO_POSTULACION_TONE[p.estado as EstadoPostulacionKey] ?? 'neutral'}
+                        dot
+                      >
+                        {ESTADO_POSTULACION_BADGE_RECLUTADOR[p.estado as EstadoPostulacionKey] ?? p.estado}
                       </Badge>
                     )}
                     {/* Auto-discard indicator — motivo_descarte is only set by the
@@ -336,12 +330,7 @@ export default async function PostulacionesRecibidasPage({
                   </div>
 
                   <p className="text-xs text-neutral-400">
-                    Postulado el{' '}
-                    {new Date(p.fecha_postulacion).toLocaleDateString('es-AR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
+                    Postulado el {formatFecha(p.fecha_postulacion, 'larga')}
                   </p>
                 </div>
 

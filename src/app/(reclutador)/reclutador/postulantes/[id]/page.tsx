@@ -33,6 +33,7 @@ import { AnexoReclutadorDisplay, InformeDisplay } from '@/modules/informe/inform
 import { esFormatoAnterior } from '@/lib/types/informe'
 import { ubicacionLabel } from '@/lib/ubicacion'
 import { getReclutadorId } from '@/modules/empresas/queries'
+import { formatFecha } from '@/lib/fecha'
 import { getFormularioDePuesto, getRespuestasDePostulacion } from '@/modules/preselector/queries'
 import { evaluarRespuestasCriticas } from '@/modules/preselector/evaluador'
 import { NotasPanel } from './notas-panel'
@@ -94,6 +95,10 @@ async function cargarContextoPostulacion(
   //   cierre automático), incluso si la postulación ya estaba en VISTO.
   // - Auto-mark as VISTO when the recruiter opens the profile from the applications list.
   //   Not the server action: it calls revalidatePath, which Next forbids during render.
+  // - H-225 (descartado): la ruta dinámica cuenta con loading.tsx, por lo que el prefetch
+  //   de Next.js solo descarga el layout y el skeleton sin renderizar la página ni ejecutar
+  //   este Server Component (node_modules/next/dist/docs/01-app/01-getting-started/04-linking-and-navigating.md).
+  //   Además, marcarPostulacionVista solo actúa condicionado a estado ENVIADA.
   const [, , formulario, respuestas] = await Promise.all([
     marcarActividadPuesto(row.puesto_id),
     row.estado === ESTADO_POSTULACION.ENVIADA ? marcarPostulacionVista(postulacionId) : undefined,
@@ -274,10 +279,7 @@ export default async function PostulanteDetallePage({
                     <p className="text-muted">{f.institucion}</p>
                     {f.fecha_graduacion && (
                       <p className="text-neutral-400 text-xs">
-                        {new Date(f.fecha_graduacion).toLocaleDateString('es-AR', {
-                          month: 'long',
-                          year: 'numeric',
-                        })}
+                        {formatFecha(f.fecha_graduacion, 'mes-anio')}
                       </p>
                     )}
                   </li>
@@ -297,12 +299,7 @@ export default async function PostulanteDetallePage({
                     <p className="text-muted">{c.institucion}</p>
                     <p className="text-neutral-400 text-xs">
                       {[
-                        c.fecha_fin
-                          ? new Date(c.fecha_fin).toLocaleDateString('es-AR', {
-                              month: 'long',
-                              year: 'numeric',
-                            })
-                          : null,
+                        c.fecha_fin ? formatFecha(c.fecha_fin, 'mes-anio') : null,
                         c.duracion_horas ? `${c.duracion_horas} h` : null,
                       ]
                         .filter(Boolean)
@@ -334,16 +331,10 @@ export default async function PostulanteDetallePage({
                     <p className="font-semibold text-ink">{e.puesto}</p>
                     <p className="text-muted">{e.empresa}</p>
                     <p className="text-neutral-400 text-xs">
-                      {new Date(e.fecha_inicio).toLocaleDateString('es-AR', {
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatFecha(e.fecha_inicio, 'mes-anio-corto')}
                       {' — '}
                       {e.fecha_fin
-                        ? new Date(e.fecha_fin).toLocaleDateString('es-AR', {
-                            month: 'short',
-                            year: 'numeric',
-                          })
+                        ? formatFecha(e.fecha_fin, 'mes-anio-corto')
                         : 'Actualidad'}
                     </p>
                     {e.descripcion && (
