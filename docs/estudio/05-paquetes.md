@@ -792,3 +792,10 @@ Los siguientes ítems quedan expresamente fuera del plan de ejecución de la Fas
   - `src/lib/ai/errores.ts`: Mensaje para el usuario de `'tiempo_agotado'` en `MENSAJE_POR_ERROR`. Sin esa entrada, un timeout en el informe o el certificado mostraba un motivo vacío ([H-227](hallazgos.md)).
   - `src/modules/asistente/cuota.ts`: Regla pura de la cuota del asistente. Va fuera de `actions.ts` porque todo lo que exporta un archivo `'use server'` queda publicado como server action ([H-221](hallazgos.md)).
   - Tests unitarios nuevos y adaptados: `src/modules/puestos/actions.test.ts`, `src/modules/asistente/actions.test.ts`, `src/modules/asistente/prompts.test.ts`, `src/lib/ai/adapters/gemini.test.ts`, `src/modules/seleccion/service.test.ts` y `src/modules/seleccion/prompts.test.ts`.
+- **Excepciones incorporadas en el bloque A5:**
+  - `src/components/shared/marca-postulacion.tsx`: Tope compartido del motivo de descarte consumiendo `MAX_MOTIVO_NO_AVANZAR` ([H-228](hallazgos.md)).
+  - `src/app/(reclutador)/reclutador/postulaciones/ver-perfil-btn.tsx` y `src/app/(reclutador)/reclutador/postulaciones/revertir-descarte-btn.tsx`: Captura del retorno `result` y renderizado de alerta de error en caso de fallo ([H-203](hallazgos.md)).
+  - `src/app/(reclutador)/reclutador/notas/eliminar-nota-btn.tsx`: Botón compartido consumiendo `NotaIconButton` para no alterar estilos ni padding con `Button` ([H-118](hallazgos.md)).
+  - `src/modules/postulaciones/transiciones.ts` (nuevo) y sus tests `src/modules/postulaciones/transiciones.test.ts`: Reglas puras de orígenes válidos para transiciones de estado de postulación ([H-203](hallazgos.md), [H-214](hallazgos.md)).
+  - `src/modules/postulantes/schema.ts` (nuevo) y sus tests `src/modules/postulantes/schema.test.ts`: Schemas Zod y topes máximos de notas y motivos ([H-228](hallazgos.md)).
+  - `src/modules/postulantes/actions.test.ts` (nuevo): Tests unitarios de revalidación y topes de notas privadas ([H-102](hallazgos.md), [H-228](hallazgos.md)).
