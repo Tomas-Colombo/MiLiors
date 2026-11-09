@@ -301,6 +301,7 @@ const ERROR_ESTADO_INVALIDO = 'El estado actual de la postulación no permite es
 
 function revalidarPostulacion(postulanteId: string) {
   revalidatePath('/reclutador/postulaciones')
+  revalidatePath('/postulante/postulaciones')
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
 }
 

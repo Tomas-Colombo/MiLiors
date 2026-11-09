@@ -207,6 +207,7 @@ describe('postulaciones/actions — transiciones y máquina de estados (H-203, H
     })
 
     expect(revalidatePath).toHaveBeenCalledWith('/reclutador/postulaciones')
+    expect(revalidatePath).toHaveBeenCalledWith('/postulante/postulaciones')
     expect(revalidatePath).toHaveBeenCalledWith('/reclutador/postulantes/postulante-1')
     expect(marcarActividadPuesto).not.toHaveBeenCalled()
   })
