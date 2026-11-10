@@ -24,6 +24,13 @@ const NAV_RECLUTADOR = [
   { href: '/reclutador/notas', label: 'Mis notas', icon: <NotebookIcon size={18} /> },
 ]
 
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
+
 export default async function ReclutadorLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRol('RECLUTADOR')
   const sidebarColapsada = await getSidebarColapsada()

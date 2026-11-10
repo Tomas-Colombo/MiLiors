@@ -35,6 +35,13 @@ const NAV_ITEMS = [
   { href: '/admin/tyc', label: 'Términos y Condiciones', icon: <ShieldIcon size={18} /> },
 ]
 
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRol('ADMIN')
   const sidebarColapsada = await getSidebarColapsada()

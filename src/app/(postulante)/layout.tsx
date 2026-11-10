@@ -50,6 +50,13 @@ async function getDesactualizadoFlags() {
   }
 }
 
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
+
 export default async function PostulanteLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRol('POSTULANTE')
   const sidebarColapsada = await getSidebarColapsada()
