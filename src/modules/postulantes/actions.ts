@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server-admin'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import { getNotasPrivadas } from './queries'
 import type { ActionResult } from '@/lib/types/domain'
@@ -33,7 +32,7 @@ export async function crearNota(
   }
   const contenidoValido = parseResult.data
 
-  const admin = createAdminClient()
+  const supabase = await createClient()
 
   // La nota solo se etiqueta con un puesto si el llamador lo indica
   // explícitamente. Sin puesto, queda como nota suelta del postulante
@@ -42,7 +41,7 @@ export async function crearNota(
   const puestoIdFinal = puestoId ?? null
   let tituloPuesto: string | null = null
   if (puestoIdFinal) {
-    const { data: puesto } = await admin.from('puesto')
+    const { data: puesto } = await supabase.from('puesto')
       .select('titulo_puesto')
       .eq('id', puestoIdFinal)
       .eq('reclutador_id', reclutadorId)
@@ -53,7 +52,7 @@ export async function crearNota(
     tituloPuesto = (puesto as { titulo_puesto: string }).titulo_puesto
   }
 
-  const { data: nota, error } = await admin.from('nota_privada').insert({
+  const { data: nota, error } = await supabase.from('nota_privada').insert({
     reclutador_id: reclutadorId,
     postulante_id: postulanteId,
     puesto_id: puestoIdFinal,

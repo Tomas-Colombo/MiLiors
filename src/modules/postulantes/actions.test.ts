@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { crearNota, editarNota, eliminarNota } from './actions'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server-admin'
 import { revalidatePath } from 'next/cache'
 
 vi.mock('next/cache', () => ({
@@ -15,10 +14,6 @@ vi.mock('@/modules/empresas/queries', () => ({
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
-}))
-
-vi.mock('@/lib/supabase/server-admin', () => ({
-  createAdminClient: vi.fn(),
 }))
 
 describe('postulantes/actions — notas privadas y revalidación (H-102, H-228)', () => {
@@ -45,14 +40,14 @@ describe('postulantes/actions — notas privadas y revalidación (H-102, H-228)'
           single: vi.fn().mockResolvedValue({ data: { id: 'nota-1' }, error: null }),
         }),
       })
-      vi.mocked(createAdminClient).mockReturnValue({
+      vi.mocked(createClient).mockResolvedValue({
         from: vi.fn().mockImplementation((table: string) => {
           if (table === 'nota_privada') {
             return { insert: insertSpy }
           }
           return {}
         }),
-      } as unknown as ReturnType<typeof createAdminClient>)
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const res = await crearNota('postulante-1', 'Nota de prueba')
       expect(res.success).toBe(true)
