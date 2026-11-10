@@ -13,36 +13,49 @@
  * documento no declara el tipo de retorno): están escritas a mano en RPCS, más
  * abajo, y hay que tocarlas si se agrega o cambia una función.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 
 const SALIDA = 'src/lib/types/database.types.ts'
 
-// ─── Config desde .env.local ─────────────────────────────────────────────────
+// ─── Config desde entorno (.env.development.local o .env.local) ─────────────
 function leerEnv() {
   const env = {}
+  const archivo = existsSync('.env.development.local')
+    ? '.env.development.local'
+    : existsSync('.env.local')
+      ? '.env.local'
+      : null
+
+  if (!archivo) {
+    console.error('No se encontró .env.development.local ni .env.local')
+    process.exit(1)
+  }
+
   // split(/\r?\n/) y no split('\n'): en JS `.` no matchea \r, así que el CRLF
   // del final de línea deja fuera de juego al `(.*)$` del regex de abajo.
-  for (const linea of readFileSync('.env.local', 'utf8').split(/\r?\n/)) {
+  for (const linea of readFileSync(archivo, 'utf8').split(/\r?\n/)) {
     const m = linea.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/)
     if (m) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '')
   }
-  return env
+  return { env, archivo }
 }
 
-const env = leerEnv()
+const { env, archivo: envArchivo } = leerEnv()
 const URL_BASE = env.NEXT_PUBLIC_SUPABASE_URL
 const KEY = env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 if (!URL_BASE || !KEY) {
-  console.error('Faltan NEXT_PUBLIC_SUPABASE_URL y/o las claves en .env.local')
+  console.error(`Faltan NEXT_PUBLIC_SUPABASE_URL y/o las claves en ${envArchivo}`)
   process.exit(1)
 }
+
+const host = new URL(URL_BASE).host
+console.log(`Generando tipos desde: ${host} (vía ${envArchivo})`)
 
 // ─── Firmas de las funciones RPC (el OpenAPI no trae el tipo de retorno) ─────
 const RPCS = {
   cerrar_puestos_inactivos: { args: 'Record<PropertyKey, never>', returns: 'number' },
   check_session: { args: 'Record<PropertyKey, never>', returns: 'string | null' },
   get_my_rol: { args: 'Record<PropertyKey, never>', returns: 'Database["public"]["Enums"]["rol_usuario"]' },
-  reclutador_ve_postulante: { args: '{ p_postulante_id: string }', returns: 'boolean' },
   touch_session_activity: { args: 'Record<PropertyKey, never>', returns: 'undefined' },
 }
 
@@ -91,7 +104,6 @@ const defs = (await res.json()).definitions ?? {}
  */
 const unicas = new Set()
 {
-  const { readdirSync } = await import('node:fs')
   const dir = 'supabase/migrations'
   for (const archivo of readdirSync(dir).filter((f) => f.endsWith('.sql'))) {
     const sql = readFileSync(`${dir}/${archivo}`, 'utf8')
@@ -104,6 +116,10 @@ const unicas = new Set()
         if ((m = l.match(/^UNIQUE\s*\(\s*(\w+)\s*\)\s*,?$/i))) unicas.add(`${tabla}.${m[1]}`)
         if ((m = l.match(/^(\w+)\s+uuid\s+PRIMARY KEY/i))) unicas.add(`${tabla}.${m[1]}`)
       }
+    }
+    const alterUniques = sql.matchAll(/ALTER TABLE ONLY (?:IF EXISTS )?(?:\"?public\"?\.)?\"?(\w+)\"?\s+ADD CONSTRAINT \S+ UNIQUE \(\"?(\w+)\"?\);/gi)
+    for (const [, tabla, col] of alterUniques) {
+      unicas.add(`${tabla}.${col}`)
     }
   }
 }

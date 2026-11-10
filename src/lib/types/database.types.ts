@@ -96,7 +96,7 @@ export type Database = {
           {
             foreignKeyName: "certificado_pdf_postulante_id_fkey"
             columns: ["postulante_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "perfil_postulante"
             referencedColumns: ["id"]
           },
@@ -234,7 +234,7 @@ export type Database = {
           {
             foreignKeyName: "contratacion_historial_puesto_id_fkey"
             columns: ["historial_puesto_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "historial_puesto"
             referencedColumns: ["id"]
           },
@@ -1510,6 +1510,35 @@ export type Database = {
           },
         ]
       }
+      puesto_criterio_psicologico: {
+        Row: {
+          created_at: string
+          perfil_psicologico_deseado: string | null
+          puesto_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          perfil_psicologico_deseado?: string | null
+          puesto_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          perfil_psicologico_deseado?: string | null
+          puesto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puesto_criterio_psicologico_puesto_id_fkey"
+            columns: ["puesto_id"]
+            isOneToOne: true
+            referencedRelation: "puesto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reclutador_empresa: {
         Row: {
           created_at: string
@@ -1852,10 +1881,6 @@ export type Database = {
       get_my_rol: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["rol_usuario"]
-      }
-      reclutador_ve_postulante: {
-        Args: { p_postulante_id: string }
-        Returns: boolean
       }
       touch_session_activity: {
         Args: Record<PropertyKey, never>
