@@ -158,9 +158,9 @@ Referencia de riesgo de escritura en producción: [H-002](hallazgos.md).
 72. `TC-ADM-002` (🔴): Crear sector → aparece en catálogo
 73. `TC-ADM-006` (🔴): Desactivar candidato → desaparece de búsqueda
 74. `TC-ADM-009` (🔴 🔒): No-ADMIN intenta acceder a /admin → prohibido
-75. `TC-PERF-001` (🔴) *[Rendimiento/Performance — ID duplicado con ítem 52, ver H-005]*: Carga del inicio del postulante → 0 llamadas a `/auth/v1/user` y ≤ 2 `check_session` en logs
-76. `TC-PERF-002` (🔴) *[Rendimiento/Performance — ID duplicado con línea 206 de QA_PLAN, ver H-005]*: Responder una pregunta del Eneagrama → 1 sola escritura, sin lecturas previas
-77. `TC-PERF-003` (🔴) *[Rendimiento/Performance — ID duplicado con línea 207 de QA_PLAN, ver H-005]*: Prueba de carga: cohorte de N postulantes haciendo el test en simultáneo → p95 < 1 s, sin 5xx
+75. `TC-LOAD-001` (🔴) *[Rendimiento/Performance — renumerado desde TC-PERF-001, ver H-005]*: Carga del inicio del postulante → 0 llamadas a `/auth/v1/user` y ≤ 2 `check_session` en logs
+76. `TC-LOAD-002` (🔴) *[Rendimiento/Performance — renumerado desde TC-PERF-002, ver H-005]*: Responder una pregunta del Eneagrama → 1 sola escritura, sin lecturas previas
+77. `TC-LOAD-003` (🔴) *[Rendimiento/Performance — renumerado desde TC-PERF-003, ver H-005]*: Prueba de carga: cohorte de N postulantes haciendo el test en simultáneo → p95 < 1 s, sin 5xx
 
 ---
 

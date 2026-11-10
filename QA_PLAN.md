@@ -66,10 +66,6 @@
 |----|------|-----|--------|
 | TC-EMP-001 | Datos de empresa visibles en el perfil del reclutador | 🟡 | ⬜ |
 | TC-EMP-002 | Admin ve listado de empresas con reclutadores asociados | 🟡 | ⬜ |
-| TC-EMP-003 | ⚠️ [PRÓXIMO] Subir logo — imagen válida (PNG/JPG) → guardado y visible | 🔴 | ⬜ |
-| TC-EMP-004 | ⚠️ [PRÓXIMO] Subir logo — archivo no imagen → error | 🔴 | ⬜ |
-| TC-EMP-005 | ⚠️ [PRÓXIMO] Subir logo — imagen > límite de tamaño → error | 🟡 | ⬜ |
-| TC-EMP-006 | ⚠️ [PRÓXIMO] Reemplazar logo existente → versión anterior reemplazada | 🟡 | ⬜ |
 
 ---
 
@@ -144,18 +140,6 @@
 
 ---
 
-## M09 — Favoritos ⚠️ PRÓXIMO
-
-| ID | Caso | Pri | Estado |
-|----|------|-----|--------|
-| TC-FAV-001 | ⚠️ [PRÓXIMO] Marcar candidato como favorito → aparece marcado | 🔴 | ⬜ |
-| TC-FAV-002 | ⚠️ [PRÓXIMO] Desmarcar favorito → marcador desaparece | 🔴 | ⬜ |
-| TC-FAV-003 | ⚠️ [PRÓXIMO] Favorito de Reclutador A no aparece marcado para Reclutador B | 🔴 🔒 | ⬜ |
-| TC-FAV-004 | ⚠️ [PRÓXIMO] Filtrar candidatos por favoritos | 🟡 | ⬜ |
-| TC-FAV-005 | ⚠️ [PRÓXIMO] Favorito persiste entre sesiones | 🟡 | ⬜ |
-
----
-
 ## M10 — Test Eneagrama
 
 | ID | Caso | Pri | Estado |
@@ -173,17 +157,6 @@
 
 ---
 
-## M11 — Human Design
-
-| ID | Caso | Pri | Estado |
-|----|------|-----|--------|
-| TC-HD-001 | Guardar HD con todos los campos → guardado exitoso | 🔴 | ⬜ |
-| TC-HD-002 | Guardar HD → informe se resetea a PENDIENTE | 🔴 | ⬜ |
-| TC-HD-003 | Guardar HD con datos previos → actualiza (upsert, no duplica) | 🟡 | ⬜ |
-| TC-HD-004 | Eliminar HD → registro borrado e informe se resetea | 🟡 | ⬜ |
-
----
-
 ## M12 — Informe de Personalidad
 
 | ID | Caso | Pri | Estado |
@@ -194,7 +167,7 @@
 | TC-INF-004 | Reintentar desde ERROR → vuelve a PENDIENTE y luego LISTO o ERROR | 🔴 | ⬜ |
 | TC-INF-005 | Informe LISTO visible para reclutador si toggle=ON | 🔴 | ⬜ |
 | TC-INF-006 | **Informe NO visible para reclutador si toggle=OFF** | 🔴 🔒 | ⬜ |
-| TC-INF-007 | Fallo de OpenAI → mensaje amigable, no expone error técnico | 🔴 | ⬜ |
+| TC-INF-007 | Fallo de Gemini → mensaje amigable, no expone error técnico | 🔴 | ⬜ |
 
 ---
 
@@ -228,19 +201,6 @@
 
 ---
 
-## M15 — CV Upload ⚠️ PRÓXIMO
-
-| ID | Caso | Pri | Estado |
-|----|------|-----|--------|
-| TC-CV-001 | ⚠️ [PRÓXIMO] Subir CV en PDF → guardado correctamente | 🔴 | ⬜ |
-| TC-CV-002 | ⚠️ [PRÓXIMO] Subir archivo que no sea documento → error | 🔴 | ⬜ |
-| TC-CV-003 | ⚠️ [PRÓXIMO] Subir CV > límite de tamaño → error con mensaje claro | 🟡 | ⬜ |
-| TC-CV-004 | ⚠️ [PRÓXIMO] Reclutador descarga CV si tiene acceso al contacto | 🔴 | ⬜ |
-| TC-CV-005 | ⚠️ [PRÓXIMO] **Reclutador NO descarga CV si no tiene acceso al contacto** | 🔴 🔒 | ⬜ |
-| TC-CV-006 | ⚠️ [PRÓXIMO] Reemplazar CV existente → versión anterior reemplazada | 🟡 | ⬜ |
-
----
-
 ## M16 — Certificado PDF
 
 | ID | Caso | Pri | Estado |
@@ -264,7 +224,7 @@
 | TC-IA-002 | Consulta registrada en tabla consulta_asistente_ia | 🟡 | ⬜ |
 | TC-IA-003 | **Reclutador solo puede consultar puestos propios** | 🔴 🔒 | ⬜ |
 | TC-IA-004 | Consulta vacía → no envía request | 🟡 | ⬜ |
-| TC-IA-005 | Fallo de OpenAI → mensaje de error amigable, sin stack trace visible | 🔴 | ⬜ |
+| TC-IA-005 | Fallo de Gemini → mensaje de error amigable, sin stack trace visible | 🔴 | ⬜ |
 
 ---
 
@@ -288,10 +248,10 @@
 
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
-| TC-PERF-001 | Carga del inicio del postulante → 0 llamadas a `/auth/v1/user` y ≤ 2 `check_session` en logs | 🔴 | ⬜ |
-| TC-PERF-002 | Responder una pregunta del Eneagrama → 1 sola escritura, sin lecturas previas | 🔴 | ⬜ |
-| TC-PERF-003 | Prueba de carga: cohorte de N postulantes haciendo el test en simultáneo → p95 < 1 s, sin 5xx | 🔴 | ⬜ |
-| TC-PERF-004 | JWT del proyecto firmado con ES256 (no HS256) | 🟡 | ⬜ |
+| TC-LOAD-001 | Carga del inicio del postulante → 0 llamadas a `/auth/v1/user` y ≤ 2 `check_session` en logs | 🔴 | ⬜ |
+| TC-LOAD-002 | Responder una pregunta del Eneagrama → 1 sola escritura, sin lecturas previas | 🔴 | ⬜ |
+| TC-LOAD-003 | Prueba de carga: cohorte de N postulantes haciendo el test en simultáneo → p95 < 1 s, sin 5xx | 🔴 | ⬜ |
+| TC-LOAD-004 | JWT del proyecto firmado con ES256 (no HS256) | 🟡 | ⬜ |
 
 ---
 
@@ -333,7 +293,7 @@ Si alguno falla, detener y escalar.
 | 3 | Informe visible con toggle=OFF (RLS) | Visibilidad |
 | 4 | Reclutador consulta asistente con puesto ajeno | Asistente IA |
 | 5 | Email de Resend falla silenciosamente → candidato no notificado | Postulaciones |
-| 6 | OpenAI falla → informe queda en PENDIENTE indefinidamente | Informe |
+| 6 | Gemini falla → informe queda en PENDIENTE indefinidamente | Informe |
 | 7 | URL signed del certificado expira en 1h → UX riesgo | Certificado |
 
 ---
@@ -343,3 +303,24 @@ Si alguno falla, detener y escalar.
 | ID | TC | Módulo | Descripción | Severidad | Estado |
 |----|----|--------|-------------|-----------|--------|
 | BUG-001 | | | | | Abierto |
+---
+
+## Funcionalidades futuras (fuera de alcance)
+
+| ID | Caso | Prioridad | Estado |
+|----|------|-----------|--------|
+| TC-EMP-003 | Subir logo — imagen válida (PNG/JPG) → guardado y visible | — | Futuro |
+| TC-EMP-004 | Subir logo — archivo no imagen → error | — | Futuro |
+| TC-EMP-005 | Subir logo — imagen > límite de tamaño → error | — | Futuro |
+| TC-EMP-006 | Reemplazar logo existente → versión anterior reemplazada | — | Futuro |
+| TC-FAV-001 | Marcar candidato como favorito → aparece marcado | — | Futuro |
+| TC-FAV-002 | Desmarcar favorito → marcador desaparece | — | Futuro |
+| TC-FAV-003 | Favorito de Reclutador A no aparece marcado para Reclutador B | — 🔒 | Futuro |
+| TC-FAV-004 | Filtrar candidatos por favoritos | — | Futuro |
+| TC-FAV-005 | Favorito persiste entre sesiones | — | Futuro |
+| TC-CV-001 | Subir CV en PDF → guardado correctamente | — | Futuro |
+| TC-CV-002 | Subir archivo que no sea documento → error | — | Futuro |
+| TC-CV-003 | Subir CV > límite de tamaño → error con mensaje claro | — | Futuro |
+| TC-CV-004 | Reclutador descarga CV si tiene acceso al contacto | — | Futuro |
+| TC-CV-005 | Reclutador NO descarga CV si no tiene acceso al contacto | — 🔒 | Futuro |
+| TC-CV-006 | Reemplazar CV existente → versión anterior reemplazada | — | Futuro |

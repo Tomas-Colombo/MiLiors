@@ -621,14 +621,14 @@ Evaluación estática de los **77 casos de prueba críticos (🔴)** que permane
 | 72 | `TC-ADM-002` | Crear sector industrial lo agrega al catálogo | **Cubierto** | `src/modules/admin/actions.ts:25` |
 | 73 | `TC-ADM-006` | Desactivar candidato lo oculta de la búsqueda | **Cubierto** | `src/modules/admin/actions.ts:601` |
 | 74 | `TC-ADM-009` | Usuario sin rol ADMIN accediendo a `/admin` prohibido | **Cubierto** | `src/proxy.ts:88`, `src/lib/guards.ts:25` |
-| 75 | `TC-PERF-001` (Carga) | Inicio postulante sin llamadas redundantes a auth | **No verificable estáticamente** | Requiere telemetría de red activa en runtime |
-| 76 | `TC-PERF-002` (Test) | Respuesta de ítem ejecuta 1 escritura sin lecturas previas | **Cubierto** | `src/modules/eneagrama/actions.ts:114` (un solo `upsert`) |
-| 77 | `TC-PERF-003` (Carga) | Cohorte simultánea con p95 < 1s y 0 errores 5xx | **No verificable estáticamente** | Prueba de carga concurrente dependiente de infraestructura |
+| 75 | `TC-LOAD-001` (Carga) | Inicio postulante sin llamadas redundantes a auth | **No verificable estáticamente** | Requiere telemetría de red activa en runtime |
+| 76 | `TC-LOAD-002` (Test) | Respuesta de ítem ejecuta 1 escritura sin lecturas previas | **Cubierto** | `src/modules/eneagrama/actions.ts:114` (un solo `upsert`) |
+| 77 | `TC-LOAD-003` (Carga) | Cohorte simultánea con p95 < 1s y 0 errores 5xx | **No verificable estáticamente** | Prueba de carga concurrente dependiente de infraestructura |
 
 **Conteo de la Tarea 6 (sobre los 77 casos críticos 🔴 pendientes):**
 - **Cubiertos:** 59 casos (76.6%).
 - **Fallas:** 4 casos (5.2%): TC-PUE-008 (H-202), TC-PUE-009 (H-202), TC-POST-006 (H-219) y TC-POST-008 (H-219).
-- **No verificables estáticamente:** 3 casos (3.9%): TC-AUTH-015 (bfcache), TC-PERF-001 (telemetría runtime) y TC-PERF-003 (prueba de carga).
+- **No verificables estáticamente:** 3 casos (3.9%): TC-AUTH-015 (bfcache), TC-LOAD-001 (telemetría runtime) y TC-LOAD-003 (prueba de carga).
 - **No aplica:** 11 casos (14.3%): 9 funcionalidades marcadas `[PRÓXIMO]` (TC-EMP-003, TC-EMP-004, TC-FAV-001 a 003, TC-CV-001, 002, 004, 005) y 2 funcionalidades eliminadas (TC-HD-001 y TC-HD-002) (H-229).
 - **Total evaluado:** 77 casos (100%).
 

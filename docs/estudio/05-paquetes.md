@@ -580,7 +580,7 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
   - [H-004](hallazgos.md): En `eslint.config.mjs`, ignorar directorios `.agents/` y `.claude/` logrando 0 advertencias.
   - [H-304](hallazgos.md): Crear `.github/workflows/ci.yml` ejecutando `npm run lint`, `npx tsc --noEmit`, `npm test` y `npm run build` en cada push o pull request.
   - [H-300](hallazgos.md): Crear `src/app/robots.ts` con exclusión de indexación para `/admin/`, `/postulante/`, `/reclutador/` y `/api/`. Incorporar metadatos `robots: { index: false, follow: false }` en sus layouts.
-  - [H-005](hallazgos.md), [H-229](hallazgos.md): Renumerar colisiones de IDs `TC-PERF-001..004`, retirar casos obsoletos de Human Design y depurar menciones a Gemini.
+  - [H-005](hallazgos.md), [H-229](hallazgos.md): Renumerar colisiones de IDs `TC-PERF-001..004` a `TC-LOAD-001..004`, retirar casos obsoletos de Human Design y depurar menciones a Gemini.
   - [H-007](hallazgos.md): Documentar activación de `auth_leaked_password_protection` en `docs/runbooks/supabase-auth-config.md`.
   - Redactar runbook de rollback operativo en `docs/runbooks/rollback.md`.
 - **Cómo se verifica:**
