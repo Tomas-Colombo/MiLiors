@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "env:local": "node scripts/entorno-supabase.mjs local",
+    "env:prod": "node scripts/entorno-supabase.mjs prod",
     "lint": "eslint",
     "gen:types": "node scripts/gen-database-types.mjs",
     "test": "vitest run",
