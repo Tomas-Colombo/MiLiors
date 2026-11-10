@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { requireAdmin } from '@/lib/guards'
+import { logAuditoria } from '@/lib/logger'
 import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 import { patronTextoCompleto } from '@/lib/texto'
@@ -518,24 +519,37 @@ export async function editarPregunta(
 }
 
 export async function eliminarPregunta(id: string): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   const admin = createAdminClient()
   const { error } = await admin.from('pregunta_eneagrama')
     .update({ fecha_baja: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo eliminar la pregunta.' }
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'eliminar_pregunta_eneagrama',
+    entidad: 'pregunta_eneagrama',
+    entidadId: id,
+  })
   await resetearTestsEnProgreso()
   revalidatePath('/admin/preguntas')
   return { success: true, data: undefined }
 }
 
 export async function togglePausarPregunta(id: string, pausada: boolean): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   const admin = createAdminClient()
   const { error } = await admin.from('pregunta_eneagrama')
     .update({ pausada })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo cambiar el estado.' }
+  logAuditoria({
+    usuarioId: session.id,
+    accion: pausada ? 'pausar_pregunta_eneagrama' : 'reanudar_pregunta_eneagrama',
+    entidad: 'pregunta_eneagrama',
+    entidadId: id,
+    detalle: { pausada },
+  })
   await resetearTestsEnProgreso()
   revalidatePath('/admin/preguntas')
   return { success: true, data: undefined }
@@ -547,7 +561,7 @@ export async function publicarTyC(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   const rawVersion = formData.get('version')?.toString() ?? ''
   const rawDescripcion = formData.get('descripcion')?.toString() ?? ''
 
@@ -581,6 +595,14 @@ export async function publicarTyC(
 
   // Recargar el layout raíz para que el gate de TyC vuelva a evaluarse en todos los usuarios
   revalidatePath('/admin/tyc')
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'publicar_tyc',
+    entidad: 'terminos_y_condiciones',
+    entidadId: (nueva as { id: string }).id,
+    detalle: { version },
+  })
+
   revalidatePath('/', 'layout')
 
   if (errorBaja) {
@@ -605,7 +627,7 @@ export async function actualizarDiasInactividad(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   const dias = Number(formData.get('dias'))
   if (!Number.isInteger(dias) || dias < 1 || dias > 3650) {
     return { success: false, error: 'Ingresá un número entero de días entre 1 y 3650.' }
@@ -616,6 +638,14 @@ export async function actualizarDiasInactividad(
     .update({ dias_inactividad_cierre: dias, updated_at: new Date().toISOString() })
     .eq('id', true)
   if (error) return { success: false, error: 'No se pudo actualizar la configuración.' }
+
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'actualizar_dias_inactividad',
+    entidad: 'configuracion_sistema',
+    entidadId: 'global',
+    detalle: { dias },
+  })
 
   revalidatePath('/admin/empresas')
   return { success: true, data: undefined }
@@ -630,7 +660,7 @@ export async function actualizarDiasReactivarFeedback(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   const dias = Number(formData.get('dias'))
   if (!Number.isInteger(dias) || dias < 1 || dias > 3650) {
     return { success: false, error: 'Ingresá un número entero de días entre 1 y 3650.' }
@@ -642,6 +672,14 @@ export async function actualizarDiasReactivarFeedback(
     .eq('id', true)
   if (error) return { success: false, error: 'No se pudo actualizar la configuración.' }
 
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'actualizar_dias_reactivar_feedback',
+    entidad: 'configuracion_sistema',
+    entidadId: 'global',
+    detalle: { dias },
+  })
+
   revalidatePath('/admin/feedback')
   revalidatePath('/postulante/informe')
   return { success: true, data: undefined }
@@ -650,7 +688,7 @@ export async function actualizarDiasReactivarFeedback(
 // ─── Moderación postulantes ──────────────────────────────────────────────────
 
 export async function desactivarPostulante(postulanteId: string): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   const admin = createAdminClient()
   const { data, error } = await admin.from('perfil_postulante')
     .update({ perfil_en_busqueda: false })
@@ -658,12 +696,20 @@ export async function desactivarPostulante(postulanteId: string): Promise<Action
     .select('id')
   if (error) return { success: false, error: 'No se pudo desactivar el perfil.' }
   if (!data || data.length === 0) return { success: false, error: 'Postulante no encontrado.' }
+
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'desactivar_postulante',
+    entidad: 'perfil_postulante',
+    entidadId: postulanteId,
+  })
+
   revalidatePath('/admin/postulantes')
   return { success: true, data: undefined }
 }
 
 export async function reactivarPostulante(postulanteId: string): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   let requisitos: RequisitosVisibilidad
   try {
     requisitos = await getRequisitosVisibilidadPostulante(postulanteId)
@@ -682,6 +728,14 @@ export async function reactivarPostulante(postulanteId: string): Promise<ActionR
     .update({ perfil_en_busqueda: true })
     .eq('id', postulanteId)
   if (error) return { success: false, error: 'No se pudo reactivar el perfil.' }
+
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'reactivar_postulante',
+    entidad: 'perfil_postulante',
+    entidadId: postulanteId,
+  })
+
   revalidatePath('/admin/postulantes')
   return { success: true, data: undefined }
 }

@@ -12,6 +12,7 @@ import { persistirFormularioPreselector, eliminarFormularioPreselector } from '@
 import { marcarActividadPuesto } from './actividad'
 import { getCicloMasReciente } from './ciclos'
 import { isUuid } from '@/lib/utils'
+import { logAuditoria } from '@/lib/logger'
 import { ESTADO_POSTULACION } from '@/lib/constants/enums'
 
 /**
@@ -328,6 +329,12 @@ export async function publicarPuesto(
   }
 
   await registrarApertura(puestoId, parsed.data.empresa_id, parsed.data.titulo_puesto)
+  logAuditoria({
+    usuarioId: ctx.reclutadorId,
+    accion: 'publicar_puesto',
+    entidad: 'puesto',
+    entidadId: puestoId,
+  })
 
   revalidarPuesto(puestoId)
   // No redirigimos: el cliente muestra el modal de advertencia (cierre por
@@ -435,6 +442,12 @@ export async function editarPuesto(
   revalidarPuesto(puestoId)
   // El form sigue montado tras guardar: refrescar /editar actualiza el formulario
   // de referencia del editor del preselector, que decide si hay cambios que enviar.
+  logAuditoria({
+    usuarioId: ctx.reclutadorId,
+    accion: 'editar_puesto',
+    entidad: 'puesto',
+    entidadId: puestoId,
+  })
   revalidatePath(`/reclutador/puestos/${puestoId}/editar`)
   return { success: true, data: undefined }
 }
@@ -505,6 +518,13 @@ export async function cerrarPuesto(
     }
   }
 
+  logAuditoria({
+    usuarioId: ctx.reclutadorId,
+    accion: 'cerrar_puesto',
+    entidad: 'puesto',
+    entidadId: puestoId,
+  })
+
   revalidarPuesto(puestoId)
   return { success: true, data: undefined }
 }
@@ -573,6 +593,13 @@ export async function eliminarPuesto(
       error: 'No se pudo eliminar el puesto. Podés reintentar la operación.',
     }
   }
+
+  logAuditoria({
+    usuarioId: ctx.reclutadorId,
+    accion: 'eliminar_puesto',
+    entidad: 'puesto',
+    entidadId: puestoId,
+  })
 
   revalidarPuesto(puestoId)
   return { success: true, data: undefined }
@@ -674,6 +701,13 @@ export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
     const { titulo_puesto } = actualizados[0] as { titulo_puesto: string }
     await registrarApertura(puestoId, empresaId, titulo_puesto)
   }
+
+  logAuditoria({
+    usuarioId: ctx.reclutadorId,
+    accion: 'reactivar_puesto',
+    entidad: 'puesto',
+    entidadId: puestoId,
+  })
 
   revalidarPuesto(puestoId)
   return { success: true, data: undefined }

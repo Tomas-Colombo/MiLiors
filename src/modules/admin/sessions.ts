@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { requireAdmin } from '@/lib/guards'
 import { ROL_USUARIO } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
+import { logAuditoria } from '@/lib/logger'
 
 /**
  * Revoca la sesión de un usuario (cualquier rol).
@@ -53,6 +54,13 @@ export async function revocarSesion(userId: string): Promise<ActionResult> {
     actualizado_en: new Date().toISOString(),
   })
   if (error) return { success: false, error: 'No se pudo revocar la sesión.' }
+
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'revocar_sesion',
+    entidad: 'usuario',
+    entidadId: userId,
+  })
 
   return { success: true, data: undefined }
 }

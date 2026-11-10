@@ -8,6 +8,7 @@ import { getNotasPrivadas } from './queries'
 import type { ActionResult } from '@/lib/types/domain'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { notaContenidoSchema } from './schema'
+import { logAuditoria } from '@/lib/logger'
 
 export type NotaData = {
   id: string
@@ -64,6 +65,14 @@ export async function crearNota(
   // Guardar una nota sobre un candidato del puesto cuenta como actividad.
   await marcarActividadPuesto(puestoIdFinal)
 
+  logAuditoria({
+    usuarioId: reclutadorId,
+    accion: 'crear_nota',
+    entidad: 'nota_privada',
+    entidadId: puestoIdFinal ?? postulanteId,
+    detalle: { postulanteId, puestoId: puestoIdFinal },
+  })
+
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
   revalidatePath('/reclutador/postulaciones')
   revalidatePath('/reclutador/notas')
@@ -101,6 +110,13 @@ export async function editarNota(notaId: string, contenido: string): Promise<Act
   if (error || !data) return { success: false, error: 'No se pudo actualizar la nota.' }
 
   const postulanteId = (data as { postulante_id: string }).postulante_id
+  logAuditoria({
+    usuarioId: reclutadorId,
+    accion: 'editar_nota',
+    entidad: 'nota_privada',
+    entidadId: notaId,
+    detalle: { postulanteId },
+  })
   revalidatePath('/reclutador/postulantes')
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
   revalidatePath('/reclutador/postulaciones')
@@ -119,6 +135,15 @@ export async function eliminarNota(notaId: string, postulanteId: string): Promis
     .eq('reclutador_id', reclutadorId)
 
   if (error) return { success: false, error: 'No se pudo eliminar la nota.' }
+
+  logAuditoria({
+    usuarioId: reclutadorId,
+    accion: 'eliminar_nota',
+    entidad: 'nota_privada',
+    entidadId: notaId,
+    detalle: { postulanteId },
+  })
+
   revalidatePath(`/reclutador/postulantes/${postulanteId}`)
   revalidatePath('/reclutador/postulaciones')
   revalidatePath('/reclutador/notas')
