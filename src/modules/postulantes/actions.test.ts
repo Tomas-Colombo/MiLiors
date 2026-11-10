@@ -40,7 +40,11 @@ describe('postulantes/actions — notas privadas y revalidación (H-102, H-228)'
     })
 
     it('al crear nota revalida postulante, postulaciones y notas', async () => {
-      const insertSpy = vi.fn().mockResolvedValue({ error: null })
+      const insertSpy = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { id: 'nota-1' }, error: null }),
+        }),
+      })
       vi.mocked(createAdminClient).mockReturnValue({
         from: vi.fn().mockImplementation((table: string) => {
           if (table === 'nota_privada') {

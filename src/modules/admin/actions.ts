@@ -595,6 +595,9 @@ export async function publicarTyC(
 
   // Recargar el layout raíz para que el gate de TyC vuelva a evaluarse en todos los usuarios
   revalidatePath('/admin/tyc')
+  revalidatePath('/', 'layout')
+
+  // La versión nueva ya quedó publicada aunque falle la baja de las anteriores.
   logAuditoria({
     usuarioId: session.id,
     accion: 'publicar_tyc',
@@ -602,8 +605,6 @@ export async function publicarTyC(
     entidadId: (nueva as { id: string }).id,
     detalle: { version },
   })
-
-  revalidatePath('/', 'layout')
 
   if (errorBaja) {
     console.error('[publicarTyC] Error al dar de baja versiones anteriores:', errorBaja)

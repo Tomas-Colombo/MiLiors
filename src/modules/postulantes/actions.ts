@@ -53,14 +53,14 @@ export async function crearNota(
     tituloPuesto = (puesto as { titulo_puesto: string }).titulo_puesto
   }
 
-  const { error } = await admin.from('nota_privada').insert({
+  const { data: nota, error } = await admin.from('nota_privada').insert({
     reclutador_id: reclutadorId,
     postulante_id: postulanteId,
     puesto_id: puestoIdFinal,
     contenido: contenidoValido,
-  })
+  }).select('id').single()
 
-  if (error) return { success: false, error: 'No se pudo guardar la nota.' }
+  if (error || !nota) return { success: false, error: 'No se pudo guardar la nota.' }
 
   // Guardar una nota sobre un candidato del puesto cuenta como actividad.
   await marcarActividadPuesto(puestoIdFinal)
@@ -69,7 +69,7 @@ export async function crearNota(
     usuarioId: reclutadorId,
     accion: 'crear_nota',
     entidad: 'nota_privada',
-    entidadId: puestoIdFinal ?? postulanteId,
+    entidadId: nota.id,
     detalle: { postulanteId, puestoId: puestoIdFinal },
   })
 
