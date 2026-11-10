@@ -1393,7 +1393,6 @@ export type Database = {
           idioma: string
           localidad_id: string | null
           nivel_experiencia: string | null
-          perfil_psicologico_deseado: string | null
           reclutador_id: string
           sector_id: string | null
           titulo_puesto: string
@@ -1414,7 +1413,6 @@ export type Database = {
           idioma?: string
           localidad_id?: string | null
           nivel_experiencia?: string | null
-          perfil_psicologico_deseado?: string | null
           reclutador_id: string
           sector_id?: string | null
           titulo_puesto: string
@@ -1435,7 +1433,6 @@ export type Database = {
           idioma?: string
           localidad_id?: string | null
           nivel_experiencia?: string | null
-          perfil_psicologico_deseado?: string | null
           reclutador_id?: string
           sector_id?: string | null
           titulo_puesto?: string
