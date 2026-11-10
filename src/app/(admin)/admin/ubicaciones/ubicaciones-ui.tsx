@@ -152,7 +152,7 @@ export function LocalidadAcciones({ id, nombre, activo }: { id: string; nombre: 
       onReactivar={() => reactivarLocalidad(id)}
       consecuencia={
         <>
-          Es una baja lógica: no se borra nada y podés reactivarlo cuando quieras. Deja de
+          Es una baja lógica: no se borra nada y podés reactivarla cuando quieras. Deja de
         ofrecerse al elegir ubicación; los perfiles y puestos que ya la tienen la conservan.
         </>
       }

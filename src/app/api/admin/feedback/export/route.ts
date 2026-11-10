@@ -67,8 +67,6 @@ export async function GET(req: NextRequest) {
   const auth = await autorizarAdmin()
   if (!auth.ok) return new Response(auth.status === 401 ? 'No autorizado' : 'Prohibido', { status: auth.status })
 
-
-
   const sp = req.nextUrl.searchParams
   const filtros: FeedbackFiltros = {
     eneatipo: sp.get('eneatipo') ?? undefined,

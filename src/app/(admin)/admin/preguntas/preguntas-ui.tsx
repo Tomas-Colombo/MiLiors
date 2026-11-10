@@ -20,8 +20,6 @@ type Pregunta = {
   pausada: boolean
 }
 
-
-
 // ─── Switch de activa/pausada ─────────────────────────────────────────────────
 
 export function PausaSwitch({ id, pausada }: { id: string; pausada: boolean }) {
@@ -105,10 +103,6 @@ export function EliminarPreguntaBtn({ id, enunciado }: { id: string; enunciado: 
 
 function EditarModal({ pregunta, onClose }: { pregunta: Pregunta; onClose: () => void }) {
   const [state, action, pending] = useFormAccion(editarPregunta, () => onClose())
-
-
-
-
 
   return (
     <Modal

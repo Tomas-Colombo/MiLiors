@@ -183,10 +183,6 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       cell: row => (
         <span className="text-xs text-muted">
           {formatFecha(row.respondidoAt, 'corta')}
-
-
-
-
         </span>
       ),
     },
