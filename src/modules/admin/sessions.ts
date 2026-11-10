@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { requireAdmin } from '@/lib/guards'
+import { ROL_USUARIO } from '@/lib/constants/enums'
 import type { ActionResult } from '@/lib/types/domain'
 
 /**
@@ -27,17 +28,22 @@ export async function revocarSesion(userId: string): Promise<ActionResult> {
   }
 
   const admin = createAdminClient()
-  const { data: usuario } = await admin
+  const { data: usuario, error: errorUsuario } = await admin
     .from('usuario')
     .select('rol_usuario')
     .eq('id', userId)
     .maybeSingle()
 
+  if (errorUsuario) {
+    console.error('[revocarSesion] Error leyendo el usuario:', errorUsuario)
+    return { success: false, error: 'No se pudo revocar la sesión.' }
+  }
+
   if (!usuario) {
     return { success: false, error: 'Usuario inválido.' }
   }
 
-  if (usuario.rol_usuario === 'ADMIN') {
+  if (usuario.rol_usuario === ROL_USUARIO.ADMIN) {
     return { success: false, error: 'No se puede revocar la sesión de otro administrador.' }
   }
 

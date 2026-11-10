@@ -52,6 +52,23 @@ describe('revocarSesion', () => {
     expect(mockEq).toHaveBeenCalledWith('id', 'usuario-inexistente')
   })
 
+  it('no revoca si la lectura del usuario falla', async () => {
+    const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'boom' } })
+    const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle })
+    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+    const mockUpsert = vi.fn()
+    const mockFrom = vi.fn().mockReturnValue({ select: mockSelect, upsert: mockUpsert })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: mockFrom,
+    } as unknown as ReturnType<typeof createAdminClient>)
+
+    const res = await revocarSesion('usuario-1')
+    expect(res).toEqual({ success: false, error: 'No se pudo revocar la sesión.' })
+    expect(mockUpsert).not.toHaveBeenCalled()
+  })
+
   it('guarda 3: rechaza revocar la sesión de otro administrador', async () => {
     const mockMaybeSingle = vi.fn().mockResolvedValue({
       data: { rol_usuario: 'ADMIN' },
