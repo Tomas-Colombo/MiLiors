@@ -1,12 +1,13 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button, Input, Textarea, Field, Alert, Badge } from '@/components/ui'
 import { PlusIcon, FileIcon, ChevronDownIcon } from '@/components/icons'
 import { publicarTyC } from '@/modules/admin/actions'
 import { cn } from '@/lib/utils'
 import { TyCDocumento } from '@/components/shared/tyc-documento'
-import type { ActionResult } from '@/lib/types/domain'
+import { useFormAccion } from '@/components/shared/use-form-accion'
+import { formatFecha } from '@/lib/fecha'
 
 type Version = {
   id: string
@@ -15,16 +16,6 @@ type Version = {
   fecha_publicacion: string
   fecha_baja_tyc: string | null
   aceptaciones: number
-}
-
-const initialState: ActionResult = { success: false, error: '' }
-
-function fmtFecha(iso: string) {
-  return new Date(iso).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
 }
 
 // ─── Contenedor con pestañas ──────────────────────────────────────────────────
@@ -76,12 +67,10 @@ function TabButton({
 // ─── Pestaña: publicar nueva versión ──────────────────────────────────────────
 
 function PublicarTab() {
-  const [state, action, pending] = useActionState(publicarTyC, initialState)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.success) formRef.current?.reset()
-  }, [state])
+  const [state, action, pending] = useFormAccion(publicarTyC, () => {
+    formRef.current?.reset()
+  })
 
   return (
     <div className="mt-6 space-y-5">
@@ -164,8 +153,8 @@ function HistorialTab({ versiones }: { versiones: Version[] }) {
                   )}
                 </div>
                 <p className="mt-0.5 text-xs text-muted">
-                  Publicada el {fmtFecha(v.fecha_publicacion)}
-                  {v.fecha_baja_tyc && ` · Reemplazada el ${fmtFecha(v.fecha_baja_tyc)}`}
+                  Publicada el {formatFecha(v.fecha_publicacion, 'corta')}
+                  {v.fecha_baja_tyc && ` · Reemplazada el ${formatFecha(v.fecha_baja_tyc, 'corta')}`}
                   {` · ${v.aceptaciones} ${v.aceptaciones === 1 ? 'aceptación' : 'aceptaciones'}`}
                 </p>
               </div>

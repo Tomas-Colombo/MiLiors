@@ -11,6 +11,7 @@ import {
 } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 import { normalizarTexto } from '@/lib/texto'
+import { formatFecha } from '@/lib/fecha'
 
 export const metadata = { title: 'Informes — Admin MiLiors' }
 
@@ -125,13 +126,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
       header: 'Generado',
       cell: row => (
         <span className="text-muted text-xs">
-          {row.fecha_generacion
-            ? new Date(row.fecha_generacion).toLocaleDateString('es-AR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-              })
-            : '—'}
+          {formatFecha(row.fecha_generacion, 'corta')}
         </span>
       ),
     },
@@ -140,13 +135,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Sea
       header: 'Últ. actualización',
       cell: row => (
         <span className="text-muted text-xs">
-          {new Date(row.updated_at).toLocaleDateString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          {formatFecha(row.updated_at, 'con-hora')}
         </span>
       ),
     },

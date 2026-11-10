@@ -8,6 +8,7 @@ import { SearchInput, FilterSelect, ClearFilters, Paginador, FiltroFechas } from
 import { paginar } from '@/lib/pagination'
 import { filtrarCatalogo, finDelDia, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
 import { ExportarExcel } from '@/components/shared/exportar-excel'
+import { formatFecha } from '@/lib/fecha'
 
 export const metadata = { title: 'Carreras — Admin MiLiors' }
 
@@ -68,7 +69,7 @@ export default async function CarrerasPage({
       header: 'Creada',
       cell: (row) => (
         <span className="text-muted">
-          {new Date(row.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          {formatFecha(row.created_at, 'corta')}
         </span>
       ),
     },
@@ -111,7 +112,7 @@ export default async function CarrerasPage({
       key: 'primeraFecha',
       header: 'Primera vez cargada',
       cell: (row) => (
-        <span className="text-muted">{new Date(row.primeraFecha).toLocaleDateString('es-AR')}</span>
+        <span className="text-muted">{formatFecha(row.primeraFecha, 'numerica')}</span>
       ),
     },
     {

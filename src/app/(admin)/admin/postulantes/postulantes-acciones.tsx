@@ -69,7 +69,7 @@ export function DesactivarPostulanteBtn({ id, activo }: { id: string; activo: bo
         title="¿Desactivar el perfil de este postulante?"
         confirmLabel="Desactivar"
         loading={isPending}
-        error={error}
+        error={error ?? undefined}
       >
         El perfil deja de aparecer en las búsquedas de los reclutadores. No se borra ningún dato
         y podés reactivarlo cuando quieras.

@@ -6,6 +6,7 @@ import {
 } from '@/modules/admin/queries'
 import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
 import { ExportarExcel } from '@/components/shared/exportar-excel'
+import { formatFecha } from '@/lib/fecha'
 import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon } from '@/components/icons'
@@ -99,7 +100,7 @@ export default async function CompetenciasPage({
       header: 'Creada',
       cell: row => (
         <span className="text-muted">
-          {new Date(row.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          {formatFecha(row.created_at, 'corta')}
         </span>
       ),
     },
@@ -153,7 +154,7 @@ export default async function CompetenciasPage({
       header: 'Alta en catálogo',
       cell: row => (
         <span className="text-muted">
-          {new Date(row.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          {formatFecha(row.createdAt, 'corta')}
         </span>
       ),
     },

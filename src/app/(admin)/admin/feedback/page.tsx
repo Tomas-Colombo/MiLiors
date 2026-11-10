@@ -23,6 +23,7 @@ import { ComoLeer } from './como-leer'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
 import { SearchInput, FilterSelect, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
+import { formatFecha } from '@/lib/fecha'
 import { normalizarTexto } from '@/lib/texto'
 
 export const metadata = { title: 'Feedback del informe — Admin MiLiors' }
@@ -181,11 +182,11 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Sea
       header: 'Respondido',
       cell: row => (
         <span className="text-xs text-muted">
-          {new Date(row.respondidoAt).toLocaleDateString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-          })}
+          {formatFecha(row.respondidoAt, 'corta')}
+
+
+
+
         </span>
       ),
     },

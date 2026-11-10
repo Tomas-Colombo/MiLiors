@@ -3,6 +3,7 @@ import type { ProvinciaAdmin, DepartamentoAdmin, LocalidadAdmin } from '@/module
 import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { MapPinIcon } from '@/components/icons'
+import { formatFecha } from '@/lib/fecha'
 import {
   CrearProvinciaForm,
   ProvinciaAcciones,
@@ -69,7 +70,7 @@ function estadoCell<T extends { fecha_baja: string | null }>(row: T) {
 function fechaCell(iso: string) {
   return (
     <span className="text-muted">
-      {new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+      {formatFecha(iso, 'corta')}
     </span>
   )
 }

@@ -65,6 +65,15 @@ describe('Admin Schemas (Zod)', () => {
         expect(res.error.issues[0].message).toBe('El enunciado no puede estar vacío.')
       }
     })
+
+    it('permite personalizar el mensaje de vacío con la fábrica', () => {
+      const custom = crearSchemaEnunciadoPregunta('Pregunta requerida.')
+      const res = custom.safeParse('   ')
+      expect(res.success).toBe(false)
+      if (!res.success) {
+        expect(res.error.issues[0].message).toBe('Pregunta requerida.')
+      }
+    })
   })
 
   describe('schemaEneatipo', () => {

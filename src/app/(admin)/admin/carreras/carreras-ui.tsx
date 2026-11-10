@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useTransition, useEffect, useRef, useState } from 'react'
+import { useTransition, useRef, useState } from 'react'
 import { Button, Input, Field, Alert, PromptDialog } from '@/components/ui'
 import { CatalogoAcciones } from '@/components/admin/catalogo-acciones'
 import { PlusIcon } from '@/components/icons'
@@ -11,19 +11,15 @@ import {
   reactivarCarrera,
   promoverCarreraOtra,
 } from '@/modules/admin/actions'
-import type { ActionResult } from '@/lib/types/domain'
-
-const initialState: ActionResult = { success: false, error: '' }
+import { useFormAccion } from '@/components/shared/use-form-accion'
 
 // ─── Sección A: carreras oficiales ─────────────────────────────────────────
 
 export function CrearCarreraForm() {
-  const [state, action, pending] = useActionState(crearCarrera, initialState)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.success) formRef.current?.reset()
-  }, [state])
+  const [state, action, pending] = useFormAccion(crearCarrera, () => {
+    formRef.current?.reset()
+  })
 
   return (
     <div className="space-y-3">
@@ -124,6 +120,3 @@ export function PromoverCarreraOtraBoton({ nombre }: { nombre: string }) {
     </>
   )
 }
-
-// ─── Filtro de fecha (sección B) ────────────────────────────────────────────
-

@@ -1,6 +1,7 @@
 import { getSectoresAdmin, type SectorAdmin } from '@/modules/admin/queries'
 import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
 import { ExportarExcel } from '@/components/shared/exportar-excel'
+import { formatFecha } from '@/lib/fecha'
 import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { GridIcon } from '@/components/icons'
@@ -67,7 +68,7 @@ export default async function SectoresPage({
       header: 'Creado',
       cell: row => (
         <span className="text-muted">
-          {new Date(row.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          {formatFecha(row.created_at, 'corta')}
         </span>
       ),
     },

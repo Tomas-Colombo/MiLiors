@@ -13,6 +13,7 @@ import {
 import { SearchInput, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 import { normalizarTexto } from '@/lib/texto'
+import { formatFecha } from '@/lib/fecha'
 
 export const metadata = { title: 'Preguntas eneagrama — Admin MiLiors' }
 
@@ -135,11 +136,7 @@ export default async function PreguntasPage({
           width: '130px',
           cell: row => (
             <span className="text-xs text-muted">
-              {new Date(row.fecha_baja!).toLocaleDateString('es-AR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-              })}
+              {formatFecha(row.fecha_baja, 'corta')}
             </span>
           ),
         },

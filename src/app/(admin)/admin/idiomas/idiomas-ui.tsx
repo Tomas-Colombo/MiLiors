@@ -1,22 +1,18 @@
 'use client'
 
-import { useActionState, useTransition, useEffect, useRef, useState } from 'react'
+import { useTransition, useRef, useState } from 'react'
 import { Button, Input, Field, Alert, ConfirmDialog } from '@/components/ui'
 import { PlusIcon } from '@/components/icons'
 import { crearIdioma, desactivarIdioma, reactivarIdioma } from '@/modules/admin/actions'
-import type { ActionResult } from '@/lib/types/domain'
+import { useFormAccion } from '@/components/shared/use-form-accion'
 
 // ─── Formulario crear idioma ──────────────────────────────────────────────────
 
-const initialState: ActionResult = { success: false, error: '' }
-
 export function CrearIdiomaForm() {
-  const [state, action, pending] = useActionState(crearIdioma, initialState)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.success) formRef.current?.reset()
-  }, [state])
+  const [state, action, pending] = useFormAccion(crearIdioma, () => {
+    formRef.current?.reset()
+  })
 
   return (
     <div className="space-y-3">

@@ -1,22 +1,18 @@
 'use client'
 
-import { useActionState, useTransition, useEffect, useRef, useState } from 'react'
+import { useTransition, useRef, useState } from 'react'
 import { Button, Input, Field, Alert, ConfirmDialog } from '@/components/ui'
 import { PlusIcon } from '@/components/icons'
 import { crearSector, desactivarSector, reactivarSector } from '@/modules/admin/actions'
-import type { ActionResult } from '@/lib/types/domain'
+import { useFormAccion } from '@/components/shared/use-form-accion'
 
 // ─── Formulario crear sector ─────────────────────────────────────────────────
 
-const initialState: ActionResult = { success: false, error: '' }
-
 export function CrearSectorForm() {
-  const [state, action, pending] = useActionState(crearSector, initialState)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.success) formRef.current?.reset()
-  }, [state])
+  const [state, action, pending] = useFormAccion(crearSector, () => {
+    formRef.current?.reset()
+  })
 
   return (
     <div className="space-y-3">

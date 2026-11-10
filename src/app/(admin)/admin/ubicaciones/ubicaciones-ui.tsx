@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { Button, Input, Field, Alert } from '@/components/ui'
 import { CatalogoAcciones } from '@/components/admin/catalogo-acciones'
 import { PlusIcon } from '@/components/icons'
@@ -18,19 +18,15 @@ import {
   desactivarLocalidad,
   reactivarLocalidad,
 } from '@/modules/admin/actions'
-import type { ActionResult } from '@/lib/types/domain'
-
-const initialState: ActionResult = { success: false, error: '' }
+import { useFormAccion } from '@/components/shared/use-form-accion'
 
 // ─── Provincias ───────────────────────────────────────────────────────────────
 
 export function CrearProvinciaForm() {
-  const [state, action, pending] = useActionState(crearProvincia, initialState)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.success) formRef.current?.reset()
-  }, [state])
+  const [state, action, pending] = useFormAccion(crearProvincia, () => {
+    formRef.current?.reset()
+  })
 
   return (
     <div className="space-y-3">
@@ -77,12 +73,10 @@ export function ProvinciaAcciones({ id, nombre, activo }: { id: string; nombre: 
 // ─── Departamentos ────────────────────────────────────────────────────────────
 
 export function CrearDepartamentoForm({ provinciaId }: { provinciaId: string }) {
-  const [state, action, pending] = useActionState(crearDepartamento, initialState)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.success) formRef.current?.reset()
-  }, [state])
+  const [state, action, pending] = useFormAccion(crearDepartamento, () => {
+    formRef.current?.reset()
+  })
 
   return (
     <div className="space-y-3">
@@ -124,12 +118,10 @@ export function DepartamentoAcciones({ id, nombre, activo }: { id: string; nombr
 // ─── Localidades ──────────────────────────────────────────────────────────────
 
 export function CrearLocalidadForm({ departamentoId }: { departamentoId: string }) {
-  const [state, action, pending] = useActionState(crearLocalidad, initialState)
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.success) formRef.current?.reset()
-  }, [state])
+  const [state, action, pending] = useFormAccion(crearLocalidad, () => {
+    formRef.current?.reset()
+  })
 
   return (
     <div className="space-y-3">
@@ -160,7 +152,7 @@ export function LocalidadAcciones({ id, nombre, activo }: { id: string; nombre: 
       onReactivar={() => reactivarLocalidad(id)}
       consecuencia={
         <>
-          Es una baja lógica: no se borra nada y podés reactivarla cuando quieras. Deja de
+          Es una baja lógica: no se borra nada y podés reactivarlo cuando quieras. Deja de
         ofrecerse al elegir ubicación; los perfiles y puestos que ya la tienen la conservan.
         </>
       }

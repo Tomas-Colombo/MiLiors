@@ -8,6 +8,7 @@ import { getCarreras, getCarrerasOtras } from '@/modules/carreras/queries'
 import { Paginador } from '@/components/shared/list-controls'
 import { FiltrosPostulantes } from './filtros-postulantes'
 import { requireEmpresaCargada } from '@/lib/guards'
+import { ubicacionLabel } from '@/lib/ubicacion'
 
 export const metadata = { title: 'Buscar postulantes — MiLiors' }
 
@@ -91,9 +92,9 @@ export default async function BuscarPostulantesPage({
                     {p.carrera && (
                       <p className="text-compact text-muted mt-0.5">{p.carrera}</p>
                     )}
-                    {(p.nombre_localidad || p.nombre_provincia) && (
+                    {ubicacionLabel(p) && (
                       <p className="text-xs text-neutral-400 mt-1">
-                        📍 {[p.nombre_localidad, p.nombre_provincia].filter(Boolean).join(', ')}
+                        📍 {ubicacionLabel(p)}
                       </p>
                     )}
                   </div>

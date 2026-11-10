@@ -3,12 +3,12 @@
 import { useActionState, useState } from 'react'
 import { Card, Field, Input, Button, Alert } from '@/components/ui'
 import { actualizarDiasInactividad } from '@/modules/admin/actions'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
-const initialState: ActionResult = { success: false, error: '' }
+
 
 export function ConfigInactividad({ diasActual }: { diasActual: number }) {
-  const [state, action, isPending] = useActionState(actualizarDiasInactividad, initialState)
+  const [state, action, isPending] = useActionState(actualizarDiasInactividad, INITIAL_ACTION_STATE)
   const [dias, setDias] = useState(String(diasActual))
 
   // "Modificado": el valor difiere del guardado. Mientras no cambie (o sea

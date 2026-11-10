@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useTransition, useState, useEffect } from 'react'
+import { useTransition, useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Button, Switch, Modal, Input, Field, Alert, inputClassName } from '@/components/ui'
 import { EditIcon, TrashIcon, PlusIcon } from '@/components/icons'
@@ -9,7 +9,7 @@ import {
   eliminarPregunta,
   togglePausarPregunta,
 } from '@/modules/admin/actions'
-import type { ActionResult } from '@/lib/types/domain'
+import { useFormAccion } from '@/components/shared/use-form-accion'
 
 type Pregunta = {
   id: string
@@ -20,7 +20,7 @@ type Pregunta = {
   pausada: boolean
 }
 
-const initialState: ActionResult = { success: false, error: '' }
+
 
 // ─── Switch de activa/pausada ─────────────────────────────────────────────────
 
@@ -104,11 +104,11 @@ export function EliminarPreguntaBtn({ id, enunciado }: { id: string; enunciado: 
 // ─── Modal de edición ─────────────────────────────────────────────────────────
 
 function EditarModal({ pregunta, onClose }: { pregunta: Pregunta; onClose: () => void }) {
-  const [state, action, pending] = useActionState(editarPregunta, initialState)
+  const [state, action, pending] = useFormAccion(editarPregunta, () => onClose())
 
-  useEffect(() => {
-    if (state.success) onClose()
-  }, [state.success, onClose])
+
+
+
 
   return (
     <Modal

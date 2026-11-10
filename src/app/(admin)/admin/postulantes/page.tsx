@@ -15,6 +15,8 @@ import {
 } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 import { normalizarTexto } from '@/lib/texto'
+import { ubicacionLabel } from '@/lib/ubicacion'
+import { formatFecha } from '@/lib/fecha'
 
 export const metadata = { title: 'Postulantes — Admin MiLiors' }
 
@@ -183,9 +185,9 @@ export default async function PostulantesPage({
       key: 'ubicacion',
       header: 'Ubicación',
       cell: row =>
-        row.nombre_localidad || row.nombre_provincia ? (
+        ubicacionLabel(row) ? (
           <span className="text-xs text-muted">
-            {[row.nombre_localidad, row.nombre_provincia].filter(Boolean).join(', ')}
+            {ubicacionLabel(row)}
           </span>
         ) : (
           <span className="text-xs text-neutral-400">—</span>
@@ -223,7 +225,7 @@ export default async function PostulantesPage({
       header: 'Registro',
       cell: row => (
         <span className="text-muted text-xs">
-          {new Date(row.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          {formatFecha(row.created_at, 'corta')}
         </span>
       ),
     },
