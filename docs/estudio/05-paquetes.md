@@ -249,14 +249,18 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
   - `src/modules/seleccion/pdf-template.tsx`
   - `src/lib/ai/adapters/gemini.ts`
   - `src/app/(reclutador)/reclutador/asistente/page.tsx`
-  - `supabase/migrations/20261102010100_cerrar_perfil_psicologico.sql` (nuevo)
+  - `supabase/migrations/20261112000000_cerrar_perfil_psicologico.sql` (nuevo)
   - `src/lib/types/database.types.ts`
 - **Diff estimado:** ~310 líneas.
 - **Dependencias:** `PQ-03`, `PQ-06`.
 - **Cambios en base de datos:**
-  - **Paso Final de H-202 en Base de Datos:** Se crea y aplica `supabase/migrations/20261102010100_cerrar_perfil_psicologico.sql`:
+  - **Paso Final de H-202 en Base de Datos:** Se crea y aplica `supabase/migrations/20261112000000_cerrar_perfil_psicologico.sql`:
     - *Si se implementó Opción C:* Ejecutar `ALTER TABLE public.puesto DROP COLUMN perfil_psicologico_deseado;`. Al haber migrado el código de puestos en PQ-06 y de IA en este paquete, la columna se borra físicamente y la fuga queda sellada de forma absoluta.
     - *Si se implementó Opción A o B:* Ejecutar `REVOKE SELECT (perfil_psicologico_deseado) ON public.puesto FROM anon, authenticated;` o revocar SELECT en la tabla base a favor de la vista.
+  - **Nota de deploy e irreversibilidad:**
+    - Las migraciones `20261111000100` y `20261112000000` se aplican juntas e inmediatamente antes de publicar el código.
+    - Entre la migración y el deploy, el código viejo falla al ver o editar puestos.
+    - Después del deploy no hay vuelta atrás automática en Vercel.
   - Aplicar primero en Staging y luego en Producción.
   - Regenerar `src/lib/types/database.types.ts`.
 - **Detalle de implementación:**
@@ -677,7 +681,7 @@ Los siguientes ítems quedan expresamente fuera del plan de ejecución de la Fas
 | `src/modules/seleccion/pdf-template.tsx` | PQ-09 |
 | `src/lib/ai/adapters/gemini.ts` | PQ-09 |
 | `src/app/(reclutador)/reclutador/asistente/page.tsx` | PQ-09 |
-| `supabase/migrations/20261102010100_cerrar_perfil_psicologico.sql` (nuevo) | PQ-09 |
+| `supabase/migrations/20261112000000_cerrar_perfil_psicologico.sql` (nuevo) | PQ-09 |
 | `src/modules/perfil/queries.ts` | PQ-04 |
 | `src/modules/perfil/actions.ts` | PQ-04 |
 | `src/modules/perfil-tecnico/actions.ts` | PQ-04 |
