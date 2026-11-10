@@ -33,22 +33,25 @@ export function RecuperarPasswordForm() {
     <form action={action} className="tid-panel">
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Email de tu cuenta</span>
+          <label htmlFor="recuperar-email" className="tid-field-label">Email de tu cuenta</label>
         </div>
         <input
+          id="recuperar-email"
           name="email"
           type="email"
           placeholder="tu@email.com"
           className="tid-input"
           data-error={emailError ? 'true' : undefined}
+          aria-invalid={emailError ? 'true' : undefined}
+          aria-describedby={emailError ? 'recuperar-email-error' : 'recuperar-email-hint'}
           defaultValue={state && !state.success ? (state.fieldErrors?._email?.[0] ?? '') : ''}
           autoComplete="email"
           required
         />
-        <div className="tid-field-hint">
+        <div id="recuperar-email-hint" className="tid-field-hint">
           Te llega un enlace para elegir una contraseña nueva. Vence en una hora.
         </div>
-        {emailError && <div className="tid-field-error">{emailError}</div>}
+        {emailError && <div id="recuperar-email-error" className="tid-field-error">{emailError}</div>}
       </div>
 
       {generalError && <div className="tid-alert">{generalError}</div>}

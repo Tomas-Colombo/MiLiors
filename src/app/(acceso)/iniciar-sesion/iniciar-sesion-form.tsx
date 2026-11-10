@@ -19,34 +19,40 @@ export function IniciarSesionForm() {
     <form action={action} className="tid-panel">
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Email</span>
+          <label htmlFor="login-email" className="tid-field-label">Email</label>
         </div>
         <input
+          id="login-email"
           name="email"
           type="email"
           placeholder="tu@email.com"
           className="tid-input"
           data-error={emailError ? 'true' : undefined}
+          aria-invalid={emailError ? 'true' : undefined}
+          aria-describedby={emailError ? 'login-email-error' : undefined}
           defaultValue={state && !state.success ? (state.fieldErrors?._email?.[0] ?? '') : ''}
           autoComplete="email"
         />
-        {emailError && <div className="tid-field-error">{emailError}</div>}
+        {emailError && <div id="login-email-error" className="tid-field-error">{emailError}</div>}
       </div>
 
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Contraseña</span>
+          <label htmlFor="login-password" className="tid-field-label">Contraseña</label>
           <Link href="/recuperar-password" className="tid-forgot-link">
             ¿La olvidaste?
           </Link>
         </div>
         <div className="tid-input-wrap">
           <input
+            id="login-password"
             name="password"
             type={showPass ? 'text' : 'password'}
             placeholder="••••••••••"
             className="tid-input tid-input-pass"
             data-error={passwordError ? 'true' : undefined}
+            aria-invalid={passwordError ? 'true' : undefined}
+            aria-describedby={passwordError ? 'login-password-error' : undefined}
             autoComplete="current-password"
           />
           <button
@@ -59,7 +65,7 @@ export function IniciarSesionForm() {
             {showPass ? 'Ocultar' : 'Mostrar'}
           </button>
         </div>
-        {passwordError && <div className="tid-field-error">{passwordError}</div>}
+        {passwordError && <div id="login-password-error" className="tid-field-error">{passwordError}</div>}
       </div>
 
       {generalError && <div className="tid-alert">{generalError}</div>}

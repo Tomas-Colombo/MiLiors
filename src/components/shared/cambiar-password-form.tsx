@@ -30,13 +30,15 @@ export function CambiarPasswordForm() {
         htmlFor="password"
         required
         hint="Mínimo 8 caracteres, una mayúscula y un número."
-        error={fieldErrors.password?.[0]}
+        error={fieldErrors.password?.[0] ? <span id="password-error">{fieldErrors.password[0]}</span> : undefined}
       >
         <Input
           id="password"
           name="password"
           type={showNew ? 'text' : 'password'}
           placeholder="Elegí una contraseña nueva"
+          aria-invalid={fieldErrors.password ? 'true' : undefined}
+          aria-describedby={fieldErrors.password ? 'password-error' : undefined}
           leftIcon={<LockIcon size={17} />}
           rightIcon={
             <button
@@ -56,13 +58,15 @@ export function CambiarPasswordForm() {
         label="Confirmar nueva contraseña"
         htmlFor="confirmPassword"
         required
-        error={fieldErrors.confirmPassword?.[0]}
+        error={fieldErrors.confirmPassword?.[0] ? <span id="confirmPassword-error">{fieldErrors.confirmPassword[0]}</span> : undefined}
       >
         <Input
           id="confirmPassword"
           name="confirmPassword"
           type={showConfirm ? 'text' : 'password'}
           placeholder="Repetí la nueva contraseña"
+          aria-invalid={fieldErrors.confirmPassword ? 'true' : undefined}
+          aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
           leftIcon={<LockIcon size={17} />}
           rightIcon={
             <button

@@ -74,9 +74,11 @@ export function VerifyForm() {
           }}
           autoComplete="off"
           spellCheck={false}
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error ? 'verificar-id-error' : undefined}
         />
         {error && (
-          <div className="mt-1.5 text-[11.5px]" style={{ color: '#c2453d' }}>
+          <div id="verificar-id-error" className="mt-1.5 text-[11.5px]" style={{ color: '#c2453d' }}>
             {error}
           </div>
         )}

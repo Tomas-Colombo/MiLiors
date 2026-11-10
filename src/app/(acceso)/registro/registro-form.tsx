@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { registrarUsuario } from '@/modules/auth/actions'
-import type { RegistroPendiente } from '@/modules/auth/schema'
+
 import { UserIcon, BuildingIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
 import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
@@ -85,31 +85,37 @@ export function RegistroForm() {
 
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Email</span>
+          <label htmlFor="registro-email" className="tid-field-label">Email</label>
         </div>
         <input
+          id="registro-email"
           name="email"
           type="email"
           placeholder="tu@email.com"
           className="tid-input"
           data-error={emailError ? 'true' : undefined}
+          aria-invalid={emailError ? 'true' : undefined}
+          aria-describedby={emailError ? 'registro-email-error' : undefined}
           defaultValue={errores?._email?.[0] ?? ''}
           autoComplete="email"
         />
-        {emailError && <div className="tid-field-error">{emailError}</div>}
+        {emailError && <div id="registro-email-error" className="tid-field-error">{emailError}</div>}
       </div>
 
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Contraseña</span>
+          <label htmlFor="registro-password" className="tid-field-label">Contraseña</label>
         </div>
         <div className="tid-input-wrap">
           <input
+            id="registro-password"
             name="password"
             type={showPass ? 'text' : 'password'}
             placeholder="••••••••••"
             className="tid-input tid-input-pass"
             data-error={passwordError ? 'true' : undefined}
+            aria-invalid={passwordError ? 'true' : undefined}
+            aria-describedby={passwordError ? 'registro-password-error' : 'registro-password-hint'}
             autoComplete="new-password"
           />
           <button
@@ -123,25 +129,28 @@ export function RegistroForm() {
           </button>
         </div>
         {passwordError ? (
-          <div className="tid-field-error">{passwordError}</div>
+          <div id="registro-password-error" className="tid-field-error">{passwordError}</div>
         ) : (
-          <div className="tid-field-hint">Mínimo 8 caracteres, una mayúscula y un número.</div>
+          <div id="registro-password-hint" className="tid-field-hint">Mínimo 8 caracteres, una mayúscula y un número.</div>
         )}
       </div>
 
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Confirmar contraseña</span>
+          <label htmlFor="registro-confirm-password" className="tid-field-label">Confirmar contraseña</label>
         </div>
         <input
+          id="registro-confirm-password"
           name="confirmPassword"
           type={showPass ? 'text' : 'password'}
           placeholder="••••••••••"
           className="tid-input"
           data-error={confirmError ? 'true' : undefined}
+          aria-invalid={confirmError ? 'true' : undefined}
+          aria-describedby={confirmError ? 'registro-confirm-password-error' : undefined}
           autoComplete="new-password"
         />
-        {confirmError && <div className="tid-field-error">{confirmError}</div>}
+        {confirmError && <div id="registro-confirm-password-error" className="tid-field-error">{confirmError}</div>}
       </div>
 
       {generalError && <div className="tid-alert">{generalError}</div>}

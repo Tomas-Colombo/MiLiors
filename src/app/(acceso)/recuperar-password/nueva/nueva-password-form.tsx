@@ -31,15 +31,18 @@ export function NuevaPasswordForm() {
     <form action={action} className="tid-panel">
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Contraseña nueva</span>
+          <label htmlFor="nueva-password" className="tid-field-label">Contraseña nueva</label>
         </div>
         <div className="tid-input-wrap">
           <input
+            id="nueva-password"
             name="password"
             type={showPass ? 'text' : 'password'}
             placeholder="••••••••••"
             className="tid-input tid-input-pass"
             data-error={passwordError ? 'true' : undefined}
+            aria-invalid={passwordError ? 'true' : undefined}
+            aria-describedby={passwordError ? 'nueva-password-error' : 'nueva-password-hint'}
             autoComplete="new-password"
           />
           <button
@@ -53,25 +56,28 @@ export function NuevaPasswordForm() {
           </button>
         </div>
         {passwordError ? (
-          <div className="tid-field-error">{passwordError}</div>
+          <div id="nueva-password-error" className="tid-field-error">{passwordError}</div>
         ) : (
-          <div className="tid-field-hint">Mínimo 8 caracteres, una mayúscula y un número.</div>
+          <div id="nueva-password-hint" className="tid-field-hint">Mínimo 8 caracteres, una mayúscula y un número.</div>
         )}
       </div>
 
       <div className="tid-field">
         <div className="tid-field-head">
-          <span className="tid-field-label">Confirmar contraseña</span>
+          <label htmlFor="nueva-confirm-password" className="tid-field-label">Confirmar contraseña</label>
         </div>
         <input
+          id="nueva-confirm-password"
           name="confirmPassword"
           type={showPass ? 'text' : 'password'}
           placeholder="••••••••••"
           className="tid-input"
           data-error={confirmError ? 'true' : undefined}
+          aria-invalid={confirmError ? 'true' : undefined}
+          aria-describedby={confirmError ? 'nueva-confirm-password-error' : undefined}
           autoComplete="new-password"
         />
-        {confirmError && <div className="tid-field-error">{confirmError}</div>}
+        {confirmError && <div id="nueva-confirm-password-error" className="tid-field-error">{confirmError}</div>}
       </div>
 
       {generalError && <div className="tid-alert">{generalError}</div>}
