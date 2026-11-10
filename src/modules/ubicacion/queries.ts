@@ -8,11 +8,17 @@ export type UbicacionOption = { value: string; label: string }
 /** Provincias activas, ordenadas alfabéticamente (para el selector). */
 export const getProvincias = cache(async (): Promise<ProvinciaOption[]> => {
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('provincia')
     .select('id, nombre')
     .is('fecha_baja', null)
     .order('nombre')
+
+  if (error) {
+    console.error('[getProvincias] Error al cargar provincias:', error)
+    throw new Error('No se pudo cargar el catálogo.')
+  }
+
   return (data ?? []) as ProvinciaOption[]
 })
 
@@ -22,12 +28,18 @@ export const getDepartamentosPorProvincia = cache(async (
 ): Promise<UbicacionOption[]> => {
   if (!provinciaId) return []
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('departamento')
     .select('id, nombre')
     .eq('provincia_id', provinciaId)
     .is('fecha_baja', null)
     .order('nombre')
+
+  if (error) {
+    console.error('[getDepartamentosPorProvincia] Error al cargar departamentos:', error)
+    throw new Error('No se pudo cargar el catálogo.')
+  }
+
   return ((data ?? []) as { id: string; nombre: string }[]).map((d) => ({
     value: d.id,
     label: d.nombre,
@@ -40,12 +52,18 @@ export const getLocalidadesPorDepartamento = cache(async (
 ): Promise<UbicacionOption[]> => {
   if (!departamentoId) return []
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('localidad')
     .select('id, nombre')
     .eq('departamento_id', departamentoId)
     .is('fecha_baja', null)
     .order('nombre')
+
+  if (error) {
+    console.error('[getLocalidadesPorDepartamento] Error al cargar localidades:', error)
+    throw new Error('No se pudo cargar el catálogo.')
+  }
+
   return ((data ?? []) as { id: string; nombre: string }[]).map((l) => ({
     value: l.id,
     label: l.nombre,
@@ -82,11 +100,16 @@ export const getUbicacionInicial = cache(async (
   if (!localidadId) {
     if (departamentoId) {
       const supabase = await createClient()
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('departamento')
         .select('id, provincia_id')
         .eq('id', departamentoId)
         .maybeSingle()
+
+      if (error) {
+        console.error('[getUbicacionInicial] Error al cargar departamento:', error)
+        throw new Error('No se pudo cargar el catálogo.')
+      }
 
       const dep = data as { id: string; provincia_id: string } | null
       if (!dep) return null
@@ -115,11 +138,16 @@ export const getUbicacionInicial = cache(async (
   }
 
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('localidad')
     .select('id, departamento_id, departamento(id, provincia_id)')
     .eq('id', localidadId)
     .maybeSingle()
+
+  if (error) {
+    console.error('[getUbicacionInicial] Error al cargar localidad:', error)
+    throw new Error('No se pudo cargar el catálogo.')
+  }
 
   const row = data as {
     id: string

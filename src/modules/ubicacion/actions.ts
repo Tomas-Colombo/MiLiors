@@ -13,10 +13,20 @@ import {
  */
 export async function cargarDepartamentos(provinciaId: string): Promise<UbicacionOption[]> {
   if (!provinciaId) return []
-  return getDepartamentosPorProvincia(provinciaId)
+  try {
+    return await getDepartamentosPorProvincia(provinciaId)
+  } catch (error) {
+    console.error('[cargarDepartamentos] Error al cargar departamentos:', error)
+    return []
+  }
 }
 
 export async function cargarLocalidades(departamentoId: string): Promise<UbicacionOption[]> {
   if (!departamentoId) return []
-  return getLocalidadesPorDepartamento(departamentoId)
+  try {
+    return await getLocalidadesPorDepartamento(departamentoId)
+  } catch (error) {
+    console.error('[cargarLocalidades] Error al cargar localidades:', error)
+    return []
+  }
 }
