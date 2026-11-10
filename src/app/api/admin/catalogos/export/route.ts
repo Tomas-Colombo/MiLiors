@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { getSessionUser } from '@/lib/dal'
+import { autorizarAdmin } from '@/lib/api-auth'
 import {
   getCarrerasAdmin,
   getCarrerasOtrasAdmin,
@@ -43,9 +43,10 @@ function esRecurso(v: string | null): v is Recurso {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSessionUser()
-  if (!session) return new Response('No autorizado', { status: 401 })
-  if (session.rol !== 'ADMIN') return new Response('Prohibido', { status: 403 })
+  const auth = await autorizarAdmin()
+  if (!auth.ok) return new Response(auth.status === 401 ? 'No autorizado' : 'Prohibido', { status: auth.status })
+
+
 
   const sp = req.nextUrl.searchParams
   const recurso = sp.get('recurso')
