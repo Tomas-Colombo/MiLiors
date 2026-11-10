@@ -94,7 +94,6 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
 
   let puesto1Id: string
   let puesto2Id: string
-  let puestoConsistenciaId: string
   let historial1Id: string
   let historial2Id: string
 
@@ -257,7 +256,6 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
     // 8. Insertar puestos para R1 y R2
     puesto1Id = crypto.randomUUID()
     puesto2Id = crypto.randomUUID()
-    puestoConsistenciaId = crypto.randomUUID()
 
     const { error: errPuesto } = await adminClient.from('puesto').insert([
       {
@@ -275,15 +273,6 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
         titulo_puesto: 'Frontend Specialist',
         carga_horaria: 'TIEMPO_COMPLETO',
         ubicacion: 'REMOTO',
-      },
-      {
-        id: puestoConsistenciaId,
-        reclutador_id: reclutador1Id,
-        empresa_id: empresa1Id,
-        titulo_puesto: 'QA Engineer',
-        carga_horaria: 'TIEMPO_COMPLETO',
-        ubicacion: 'REMOTO',
-        perfil_psicologico_deseado: 'Perfil sembrado para consistencia',
       },
     ])
     if (errPuesto) throw new Error(`puesto error: ${errPuesto.message}`)
@@ -324,16 +313,21 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
     clientR2 = authClR2.client
   })
 
+  // Orden impuesto por las FKs sin cascada: postulacion y puesto bloquean el
+  // borrado del perfil_reclutador (y con él, del usuario), y perfil_reclutador
+  // bloquea el de la empresa. Al revés, los borrados fallan y quedan datos de
+  // prueba acumulados en la base local en cada corrida.
   afterAll(async () => {
-    for (const userId of createdAuthUserIds) {
-      try {
-        await adminClient.auth.admin.deleteUser(userId)
-      } catch {}
+    const puestos = [puesto1Id, puesto2Id].filter(Boolean)
+    if (puestos.length > 0) {
+      await adminClient.from('postulacion').delete().in('puesto_id', puestos)
+      await adminClient.from('puesto').delete().in('id', puestos)
     }
-    for (const empId of createdEmpresaIds) {
-      try {
-        await adminClient.from('empresa').delete().eq('id', empId)
-      } catch {}
+    for (const userId of createdAuthUserIds) {
+      await adminClient.auth.admin.deleteUser(userId)
+    }
+    if (createdEmpresaIds.length > 0) {
+      await adminClient.from('empresa').delete().in('id', createdEmpresaIds)
     }
   })
 
@@ -504,25 +498,9 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
       .select()
     expect(updateR2 ?? []).toHaveLength(0)
 
-    // 6d. Verificación de consistencia de la copia de datos:
-    // Insertamos la copia del puestoConsistenciaId para simular/verificar la consistencia del DML
-    await adminClient.from('puesto_criterio_psicologico').upsert({
-      puesto_id: puestoConsistenciaId,
-      perfil_psicologico_deseado: 'Perfil sembrado para consistencia',
-    })
-
-    const { data: puestoCheck } = await adminClient
-      .from('puesto')
-      .select('id, perfil_psicologico_deseado')
-      .eq('id', puestoConsistenciaId)
-      .single()
-
-    const { data: criterioCheck } = await adminClient
-      .from('puesto_criterio_psicologico')
-      .select('perfil_psicologico_deseado')
-      .eq('puesto_id', puestoConsistenciaId)
-      .single()
-
-    expect(criterioCheck?.perfil_psicologico_deseado).toBe(puestoCheck?.perfil_psicologico_deseado)
+    // La copia desde puesto.perfil_psicologico_deseado corre dentro de la
+    // migración, antes de que este test siembre datos, así que no se puede
+    // verificar desde acá. Su consistencia se comprueba con una consulta sobre
+    // todos los puestos al hacer la re-copia previa al cambio de código (PQ-06).
   })
 })
