@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { requireAdmin } from '@/lib/guards'
 import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 import { patronTextoCompleto } from '@/lib/texto'
@@ -14,13 +14,6 @@ import {
   schemaVersionTyC,
   schemaDescripcionTyC,
 } from './schema'
-
-// Guard ADMIN
-async function requireAdmin() {
-  const session = await verifySession()
-  if (session.rol !== 'ADMIN') throw new Error('Acceso denegado.')
-  return session
-}
 
 // ─── Sectores ────────────────────────────────────────────────────────────────
 
@@ -578,7 +571,7 @@ export async function publicarTyC(
   if (error || !nueva) return { success: false, error: 'No se pudo publicar la nueva versión.' }
 
   // 2. Dar de baja las versiones vigentes anteriores (debe quedar una sola vigente)
-  await admin.from('terminos_y_condiciones')
+  const { error: errorBaja } = await admin.from('terminos_y_condiciones')
     .update({ fecha_baja_tyc: new Date().toISOString() })
     .is('fecha_baja_tyc', null)
     .neq('id', (nueva as { id: string }).id)
@@ -586,6 +579,15 @@ export async function publicarTyC(
   // Recargar el layout raíz para que el gate de TyC vuelva a evaluarse en todos los usuarios
   revalidatePath('/admin/tyc')
   revalidatePath('/', 'layout')
+
+  if (errorBaja) {
+    console.error('[publicarTyC] Error al dar de baja versiones anteriores:', errorBaja)
+    return {
+      success: false,
+      error: 'Se publicó la nueva versión, pero no se pudieron dar de baja las anteriores. Avisale al equipo.',
+    }
+  }
+
   return { success: true, data: undefined }
 }
 

@@ -1,15 +1,8 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { verifySession } from '@/lib/dal'
+import { requireAdmin } from '@/lib/guards'
 import type { ActionResult } from '@/lib/types/domain'
-
-// Guard ADMIN (mismo criterio que src/modules/admin/actions.ts)
-async function requireAdmin() {
-  const session = await verifySession()
-  if (session.rol !== 'ADMIN') throw new Error('Acceso denegado.')
-  return session
-}
 
 /**
  * Revoca la sesión de un usuario (cualquier rol).
