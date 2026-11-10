@@ -298,8 +298,10 @@ export async function publicarPuesto(
 
   const carreraIds = parseCarreraIds(formData.get('carrera_ids'))
 
+  const { perfil_psicologico_deseado, ...datosPuesto } = parsed.data
+
   // Modalidad remota → sin ubicación geográfica.
-  const esRemoto = parsed.data.ubicacion === 'REMOTO'
+  const esRemoto = datosPuesto.ubicacion === 'REMOTO'
 
   const admin = createAdminClient()
   const puestoId = crypto.randomUUID()
@@ -307,15 +309,23 @@ export async function publicarPuesto(
   const { error } = await admin.from('puesto').insert({
     id: puestoId,
     reclutador_id: ctx.reclutadorId,
-    ...parsed.data,
-    idioma: parsed.data.idioma || '',
-    sector_id: parsed.data.sector_id || null,
-    departamento_id: esRemoto ? null : parsed.data.departamento_id || null,
-    localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
+    ...datosPuesto,
+    idioma: datosPuesto.idioma || '',
+    sector_id: datosPuesto.sector_id || null,
+    departamento_id: esRemoto ? null : datosPuesto.departamento_id || null,
+    localidad_id: esRemoto ? null : datosPuesto.localidad_id || null,
     activo: true,
   })
 
   if (error) return { success: false, error: 'No se pudo publicar el puesto.' }
+
+  if (perfil_psicologico_deseado) {
+    const { error: criterioError } = await admin.from('puesto_criterio_psicologico').insert({
+      puesto_id: puestoId,
+      perfil_psicologico_deseado,
+    })
+    if (criterioError) return { success: false, error: 'No se pudo guardar el perfil psicológico del puesto.' }
+  }
 
   if (carreraIds.length > 0) {
     const { error: carrerasError } = await admin.from('puesto_carrera')
@@ -390,17 +400,18 @@ export async function editarPuesto(
     }
   }
 
+  const { perfil_psicologico_deseado, ...datosPuesto } = parsed.data
   const carreraIds = parseCarreraIds(formData.get('carrera_ids'))
-  const esRemoto = parsed.data.ubicacion === 'REMOTO'
+  const esRemoto = datosPuesto.ubicacion === 'REMOTO'
 
   const supabase = await createClient()
   const { data: actualizados, error } = await supabase.from('puesto')
     .update({
-      ...parsed.data,
-      idioma: parsed.data.idioma || '',
-      sector_id: parsed.data.sector_id || null,
-      departamento_id: esRemoto ? null : parsed.data.departamento_id || null,
-      localidad_id: esRemoto ? null : parsed.data.localidad_id || null,
+      ...datosPuesto,
+      idioma: datosPuesto.idioma || '',
+      sector_id: datosPuesto.sector_id || null,
+      departamento_id: esRemoto ? null : datosPuesto.departamento_id || null,
+      localidad_id: esRemoto ? null : datosPuesto.localidad_id || null,
     })
     .eq('id', puestoId)
     .eq('reclutador_id', ctx.reclutadorId)
@@ -413,6 +424,14 @@ export async function editarPuesto(
   if (!actualizados || actualizados.length === 0) {
     return { success: false, error: 'No autorizado.' }
   }
+
+  const { error: criterioError } = await supabase
+    .from('puesto_criterio_psicologico')
+    .upsert({
+      puesto_id: puestoId,
+      perfil_psicologico_deseado: perfil_psicologico_deseado ?? null,
+    })
+  if (criterioError) return { success: false, error: 'No se pudo actualizar el puesto.' }
 
   // Sincronizar carreras del puesto (reemplazo completo). Se hace con el service
   // role; la propiedad del puesto ya quedó probada arriba.

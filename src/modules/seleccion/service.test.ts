@@ -52,7 +52,7 @@ describe('seleccion/service — generarInformeSeleccion timeouts y reintento (H-
                   carga_horaria: 'Full time',
                   ubicacion: 'Remoto',
                   nivel_experiencia: 'Senior',
-                  perfil_psicologico_deseado: null,
+                  puesto_criterio_psicologico: null,
                 },
               }),
             }),

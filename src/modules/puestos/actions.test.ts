@@ -5,11 +5,15 @@ import {
   eliminarPuesto,
   getPostulantesDePuesto,
   contarPostulacionesDelUltimoCiclo,
+  publicarPuesto,
+  editarPuesto,
 } from './actions'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import { createAdminClient } from '@/lib/supabase/server-admin'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getCicloMasReciente } from './ciclos'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
@@ -21,6 +25,10 @@ vi.mock('@/modules/empresas/queries', () => ({
 
 vi.mock('@/lib/supabase/server-admin', () => ({
   createAdminClient: vi.fn(),
+}))
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(),
 }))
 
 vi.mock('./ciclos', () => ({
@@ -478,3 +486,288 @@ describe('puestos/actions — lecturas del modal como ActionResult (H-105)', () 
     expect(res).toEqual({ success: true, data: 5 })
   })
 })
+
+describe('puestos/actions — criterio psicológico fuera de puesto (H-202)', () => {
+  const EMPRESA_ID = '11111111-1111-4111-8111-111111111111'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('publicarPuesto con criterio: inserta en puesto sin la columna y en puesto_criterio_psicologico con el valor', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValue('rec-1')
+
+    let puestoInsertPayload: Record<string, unknown> | null = null
+    let criterioInsertPayload: Record<string, unknown> | null = null
+
+    const mockAdminFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'reclutador_empresa') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { empresa: { id: EMPRESA_ID, fecha_baja: null } },
+                }),
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'puesto') {
+        return {
+          insert: vi.fn().mockImplementation((payload) => {
+            puestoInsertPayload = payload
+            return Promise.resolve({ error: null })
+          }),
+        }
+      }
+      if (table === 'puesto_criterio_psicologico') {
+        return {
+          insert: vi.fn().mockImplementation((payload) => {
+            criterioInsertPayload = payload
+            return Promise.resolve({ error: null })
+          }),
+        }
+      }
+      if (table === 'historial_puesto') {
+        return {
+          insert: vi.fn().mockResolvedValue({ error: null }),
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              gte: vi.fn().mockResolvedValue({ data: [] }),
+            }),
+          }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createAdminClient).mockReturnValue({ from: mockAdminFrom } as never)
+
+    const formData = new FormData()
+    formData.set('empresa_id', EMPRESA_ID)
+    formData.set('titulo_puesto', 'Desarrollador Full Stack')
+    formData.set('carga_horaria', 'TIEMPO_COMPLETO')
+    formData.set('ubicacion', 'REMOTO')
+    formData.set('perfil_psicologico_deseado', 'Perfil analítico y orientado a objetivos')
+
+    const res = await publicarPuesto(INITIAL_ACTION_STATE, formData)
+
+    expect(res).toEqual({
+      success: true,
+      data: { puestoId: expect.any(String) },
+    })
+
+    expect(puestoInsertPayload).not.toBeNull()
+    expect(puestoInsertPayload).not.toHaveProperty('perfil_psicologico_deseado')
+    expect(puestoInsertPayload).toMatchObject({
+      reclutador_id: 'rec-1',
+      titulo_puesto: 'Desarrollador Full Stack',
+      ubicacion: 'REMOTO',
+      activo: true,
+    })
+
+    expect(criterioInsertPayload).toEqual({
+      puesto_id: (res as { data: { puestoId: string } }).data.puestoId,
+      perfil_psicologico_deseado: 'Perfil analítico y orientado a objetivos',
+    })
+  })
+
+  it('publicarPuesto falla si no se puede guardar el criterio psicológico', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValue('rec-1')
+
+    const mockAdminFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'reclutador_empresa') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { empresa: { id: EMPRESA_ID, fecha_baja: null } },
+                }),
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'puesto') {
+        return {
+          insert: vi.fn().mockResolvedValue({ error: null }),
+        }
+      }
+      if (table === 'puesto_criterio_psicologico') {
+        return {
+          insert: vi.fn().mockResolvedValue({ error: { message: 'db error' } }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createAdminClient).mockReturnValue({ from: mockAdminFrom } as never)
+
+    const formData = new FormData()
+    formData.set('empresa_id', EMPRESA_ID)
+    formData.set('titulo_puesto', 'Desarrollador Backend')
+    formData.set('carga_horaria', 'TIEMPO_COMPLETO')
+    formData.set('ubicacion', 'REMOTO')
+    formData.set('perfil_psicologico_deseado', 'Perfil resolutivo')
+
+    const res = await publicarPuesto(INITIAL_ACTION_STATE, formData)
+
+    expect(res).toEqual({
+      success: false,
+      error: 'No se pudo guardar el perfil psicológico del puesto.',
+    })
+  })
+
+  it('editarPuesto con el campo vacío: hace upsert con null y no manda la columna a puesto', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValue('rec-1')
+
+    let puestoUpdatePayload: Record<string, unknown> | null = null
+    let criterioUpsertPayload: Record<string, unknown> | null = null
+
+    const mockClientFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'puesto') {
+        return {
+          update: vi.fn().mockImplementation((payload) => {
+            puestoUpdatePayload = payload
+            return {
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  select: vi.fn().mockResolvedValue({
+                    data: [{ id: 'puesto-1' }],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }),
+        }
+      }
+      if (table === 'puesto_criterio_psicologico') {
+        return {
+          upsert: vi.fn().mockImplementation((payload) => {
+            criterioUpsertPayload = payload
+            return Promise.resolve({ error: null })
+          }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createClient).mockResolvedValue({ from: mockClientFrom } as never)
+
+    const mockAdminFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'reclutador_empresa') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { empresa: { id: EMPRESA_ID, fecha_baja: null } },
+                }),
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'puesto') {
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        }
+      }
+      if (table === 'puesto_carrera') {
+        return {
+          delete: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createAdminClient).mockReturnValue({ from: mockAdminFrom } as never)
+
+    const formData = new FormData()
+    formData.set('empresa_id', EMPRESA_ID)
+    formData.set('titulo_puesto', 'Desarrollador Modificado')
+    formData.set('carga_horaria', 'TIEMPO_COMPLETO')
+    formData.set('ubicacion', 'REMOTO')
+    // perfil_psicologico_deseado omitted / empty
+
+    const res = await editarPuesto('puesto-1', INITIAL_ACTION_STATE, formData)
+
+    expect(res).toEqual({ success: true })
+    expect(puestoUpdatePayload).not.toBeNull()
+    expect(puestoUpdatePayload).not.toHaveProperty('perfil_psicologico_deseado')
+    expect(criterioUpsertPayload).toEqual({
+      puesto_id: 'puesto-1',
+      perfil_psicologico_deseado: null,
+    })
+  })
+
+  it('editarPuesto falla si falla el upsert del criterio psicológico', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValue('rec-1')
+
+    const mockClientFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'puesto') {
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                select: vi.fn().mockResolvedValue({
+                  data: [{ id: 'puesto-1' }],
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'puesto_criterio_psicologico') {
+        return {
+          upsert: vi.fn().mockResolvedValue({ error: { message: 'db error' } }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createClient).mockResolvedValue({ from: mockClientFrom } as never)
+
+    const mockAdminFrom = vi.fn().mockImplementation((table: string) => {
+      if (table === 'reclutador_empresa') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { empresa: { id: EMPRESA_ID, fecha_baja: null } },
+                }),
+              }),
+            }),
+          }),
+        }
+      }
+      return {}
+    })
+
+    vi.mocked(createAdminClient).mockReturnValue({ from: mockAdminFrom } as never)
+
+    const formData = new FormData()
+    formData.set('empresa_id', EMPRESA_ID)
+    formData.set('titulo_puesto', 'Desarrollador Modificado')
+    formData.set('carga_horaria', 'TIEMPO_COMPLETO')
+    formData.set('ubicacion', 'REMOTO')
+
+    const res = await editarPuesto('puesto-1', INITIAL_ACTION_STATE, formData)
+
+    expect(res).toEqual({
+      success: false,
+      error: 'No se pudo actualizar el puesto.',
+    })
+  })
+})
+

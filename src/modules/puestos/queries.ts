@@ -216,7 +216,8 @@ export const getPuestoById = cache(async (
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
       nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
-      empresa_id, sector_id, departamento_id, localidad_id, perfil_psicologico_deseado,
+      empresa_id, sector_id, departamento_id, localidad_id,
+      puesto_criterio_psicologico(perfil_psicologico_deseado),
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
       departamento(id, nombre, provincia_id, provincia(nombre)),
       localidad(nombre, departamento(id, nombre, provincia_id, provincia(nombre)))
@@ -237,7 +238,7 @@ export const getPuestoById = cache(async (
     empresa_id: string; sector_id: string | null
     departamento_id: string | null
     localidad_id: string | null
-    perfil_psicologico_deseado: string | null
+    puesto_criterio_psicologico: { perfil_psicologico_deseado: string | null } | null
     empresa: { nombre_empresa: string } | null
     sector_industrial: { nombre_sector: string } | null
     puesto_carrera: PuestoCarreraRow[] | null
@@ -268,7 +269,7 @@ export const getPuestoById = cache(async (
     sector_id: r.sector_id,
     departamento_id: r.departamento_id,
     localidad_id: r.localidad_id,
-    perfil_psicologico_deseado: r.perfil_psicologico_deseado,
+    perfil_psicologico_deseado: r.puesto_criterio_psicologico?.perfil_psicologico_deseado ?? null,
     nombre_empresa: r.empresa?.nombre_empresa,
     nombre_sector: r.sector_industrial?.nombre_sector,
     carreras: mapCarreras(r.puesto_carrera),

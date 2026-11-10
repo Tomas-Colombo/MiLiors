@@ -28,7 +28,7 @@ export async function consultarAsistente(
 
   const { data: puesto } = await supabase
     .from('puesto')
-    .select('titulo_puesto, descripcion_texto, carga_horaria, ubicacion, nivel_experiencia, perfil_psicologico_deseado')
+    .select('titulo_puesto, descripcion_texto, carga_horaria, ubicacion, nivel_experiencia, puesto_criterio_psicologico(perfil_psicologico_deseado)')
     .eq('id', puestoId)
     .eq('reclutador_id', reclutadorId)
     .single()
@@ -86,7 +86,7 @@ export async function consultarAsistente(
     carga_horaria: string
     ubicacion: string
     nivel_experiencia: string | null
-    perfil_psicologico_deseado: string | null
+    puesto_criterio_psicologico: { perfil_psicologico_deseado: string | null } | null
   }
 
   // Mismo contexto que el informe de selección grupal: perfil técnico, bloque de
@@ -106,7 +106,7 @@ export async function consultarAsistente(
     cargaHoraria: puestoTyped.carga_horaria,
     ubicacion: puestoTyped.ubicacion,
     nivelExperiencia: puestoTyped.nivel_experiencia,
-    perfilPsicologicoDeseado: puestoTyped.perfil_psicologico_deseado,
+    perfilPsicologicoDeseado: puestoTyped.puesto_criterio_psicologico?.perfil_psicologico_deseado ?? null,
     pregunta: pregunta.trim(),
   }
 

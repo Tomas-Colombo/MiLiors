@@ -77,7 +77,7 @@ export async function generarInformeSeleccion(
   const { data: puesto } = await supabase
     .from('puesto')
     .select(
-      'titulo_puesto, descripcion_texto, carga_horaria, ubicacion, nivel_experiencia, perfil_psicologico_deseado'
+      'titulo_puesto, descripcion_texto, carga_horaria, ubicacion, nivel_experiencia, puesto_criterio_psicologico(perfil_psicologico_deseado)'
     )
     .eq('id', puestoId)
     .eq('reclutador_id', reclutadorId)
@@ -93,7 +93,7 @@ export async function generarInformeSeleccion(
     carga_horaria: string
     ubicacion: string
     nivel_experiencia: string | null
-    perfil_psicologico_deseado: string | null
+    puesto_criterio_psicologico: { perfil_psicologico_deseado: string | null } | null
   }
 
   // Cada candidato debe haberse postulado a ESTE puesto: es la barrera que evita
@@ -139,7 +139,7 @@ export async function generarInformeSeleccion(
     cargaHoraria: puestoTyped.carga_horaria,
     ubicacion: puestoTyped.ubicacion,
     nivelExperiencia: puestoTyped.nivel_experiencia,
-    perfilPsicologicoDeseado: puestoTyped.perfil_psicologico_deseado,
+    perfilPsicologicoDeseado: puestoTyped.puesto_criterio_psicologico?.perfil_psicologico_deseado ?? null,
     candidatos,
   })
 
