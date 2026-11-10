@@ -1,6 +1,8 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { COMPETENCIAS } from '@/modules/informe/competencias'
+import { ESTADO_INFORME } from '@/lib/constants/enums'
+import type { RequisitosVisibilidad } from '@/modules/visibilidad/regla'
 import {
   VALORACION_COMPETENCIA,
   valorEnum,
@@ -1035,4 +1037,54 @@ export function agregarPorCompetencia(rows: FeedbackCompetenciaRow[]): AgregadoC
   return [...porKey.values()]
     .map(a => ({ ...a, sesgo: Math.round(((a.subestima - a.sobrestima) / a.total) * 100) }))
     .sort((a, b) => Math.abs(b.sesgo) - Math.abs(a.sesgo))
+}
+
+/**
+ * Consulta con cliente admin (bypasseando RLS) los requisitos para que un
+ * postulante pueda tener visibilidad de búsqueda activa (H-215).
+ */
+export async function getRequisitosVisibilidadPostulante(
+  postulanteId: string,
+): Promise<RequisitosVisibilidad> {
+  const admin = createAdminClient()
+
+  // 1. Verificar si existe el perfil del postulante
+  const { data: perfil } = await admin
+    .from('perfil_postulante')
+    .select('id')
+    .eq('id', postulanteId)
+    .maybeSingle()
+
+  if (!perfil) {
+    return {
+      existePerfil: false,
+      tieneDominante: false,
+      informeListo: false,
+    }
+  }
+
+  // 2. Verificar test de eneagrama con al menos un dominante
+  const { data: test } = await admin
+    .from('test_eneagrama')
+    .select('id, test_eneagrama_dominante(id)')
+    .eq('postulante_id', postulanteId)
+    .maybeSingle()
+
+  const dominantes = (test as unknown as { test_eneagrama_dominante?: { id: string }[] } | null)?.test_eneagrama_dominante
+  const tieneDominante = Array.isArray(dominantes) && dominantes.length > 0
+
+  // 3. Verificar informe de personalidad generado en estado LISTO
+  const { data: informe } = await admin
+    .from('informe_personalidad')
+    .select('id, estado_informe')
+    .eq('postulante_id', postulanteId)
+    .maybeSingle()
+
+  const informeListo = (informe as { estado_informe: string } | null)?.estado_informe === ESTADO_INFORME.LISTO
+
+  return {
+    existePerfil: true,
+    tieneDominante,
+    informeListo,
+  }
 }

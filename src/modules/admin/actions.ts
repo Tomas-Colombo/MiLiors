@@ -6,6 +6,8 @@ import { requireAdmin } from '@/lib/guards'
 import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 import { patronTextoCompleto } from '@/lib/texto'
+import { getRequisitosVisibilidadPostulante } from './queries'
+import { evaluarRequisitosVisibilidad } from '@/modules/visibilidad/regla'
 import {
   crearSchemaNombreCatalogo,
   schemaNombreCatalogo,
@@ -649,16 +651,24 @@ export async function actualizarDiasReactivarFeedback(
 export async function desactivarPostulante(postulanteId: string): Promise<ActionResult> {
   await requireAdmin()
   const admin = createAdminClient()
-  const { error } = await admin.from('perfil_postulante')
+  const { data, error } = await admin.from('perfil_postulante')
     .update({ perfil_en_busqueda: false })
     .eq('id', postulanteId)
+    .select('id')
   if (error) return { success: false, error: 'No se pudo desactivar el perfil.' }
+  if (!data || data.length === 0) return { success: false, error: 'Postulante no encontrado.' }
   revalidatePath('/admin/postulantes')
   return { success: true, data: undefined }
 }
 
 export async function reactivarPostulante(postulanteId: string): Promise<ActionResult> {
   await requireAdmin()
+  const requisitos = await getRequisitosVisibilidadPostulante(postulanteId)
+  const evaluacion = evaluarRequisitosVisibilidad(requisitos)
+  if (!evaluacion.ok) {
+    return { success: false, error: evaluacion.error }
+  }
+
   const admin = createAdminClient()
   const { error } = await admin.from('perfil_postulante')
     .update({ perfil_en_busqueda: true })

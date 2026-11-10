@@ -7,6 +7,7 @@ import { ROL_USUARIO, ESTADO_INFORME } from '@/lib/constants/enums'
 import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
 import { getInformeActual } from '@/modules/informe/queries'
+import { evaluarRequisitosVisibilidad } from './regla'
 import type { ActionResult } from '@/lib/types/domain'
 
 /**
@@ -35,29 +36,19 @@ export async function togglePerfilEnBusqueda(activo: boolean): Promise<ActionRes
   // 2. Precondiciones para activar visibilidad
   if (activo) {
     const perfil = await getPerfilPostulanteActual()
-    if (!perfil) {
-      return {
-        success: false,
-        error: 'No se encontró el perfil del postulante.',
-      }
-    }
+    const test = perfil ? await getTestEneagramaDePostulante(perfil.id) : null
+    const tieneDominante = !!(test?.test_eneagrama_dominante && test.test_eneagrama_dominante.length > 0)
+    const informe = perfil && tieneDominante ? await getInformeActual() : null
+    const informeListo = informe?.estado_informe === ESTADO_INFORME.LISTO
 
-    // Debe existir test de eneagrama con al menos un dominante (mismo criterio que requireEneagramaCompleto)
-    const test = await getTestEneagramaDePostulante(perfil.id)
-    if (!test || !test.test_eneagrama_dominante || test.test_eneagrama_dominante.length === 0) {
-      return {
-        success: false,
-        error: 'Debés completar el test de personalidad antes de hacer visible tu perfil.',
-      }
-    }
+    const evaluacion = evaluarRequisitosVisibilidad({
+      existePerfil: !!perfil,
+      tieneDominante,
+      informeListo,
+    })
 
-    // El informe de personalidad debe estar listo
-    const informe = await getInformeActual()
-    if (!informe || informe.estado_informe !== ESTADO_INFORME.LISTO) {
-      return {
-        success: false,
-        error: 'Tu informe de personalidad debe estar listo antes de hacer visible tu perfil.',
-      }
+    if (!evaluacion.ok) {
+      return { success: false, error: evaluacion.error }
     }
   }
 
