@@ -799,3 +799,13 @@ Los siguientes ítems quedan expresamente fuera del plan de ejecución de la Fas
   - `src/modules/postulaciones/transiciones.ts` (nuevo) y sus tests `src/modules/postulaciones/transiciones.test.ts`: Reglas puras de orígenes válidos para transiciones de estado de postulación ([H-203](hallazgos.md), [H-214](hallazgos.md)).
   - `src/modules/postulantes/schema.ts` (nuevo) y sus tests `src/modules/postulantes/schema.test.ts`: Schemas Zod y topes máximos de notas y motivos ([H-228](hallazgos.md)).
   - `src/modules/postulantes/actions.test.ts` (nuevo): Tests unitarios de revalidación y topes de notas privadas ([H-102](hallazgos.md), [H-228](hallazgos.md)).
+- **Excepciones incorporadas en el bloque A6:**
+  - `src/modules/visibilidad/regla.ts` (nuevo) y su test `src/modules/visibilidad/regla.test.ts`: Regla pura común de evaluación de requisitos de visibilidad entre postulante ([H-208](hallazgos.md)) y admin ([H-215](hallazgos.md)).
+  - `src/modules/visibilidad/actions.ts`: Pasa a usar la regla pura común de visibilidad ([H-215](hallazgos.md)).
+  - `src/modules/admin/queries.ts` y su test `src/modules/admin/queries.test.ts`: Consulta canónica `getRequisitosVisibilidadPostulante` con cliente admin para evaluar visibilidad de postulante por id sin depender de RLS de usuario ([H-215](hallazgos.md)).
+  - `src/app/(admin)/admin/postulantes/postulantes-acciones.tsx`: Visualización de error `result.error` ante fallos de reactivación o desactivación ([H-215](hallazgos.md)).
+  - `src/modules/ubicacion/actions.ts` y su test `src/modules/ubicacion/actions.test.ts`: Atajar errores en cascada devolviendo array vacío para no romper los selectores ([H-216](hallazgos.md)).
+  - `src/app/(reclutador)/reclutador/postulantes/page.tsx`: Unificación de etiqueta de ubicación con `ubicacionLabel` conservando el emoji `📍` ([H-116](hallazgos.md)).
+  - `src/lib/api-auth.ts` (nuevo) y su test `src/lib/api-auth.test.ts`: Autorización común `autorizarAdmin` para rutas de API basada en `getSessionUser()` ([H-104](hallazgos.md)).
+  - `src/app/api/admin/feedback/export/route.ts`: Unificación de autorización con `autorizarAdmin` manteniendo texto plano para descarga en navegador ([H-104](hallazgos.md)).
+  - Tests unitarios nuevos: `src/modules/admin/schema.test.ts`, `src/modules/admin/sessions.test.ts`, `src/modules/admin/visibilidad-postulante.test.ts`, `src/modules/carreras/queries.test.ts`, `src/modules/ubicacion/queries.test.ts`.
