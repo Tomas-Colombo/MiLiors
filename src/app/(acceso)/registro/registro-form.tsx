@@ -2,11 +2,8 @@
 
 import { useActionState, useState } from 'react'
 import { registrarUsuario } from '@/modules/auth/actions'
-
 import { UserIcon, BuildingIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
 import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
-
-
 
 /**
  * Alta de cuenta dentro de la pantalla de acceso — mismos campos y estilos

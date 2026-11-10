@@ -16,7 +16,7 @@ export const envServidorSchema = z
     if (data.EMAIL_POSTULACIONES_HABILITADO === 'true') {
       if (!data.RESEND_API_KEY || data.RESEND_API_KEY.trim() === '') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: 'RESEND_API_KEY es obligatoria cuando EMAIL_POSTULACIONES_HABILITADO es true',
           path: ['RESEND_API_KEY'],
         })
