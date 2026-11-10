@@ -1,0 +1,52 @@
+# Pipeline de Integración Continua (CI) de MiLiors.
+#
+# El build no valida el entorno en tiempo de compilación (ver src/instrumentation.ts,
+# donde register() omite la validación cuando process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD).
+# Además, ninguna página prerenderizada estáticamente (○) lee Supabase al compilar.
+# Por lo tanto, el build de CI corre con variables de entorno ficticias ("placeholder")
+# sin necesidad de secretos reales ni dependencias de servicios externos.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    name: Verificación (Tipos, Lint, Tests y Build)
+    runs-on: ubuntu-latest
+
+    # Variables de mentira para permitir la compilación sin secretos de producción
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+      SUPABASE_SERVICE_ROLE_KEY: placeholder
+      GEMINI_API_KEY: placeholder
+      NEXT_PUBLIC_APP_URL: https://placeholder.invalid
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificar tipos de TypeScript
+        run: npx tsc --noEmit
+
+      - name: Ejecutar linter
+        run: npm run lint
+
+      - name: Ejecutar tests unitarios
+        run: npm test
+
+      - name: Compilar aplicación (build)
+        run: npm run build
