@@ -1,12 +1,13 @@
 import 'server-only'
 import { GoogleGenAI } from '@google/genai'
 import { AIError, type AIProvider, type GenerateOptions, type GenerateResult } from '../port'
+import { getEnvServidor } from '@/lib/env'
 
 let client: GoogleGenAI | null = null
 
 function getClient(): GoogleGenAI {
   if (!client) {
-    const apiKey = process.env.GEMINI_API_KEY
+    const apiKey = getEnvServidor().GEMINI_API_KEY
     if (!apiKey) {
       throw new AIError('configuracion', false, 'GEMINI_API_KEY is not set in environment variables.')
     }
@@ -57,7 +58,7 @@ export const geminiAdapter: AIProvider = {
     timeoutMs = 90_000,
   }: GenerateOptions): Promise<GenerateResult> {
     const ai = getClient()
-    const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
+    const model = getEnvServidor().GEMINI_MODEL ?? 'gemini-2.5-flash'
 
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)

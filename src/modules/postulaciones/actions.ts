@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { verifySession } from '@/lib/dal'
+import { getEnvServidor } from '@/lib/env'
 import type { ActionResult } from '@/lib/types/domain'
 import {
   ESTADO_POSTULACION,
@@ -38,7 +39,9 @@ import { motivoNoAvanzarSchema } from '@/modules/postulantes/schema'
  * Apagado, la acción sigue su curso normal: cambiar el estado de una
  * postulación no depende del mail ni falla si no sale.
  */
-const EMAIL_POSTULACIONES_HABILITADO = process.env.EMAIL_POSTULACIONES_HABILITADO === 'true'
+function isEmailPostulacionesHabilitado(): boolean {
+  return getEnvServidor().EMAIL_POSTULACIONES_HABILITADO === 'true'
+}
 
 // Helper: send email via Resend (no SDK — native fetch)
 async function enviarEmailCambioEstado(
@@ -48,7 +51,8 @@ async function enviarEmailCambioEstado(
   empresaNombre: string,
   nuevoEstado: string
 ) {
-  const apiKey = process.env.RESEND_API_KEY
+  const env = getEnvServidor()
+  const apiKey = env.RESEND_API_KEY
   if (!apiKey) {
     console.warn('[postulaciones] RESEND_API_KEY not configured. Email not sent.')
     return
@@ -71,7 +75,7 @@ async function enviarEmailCambioEstado(
           <p>Hola ${nombrePostulante},</p>
           <p>Tu postulación al puesto <strong>${tituloPuesto}</strong> en <strong>${empresaNombre}</strong> fue actualizada.</p>
           <p><strong>Estado actual:</strong> ${estadoLabel}</p>
-          <p>Ingresa a <a href="${process.env.NEXT_PUBLIC_APP_URL}/postulante/postulaciones">MiLiors</a> para ver el detalle.</p>
+          <p>Ingresa a <a href="${env.NEXT_PUBLIC_APP_URL}/postulante/postulaciones">MiLiors</a> para ver el detalle.</p>
           <p>— El equipo de MiLiors</p>
         `,
       }),
@@ -420,7 +424,7 @@ export async function avanzarEstadoPostulacion(
   // EMAIL_POSTULACIONES_HABILITADO). La guarda envuelve también a la consulta
   // de datos, que si no sería una ida a la base para no mandar nada.
   // Cuando esté prendido sigue sin bloquear: los errores se loguean adentro.
-  if (EMAIL_POSTULACIONES_HABILITADO) {
+  if (isEmailPostulacionesHabilitado()) {
     const datos = await getDatosEmail(postulacionId)
     if (datos?.email) {
       await enviarEmailCambioEstado(
@@ -589,7 +593,7 @@ export async function noAvanzarPostulacion(
   ])
 
   // Aviso por mail al postulante: apagado por ahora (ver EMAIL_POSTULACIONES_HABILITADO).
-  if (EMAIL_POSTULACIONES_HABILITADO) {
+  if (isEmailPostulacionesHabilitado()) {
     const datos = await getDatosEmail(postulacionId)
     if (datos?.email) {
       await enviarEmailCambioEstado(

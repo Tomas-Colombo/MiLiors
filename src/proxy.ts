@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { rolDeUsuario, rutaDeRol } from '@/lib/rol'
 import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 import { checkSessionCacheado } from '@/lib/session/check-session-cache'
+import { getEnvServidor } from '@/lib/env'
 
 // Rutas que NO requieren autenticación
 const PUBLIC_PATHS = [
@@ -26,9 +27,10 @@ export async function proxy(request: NextRequest) {
   // Crear cliente Supabase para leer la sesión desde cookies
   let response = NextResponse.next({ request })
 
+  const env = getEnvServidor()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
