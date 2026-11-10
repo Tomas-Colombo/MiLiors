@@ -4,9 +4,9 @@ import { useActionState, useState } from 'react'
 import { registrarUsuario } from '@/modules/auth/actions'
 import type { RegistroPendiente } from '@/modules/auth/schema'
 import { UserIcon, BuildingIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
-const initialState: ActionResult<RegistroPendiente> = { success: false, error: '' }
+
 
 /**
  * Alta de cuenta dentro de la pantalla de acceso — mismos campos y estilos
@@ -14,7 +14,7 @@ const initialState: ActionResult<RegistroPendiente> = { success: false, error: '
  * lenguaje visual.
  */
 export function RegistroForm() {
-  const [state, action, pending] = useActionState(registrarUsuario, initialState)
+  const [state, action, pending] = useActionState(registrarUsuario, INITIAL_ACTION_STATE)
   const [rol, setRol] = useState<'POSTULANTE' | 'RECLUTADOR' | null>(null)
   const [showPass, setShowPass] = useState(false)
 

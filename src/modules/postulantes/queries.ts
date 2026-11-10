@@ -2,12 +2,13 @@ import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { patronSinTildes } from '@/lib/texto'
+import { isUuid } from '@/lib/utils'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import type { AnexoReclutador, InformePersonalidadJSON } from '@/lib/types/informe'
 
-/** UUID v4-ish check — used to distinguish real carrera ids from the 'OTRAS' sentinel */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+
 
 export type PostulanteCard = {
   id: string
@@ -121,7 +122,7 @@ export const buscarPostulantes = cache(async (filtros?: {
     // embed, porque cuelga de la localidad.
     if (filtros?.provinciaId) query = query.eq('provincia_id', filtros.provinciaId)
     if (filtros?.departamentoId) query = query.eq('localidad.departamento_id', filtros.departamentoId)
-    if (filtros?.carrera && UUID_RE.test(filtros.carrera)) {
+    if (filtros?.carrera && isUuid(filtros.carrera)) {
       query = query.eq('carrera_id', filtros.carrera)
     }
     if (filtros?.carreraOtra) {

@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DOC } from '@/lib/constants/documento'
 import { Papel, PapelHeader } from '@/components/shared/documento-papel'
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+import { isUuid } from '@/lib/utils'
 
 /**
  * Buscador de certificados, con el mismo skin que el certificado emitido: quien
@@ -28,7 +27,7 @@ export function VerifyForm() {
       setError('Ingresá el ID del certificado.')
       return
     }
-    if (!UUID_RE.test(trimmed)) {
+    if (!isUuid(trimmed)) {
       setError('El ID debe tener el formato correcto (ej: ef24e3b5-040d-43c9-99c8-57f2cb0649de).')
       return
     }

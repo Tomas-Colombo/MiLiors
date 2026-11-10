@@ -27,5 +27,5 @@ export function useFormAccion<T = void>(
       onSuccess(result.data)
     }
     return result
-  }, INITIAL_ACTION_STATE as ActionResult<T>)
+  }, INITIAL_ACTION_STATE)
 }

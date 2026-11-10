@@ -2,9 +2,9 @@
 
 import { useActionState } from 'react'
 import { recuperarPassword } from '@/modules/auth/actions'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
-const initialState: ActionResult = { success: false, error: '' }
+
 
 /**
  * Mismo marcado que `LoginForm`: es la misma pantalla, con un campo en vez de
@@ -13,7 +13,7 @@ const initialState: ActionResult = { success: false, error: '' }
  * "¿La olvidaste?" aterrizaba en una pantalla que no se parecía a la anterior.
  */
 export function RecuperarPasswordForm() {
-  const [state, action, pending] = useActionState(recuperarPassword, initialState)
+  const [state, action, pending] = useActionState(recuperarPassword, INITIAL_ACTION_STATE)
 
   const emailError = state && !state.success ? state.fieldErrors?.email?.[0] : undefined
   const generalError =

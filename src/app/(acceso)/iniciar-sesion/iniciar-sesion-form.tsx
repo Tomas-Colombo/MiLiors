@@ -4,12 +4,10 @@ import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import { iniciarSesion } from '@/modules/auth/actions'
 import { EyeIcon, EyeOffIcon } from '@/components/icons'
-import type { ActionResult } from '@/lib/types/domain'
-
-const initialState: ActionResult = { success: false, error: '' }
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
 export function IniciarSesionForm() {
-  const [state, action, pending] = useActionState(iniciarSesion, initialState)
+  const [state, action, pending] = useActionState(iniciarSesion, INITIAL_ACTION_STATE)
   const [showPass, setShowPass] = useState(false)
 
   const emailError = state && !state.success ? state.fieldErrors?.email?.[0] : undefined

@@ -25,4 +25,4 @@ export type ActionResult<T = void> =
  * Estado inicial canónico para useActionState y useFormAccion.
  * Idéntico al estado inicial del perfil técnico ({ success: false, error: '' }).
  */
-export const INITIAL_ACTION_STATE: ActionResult = { success: false, error: '' }
+export const INITIAL_ACTION_STATE: { success: false; error: string } = { success: false, error: '' }

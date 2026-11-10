@@ -3,9 +3,9 @@
 import { useActionState, useState } from 'react'
 import { establecerPasswordNueva } from '@/modules/auth/actions'
 import { EyeIcon, EyeOffIcon } from '@/components/icons'
-import type { ActionResult } from '@/lib/types/domain'
+import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
-const initialState: ActionResult = { success: false, error: '' }
+
 
 /**
  * Contraseña nueva al final del flujo de recuperación. Mismo marcado `tid-*`
@@ -16,7 +16,7 @@ const initialState: ActionResult = { success: false, error: '' }
  * con el aviso puesto.
  */
 export function NuevaPasswordForm() {
-  const [state, action, pending] = useActionState(establecerPasswordNueva, initialState)
+  const [state, action, pending] = useActionState(establecerPasswordNueva, INITIAL_ACTION_STATE)
   const [showPass, setShowPass] = useState(false)
 
   const errores = state && !state.success ? state.fieldErrors : undefined

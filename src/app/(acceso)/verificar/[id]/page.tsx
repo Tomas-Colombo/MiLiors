@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getCertificadoParaVerificar, type CertificadoVerificacion } from '@/modules/certificado/queries'
 import { InformePapel } from '@/modules/informe/informe-papel'
 import { esFormatoAnterior } from '@/lib/types/informe'
+import { formatFecha } from '@/lib/fecha'
 import { BackButton } from './back-button'
 import { CopyId } from './copy-id'
 import { BrandLogo } from '@/components/shared/brand-logo'
@@ -43,11 +44,7 @@ export default async function VerificarPage({
               data={cert.informe}
               fechaGeneracion={
                 cert.fechaInforme
-                  ? new Date(cert.fechaInforme).toLocaleDateString('es-AR', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                    })
+                  ? formatFecha(cert.fechaInforme, 'larga-dos-digitos')
                   : undefined
               }
             />
@@ -78,11 +75,7 @@ export default async function VerificarPage({
    Estado: VERIFICADO
 ───────────────────────────────────────────────────── */
 function CertificadoVerificado({ cert }: { cert: CertificadoVerificacion }) {
-  const fechaFirma = new Date(cert.timestamp_firma).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
+  const fechaFirma = formatFecha(cert.timestamp_firma, 'larga-dos-digitos')
 
   return (
     <>
