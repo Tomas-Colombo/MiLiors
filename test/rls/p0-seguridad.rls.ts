@@ -412,8 +412,8 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
     expect(res.status).toBe(404)
   })
 
-  // ─── 6. H-202 (paso 1) ────────────────────────────────────────────────────
-  it('H-202 (paso 1): aislamiento de puesto_criterio_psicologico (solo titular y ADMIN; anon y postulante bloqueados)', async () => {
+  // ─── 6. H-202 (pasos 1 a 3) ────────────────────────────────────────────────
+  it('H-202 (pasos 1 a 3): aislamiento de puesto_criterio_psicologico (solo titular y ADMIN; columna eliminada de puesto)', async () => {
     // 6a. Anon y postulante no leen puesto_criterio_psicologico
     const { data: dataAnon } = await anonClient.from('puesto_criterio_psicologico').select('*')
     expect(dataAnon ?? []).toHaveLength(0)
@@ -449,9 +449,39 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
       .select()
     expect(updateR2 ?? []).toHaveLength(0)
 
-    // La copia desde puesto.perfil_psicologico_deseado corre dentro de la
-    // migración, antes de que este test siembre datos, así que no se puede
-    // verificar desde acá. Su consistencia se comprueba con una consulta sobre
-    // todos los puestos al hacer la re-copia previa al cambio de código (PQ-06).
+    // 6d. Reclutador titular lee el criterio vía embed; otro reclutador recibe null en el embed
+    type PuestoEmbedCriterio = {
+      id: string
+      puesto_criterio_psicologico: { perfil_psicologico_deseado: string | null } | null
+    }
+
+    const { data: puestoR1, error: errEmbedR1 } = await clientR1
+      .from('puesto')
+      .select('id, puesto_criterio_psicologico(perfil_psicologico_deseado)')
+      .eq('id', puesto1Id)
+      .single()
+    expect(errEmbedR1).toBeNull()
+    expect((puestoR1 as unknown as PuestoEmbedCriterio)?.puesto_criterio_psicologico?.perfil_psicologico_deseado).toBe(
+      'Criterio psicológico confidencial para puesto 1'
+    )
+
+    const { data: puestoR2, error: errEmbedR2 } = await clientR2
+      .from('puesto')
+      .select('id, puesto_criterio_psicologico(perfil_psicologico_deseado)')
+      .eq('id', puesto1Id)
+      .single()
+    expect(errEmbedR2).toBeNull()
+    expect((puestoR2 as unknown as PuestoEmbedCriterio)?.puesto_criterio_psicologico).toBeNull()
+
+    // 6e. La columna perfil_psicologico_deseado ya no existe en puesto (error 42703 para anon y postulante)
+    const { error: errColAnon } = await anonClient
+      .from('puesto')
+      .select('perfil_psicologico_deseado' as unknown as 'id')
+    expect(errColAnon?.code).toBe('42703')
+
+    const { error: errColPostulante } = await clientA
+      .from('puesto')
+      .select('perfil_psicologico_deseado' as unknown as 'id')
+    expect(errColPostulante?.code).toBe('42703')
   })
 })
