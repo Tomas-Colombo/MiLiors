@@ -128,32 +128,36 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
   > [!WARNING]
   > **Estado de H-202:** La vulnerabilidad H-202 **sigue abierta en producción tras PQ-02**, debido a que la columna `puesto.perfil_psicologico_deseado` debe preservarse temporalmente para no romper el código actual que ejecuta `select('*')` o consultas directas. El cierre definitivo y la eliminación/bloqueo de acceso de dicha columna se produce en **PQ-09**, tras migrar el código de puestos en **PQ-06** y de IA en **PQ-09**. Por este motivo, PQ-06 y PQ-09 se ubican inmediatamente después de PQ-03 para minimizar al máximo esta ventana temporal.
 - **Archivos que toca:**
-  - `supabase/migrations/20261102010000_p0_seguridad_rls.sql` (nuevo)
-  - `src/lib/supabase/rls-seguridad-p0.rls.ts` (nuevo — extensión `.rls.ts` para no ser ejecutado por `vitest run` en CI)
+  - `supabase/migrations/20261111000000_p0_seguridad_rls.sql` (nuevo)
+  - `supabase/migrations/20261111000100_puesto_criterio_psicologico.sql` (nuevo)
+  - `test/rls/p0-seguridad.rls.ts` (nuevo)
+  - `vitest.rls.config.ts` (nuevo)
+  - `scripts/gen-database-types.mjs`
   - `package.json`
   - `src/lib/types/database.types.ts`
-- **Diff estimado:** ~260 líneas.
-- **Dependencias:** `PQ-01` (requiere staging levantado para probar los exploits).
+- **Diff estimado:** ~350 líneas.
+- **Dependencias:** Stack local de Supabase (`supabase db reset --local`).
 - **Cambios en base de datos:**
   - [H-200](hallazgos.md): Corregir la política `experiencia_select` en `public.experiencia_laboral`, reemplazando la tautología `pt.id = pt.id` por `pp.id = pt.postulante_id`.
-  - [H-201](hallazgos.md): Endurecer la política `usuario_insert_service` en `public.usuario` añadiendo `TO service_role` para impedir que peticiones cliente anon o authenticated inserten registros con rol `ADMIN`.
-  - [H-008](hallazgos.md) y [H-213](hallazgos.md): Crear esquema `private` (`CREATE SCHEMA IF NOT EXISTS private;`). Mover la función `reclutador_ve_postulante` a `private.reclutador_ve_postulante(postulante_uuid uuid)`. Al no estar en `public`, PostgREST no la expone por RPC HTTP (cerrando el riesgo de enumeración de H-008). Mantener `GRANT EXECUTE ON FUNCTION private.reclutador_ve_postulante TO authenticated;`. Actualizar las políticas que la consumen (`postulante_select_propio`, `formacion_select`, `curso_select`, `idioma_select` y `postulante_competencia_select`) incorporando la condición `OR private.reclutador_ve_postulante(pp.id)`, desbloqueando el acceso legítimo de reclutadores a candidatos postulados (H-213).
-  - [H-211](hallazgos.md): Revocar privilegios `INSERT` a `authenticated` sobre `public.reclutador_empresa` y requerir que la vinculación se realice exclusivamente mediante backend con service role validando titularidad previa de la empresa.
-  - [H-202](hallazgos.md) (Paso 1 Base según la técnica adoptada de la decisión pendiente):
-    - *Si se elige Opción A (Privilegios de columna):* No se ejecuta `REVOKE` todavía (rompería el código en ejecución que hace `select('*')`). Se prepara la infraestructura de funciones autorizadas.
-    - *Si se elige Opción B (Vista pública sanitizada):* Se crea la vista `puesto_publico` sin la columna confidencial para candidatos/anónimos, pero la tabla base `puesto` conserva la columna y permisos para no quebrar las lecturas actuales del reclutador e IA.
-    - *Si se elige Opción C (Tabla dedicada `puesto_criterio_psicologico`):* Se crea la tabla `puesto_criterio_psicologico` con RLS restringido al reclutador titular y `service_role`, se copian los datos existentes de `puesto.perfil_psicologico_deseado`, y se conserva temporalmente la columna en `puesto` para compatibilidad hacia atrás.
-  - Aplicación: Aplicar en Staging vía `supabase db push`. Correr suite de RLS. Posteriormente aplicar en Producción.
+  - [H-201](hallazgos.md): Eliminar la política `usuario_insert_service` en `public.usuario` y revocar `INSERT` a `anon` y `authenticated` para impedir inserciones cliente no autorizadas.
+  - [H-008](hallazgos.md) y [H-213](hallazgos.md): Crear esquema `private` (`CREATE SCHEMA IF NOT EXISTS private;`). Mover la función `reclutador_ve_postulante` a `private.reclutador_ve_postulante(p_postulante_id uuid)` con `SET search_path = ''`. Al no estar en `public`, PostgREST no la expone por RPC HTTP (cerrando el riesgo de enumeración de H-008). Mantener `GRANT EXECUTE ON FUNCTION private.reclutador_ve_postulante TO authenticated, service_role;`. Actualizar las políticas que la consumen (`postulante_select_propio`, `formacion_select`, `curso_select`, `idioma_select`, `postulante_competencia_select` y `experiencia_select`) incorporando la condición `OR private.reclutador_ve_postulante(pp.id)`, desbloqueando el acceso legítimo de reclutadores a candidatos postulados (H-213).
+  - [H-211](hallazgos.md): Revocar privilegios `INSERT` a `anon` y `authenticated` sobre `public.reclutador_empresa`, eliminar la política `reclutador_empresa_insert`, y requerir que la vinculación se realice exclusivamente mediante backend con service role validando titularidad previa de la empresa.
+  - [H-202](hallazgos.md) (Paso 1 Opción C - Tabla dedicada `puesto_criterio_psicologico`):
+    - Se crea la tabla `puesto_criterio_psicologico` con RLS restringido al reclutador titular del puesto y `ADMIN` (más `service_role`).
+    - Se copian los datos existentes de `puesto.perfil_psicologico_deseado`.
+    - Se conserva temporalmente la columna en `puesto` para compatibilidad hacia atrás hasta PQ-06 / PQ-09.
+  - Aplicación: Aplicar en el stack local vía `supabase db reset --local`. Correr suite de RLS. Posteriormente aplicar en Producción en el deploy pre-aprobado.
   - Regenerar `src/lib/types/database.types.ts`.
 - **Cómo se verifica:**
-  - Se añade el script `"test:rls": "vitest run src/lib/supabase/rls-seguridad-p0.rls.ts"` en `package.json`. Al tener extensión `.rls.ts`, `vitest run` por defecto (`npm test`) lo ignora en el pipeline de CI sin base conectada. Se ejecuta manualmente o en Staging con base activa.
+  - Se añade el script `"test:rls": "vitest run --config vitest.rls.config.ts"` en `package.json` apuntando a `test/rls/**/*.rls.ts`. Al tener extensión `.rls.ts`, `vitest run` por defecto (`npm test`) lo ignora en el pipeline de CI sin base conectada. Se ejecuta contra el stack local con `npm run test:rls`.
   - Comprobar que:
     1. Un postulante autenticado no puede leer la experiencia laboral de otros postulantes ([H-200](hallazgos.md)).
     2. La API no permite insertar usuarios con rol ADMIN desde cliente anónimo/autenticado ([H-201](hallazgos.md)).
     3. Un reclutador no puede insertar filas en `reclutador_empresa` asociadas a empresas ajenas ([H-211](hallazgos.md)).
-    4. Un reclutador puede leer formación y competencias de candidatos que se postularon a sus puestos ([H-213](hallazgos.md)).
+    4. Un reclutador puede leer formación, cursos, idiomas, competencias y experiencia de candidatos que se postularon a sus puestos ([H-213](hallazgos.md)).
     5. La llamada RPC `/rest/v1/rpc/reclutador_ve_postulante` responde 404 Not Found al no estar expuesta en `public` ([H-008](hallazgos.md)).
-  - Casos del QA_PLAN que pasan a ✅: `TC-AUTH-001`, `TC-PUE-008`, `TC-PUE-009`.
+    6. Anon y postulante no leen `puesto_criterio_psicologico`; el reclutador titular lee y escribe su criterio; otro reclutador no ([H-202](hallazgos.md) paso 1).
+  - Casos del QA_PLAN: TC-PUE-008 y TC-PUE-009 siguen ⬜ hasta PQ-09.
 - **Riesgo y marcha atrás:**
   - *Riesgo:* Medio. Las políticas de RLS alteran la visibilidad de datos.
   - *Rollback:* Script de reversión SQL de políticas en la base de datos. Rollback instantáneo en Vercel.
