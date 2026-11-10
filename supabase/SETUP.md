@@ -82,3 +82,17 @@ If the schema was built by pasting SQL into the dashboard editor (no `config.tom
 
 - `001_`–`005_` use a sequential prefix instead of a timestamp. They sort correctly ahead of every timestamped file, so nothing is ambiguous; renaming them would cost another history reconciliation for no functional gain. Left as is on purpose.
 - `seed.sql`, `seed_informe_mock.sql` and `seed_ubicacion.sql` live inside `migrations/` but are not migrations. They have no version prefix so the CLI skips them, but they belong outside that directory.
+
+## Local environment (Docker)
+
+The local stack (`project_id = "miliors"`, ports 553xx) rebuilds production's `public` schema from `migrations/20261110000000_baseline.sql` and loads catalog data from `seed.sql`. The pre-baseline migrations live in `migrations_archivo/` for reference only.
+
+```bash
+supabase start          # bring the stack up (Studio: http://127.0.0.1:55323, mail: http://127.0.0.1:55324)
+npm run env:local       # point `next dev` at the local stack (.env.development.local)
+npm run env:prod        # point `next dev` back at production
+supabase db reset --local   # rebuild the local DB from baseline + seed
+supabase stop           # stop the stack, keeping its data
+```
+
+Never run `db reset`, `db push` or `migration repair` with `--linked` without an explicit decision: the CLI is linked to production.
