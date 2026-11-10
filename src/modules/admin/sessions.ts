@@ -19,10 +19,28 @@ import type { ActionResult } from '@/lib/types/domain'
  * src/lib/session/check-session-cache.ts).
  */
 export async function revocarSesion(userId: string): Promise<ActionResult> {
-  await requireAdmin()
+  const session = await requireAdmin()
   if (!userId) return { success: false, error: 'Usuario inválido.' }
 
+  if (userId === session.id) {
+    return { success: false, error: 'No podés revocar tu propia sesión.' }
+  }
+
   const admin = createAdminClient()
+  const { data: usuario } = await admin
+    .from('usuario')
+    .select('rol_usuario')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!usuario) {
+    return { success: false, error: 'Usuario inválido.' }
+  }
+
+  if (usuario.rol_usuario === 'ADMIN') {
+    return { success: false, error: 'No se puede revocar la sesión de otro administrador.' }
+  }
+
   const { error } = await admin.from('sesion_actividad').upsert({
     usuario_id: userId,
     revocada: true,
