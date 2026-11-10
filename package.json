@@ -11,6 +11,7 @@
     "lint": "eslint",
     "gen:types": "node scripts/gen-database-types.mjs",
     "test": "vitest run",
+    "test:rls": "vitest run --config vitest.rls.config.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
