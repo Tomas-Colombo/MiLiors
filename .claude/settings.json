@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(supabase db reset*--linked*)",
+      "Bash(supabase db reset*--db-url*)",
+      "Bash(npx supabase db reset*--linked*)",
+      "Bash(npx supabase db reset*--db-url*)"
+    ]
+  }
+}
