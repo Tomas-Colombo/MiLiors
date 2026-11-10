@@ -15,22 +15,24 @@ function toDate(mesAnio: string | undefined): string | null {
 }
 
 // Helper: get or create perfil_tecnico
-async function getOrCreatePerfilTecnico(postulanteId: string): Promise<string> {
+async function getOrCreatePerfilTecnico(postulanteId: string): Promise<string | null> {
   const supabase = await createClient()
-  const admin = createAdminClient()
 
   const { data: existing } = await supabase
     .from('perfil_tecnico')
     .select('id')
     .eq('postulante_id', postulanteId)
-    .single()
+    .maybeSingle()
 
   if (existing) return (existing as { id: string }).id
 
-  const { data: created } = await admin.from('perfil_tecnico')
+  const { data: created, error } = await supabase
+    .from('perfil_tecnico')
     .insert({ postulante_id: postulanteId })
     .select('id')
     .single()
+
+  if (error || !created) return null
 
   return (created as { id: string }).id
 }
@@ -42,6 +44,9 @@ async function getOrCreatePerfilTecnico(postulanteId: string): Promise<string> {
  * viejo. Aca solo prendemos el flag (una escritura, sin LLM); regenerar la
  * sintesis y re-emitir el PDF queda a cargo del boton "Actualizar certificado"
  * en /postulante/certificado. Mismo patron que eneagrama.
+ *
+ * Se usa createAdminClient() porque certificado_pdf está cerrada a escritura de
+ * usuarios por diseño (migración archivada 20260924000007_restringir_escritura_informe_certificado.sql).
  */
 async function marcarCambioPerfilTecnico(postulanteId: string | null): Promise<void> {
   if (postulanteId) {
@@ -98,9 +103,11 @@ export async function agregarFormacion(
   if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
 
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
-  const admin = createAdminClient()
+  if (!perfilTecnicoId) return { success: false, error: 'No se pudo preparar el perfil técnico.' }
 
-  const { error } = await admin.from('formacion_academica').insert({
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('formacion_academica').insert({
     perfil_tecnico_id: perfilTecnicoId,
     institucion: parsed.data.institucion,
     titulo: parsed.data.titulo,
@@ -179,9 +186,11 @@ export async function agregarCurso(
   if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
 
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
-  const admin = createAdminClient()
+  if (!perfilTecnicoId) return { success: false, error: 'No se pudo preparar el perfil técnico.' }
 
-  const { error } = await admin.from('curso').insert({
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('curso').insert({
     perfil_tecnico_id: perfilTecnicoId,
     nombre: parsed.data.nombre,
     institucion: parsed.data.institucion,
@@ -252,9 +261,11 @@ export async function agregarExperiencia(
   if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
 
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
-  const admin = createAdminClient()
+  if (!perfilTecnicoId) return { success: false, error: 'No se pudo preparar el perfil técnico.' }
 
-  const { error } = await admin.from('experiencia_laboral').insert({
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('experiencia_laboral').insert({
     perfil_tecnico_id: perfilTecnicoId,
     empresa: parsed.data.empresa,
     puesto: parsed.data.puesto,
@@ -332,9 +343,11 @@ export async function agregarIdioma(
   if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
 
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
-  const admin = createAdminClient()
+  if (!perfilTecnicoId) return { success: false, error: 'No se pudo preparar el perfil técnico.' }
 
-  const { error } = await admin.from('idioma').insert({
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('idioma').insert({
     perfil_tecnico_id: perfilTecnicoId,
     nombre: parsed.data.nombre,
     nivel_idioma: parsed.data.nivel_idioma,
@@ -361,12 +374,18 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
   if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
 
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
-  const admin = createAdminClient()
+  if (!perfilTecnicoId) return { success: false, error: 'No se pudo preparar el perfil técnico.' }
+
+  const supabase = await createClient()
 
   // Delete all current competencies
-  await admin.from('postulante_competencia')
+  const { error: deleteError } = await supabase.from('postulante_competencia')
     .delete()
     .eq('perfil_tecnico_id', perfilTecnicoId)
+
+  if (deleteError) {
+    return { success: false, error: 'No se pudieron guardar las competencias.' }
+  }
 
   if (competenciaIds.length === 0) {
     await marcarCambioPerfilTecnico(postulanteId)
@@ -379,7 +398,7 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
     competencia_id: cid,
   }))
 
-  const { error } = await admin.from('postulante_competencia').insert(rows)
+  const { error } = await supabase.from('postulante_competencia').insert(rows)
   if (error) return { success: false, error: 'No se pudieron guardar las competencias.' }
 
   await marcarCambioPerfilTecnico(postulanteId)
@@ -407,6 +426,9 @@ export async function guardarCompetenciasConCustom(
   if (!postulanteId) return { success: false, error: 'Perfil no encontrado.' }
 
   const perfilTecnicoId = await getOrCreatePerfilTecnico(postulanteId)
+  if (!perfilTecnicoId) return { success: false, error: 'No se pudo preparar el perfil técnico.' }
+
+  const supabase = await createClient()
   const admin = createAdminClient()
 
   // id → nivel (dedupes; el último gana)
@@ -416,6 +438,8 @@ export async function guardarCompetenciasConCustom(
   }
 
   // Resolve custom names → IDs (upsert by nombre, which is UNIQUE)
+  // Nota H-205: Se usa createAdminClient porque hoy solo ADMIN puede insertar en el catálogo
+  // `competencia`. Este flujo lo rehace H-205 con la tabla de sugerencias.
   for (const c of customs) {
     const trimmed = c.nombre.trim()
     if (!trimmed) continue
@@ -440,9 +464,13 @@ export async function guardarCompetenciasConCustom(
   }
 
   // Replace all competencies for this profile
-  await admin.from('postulante_competencia')
+  const { error: deleteError } = await supabase.from('postulante_competencia')
     .delete()
     .eq('perfil_tecnico_id', perfilTecnicoId)
+
+  if (deleteError) {
+    return { success: false, error: 'No se pudieron guardar las competencias.' }
+  }
 
   if (niveles.size === 0) {
     await marcarCambioPerfilTecnico(postulanteId)
@@ -455,11 +483,11 @@ export async function guardarCompetenciasConCustom(
     nivel,
   }))
 
-  const { error } = await admin.from('postulante_competencia').insert(rows)
+  const { error } = await supabase.from('postulante_competencia').insert(rows)
   if (error) return { success: false, error: 'No se pudieron guardar las competencias.' }
 
-  // Fetch the saved items to return updated state to the UI
-  const { data: saved } = await admin.from('competencia')
+  // Fetch the saved items to return updated state to the UI (competencia_select_autenticado permite SELECT a authenticated)
+  const { data: saved } = await supabase.from('competencia')
     .select('id, nombre')
     .in('id', [...niveles.keys()])
 
