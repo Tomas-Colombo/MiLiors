@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
     enunciado,
     eneatipo_asociado,
     numero_pregunta,
-    codigo_original: '0',
+    // Una pregunta creada a mano no tiene código del cuestionario original.
+    codigo_original: null,
     fecha_baja: null,
     pausada: false,
   }).select('id').single()
