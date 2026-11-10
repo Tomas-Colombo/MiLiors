@@ -7,7 +7,7 @@ import { ROL_USUARIO, ESTADO_INFORME } from '@/lib/constants/enums'
 import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
 import { getInformeActual } from '@/modules/informe/queries'
-import { evaluarRequisitosVisibilidad } from './regla'
+import { evaluarRequisitosVisibilidad, MENSAJE_VISIBILIDAD_POSTULANTE } from './regla'
 import type { ActionResult } from '@/lib/types/domain'
 
 /**
@@ -48,7 +48,7 @@ export async function togglePerfilEnBusqueda(activo: boolean): Promise<ActionRes
     })
 
     if (!evaluacion.ok) {
-      return { success: false, error: evaluacion.error }
+      return { success: false, error: MENSAJE_VISIBILIDAD_POSTULANTE[evaluacion.motivo] }
     }
   }
 

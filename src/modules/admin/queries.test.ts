@@ -30,6 +30,19 @@ describe('getRequisitosVisibilidadPostulante', () => {
     expect(mockFrom).toHaveBeenCalledWith('perfil_postulante')
   })
 
+  it('lanza si la lectura del perfil falla', async () => {
+    const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'boom' } })
+    const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle })
+    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
+    const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
+
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: mockFrom,
+    } as unknown as ReturnType<typeof createAdminClient>)
+
+    await expect(getRequisitosVisibilidadPostulante('post-1')).rejects.toThrow('boom')
+  })
+
   it('evalúa correctamente dominantes e informe cuando existe el perfil', async () => {
     const mockFrom = vi.fn((table: string) => {
       if (table === 'perfil_postulante') {

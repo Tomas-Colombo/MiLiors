@@ -7,7 +7,8 @@ import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 import { patronTextoCompleto } from '@/lib/texto'
 import { getRequisitosVisibilidadPostulante } from './queries'
-import { evaluarRequisitosVisibilidad } from '@/modules/visibilidad/regla'
+import { evaluarRequisitosVisibilidad, MENSAJE_VISIBILIDAD_ADMIN } from '@/modules/visibilidad/regla'
+import type { RequisitosVisibilidad } from '@/modules/visibilidad/regla'
 import {
   crearSchemaNombreCatalogo,
   schemaNombreCatalogo,
@@ -663,10 +664,17 @@ export async function desactivarPostulante(postulanteId: string): Promise<Action
 
 export async function reactivarPostulante(postulanteId: string): Promise<ActionResult> {
   await requireAdmin()
-  const requisitos = await getRequisitosVisibilidadPostulante(postulanteId)
+  let requisitos: RequisitosVisibilidad
+  try {
+    requisitos = await getRequisitosVisibilidadPostulante(postulanteId)
+  } catch (err) {
+    console.error('[reactivarPostulante] Error leyendo los requisitos de visibilidad:', err)
+    return { success: false, error: 'No se pudo reactivar el perfil.' }
+  }
+
   const evaluacion = evaluarRequisitosVisibilidad(requisitos)
   if (!evaluacion.ok) {
-    return { success: false, error: evaluacion.error }
+    return { success: false, error: MENSAJE_VISIBILIDAD_ADMIN[evaluacion.motivo] }
   }
 
   const admin = createAdminClient()

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { evaluarRequisitosVisibilidad } from './regla'
+import {
+  evaluarRequisitosVisibilidad,
+  MENSAJE_VISIBILIDAD_ADMIN,
+  MENSAJE_VISIBILIDAD_POSTULANTE,
+} from './regla'
 
 describe('evaluarRequisitosVisibilidad', () => {
   it('falla si no existe el perfil', () => {
@@ -8,10 +12,7 @@ describe('evaluarRequisitosVisibilidad', () => {
       tieneDominante: true,
       informeListo: true,
     })
-    expect(res).toEqual({
-      ok: false,
-      error: 'No se encontró el perfil del postulante.',
-    })
+    expect(res).toEqual({ ok: false, motivo: 'sin_perfil' })
   })
 
   it('falla si no tiene test con dominante', () => {
@@ -20,10 +21,7 @@ describe('evaluarRequisitosVisibilidad', () => {
       tieneDominante: false,
       informeListo: true,
     })
-    expect(res).toEqual({
-      ok: false,
-      error: 'Debés completar el test de personalidad antes de hacer visible tu perfil.',
-    })
+    expect(res).toEqual({ ok: false, motivo: 'sin_test' })
   })
 
   it('falla si el informe no está listo', () => {
@@ -32,10 +30,7 @@ describe('evaluarRequisitosVisibilidad', () => {
       tieneDominante: true,
       informeListo: false,
     })
-    expect(res).toEqual({
-      ok: false,
-      error: 'Tu informe de personalidad debe estar listo antes de hacer visible tu perfil.',
-    })
+    expect(res).toEqual({ ok: false, motivo: 'informe_pendiente' })
   })
 
   it('devuelve ok si cumple todas las condiciones', () => {
@@ -45,5 +40,19 @@ describe('evaluarRequisitosVisibilidad', () => {
       informeListo: true,
     })
     expect(res).toEqual({ ok: true })
+  })
+
+  it('conserva los mensajes del postulante', () => {
+    expect(MENSAJE_VISIBILIDAD_POSTULANTE).toEqual({
+      sin_perfil: 'No se encontró el perfil del postulante.',
+      sin_test: 'Debés completar el test de personalidad antes de hacer visible tu perfil.',
+      informe_pendiente: 'Tu informe de personalidad debe estar listo antes de hacer visible tu perfil.',
+    })
+  })
+
+  it('le habla al admin en tercera persona', () => {
+    for (const mensaje of Object.values(MENSAJE_VISIBILIDAD_ADMIN)) {
+      expect(mensaje).not.toMatch(/\b(Debés|Tu|tu)\b/)
+    }
   })
 })

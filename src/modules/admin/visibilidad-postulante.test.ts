@@ -41,8 +41,17 @@ describe('Moderación de visibilidad de postulante desde admin (H-215)', () => {
       const res = await reactivarPostulante('postulante-1')
       expect(res).toEqual({
         success: false,
-        error: 'Debés completar el test de personalidad antes de hacer visible tu perfil.',
+        error: 'No se puede reactivar: el postulante no completó el test de personalidad.',
       })
+      expect(createAdminClient).not.toHaveBeenCalled()
+    })
+
+    it('no confunde un error de lectura con un requisito incumplido', async () => {
+      vi.mocked(getRequisitosVisibilidadPostulante).mockRejectedValueOnce(new Error('timeout'))
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const res = await reactivarPostulante('postulante-1')
+      expect(res).toEqual({ success: false, error: 'No se pudo reactivar el perfil.' })
       expect(createAdminClient).not.toHaveBeenCalled()
     })
 

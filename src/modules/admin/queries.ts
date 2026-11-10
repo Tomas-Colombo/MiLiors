@@ -1042,6 +1042,9 @@ export function agregarPorCompetencia(rows: FeedbackCompetenciaRow[]): AgregadoC
 /**
  * Consulta con cliente admin (bypasseando RLS) los requisitos para que un
  * postulante pueda tener visibilidad de búsqueda activa (H-215).
+ *
+ * Lanza si alguna consulta falla: un error de lectura no puede confundirse con
+ * "no cumple el requisito", porque el admin vería un motivo falso.
  */
 export async function getRequisitosVisibilidadPostulante(
   postulanteId: string,
@@ -1049,11 +1052,13 @@ export async function getRequisitosVisibilidadPostulante(
   const admin = createAdminClient()
 
   // 1. Verificar si existe el perfil del postulante
-  const { data: perfil } = await admin
+  const { data: perfil, error: errorPerfil } = await admin
     .from('perfil_postulante')
     .select('id')
     .eq('id', postulanteId)
     .maybeSingle()
+
+  if (errorPerfil) throw new Error(`No se pudo leer el perfil: ${errorPerfil.message}`)
 
   if (!perfil) {
     return {
@@ -1063,22 +1068,29 @@ export async function getRequisitosVisibilidadPostulante(
     }
   }
 
-  // 2. Verificar test de eneagrama con al menos un dominante
-  const { data: test } = await admin
-    .from('test_eneagrama')
-    .select('id, test_eneagrama_dominante(id)')
-    .eq('postulante_id', postulanteId)
-    .maybeSingle()
+  // 2. Test de eneagrama con al menos un dominante y 3. informe en estado LISTO.
+  // Mismos criterios que getTestEneagramaDePostulante y getInformeActual.
+  const [resTest, resInforme] = await Promise.all([
+    admin
+      .from('test_eneagrama')
+      .select('id, test_eneagrama_dominante(id)')
+      .eq('postulante_id', postulanteId)
+      .maybeSingle(),
+    admin
+      .from('informe_personalidad')
+      .select('id, estado_informe')
+      .eq('postulante_id', postulanteId)
+      .maybeSingle(),
+  ])
+
+  if (resTest.error) throw new Error(`No se pudo leer el test: ${resTest.error.message}`)
+  if (resInforme.error) throw new Error(`No se pudo leer el informe: ${resInforme.error.message}`)
+
+  const test = resTest.data
+  const informe = resInforme.data
 
   const dominantes = (test as unknown as { test_eneagrama_dominante?: { id: string }[] } | null)?.test_eneagrama_dominante
   const tieneDominante = Array.isArray(dominantes) && dominantes.length > 0
-
-  // 3. Verificar informe de personalidad generado en estado LISTO
-  const { data: informe } = await admin
-    .from('informe_personalidad')
-    .select('id, estado_informe')
-    .eq('postulante_id', postulanteId)
-    .maybeSingle()
 
   const informeListo = (informe as { estado_informe: string } | null)?.estado_informe === ESTADO_INFORME.LISTO
 
