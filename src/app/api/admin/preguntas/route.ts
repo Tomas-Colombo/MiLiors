@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 import { autorizarAdmin } from '@/lib/api-auth'
+import { schemaEnunciadoPregunta, schemaEneatipo } from '@/modules/admin/schema'
 
 export async function POST(req: NextRequest) {
   // Verificar sesión y rol ADMIN
@@ -19,13 +20,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body inválido.' }, { status: 400 })
   }
 
-  const enunciado = body.enunciado?.toString().trim()
-  const eneatipo_asociado = Number(body.eneatipo_asociado)
+  const parsedEnunciado = schemaEnunciadoPregunta.safeParse(body.enunciado?.toString() ?? '')
+  if (!parsedEnunciado.success) {
+    return NextResponse.json({ error: parsedEnunciado.error.issues[0].message }, { status: 422 })
+  }
+  const enunciado = parsedEnunciado.data
 
-  if (!enunciado)
-    return NextResponse.json({ error: 'El enunciado no puede estar vacío.' }, { status: 422 })
-  if (isNaN(eneatipo_asociado) || eneatipo_asociado < 1 || eneatipo_asociado > 9)
+  const parsedEneatipo = schemaEneatipo.safeParse(Number(body.eneatipo_asociado))
+  if (!parsedEneatipo.success) {
     return NextResponse.json({ error: 'Eneatipo debe ser entre 1 y 9.' }, { status: 422 })
+  }
+  const eneatipo_asociado = parsedEneatipo.data
 
   const admin = createAdminClient()
 

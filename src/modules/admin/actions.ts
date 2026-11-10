@@ -6,6 +6,14 @@ import { verifySession } from '@/lib/dal'
 import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 import { patronTextoCompleto } from '@/lib/texto'
+import {
+  crearSchemaNombreCatalogo,
+  schemaNombreCatalogo,
+  crearSchemaEnunciadoPregunta,
+  schemaEneatipo,
+  schemaVersionTyC,
+  schemaDescripcionTyC,
+} from './schema'
 
 // Guard ADMIN
 async function requireAdmin() {
@@ -21,8 +29,10 @@ export async function crearSector(
   formData: FormData
 ): Promise<ActionResult> {
   await requireAdmin()
-  const nombre = formData.get('nombre_sector')?.toString().trim()
-  if (!nombre) return { success: false, error: 'Ingresá un nombre de sector.' }
+  const rawNombre = formData.get('nombre_sector')?.toString() ?? ''
+  const parsed = crearSchemaNombreCatalogo('Ingresá un nombre de sector.').safeParse(rawNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const nombre = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('sector_industrial').insert({ nombre_sector: nombre })
@@ -62,8 +72,10 @@ export async function crearCompetencia(
   formData: FormData
 ): Promise<ActionResult> {
   await requireAdmin()
-  const nombre = formData.get('nombre')?.toString().trim()
-  if (!nombre) return { success: false, error: 'Ingresá un nombre de competencia.' }
+  const rawNombre = formData.get('nombre')?.toString() ?? ''
+  const parsed = crearSchemaNombreCatalogo('Ingresá un nombre de competencia.').safeParse(rawNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const nombre = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('competencia').insert({ nombre })
@@ -103,8 +115,10 @@ export async function crearIdioma(
   formData: FormData
 ): Promise<ActionResult> {
   await requireAdmin()
-  const nombre = formData.get('nombre')?.toString().trim()
-  if (!nombre) return { success: false, error: 'Ingresá un nombre de idioma.' }
+  const rawNombre = formData.get('nombre')?.toString() ?? ''
+  const parsed = crearSchemaNombreCatalogo('Ingresá un nombre de idioma.').safeParse(rawNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const nombre = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('idioma_catalogo').insert({ nombre })
@@ -168,14 +182,15 @@ async function carreraConMismoNombre(
   return filas[0] ?? null
 }
 
-
 export async function crearCarrera(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
   await requireAdmin()
-  const nombre = formData.get('nombre')?.toString().trim()
-  if (!nombre) return { success: false, error: 'Ingresá el nombre de la carrera.' }
+  const rawNombre = formData.get('nombre')?.toString() ?? ''
+  const parsed = crearSchemaNombreCatalogo('Ingresá el nombre de la carrera.').safeParse(rawNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const nombre = parsed.data
 
   const admin = createAdminClient()
   const duplicada = await carreraConMismoNombre(admin, nombre)
@@ -193,8 +208,9 @@ export async function crearCarrera(
 
 export async function renombrarCarrera(id: string, nuevoNombre: string): Promise<ActionResult> {
   await requireAdmin()
-  const limpio = nuevoNombre.trim()
-  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+  const parsed = schemaNombreCatalogo.safeParse(nuevoNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const limpio = parsed.data
 
   const admin = createAdminClient()
   const duplicada = await carreraConMismoNombre(admin, limpio, id)
@@ -248,9 +264,13 @@ export async function promoverCarreraOtra(
   nombreOficial?: string,
 ): Promise<ActionResult> {
   await requireAdmin()
-  const original = textoLibre.trim()
-  const oficial = (nombreOficial ?? textoLibre).trim()
-  if (!original || !oficial) return { success: false, error: 'Nombre inválido.' }
+  const parsedOriginal = crearSchemaNombreCatalogo('Nombre inválido.').safeParse(textoLibre)
+  if (!parsedOriginal.success) return { success: false, error: parsedOriginal.error.issues[0].message }
+  const original = parsedOriginal.data
+
+  const parsedOficial = crearSchemaNombreCatalogo('Nombre inválido.').safeParse(nombreOficial ?? textoLibre)
+  if (!parsedOficial.success) return { success: false, error: parsedOficial.error.issues[0].message }
+  const oficial = parsedOficial.data
 
   const admin = createAdminClient()
 
@@ -293,8 +313,10 @@ export async function crearProvincia(
   formData: FormData
 ): Promise<ActionResult> {
   await requireAdmin()
-  const nombre = formData.get('nombre')?.toString().trim()
-  if (!nombre) return { success: false, error: 'Ingresá el nombre de la provincia.' }
+  const rawNombre = formData.get('nombre')?.toString() ?? ''
+  const parsed = crearSchemaNombreCatalogo('Ingresá el nombre de la provincia.').safeParse(rawNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const nombre = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('provincia').insert({ nombre })
@@ -307,8 +329,9 @@ export async function crearProvincia(
 
 export async function renombrarProvincia(id: string, nombre: string): Promise<ActionResult> {
   await requireAdmin()
-  const limpio = nombre.trim()
-  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+  const parsed = schemaNombreCatalogo.safeParse(nombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const limpio = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('provincia').update({ nombre: limpio }).eq('id', id)
@@ -347,9 +370,12 @@ export async function crearDepartamento(
 ): Promise<ActionResult> {
   await requireAdmin()
   const provinciaId = formData.get('provincia_id')?.toString()
-  const nombre = formData.get('nombre')?.toString().trim()
   if (!provinciaId) return { success: false, error: 'Seleccioná una provincia primero.' }
-  if (!nombre) return { success: false, error: 'Ingresá el nombre del departamento.' }
+
+  const rawNombre = formData.get('nombre')?.toString() ?? ''
+  const parsed = crearSchemaNombreCatalogo('Ingresá el nombre del departamento.').safeParse(rawNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const nombre = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('departamento').insert({
@@ -365,8 +391,9 @@ export async function crearDepartamento(
 
 export async function renombrarDepartamento(id: string, nombre: string): Promise<ActionResult> {
   await requireAdmin()
-  const limpio = nombre.trim()
-  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+  const parsed = schemaNombreCatalogo.safeParse(nombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const limpio = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('departamento').update({ nombre: limpio }).eq('id', id)
@@ -405,9 +432,12 @@ export async function crearLocalidad(
 ): Promise<ActionResult> {
   await requireAdmin()
   const departamentoId = formData.get('departamento_id')?.toString()
-  const nombre = formData.get('nombre')?.toString().trim()
   if (!departamentoId) return { success: false, error: 'Seleccioná un departamento primero.' }
-  if (!nombre) return { success: false, error: 'Ingresá el nombre de la localidad.' }
+
+  const rawNombre = formData.get('nombre')?.toString() ?? ''
+  const parsed = crearSchemaNombreCatalogo('Ingresá el nombre de la localidad.').safeParse(rawNombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const nombre = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('localidad').insert({
@@ -422,8 +452,9 @@ export async function crearLocalidad(
 
 export async function renombrarLocalidad(id: string, nombre: string): Promise<ActionResult> {
   await requireAdmin()
-  const limpio = nombre.trim()
-  if (!limpio) return { success: false, error: 'El nombre no puede quedar vacío.' }
+  const parsed = schemaNombreCatalogo.safeParse(nombre)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+  const limpio = parsed.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('localidad').update({ nombre: limpio }).eq('id', id)
@@ -464,12 +495,21 @@ export async function editarPregunta(
 ): Promise<ActionResult> {
   await requireAdmin()
   const id = formData.get('id')?.toString()
-  const enunciado = formData.get('enunciado')?.toString().trim()
-  const eneatipo_asociado = Number(formData.get('eneatipo_asociado'))
+  if (!id) return { success: false, error: 'Datos incompletos.' }
 
-  if (!id || !enunciado) return { success: false, error: 'Datos incompletos.' }
-  if (isNaN(eneatipo_asociado) || eneatipo_asociado < 1 || eneatipo_asociado > 9)
+  const rawEnunciado = formData.get('enunciado')?.toString() ?? ''
+  const parsedEnunciado = crearSchemaEnunciadoPregunta('Datos incompletos.').safeParse(rawEnunciado)
+  if (!parsedEnunciado.success) {
+    return { success: false, error: parsedEnunciado.error.issues[0].message }
+  }
+  const enunciado = parsedEnunciado.data
+
+  const rawEneatipo = Number(formData.get('eneatipo_asociado'))
+  const parsedEneatipo = schemaEneatipo.safeParse(rawEneatipo)
+  if (!parsedEneatipo.success) {
     return { success: false, error: 'Eneatipo debe ser entre 1 y 9.' }
+  }
+  const eneatipo_asociado = parsedEneatipo.data
 
   const admin = createAdminClient()
   const { error } = await admin.from('pregunta_eneagrama')
@@ -512,12 +552,20 @@ export async function publicarTyC(
   formData: FormData
 ): Promise<ActionResult> {
   await requireAdmin()
-  const version = formData.get('version')?.toString().trim()
-  const descripcion = formData.get('descripcion')?.toString().trim()
+  const rawVersion = formData.get('version')?.toString() ?? ''
+  const rawDescripcion = formData.get('descripcion')?.toString() ?? ''
 
-  if (!version) return { success: false, error: 'Ingresá el número de versión.' }
-  if (!descripcion || descripcion.length < 20)
-    return { success: false, error: 'El contenido de los términos es demasiado corto.' }
+  const parsedVersion = schemaVersionTyC.safeParse(rawVersion)
+  if (!parsedVersion.success) {
+    return { success: false, error: parsedVersion.error.issues[0].message }
+  }
+  const version = parsedVersion.data
+
+  const parsedDescripcion = schemaDescripcionTyC.safeParse(rawDescripcion)
+  if (!parsedDescripcion.success) {
+    return { success: false, error: parsedDescripcion.error.issues[0].message }
+  }
+  const descripcion = parsedDescripcion.data
 
   const admin = createAdminClient()
 
