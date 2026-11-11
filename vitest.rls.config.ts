@@ -5,6 +5,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['test/rls/**/*.rls.ts'],
+    // The suites share one local Auth service and seed users in beforeAll;
+    // running files one at a time avoids contention on a cold stack.
+    fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 30000,
     exclude: [
