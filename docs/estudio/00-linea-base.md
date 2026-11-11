@@ -242,3 +242,62 @@ Referencia de riesgo de escritura en producción: [H-002](hallazgos.md).
 46. `20260924000008_perfil_fecha_nacimiento.sql`
 47. `20261028000000_endurecer_funciones_security_definer.sql`
 *(Excluidos seeds auxiliares: `seed.sql`, `seed_informe_mock.sql`, `seed_ubicacion.sql`).*
+
+---
+
+## 6. Repetición de la Fase 0 (Etapa B, 11/11/2026)
+
+Se repitió la línea base en la rama `fase-6/etapa-a`, con todas las migraciones de la Etapa B aplicadas en el stack local (`supabase db reset --local`). Esta vez la suite E2E sí corrió, contra el Supabase local y nunca contra producción ([H-002](hallazgos.md) resuelto).
+
+### Comparación de comandos
+
+| Comando | Línea base (Fase 0) | Etapa B | Diferencia |
+| --- | --- | --- | --- |
+| `npx tsc --noEmit` | exit 0 | exit 0 (~3 s) | Sin cambios |
+| `npm run lint` | exit 0, 372 warnings en `.agents/` | exit 0, 0 warnings | [H-004](hallazgos.md) resuelto (commit 43d9932) |
+| `npm test` | 32 suites, 281 tests | 58 suites, 451 tests | +170 tests |
+| `npm run test:rls` | No existía | 6 archivos, 38 tests | Nuevo: RLS contra el stack local |
+| `npm run build` | 51 páginas | 52 páginas | Sin errores |
+| `npx playwright test` | No se ejecutó (apuntaba a producción) | **53/53 pasan, 0 skips** (~2 min) | Primera corrida real |
+
+### Cómo corre ahora la suite E2E
+
+- `playwright.config.ts` toma las credenciales de `supabase status` y aborta si el host no es `127.0.0.1`/`localhost` o si la URL menciona el proyecto productivo (`e2e/support/entorno-local.ts`). Sin stack local, la config no carga.
+- Playwright levanta su propio `next dev` en el puerto 3100 y le pasa las credenciales locales como variables de proceso, que pisan a `.env.local`. Gemini y el mail transaccional quedan apagados. No se admite `PLAYWRIGHT_BASE_URL`, porque apuntar a un servidor externo saltearía el guard.
+- `e2e/global-setup.ts` siembra cuatro cuentas fijas (`@example.test`): un postulante visible con certificado vigente, un reclutador con empresa, un reclutador sin empresa y un admin. La contraseña es aleatoria por corrida.
+- `e2e/global-teardown.ts` borra esas cuentas y todo lo que generaron, incluidas las cuentas de los specs de registro. Después de la corrida, la base local quedó con 0 usuarios, 0 empresas y 0 puestos.
+
+### Lo que encontró la primera corrida
+
+La primera corrida dio 33 pasan y 21 fallan. Casi todas las fallas eran specs desactualizados respecto de la UI, no bugs:
+
+| Causa | Specs afectados | Corrección |
+| --- | --- | --- |
+| El formulario de puestos usa selects propios, ya no `<select>` nativo ni el campo "Idioma requerido"; publicar abre un modal de confirmación | puestos, postulaciones | Helper único `e2e/support/puestos.ts` |
+| El registro exige confirmar el mail (igual que producción): no hay sesión hasta confirmar | TC-AUTH-001, TC-AUTH-002 | El test verifica el aviso, confirma la cuenta y entra |
+| El sidebar ya no restaura filtros (decisión de diseño: solo lo hace "Volver") | filtros-memoria | Specs reescritos con el comportamiento vigente |
+| Textos y selectores viejos (recuperar contraseña, notas, "No avanzar" con confirmación) | auth, notas, postulaciones | Selectores actualizados |
+| Skips condicionales por falta de datos (sin certificado, sin candidatos) | postulaciones, notas, filtros, onboarding | El seed garantiza los datos; la falta ahora es una falla, no un skip |
+
+Una falla sí era de código: **TC-ONB-REC-007**. El QA_PLAN lo tenía aprobado, pero `/reclutador/onboarding` nunca redirigía a un reclutador que ya tenía empresa. Se agregó el redirect a `/reclutador/puestos`: el onboarding es para la primera empresa y las siguientes se cargan desde "Mis empresas".
+
+### QA_PLAN.md
+
+Con la suite en verde se marcaron 22 casos más como aprobados. Solo se marcaron los casos cuya aserción en el spec coincide con el resultado esperado del caso. Quedan pendientes, aunque tengan un test parecido:
+
+- TC-AUTH-015: el spec navega a una ruta protegida, no prueba el botón atrás.
+- TC-AUTH-016: el spec verifica el aviso, no el mail.
+- TC-ONB-REC-005, TC-ONB-POS-003 y TC-ONB-POS-004: el spec verifica que no avanza, no el mensaje de error.
+- TC-POST-010 y TC-NOTA-005: con un solo reclutador no se prueba el aislamiento entre reclutadores (lo cubre `npm run test:rls`).
+
+| Métrica | Línea base | Etapa B |
+| --- | --- | --- |
+| Casos con estado | 158 | 139 (más 15 en la tabla de funcionalidades futuras) |
+| ✅ Aprobados | 22 | 44 |
+| ⬜ Pendientes | 136 | 95 |
+| 🔴 críticos pendientes | 77 | 49 |
+
+### Pendiente fuera de este paso
+
+- Advisors de Supabase: no se repitieron contra producción porque producción todavía no tiene las migraciones de la Etapa B. Las migraciones de [H-009](hallazgos.md) y [H-010](hallazgos.md) llevan postcondiciones que abortan si queda alguna política sin envolver o duplicada.
+- CI (`.github/workflows/ci.yml`) sigue sin correr E2E: necesitaría levantar el stack de Supabase en el runner.

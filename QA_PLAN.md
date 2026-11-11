@@ -1,6 +1,8 @@
 # QA Plan — MiLiors
 
 > Leyenda: ⬜ Pendiente · ✅ Aprobado · ❌ Falló
+>
+> **E2E automatizados (Playwright):** corren solo contra el Supabase local. Con el stack levantado (`supabase start`), `npm run test:e2e` siembra las cuentas, levanta la app en el puerto 3100 y al final borra todo. La config aborta si el entorno no es local. Última corrida: 11/11/2026, 53/53 sin skips.
 
 ---
 
@@ -9,25 +11,25 @@
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
 | TC-AUTH-001 | Registro exitoso como RECLUTADOR → redirige a /reclutador/onboarding | 🔴 | ✅ |
-| TC-AUTH-002 | Registro exitoso como POSTULANTE → redirige a /postulante/onboarding | 🔴 | ⬜ |
-| TC-AUTH-003 | Registro con email ya existente → error | 🔴 | ⬜ |
+| TC-AUTH-002 | Registro exitoso como POSTULANTE → redirige a /postulante/onboarding | 🔴 | ✅ |
+| TC-AUTH-003 | Registro con email ya existente → error | 🔴 | ✅ |
 | TC-AUTH-004 | Password sin mayúscula → error de validación | 🟡 | ✅ |
 | TC-AUTH-005 | Password sin número → error de validación | 🟡 | ✅ |
-| TC-AUTH-006 | Password < 8 chars → error | 🟡 | ⬜ |
+| TC-AUTH-006 | Password < 8 chars → error | 🟡 | ✅ |
 | TC-AUTH-007 | Passwords no coinciden → error | 🟡 | ✅ |
 | TC-AUTH-008 | Email con formato inválido → error | 🟡 | ✅ |
 | TC-AUTH-009 | Login RECLUTADOR → redirige a /reclutador | 🔴 | ✅ |
-| TC-AUTH-010 | Login POSTULANTE → redirige a /postulante | 🔴 | ⬜ |
-| TC-AUTH-011 | Login ADMIN → redirige a /admin | 🔴 | ⬜ |
+| TC-AUTH-010 | Login POSTULANTE → redirige a /postulante | 🔴 | ✅ |
+| TC-AUTH-011 | Login ADMIN → redirige a /admin | 🔴 | ✅ |
 | TC-AUTH-012 | Login con password incorrecto → error genérico (no revela si el email existe) | 🔴 | ✅ |
 | TC-AUTH-013 | Login con email no registrado → mismo mensaje que TC-AUTH-012 | 🔴 | ✅ |
-| TC-AUTH-014 | Logout → sesión destruida, redirige a /iniciar-sesion | 🔴 | ⬜ |
+| TC-AUTH-014 | Logout → sesión destruida, redirige a /iniciar-sesion | 🔴 | ✅ |
 | TC-AUTH-015 | Post-logout, botón atrás del browser → no accede a páginas protegidas | 🔴 | ⬜ |
 | TC-AUTH-016 | Recuperar password con email registrado → email enviado | 🟡 | ⬜ |
-| TC-AUTH-017 | Recuperar password con email no registrado → misma respuesta (no revela existencia) | 🔴 | ⬜ |
-| TC-AUTH-018 | Acceso directo a /reclutador sin sesión → redirige a /iniciar-sesion | 🔴 | ⬜ |
-| TC-AUTH-019 | POSTULANTE intenta acceder a /reclutador → prohibido | 🔴 | ⬜ |
-| TC-AUTH-020 | RECLUTADOR intenta acceder a /admin → prohibido | 🔴 | ⬜ |
+| TC-AUTH-017 | Recuperar password con email no registrado → misma respuesta (no revela existencia) | 🔴 | ✅ |
+| TC-AUTH-018 | Acceso directo a /reclutador sin sesión → redirige a /iniciar-sesion | 🔴 | ✅ |
+| TC-AUTH-019 | POSTULANTE intenta acceder a /reclutador → prohibido | 🔴 | ✅ |
+| TC-AUTH-020 | RECLUTADOR intenta acceder a /admin → prohibido | 🔴 | ✅ |
 | TC-AUTH-021 | TyC Gate — usuario sin TyC aceptado ve modal bloqueante | 🔴 | ✅ |
 | TC-AUTH-022 | TyC Gate — aceptar TyC dos veces seguidas → sin error (idempotente) | 🟡 | ⬜ |
 | TC-AUTH-023 | Admin revoca una sesión → el usuario es deslogueado en ≤ 60 s | 🔴 🔒 | ⬜ |
@@ -40,7 +42,7 @@
 |----|------|-----|--------|
 | TC-ONB-REC-001 | Completar con solo nombre_empresa → redirige a /reclutador/puestos | 🔴 | ✅ |
 | TC-ONB-REC-002 | Completar con todos los campos (nombre, descripción, URL) | 🟡 | ⬜ |
-| TC-ONB-REC-003 | nombre_empresa < 2 chars → error | 🟡 | ⬜ |
+| TC-ONB-REC-003 | nombre_empresa < 2 chars → error | 🟡 | ✅ |
 | TC-ONB-REC-004 | descripcion > 1000 chars → error | 🟡 | ⬜ |
 | TC-ONB-REC-005 | url_empresa con formato inválido → error | 🟡 | ⬜ |
 | TC-ONB-REC-006 | url_empresa vacía → aceptada (opcional) | 🟢 | ✅ |
@@ -53,7 +55,7 @@
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
 | TC-ONB-POS-001 | Completar con solo nombre_completo → redirige a /postulante/eneagrama | 🔴 | ✅ |
-| TC-ONB-POS-002 | nombre_completo vacío → error | 🔴 | ⬜ |
+| TC-ONB-POS-002 | nombre_completo vacío → error | 🔴 | ✅ |
 | TC-ONB-POS-003 | enlace_linkedin con URL inválida → error | 🟡 | ⬜ |
 | TC-ONB-POS-004 | portfolio con URL inválida → error | 🟡 | ⬜ |
 | TC-ONB-POS-005 | especificidad_puesto > 200 chars → error | 🟡 | ⬜ |
@@ -74,17 +76,17 @@
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
 | TC-PUE-001 | Crear puesto con todos los campos → aparece en /reclutador/puestos | 🔴 | ✅ |
-| TC-PUE-002 | Crear puesto sin titulo_puesto → error | 🔴 | ⬜ |
-| TC-PUE-003 | titulo_puesto < 3 chars → error | 🟡 | ⬜ |
+| TC-PUE-002 | Crear puesto sin titulo_puesto → error | 🔴 | ✅ |
+| TC-PUE-003 | titulo_puesto < 3 chars → error | 🟡 | ✅ |
 | TC-PUE-004 | titulo_puesto > 200 chars → error | 🟡 | ⬜ |
 | TC-PUE-005 | descripcion_texto > 3000 chars → error | 🟡 | ⬜ |
 | TC-PUE-006 | perfil_psicologico_deseado > 2000 chars → error | 🟡 | ⬜ |
-| TC-PUE-007 | Puesto activo aparece en /postulante/puestos | 🔴 | ⬜ |
-| TC-PUE-008 | **perfil_psicologico_deseado NO aparece en vista del candidato** | 🔴 🔒 | ⬜ |
+| TC-PUE-007 | Puesto activo aparece en /postulante/puestos | 🔴 | ✅ |
+| TC-PUE-008 | **perfil_psicologico_deseado NO aparece en vista del candidato** | 🔴 🔒 | ✅ |
 | TC-PUE-009 | **perfil_psicologico_deseado NO aparece en ninguna respuesta de API pública** | 🔴 🔒 | ⬜ |
 | TC-PUE-010 | Editar puesto propio → cambios reflejados | 🔴 | ✅ |
 | TC-PUE-011 | Editar puesto ajeno → prohibido | 🔴 🔒 | ⬜ |
-| TC-PUE-012 | Cerrar puesto → activo=false, desaparece de /postulante/puestos | 🔴 | ⬜ |
+| TC-PUE-012 | Cerrar puesto → activo=false, desaparece de /postulante/puestos | 🔴 | ✅ |
 | TC-PUE-013 | Cerrar puesto → postulaciones ENVIADA y VISTO pasan a CERRADA | 🔴 | ⬜ |
 | TC-PUE-014 | Reactivar puesto → vuelve a aparecer en /postulante/puestos | 🔴 | ✅ |
 | TC-PUE-015 | Filtrar por sector en vista candidato | 🟡 | ⬜ |
@@ -131,12 +133,12 @@
 
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
-| TC-NOTA-001 | Crear nota sobre candidato → guardada | 🔴 | ⬜ |
+| TC-NOTA-001 | Crear nota sobre candidato → guardada | 🔴 | ✅ |
 | TC-NOTA-002 | Crear nota asociada a un puesto → guardada con relación | 🟡 | ⬜ |
-| TC-NOTA-003 | Editar nota existente → contenido actualizado | 🟡 | ⬜ |
-| TC-NOTA-004 | Eliminar nota → desaparece | 🟡 | ⬜ |
+| TC-NOTA-003 | Editar nota existente → contenido actualizado | 🟡 | ✅ |
+| TC-NOTA-004 | Eliminar nota → desaparece | 🟡 | ✅ |
 | TC-NOTA-005 | **Nota de Reclutador A no visible para Reclutador B** | 🔴 🔒 | ⬜ |
-| TC-NOTA-006 | **Candidato NO puede ver sus propias notas** | 🔴 🔒 | ⬜ |
+| TC-NOTA-006 | **Candidato NO puede ver sus propias notas** | 🔴 🔒 | ✅ |
 
 ---
 
@@ -240,7 +242,7 @@
 | TC-ADM-006 | Desactivar candidato → desaparece de búsqueda | 🔴 | ⬜ |
 | TC-ADM-007 | Admin ve lista de empresas con reclutadores | 🟡 | ⬜ |
 | TC-ADM-008 | Monitor de informes muestra estados LISTO/PENDIENTE/ERROR | 🟡 | ⬜ |
-| TC-ADM-009 | **No-ADMIN intenta acceder a /admin → prohibido** | 🔴 🔒 | ⬜ |
+| TC-ADM-009 | **No-ADMIN intenta acceder a /admin → prohibido** | 🔴 🔒 | ✅ |
 
 ---
 
