@@ -301,9 +301,23 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
   - `src/app/(postulante)/postulante/puestos/[id]/page.tsx`
   - `src/app/(postulante)/postulante/reclutadores/[id]/page.tsx`
   - `src/app/(postulante)/postulante/postulaciones/page.tsx`
+  - `src/modules/perfil-tecnico/queries.ts`
+  - `src/modules/perfil-tecnico/certificado.ts` (nuevo)
+  - `src/modules/perfil-tecnico/actions.test.ts` (nuevo)
+  - `src/components/perfil-tecnico/use-seleccion-competencias.ts`
+  - `src/components/perfil-tecnico/competencias-seleccionadas.tsx`
+  - `src/modules/admin/queries.ts`
+  - `src/modules/admin/actions.ts`
+  - `src/modules/admin/actions.test.ts` (nuevo)
+  - `src/app/(admin)/admin/competencias/page.tsx`
+  - `src/app/(admin)/admin/competencias/competencias-ui.tsx`
+  - `supabase/migrations/20261114000000_competencia_sugerida.sql` (nuevo)
+  - `supabase/SETUP.md`
+  - `test/rls/competencia-sugerida.rls.ts` (nuevo)
+  - `src/lib/types/database.types.ts`
 - **Diff estimado:** ~350 líneas.
 - **Dependencias:** `PQ-02` (requiere H-213 resuelto en base), `PQ-03`.
-- **Cambios en base de datos:** Ninguno.
+- **Cambios en base de datos:** Migración `supabase/migrations/20261114000000_competencia_sugerida.sql` con creación de tabla `competencia_sugerida`, políticas RLS para postulante y admin, reemplazo de `competencia_nombre_key` por índice único insensible a mayúsculas `competencia_nombre_lower_key` y consulta previa de verificación en `supabase/SETUP.md`.
 - **Detalle de implementación:**
   - [H-107](hallazgos.md): Exportar helper memoizado `getPostulanteId()` con `cache()` en `src/modules/perfil/queries.ts`.
   - [H-100](hallazgos.md): En `src/modules/perfil-tecnico/actions.ts`, reemplazar `createAdminClient()` por `createClient()` en funciones de alta (experiencia, educación, cursos, idiomas, competencias) respetando RLS (Grupo 1.1).
