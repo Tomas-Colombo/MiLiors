@@ -13,6 +13,7 @@ import { calcularResultadoEneagrama, ErrorRespuestasIncompletas } from './calcul
 import { validarCalidadTest } from './quality-validator'
 import { evaluarRehacer, formatearFecha } from './rehacer-policy'
 import { generarInforme } from '@/modules/informe/actions'
+import { logError } from '@/lib/logger'
 
 /**
  * Todo perfil nuevo arranca con Español como idioma nativo: es el idioma del
@@ -349,52 +350,46 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
     (d): d is NonNullable<typeof d> => d !== null
   )
 
-  // Actualizar test_eneagrama (ya sin eneatipo_id). Recién acá, con el resultado
-  // ya validado, se sobrescribe el intento anterior — nunca antes de validar.
-  await admin.from('test_eneagrama')
-    .update({
-      ala: resultado.ala,
-      tiene_empate_dominante: resultado.tieneEmpateDominante,
-      dominantes_empate: resultado.tieneEmpateDominante ? resultado.dominantes : null,
-      tiene_empate_ala: resultado.tieneEmpateAla,
-      fecha_realizacion: new Date().toISOString(),
-      // Sólo cuentan las realizaciones con resultado válido: un intento
-      // descartado por calidad no consume la espera de 6 meses.
-      veces_completado: (testTyped.veces_completado ?? 0) + 1,
-    })
-    .eq('id', testId)
+  // Guardado atómico del resultado del test en una única transacción (H-207).
+  const dominantesJson = dominantesValidos.map(d => ({
+    eneatipo_id: d.id,
+    puntaje_crudo: d.puntajeCrudo,
+    porcentaje: d.porcentaje,
+  }))
 
-  // Borrar dominantes anteriores e insertar los nuevos
-  await admin.from('test_eneagrama_dominante')
-    .delete()
-    .eq('test_eneagrama_id', testId)
-
-  await admin.from('test_eneagrama_dominante')
-    .insert(dominantesValidos.map(d => ({
-      test_eneagrama_id: testId,
-      eneatipo_id: d.id,
-      puntaje_crudo: d.puntajeCrudo,
-      porcentaje: d.porcentaje,
-    })))
-
-  // Persistir los 9 puntajes en resultado_puntaje_eneagrama
-  const filasPuntaje = resultado.puntajes.map(p => ({
-    test_eneagrama_id: testId,
+  const puntajesJson = resultado.puntajes.map(p => ({
     eneatipo_numero: p.eneatipo,
     puntaje_crudo: p.puntajeCrudo,
     porcentaje: p.porcentaje,
   }))
-  await admin.from('resultado_puntaje_eneagrama')
-    .upsert(filasPuntaje, { onConflict: 'test_eneagrama_id,eneatipo_numero' })
+
+  const { error: rpcError } = await admin.rpc('guardar_resultado_eneagrama', {
+    p_test_id: testId,
+    p_ala: resultado.ala,
+    p_tiene_empate_dominante: resultado.tieneEmpateDominante,
+    p_dominantes_empate: resultado.tieneEmpateDominante ? resultado.dominantes : null,
+    p_tiene_empate_ala: resultado.tieneEmpateAla,
+    p_dominantes: dominantesJson,
+    p_puntajes: puntajesJson,
+  })
+
+  if (rpcError) {
+    logError('calcularEneatipo.guardar_resultado_eneagrama', rpcError, { testId })
+    return { success: false, error: 'Error al guardar el resultado del Eneagrama.' }
+  }
 
   // Informe de personalidad: la primera vez se genera automáticamente; al REHACER
   // el test (ya había un informe LISTO) solo se marca DESACTUALIZADO — el postulante
   // lo regenera manualmente desde /postulante/informe (ahorra créditos de IA).
-  const { data: informeExistente } = await supabase
+  const { data: informeExistente, error: errInformeExistente } = await supabase
     .from('informe_personalidad')
     .select('id, estado_informe, contenido_json')
     .eq('postulante_id', testTyped.postulante_id)
     .single()
+
+  if (errInformeExistente && errInformeExistente.code !== 'PGRST116') {
+    logError('calcularEneatipo.informe_personalidad_select', errInformeExistente, { postulanteId: testTyped.postulante_id })
+  }
 
   const infPrev = informeExistente as { id: string; estado_informe: string; contenido_json: unknown } | null
   // "Ya generado" en el FORMATO NUEVO: exige contenido_json. Un informe LISTO
@@ -404,19 +399,29 @@ export async function calcularEneatipo(testId: string): Promise<ActionResult<{ e
 
   if (yaGenerado) {
     // Rehacer test → informe y certificado quedan desactualizados (sin regenerar).
-    await admin.from('informe_personalidad')
+    const { error: errUpdateInf } = await admin.from('informe_personalidad')
       .update({ desactualizado: true })
       .eq('id', infPrev!.id)
-    await admin.from('certificado_pdf')
+    if (errUpdateInf) {
+      logError('calcularEneatipo.informe_personalidad_update', errUpdateInf, { informeId: infPrev!.id })
+    }
+
+    const { error: errUpdateCert } = await admin.from('certificado_pdf')
       .update({ desactualizado: true })
       .eq('postulante_id', testTyped.postulante_id)
+    if (errUpdateCert) {
+      logError('calcularEneatipo.certificado_pdf_update', errUpdateCert, { postulanteId: testTyped.postulante_id })
+    }
   } else {
     // Primera vez (o generación previa fallida): asegurar registro y auto-generar.
     if (!infPrev) {
-      await admin.from('informe_personalidad').insert({
+      const { error: errInsertInf } = await admin.from('informe_personalidad').insert({
         postulante_id: testTyped.postulante_id,
         estado_informe: 'PENDIENTE',
       })
+      if (errInsertInf) {
+        logError('calcularEneatipo.informe_personalidad_insert', errInsertInf, { postulanteId: testTyped.postulante_id })
+      }
     }
     // Auto-generación inicial FUERA del camino de la respuesta.
     //

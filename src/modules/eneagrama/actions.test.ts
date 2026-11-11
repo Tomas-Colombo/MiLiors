@@ -85,6 +85,7 @@ describe('calcularEneatipo — H-209 regla de espera de 6 meses', () => {
   const adminDelete = vi.fn().mockReturnValue({ eq: adminDeleteEq })
   const adminInsert = vi.fn().mockResolvedValue({ error: null })
   const adminUpsert = vi.fn().mockResolvedValue({ error: null })
+  const adminRpc = vi.fn().mockResolvedValue({ error: null })
 
   // Admin client mock
   const adminFrom = vi.fn((tabla: string) => {
@@ -116,8 +117,10 @@ describe('calcularEneatipo — H-209 regla de espera de 6 meses', () => {
       rol: 'POSTULANTE',
     })
 
+    adminRpc.mockResolvedValue({ error: null })
     vi.mocked(createAdminClient).mockReturnValue({
       from: adminFrom,
+      rpc: adminRpc,
     } as unknown as ReturnType<typeof createAdminClient>)
   })
 
@@ -223,10 +226,12 @@ describe('calcularEneatipo — H-209 regla de espera de 6 meses', () => {
       expect(resultado.data.eneatipoNumero).toBe(6)
       expect(resultado.data.eneatipoNombre).toBe('El Leal')
     }
-    expect(adminUpdate).toHaveBeenCalled()
-    expect(adminDelete).toHaveBeenCalled()
-    expect(adminInsert).toHaveBeenCalled()
-    expect(adminUpsert).toHaveBeenCalled()
+    expect(adminRpc).toHaveBeenCalledWith('guardar_resultado_eneagrama', expect.objectContaining({
+      p_test_id: 'test-1',
+    }))
+    expect(adminFrom).not.toHaveBeenCalledWith('test_eneagrama')
+    expect(adminFrom).not.toHaveBeenCalledWith('test_eneagrama_dominante')
+    expect(adminFrom).not.toHaveBeenCalledWith('resultado_puntaje_eneagrama')
     expect(revalidatePath).toHaveBeenCalledWith('/postulante', 'layout')
   })
 
@@ -249,10 +254,9 @@ describe('calcularEneatipo — H-209 regla de espera de 6 meses', () => {
     if (resultado.success) {
       expect(resultado.data.eneatipoNumero).toBe(6)
     }
-    expect(adminUpdate).toHaveBeenCalled()
-    expect(adminDelete).toHaveBeenCalled()
-    expect(adminInsert).toHaveBeenCalled()
-    expect(adminUpsert).toHaveBeenCalled()
+    expect(adminRpc).toHaveBeenCalledWith('guardar_resultado_eneagrama', expect.objectContaining({
+      p_test_id: 'test-1',
+    }))
   })
 
   it('veces 2 con fecha de hace 1 mes → error y NINGUNA escritura en la base', async () => {
@@ -270,6 +274,7 @@ describe('calcularEneatipo — H-209 regla de espera de 6 meses', () => {
     }
 
     // NINGUNA operación de escritura fue ejecutada
+    expect(adminRpc).not.toHaveBeenCalled()
     expect(adminUpdate).not.toHaveBeenCalled()
     expect(adminDelete).not.toHaveBeenCalled()
     expect(adminInsert).not.toHaveBeenCalled()
@@ -301,9 +306,234 @@ describe('calcularEneatipo — H-209 regla de espera de 6 meses', () => {
       expect(resultado.data.eneatipoNumero).toBe(6)
       expect(resultado.data.eneatipoNombre).toBe('El Leal')
     }
-    expect(adminUpdate).toHaveBeenCalled()
-    expect(adminDelete).toHaveBeenCalled()
-    expect(adminInsert).toHaveBeenCalled()
-    expect(adminUpsert).toHaveBeenCalled()
+    expect(adminRpc).toHaveBeenCalledWith('guardar_resultado_eneagrama', expect.objectContaining({
+      p_test_id: 'test-1',
+    }))
+  })
+})
+
+describe('calcularEneatipo — H-207 guardado atómico del resultado', () => {
+  // Spies de admin client
+  const adminUpdateEq = vi.fn().mockResolvedValue({ error: null })
+  const adminUpdate = vi.fn().mockReturnValue({ eq: adminUpdateEq })
+  const adminDeleteEq = vi.fn().mockResolvedValue({ error: null })
+  const adminDelete = vi.fn().mockReturnValue({ eq: adminDeleteEq })
+  const adminInsert = vi.fn().mockResolvedValue({ error: null })
+  const adminUpsert = vi.fn().mockResolvedValue({ error: null })
+  const adminRpc = vi.fn().mockResolvedValue({ error: null })
+
+  const adminFrom = vi.fn((tabla: string) => {
+    switch (tabla) {
+      case 'test_eneagrama':
+        return { update: adminUpdate }
+      case 'test_eneagrama_dominante':
+        return { delete: adminDelete, insert: adminInsert }
+      case 'resultado_puntaje_eneagrama':
+        return { upsert: adminUpsert }
+      case 'informe_personalidad':
+        return {
+          insert: adminInsert,
+          update: adminUpdate,
+        }
+      case 'certificado_pdf':
+        return { update: adminUpdate }
+      default:
+        return {}
+    }
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    vi.mocked(verifySession).mockResolvedValue({
+      id: 'usr-1',
+      email: 'postulante@example.com',
+      rol: 'POSTULANTE',
+    })
+
+    adminRpc.mockResolvedValue({ error: null })
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: adminFrom,
+      rpc: adminRpc,
+    } as unknown as ReturnType<typeof createAdminClient>)
+  })
+
+  function configurarSupabaseMock({
+    vecesCompletado = 0,
+    fechaRealizacion = null,
+    informeExistente = null,
+  }: {
+    vecesCompletado?: number | null
+    fechaRealizacion?: string | null
+    informeExistente?: { id: string; estado_informe: string; contenido_json: unknown } | null
+  }) {
+    const supabaseFrom = vi.fn((tabla: string) => {
+      switch (tabla) {
+        case 'test_eneagrama':
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: 'test-1',
+                    postulante_id: 'post-1',
+                    veces_completado: vecesCompletado,
+                    fecha_realizacion: fechaRealizacion,
+                  },
+                }),
+              }),
+            }),
+          }
+        case 'perfil_postulante':
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'post-1' },
+                  }),
+                }),
+              }),
+            }),
+          }
+        case 'pregunta_eneagrama':
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                is: vi.fn().mockResolvedValue({
+                  data: PREGUNTAS_ACTIVAS_MOCK,
+                  error: null,
+                }),
+              }),
+            }),
+          }
+        case 'respuesta_item_eneagrama':
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({
+                data: RESPUESTAS_DB_MOCK,
+              }),
+            }),
+          }
+        case 'eneatipo':
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'eneatipo-uuid-6', nombre: 'El Leal' },
+                }),
+              }),
+            }),
+          }
+        case 'informe_personalidad':
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: informeExistente,
+                }),
+              }),
+            }),
+          }
+        default:
+          return {}
+      }
+    })
+
+    vi.mocked(createClient).mockResolvedValue({
+      from: supabaseFrom,
+    } as unknown as Awaited<ReturnType<typeof createClient>>)
+
+    return { supabaseFrom }
+  }
+
+  it('camino feliz: llama rpc con parámetros correctos y no ejecuta delete/insert/upsert sobre las tres tablas de resultado', async () => {
+    configurarSupabaseMock({ vecesCompletado: 0 })
+
+    const resultado = await calcularEneatipo('test-1')
+
+    expect(resultado.success).toBe(true)
+    if (resultado.success) {
+      expect(resultado.data.eneatipoNumero).toBe(6)
+      expect(resultado.data.eneatipoNombre).toBe('El Leal')
+    }
+
+    expect(adminRpc).toHaveBeenCalledTimes(1)
+    expect(adminRpc).toHaveBeenCalledWith('guardar_resultado_eneagrama', {
+      p_test_id: 'test-1',
+      p_ala: 5,
+      p_tiene_empate_dominante: false,
+      p_dominantes_empate: null,
+      p_tiene_empate_ala: false,
+      p_dominantes: [
+        {
+          eneatipo_id: 'eneatipo-uuid-6',
+          puntaje_crudo: 53,
+          porcentaje: 63.3,
+        },
+      ],
+      p_puntajes: expect.arrayContaining([
+        expect.objectContaining({ eneatipo_numero: 6, puntaje_crudo: 53, porcentaje: 63.3 }),
+      ]),
+    })
+
+    const rpcPayload = adminRpc.mock.calls[0][1] as { p_puntajes: unknown[]; p_dominantes: unknown[] }
+    expect(rpcPayload.p_puntajes).toHaveLength(9)
+    expect(rpcPayload.p_dominantes).toHaveLength(1)
+
+    // No debe haber delete/insert/upsert directos en las tablas de resultado
+    expect(adminFrom).not.toHaveBeenCalledWith('test_eneagrama')
+    expect(adminFrom).not.toHaveBeenCalledWith('test_eneagrama_dominante')
+    expect(adminFrom).not.toHaveBeenCalledWith('resultado_puntaje_eneagrama')
+    expect(adminDelete).not.toHaveBeenCalled()
+    expect(adminUpsert).not.toHaveBeenCalled()
+
+    expect(revalidatePath).toHaveBeenCalledWith('/postulante', 'layout')
+  })
+
+  it('si rpc devuelve error: devuelve error controlado, no inserta ni marca informe y no llama revalidatePath', async () => {
+    configurarSupabaseMock({ vecesCompletado: 0 })
+
+    adminRpc.mockResolvedValueOnce({
+      error: { message: 'Fallo transaccional simulado en DB' },
+    })
+
+    const resultado = await calcularEneatipo('test-1')
+
+    expect(resultado.success).toBe(false)
+    if (!resultado.success) {
+      expect(resultado.error).toBe('Error al guardar el resultado del Eneagrama.')
+    }
+
+    // No debe haber tocado informe_personalidad ni certificado_pdf
+    expect(adminFrom).not.toHaveBeenCalledWith('informe_personalidad')
+    expect(adminFrom).not.toHaveBeenCalledWith('certificado_pdf')
+    expect(adminInsert).not.toHaveBeenCalled()
+    expect(adminUpdate).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('si falla la escritura del informe: registra en el log pero el action igual devuelve éxito', async () => {
+    configurarSupabaseMock({
+      vecesCompletado: 0,
+      informeExistente: null,
+    })
+
+    // Error en el insert del informe de personalidad
+    adminInsert.mockResolvedValueOnce({
+      error: { message: 'Fallo al insertar informe pendiente' },
+    })
+
+    const resultado = await calcularEneatipo('test-1')
+
+    expect(resultado.success).toBe(true)
+    if (resultado.success) {
+      expect(resultado.data.eneatipoNumero).toBe(6)
+      expect(resultado.data.eneatipoNombre).toBe('El Leal')
+    }
+
+    // El resultado sí se guardó mediante la RPC
+    expect(adminRpc).toHaveBeenCalledWith('guardar_resultado_eneagrama', expect.any(Object))
+    expect(revalidatePath).toHaveBeenCalledWith('/postulante', 'layout')
   })
 })
