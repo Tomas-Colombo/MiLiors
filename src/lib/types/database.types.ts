@@ -1112,6 +1112,7 @@ export type Database = {
       }
       perfil_postulante: {
         Row: {
+          bloqueado_por_admin: boolean
           carrera_id: string | null
           carrera_otra: string | null
           created_at: string
@@ -1131,6 +1132,7 @@ export type Database = {
           usuario_id: string
         }
         Insert: {
+          bloqueado_por_admin?: boolean
           carrera_id?: string | null
           carrera_otra?: string | null
           created_at?: string
@@ -1150,6 +1152,7 @@ export type Database = {
           usuario_id: string
         }
         Update: {
+          bloqueado_por_admin?: boolean
           carrera_id?: string | null
           carrera_otra?: string | null
           created_at?: string
