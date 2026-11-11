@@ -1,45 +1,33 @@
 import { test, expect } from '@playwright/test'
 import { loginAs } from './fixtures/auth'
+import { confirmarEmail } from './support/datos-e2e'
 
 // TC-ONB-* — M02 Onboarding Reclutador / M03 Onboarding Postulante
 //
-// NOTE: These tests use the fixed users who have ALREADY completed onboarding.
-// Testing "happy path with redirect" requires a fresh user account.
-// Validation tests (field errors) work with existing users too — the form
-// is still rendered, errors are caught client-side before any DB write.
+// The fixed accounts are seeded by e2e/global-setup.ts: `reclutador` already has
+// a company, `reclutadorSinEmpresa` is freshly registered and must see the form.
+
+test.describe('M02 — Onboarding Reclutador: guard', () => {
+  test('TC-ONB-REC-007 — Reclutador con empresa → redirige al dashboard', async ({ page }) => {
+    await loginAs(page, 'reclutador')
+    await page.goto('/reclutador/onboarding')
+    await expect(page).toHaveURL(/\/reclutador\/puestos/)
+  })
+})
 
 test.describe('M02 — Onboarding Reclutador: validaciones', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'reclutador')
-    // Navigate directly even if the user already has a company.
-    // The server guard redirects completed users to /reclutador/puestos,
-    // so TC-ONB-REC-007 can be derived from this behavior.
+    await loginAs(page, 'reclutadorSinEmpresa')
     await page.goto('/reclutador/onboarding')
   })
 
-  test('TC-ONB-REC-007 — Reclutador con empresa → redirige al dashboard', async ({ page }) => {
-    // If guard fires, we won't be on /reclutador/onboarding anymore.
-    const url = page.url()
-    if (url.includes('/reclutador/onboarding')) {
-      // User hasn't completed onboarding — skip guard assertion
-      test.skip()
-    }
-    await expect(page).not.toHaveURL(/\/reclutador\/onboarding/)
-  })
-
   test('TC-ONB-REC-003 — nombre_empresa < 2 chars → error', async ({ page }) => {
-    if (!page.url().includes('/reclutador/onboarding')) {
-      test.skip()
-    }
     await page.locator('[name="nombre_empresa"]').fill('A')
     await page.getByRole('button', { name: 'Guardar empresa y continuar' }).click()
     await expect(page.getByText('Ingresá el nombre de la empresa.')).toBeVisible()
   })
 
   test('TC-ONB-REC-005 — url_empresa con formato inválido → bloqueado (validación nativa o Zod)', async ({ page }) => {
-    if (!page.url().includes('/reclutador/onboarding')) {
-      test.skip()
-    }
     await page.locator('[name="nombre_empresa"]').fill('Empresa Test')
     // Bypass native URL validation to reach Zod server-side error
     await page.locator('[name="link_url"]').evaluate(
@@ -89,14 +77,24 @@ test.describe('M03 — Onboarding Postulante: validaciones', () => {
 
 test.describe('M02 — Onboarding Reclutador: registro nuevo usuario', () => {
   test('TC-AUTH-001 + TC-ONB-REC-001 — Registro RECLUTADOR → onboarding → crea empresa', async ({ page }) => {
-    // Step 1: register a fresh recruiter
+    // Step 1: register a fresh recruiter. Email confirmation is on (as in
+    // production): signup shows the "check your inbox" notice and creates no
+    // session, so the test confirms the address and logs in.
     const uniqueEmail = `e2e-reclutador-${Date.now()}@mailinator.com`
+    const password = 'Admin1234!'
     await page.goto('/registro')
     await page.getByRole('button', { name: 'Empresa' }).click()
     await page.locator('[name="email"]').fill(uniqueEmail)
-    await page.locator('[name="password"]').fill('Admin1234!')
-    await page.locator('[name="confirmPassword"]').fill('Admin1234!')
+    await page.locator('[name="password"]').fill(password)
+    await page.locator('[name="confirmPassword"]').fill(password)
     await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.getByText(/te enviamos un mail de verificación/)).toBeVisible({ timeout: 15000 })
+
+    await confirmarEmail(uniqueEmail)
+    await page.goto('/iniciar-sesion')
+    await page.locator('[name="email"]').fill(uniqueEmail)
+    await page.locator('[name="password"]').fill(password)
+    await page.getByRole('button', { name: 'Ingresar' }).click()
     await page.waitForURL('**/reclutador/onboarding**', { timeout: 15000 })
 
     // A fresh user must accept the blocking Terms & Conditions modal first —

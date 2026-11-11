@@ -1,24 +1,13 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { loginAs } from './fixtures/auth'
+import {
+  cambiarEstadoPuesto,
+  completarPuestoMinimo,
+  filaDePuesto,
+  publicarPuesto,
+} from './support/puestos'
 
 // TC-PUE-* — M05 Puestos de Trabajo
-
-let createdJobTitle: string
-
-/**
- * Opens the puestos list and returns the row locator for `title`, re-navigating
- * until the freshly-created puesto shows up. `fecha_publicacion` is a DATE, so
- * same-day puestos tie on ordering and a just-created one may not be readable on
- * the very first render (write-visibility / route-cache race after the publish
- * redirect). Re-fetching until it appears makes the test deterministic.
- */
-async function findPuestoRow(page: Page, title: string) {
-  await expect(async () => {
-    await page.goto('/reclutador/puestos')
-    await expect(page.getByText(title)).toBeVisible({ timeout: 2000 })
-  }).toPass({ timeout: 20000 })
-  return page.locator('div.grid').filter({ hasText: title })
-}
 
 test.describe('M05 — Puestos: CRUD del reclutador', () => {
   test.beforeEach(async ({ page }) => {
@@ -26,46 +15,25 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
   })
 
   test('TC-PUE-001 — Crear puesto con campos mínimos → aparece en lista', async ({ page }) => {
-    createdJobTitle = `E2E Puesto ${Date.now()}`
-    await page.goto('/reclutador/puestos/nuevo')
-    await page.getByRole('heading', { name: 'Publicar nuevo puesto' }).waitFor()
-
-    await page.getByLabel('Título del puesto').fill(createdJobTitle)
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
-
-    await page.getByRole('button', { name: 'Publicar puesto' }).click()
-    await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
-
-    await expect(page.getByText(createdJobTitle)).toBeVisible()
+    const title = `E2E Puesto ${Date.now()}`
+    await publicarPuesto(page, title)
+    const row = await filaDePuesto(page, title)
+    await expect(row).toBeVisible()
   })
 
   test('TC-PUE-002 — Crear puesto sin título → error', async ({ page }) => {
-    await page.goto('/reclutador/puestos/nuevo')
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
+    await completarPuestoMinimo(page, '')
     await page.getByRole('button', { name: 'Publicar puesto' }).click()
     await expect(page.getByText('Ingresá el título del puesto.')).toBeVisible()
   })
 
   test('TC-PUE-010 — Editar puesto propio → cambios reflejados', async ({ page }) => {
-    // Create a puesto first, then edit it
     const original = `E2E Edit ${Date.now()}`
     const updated = `${original} EDITADO`
+    await publicarPuesto(page, original)
 
-    await page.goto('/reclutador/puestos/nuevo')
-    await page.getByLabel('Título del puesto').fill(original)
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
-    await page.getByRole('button', { name: 'Publicar puesto' }).click()
-    await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
-
-    // Navigate to the new puesto's detail
-    await page.getByText(original).click()
-    await page.getByRole('link', { name: /editar/i }).click()
+    const row = await filaDePuesto(page, original)
+    await row.getByRole('link', { name: 'Editar', exact: true }).click()
     await page.waitForURL('**/editar**')
 
     await page.getByLabel('Título del puesto').fill(updated)
@@ -77,90 +45,51 @@ test.describe('M05 — Puestos: CRUD del reclutador', () => {
   })
 
   test('TC-PUE-012 — Pausar puesto → desaparece de vista del postulante', async ({ page }) => {
-    // Create a puesto to close
     const title = `E2E Cerrar ${Date.now()}`
-    await page.goto('/reclutador/puestos/nuevo')
-    await page.getByLabel('Título del puesto').fill(title)
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
-    await page.getByRole('button', { name: 'Publicar puesto' }).click()
-    await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
+    await publicarPuesto(page, title)
 
-    // Close/reactivate actions live in the puestos list, not the detail page.
-    const row = await findPuestoRow(page, title)
-    await row.getByRole('button', { name: 'Pausar', exact: true }).click()
-
-    // After closing, the row flips to a "Reactivar" button.
+    await cambiarEstadoPuesto(page, title, 'Pausar')
+    const row = await filaDePuesto(page, title)
     await expect(row.getByRole('button', { name: 'Reactivar', exact: true })).toBeVisible({ timeout: 8000 })
+
+    await loginAs(page, 'postulante')
+    await page.goto('/postulante/puestos')
+    await expect(page.getByText(title)).not.toBeVisible()
   })
 
   test('TC-PUE-014 — Reactivar puesto → vuelve a aparecer', async ({ page }) => {
-    // Create and close a puesto, then reactivate
     const title = `E2E Reactivar ${Date.now()}`
-    await page.goto('/reclutador/puestos/nuevo')
-    await page.getByLabel('Título del puesto').fill(title)
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
-    await page.getByRole('button', { name: 'Publicar puesto' }).click()
-    await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
+    await publicarPuesto(page, title)
 
-    // Close then reactivate from the puestos list.
-    const row = await findPuestoRow(page, title)
-    await row.getByRole('button', { name: 'Pausar', exact: true }).click()
-    await row.getByRole('button', { name: 'Reactivar', exact: true }).click()
-
-    // After reactivation, the close button should be back.
+    await cambiarEstadoPuesto(page, title, 'Pausar')
+    await cambiarEstadoPuesto(page, title, 'Reactivar')
+    const row = await filaDePuesto(page, title)
     await expect(row.getByRole('button', { name: 'Pausar', exact: true })).toBeVisible({ timeout: 8000 })
   })
 })
 
 test.describe('M05 — Puestos: visibilidad para el postulante', () => {
   test('TC-PUE-007 — Puesto activo aparece en /postulante/puestos', async ({ page }) => {
-    // Create an active puesto as reclutador
     await loginAs(page, 'reclutador')
     const title = `E2E Visible ${Date.now()}`
-    await page.goto('/reclutador/puestos/nuevo')
-    await page.getByLabel('Título del puesto').fill(title)
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
-    await page.getByRole('button', { name: 'Publicar puesto' }).click()
-    await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
+    await publicarPuesto(page, title)
 
-    // Switch to postulante and check visibility
     await loginAs(page, 'postulante')
     await page.goto('/postulante/puestos')
     await expect(page.getByText(title)).toBeVisible({ timeout: 10000 })
   })
 
   test('TC-PUE-008 — perfil_psicologico_deseado NO es visible para el postulante', async ({ page }) => {
-    // Create a puesto with a psychological profile
     await loginAs(page, 'reclutador')
     const title = `E2E PsicoOculto ${Date.now()}`
     const secretText = `SECRETO_PSICO_${Date.now()}`
+    const puestoId = await publicarPuesto(page, title, { notasPrivadas: secretText })
 
-    await page.goto('/reclutador/puestos/nuevo')
-    await page.getByLabel('Título del puesto').fill(title)
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
-    await page.locator('[name="perfil_psicologico_deseado"]').fill(secretText)
-    await page.getByRole('button', { name: 'Publicar puesto' }).click()
-    await page.waitForURL('**/reclutador/puestos**', { timeout: 15000 })
-
-    // Find the puesto ID from the list link
-    const puestoLink = page.getByText(title)
-    await puestoLink.click()
-    const url = page.url()
-    const puestoId = url.split('/').pop()
-
-    // Log in as postulante and check the puesto detail page
     await loginAs(page, 'postulante')
     await page.goto(`/postulante/puestos/${puestoId}`)
+    await expect(page.getByRole('heading', { name: title })).toBeVisible()
     await expect(page.getByText(secretText)).not.toBeVisible()
-    // Also verify it's not anywhere in the page HTML
+    // Also verify it's not anywhere in the page HTML (RSC payload included)
     const content = await page.content()
     expect(content).not.toContain(secretText)
   })
@@ -169,16 +98,12 @@ test.describe('M05 — Puestos: visibilidad para el postulante', () => {
 test.describe('M05 — Puestos: validaciones de formulario', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'reclutador')
-    await page.goto('/reclutador/puestos/nuevo')
   })
 
   test('TC-PUE-003 — título < 3 chars → error', async ({ page }) => {
-    await page.getByLabel('Título del puesto').fill('AB')
-    await page.getByLabel('Idioma requerido').fill('Español')
-    await page.locator('[name="carga_horaria"]').selectOption('TIEMPO_COMPLETO')
-    await page.locator('[name="ubicacion"]').selectOption('REMOTO')
+    await completarPuestoMinimo(page, 'AB')
     await page.getByRole('button', { name: 'Publicar puesto' }).click()
-    // Expect some validation error related to title length
-    await expect(page.locator('text=/título|caracteres/i').first()).toBeVisible({ timeout: 5000 })
+    // Same message as the empty title: the schema requires at least 3 characters.
+    await expect(page.getByText('Ingresá el título del puesto.')).toBeVisible({ timeout: 5000 })
   })
 })

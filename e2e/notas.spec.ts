@@ -4,16 +4,17 @@ import { loginAs } from './fixtures/auth'
 // TC-NOTA-* — M08 Notas Privadas
 //
 // These tests use /reclutador/postulantes/[id] — we need a real postulante ID.
-// We navigate to /reclutador/postulantes and pick the first candidate to run tests on.
+// We navigate to /reclutador/postulantes and pick the first candidate to run tests on
+// (the postulante seeded by e2e/global-setup.ts).
 
-async function getFirstCandidateUrl(page: import('@playwright/test').Page): Promise<string | null> {
+async function getFirstCandidateUrl(page: import('@playwright/test').Page): Promise<string> {
   await page.goto('/reclutador/postulantes')
   // Each candidate card is a Link wrapping the card body — there is no "Ver perfil"
-  // label to match on, so target the detail route directly.
+  // label to match on, so target the detail route directly. The seeded postulante
+  // is searchable (e2e/global-setup.ts), so an empty list is a failure.
   const candidateLink = page.locator('a[href^="/reclutador/postulantes/"]').first()
-  const count = await candidateLink.count()
-  if (count === 0) return null
-  return candidateLink.getAttribute('href')
+  await expect(candidateLink).toBeVisible({ timeout: 10000 })
+  return (await candidateLink.getAttribute('href'))!
 }
 
 test.describe('M08 — Notas Privadas: CRUD', () => {
@@ -23,10 +24,6 @@ test.describe('M08 — Notas Privadas: CRUD', () => {
 
   test('TC-NOTA-001 — Crear nota sobre candidato → guardada', async ({ page }) => {
     const candidateUrl = await getFirstCandidateUrl(page)
-    if (!candidateUrl) {
-      test.skip(true, 'No candidates available in /reclutador/postulantes')
-      return
-    }
 
     await page.goto(candidateUrl)
     await page.getByRole('heading', { name: 'Notas privadas' }).waitFor()
@@ -40,10 +37,6 @@ test.describe('M08 — Notas Privadas: CRUD', () => {
 
   test('TC-NOTA-003 — Editar nota existente → contenido actualizado', async ({ page }) => {
     const candidateUrl = await getFirstCandidateUrl(page)
-    if (!candidateUrl) {
-      test.skip(true, 'No candidates available')
-      return
-    }
 
     await page.goto(candidateUrl)
     await page.getByRole('heading', { name: 'Notas privadas' }).waitFor()
@@ -56,10 +49,10 @@ test.describe('M08 — Notas Privadas: CRUD', () => {
     await expect(page.getByText(originalText)).toBeVisible({ timeout: 10000 })
 
     // Edit it
-    await page.getByRole('button', { name: 'Editar nota' }).first().click()
-    const editArea = page.getByRole('textbox').last()
+    await page.locator('li', { hasText: originalText }).getByRole('button', { name: 'Editar nota' }).click()
+    const editArea = page.locator('li textarea')
     await editArea.fill(updatedText)
-    await page.getByRole('button', { name: 'Guardar' }).click()
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
 
     await expect(page.getByText(updatedText)).toBeVisible({ timeout: 10000 })
     await expect(page.getByText(originalText)).not.toBeVisible()
@@ -67,10 +60,6 @@ test.describe('M08 — Notas Privadas: CRUD', () => {
 
   test('TC-NOTA-004 — Eliminar nota → desaparece', async ({ page }) => {
     const candidateUrl = await getFirstCandidateUrl(page)
-    if (!candidateUrl) {
-      test.skip(true, 'No candidates available')
-      return
-    }
 
     await page.goto(candidateUrl)
     await page.getByRole('heading', { name: 'Notas privadas' }).waitFor()
@@ -82,8 +71,8 @@ test.describe('M08 — Notas Privadas: CRUD', () => {
     await expect(page.getByText(noteText)).toBeVisible({ timeout: 10000 })
 
     // Delete it
-    // Find the delete button near this specific note
-    const noteRow = page.locator('*', { hasText: noteText }).last()
+    // Each note is an <li>: delete the one holding this text.
+    const noteRow = page.locator('li', { hasText: noteText })
     await noteRow.getByRole('button', { name: 'Eliminar nota' }).click()
 
     await expect(page.getByText(noteText)).not.toBeVisible({ timeout: 8000 })
@@ -110,10 +99,6 @@ test.describe('M08 — Notas Privadas: seguridad 🔒', () => {
     // We verify that /reclutador/postulantes/[id] shows "Notas privadas" scoped to logged-in user.
     await loginAs(page, 'reclutador')
     const candidateUrl = await getFirstCandidateUrl(page)
-    if (!candidateUrl) {
-      test.skip(true, 'No candidates available')
-      return
-    }
 
     await page.goto(candidateUrl)
     // Notes section must be visible to the recruiter

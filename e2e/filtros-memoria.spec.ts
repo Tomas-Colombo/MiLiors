@@ -3,24 +3,43 @@ import { loginAs } from './fixtures/auth'
 
 // Memoria de filtros por pestaña — src/lib/filter-memory.ts
 //
-// Los filtros viven en la query string, y antes se perdían porque el sidebar y los enlaces
-// "Volver" apuntaban a hrefs sin query. Estos tests entran al listado con la query ya puesta
-// (equivale a haber filtrado a mano, pero sin depender del markup de cada filtro) y verifican
-// que al volver siga ahí.
+// Los filtros viven en la query string y <FilterMemory> recuerda la de cada listado en
+// sessionStorage. La restaura un solo consumidor: <VolverLink>, el "Volver" del detalle.
+// El sidebar, a propósito, NO la restaura: entrar a una sección desde el menú es "lleváme
+// al listado", no "devolveme lo que había filtrado".
+//
+// Estos tests entran al listado con la query ya puesta (equivale a haber filtrado a mano,
+// sin depender del markup de cada filtro) y verifican adónde lleva cada forma de volver.
 
 const LISTADO = '/reclutador/postulantes'
 const FILTRO = 'busqueda=ana'
+const CLAVE_MEMORIA = `miliors-filters:${LISTADO}`
 
-function irAlListadoFiltrado(page: Page) {
-  return page.goto(`${LISTADO}?${FILTRO}`)
+/** Entra al listado filtrado y espera a que <FilterMemory> haya guardado la query. */
+async function irAlListadoFiltrado(page: Page) {
+  await page.goto(`${LISTADO}?${FILTRO}`)
+  await page.waitForFunction((clave) => sessionStorage.getItem(clave) !== null, CLAVE_MEMORIA)
 }
 
-/** Busca un candidato en el listado sin filtrar, para no depender de que el filtro dé resultados. */
-async function getPrimerCandidatoUrl(page: Page): Promise<string | null> {
+/**
+ * Busca un candidato en el listado sin filtrar, para no depender de que el filtro dé
+ * resultados. El postulante sembrado por e2e/global-setup.ts es visible: si no hay
+ * ninguno, el test falla.
+ */
+async function getPrimerCandidatoUrl(page: Page): Promise<string> {
   await page.goto(LISTADO)
   const link = page.locator(`a[href^="${LISTADO}/"]`).first()
-  if ((await link.count()) === 0) return null
-  return link.getAttribute('href')
+  await expect(link).toBeVisible({ timeout: 10000 })
+  return (await link.getAttribute('href'))!
+}
+
+function linkSidebar(page: Page) {
+  // exact: el dashboard tiene una tarjeta "Buscar candidatos — Explorá el…" con el mismo destino.
+  return page.getByRole('link', { name: 'Buscar candidatos', exact: true })
+}
+
+function linkVolver(page: Page) {
+  return page.getByRole('link', { name: /volver a la búsqueda/i })
 }
 
 test.describe('Memoria de filtros', () => {
@@ -28,88 +47,60 @@ test.describe('Memoria de filtros', () => {
     await loginAs(page, 'reclutador')
   })
 
-  test('Volver por el sidebar restaura los filtros', async ({ page }) => {
-    await irAlListadoFiltrado(page)
-
-    await page.getByRole('link', { name: 'Mis notas' }).click()
-    await page.waitForURL('**/reclutador/notas**')
-
-    await page.getByRole('link', { name: 'Buscar candidatos' }).click()
-    await page.waitForURL(`**${LISTADO}?**`)
-    expect(page.url()).toContain(FILTRO)
-  })
-
   test('Volver desde el detalle de un candidato restaura los filtros', async ({ page }) => {
     const candidatoUrl = await getPrimerCandidatoUrl(page)
-    if (!candidatoUrl) {
-      test.skip(true, 'No hay candidatos en el listado')
-      return
-    }
 
     await irAlListadoFiltrado(page)
     await page.goto(candidatoUrl)
 
-    await page.getByRole('link', { name: /volver a la búsqueda/i }).click()
+    await linkVolver(page).click()
     await page.waitForURL(`**${LISTADO}?**`)
     expect(page.url()).toContain(FILTRO)
   })
 
-  test('Clickear en el sidebar la vista donde ya estamos limpia los filtros', async ({ page }) => {
-    await irAlListadoFiltrado(page)
-
-    await page.getByRole('link', { name: 'Buscar candidatos' }).click()
-    await page.waitForURL(`**${LISTADO}`)
-    expect(page.url()).not.toContain(FILTRO)
-
-    // Y la memoria quedó borrada: dar una vuelta y volver sigue sin filtrar.
-    await page.getByRole('link', { name: 'Mis notas' }).click()
-    await page.waitForURL('**/reclutador/notas**')
-    await page.getByRole('link', { name: 'Buscar candidatos' }).click()
-    await page.waitForURL(`**${LISTADO}`)
-    expect(page.url()).not.toContain(FILTRO)
-  })
-
-  // Regresión: isActive() matchea por prefijo para el resaltado, así que en el detalle el ítem
-  // del listado figura activo. Si esa función decidiera "reset vs restaurar", este caso —volver
-  // del detalle por el sidebar— borraría los filtros justo cuando hay que restaurarlos.
-  test('Desde el detalle, el sidebar restaura en vez de limpiar', async ({ page }) => {
+  test('Desde el detalle, el sidebar lleva al listado sin filtrar', async ({ page }) => {
     const candidatoUrl = await getPrimerCandidatoUrl(page)
-    if (!candidatoUrl) {
-      test.skip(true, 'No hay candidatos en el listado')
-      return
-    }
 
     await irAlListadoFiltrado(page)
     await page.goto(candidatoUrl)
 
-    await page.getByRole('link', { name: 'Buscar candidatos' }).click()
-    await page.waitForURL(`**${LISTADO}?**`)
-    expect(page.url()).toContain(FILTRO)
+    await linkSidebar(page).click()
+    await page.waitForURL(`**${LISTADO}`)
+    expect(page.url()).not.toContain(FILTRO)
+  })
+
+  test('Desde otra sección, el sidebar lleva al listado sin filtrar', async ({ page }) => {
+    await irAlListadoFiltrado(page)
+
+    await page.getByRole('link', { name: 'Mis notas', exact: true }).click()
+    await page.waitForURL('**/reclutador/notas**')
+
+    await linkSidebar(page).click()
+    await page.waitForURL(`**${LISTADO}`)
+    expect(page.url()).not.toContain(FILTRO)
   })
 
   test('Limpiar los filtros no deja memoria atrás', async ({ page }) => {
+    const candidatoUrl = await getPrimerCandidatoUrl(page)
     await irAlListadoFiltrado(page)
 
-    // Equivale a "Limpiar filtros": el listado queda sin query.
+    // Equivale a "Limpiar filtros": el listado queda sin query y la entrada se borra.
     await page.goto(LISTADO)
+    await page.waitForFunction((clave) => sessionStorage.getItem(clave) === null, CLAVE_MEMORIA)
 
-    await page.getByRole('link', { name: 'Mis notas' }).click()
-    await page.waitForURL('**/reclutador/notas**')
-    await page.getByRole('link', { name: 'Buscar candidatos' }).click()
+    await page.goto(candidatoUrl)
+    await linkVolver(page).click()
     await page.waitForURL(`**${LISTADO}`)
     expect(page.url()).not.toContain(FILTRO)
   })
 
-  test('Una pestaña nueva abre el listado sin filtrar', async ({ page }) => {
+  test('Una pestaña nueva no hereda la memoria de otra', async ({ page }) => {
+    const candidatoUrl = await getPrimerCandidatoUrl(page)
     await irAlListadoFiltrado(page)
 
     const otraPestana = await page.context().newPage()
-    await otraPestana.goto(LISTADO)
-    expect(otraPestana.url()).not.toContain(FILTRO)
-
-    await otraPestana.getByRole('link', { name: 'Mis notas' }).click()
-    await otraPestana.waitForURL('**/reclutador/notas**')
-    await otraPestana.getByRole('link', { name: 'Buscar candidatos' }).click()
+    await otraPestana.goto(candidatoUrl)
+    await linkVolver(otraPestana).click()
     await otraPestana.waitForURL(`**${LISTADO}`)
     expect(otraPestana.url()).not.toContain(FILTRO)
 

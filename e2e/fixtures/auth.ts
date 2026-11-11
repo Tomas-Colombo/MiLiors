@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test'
 
-const ENV_VARS = {
+export const ENV_VARS = {
   postulante: {
     emailKey: 'E2E_POSTULANTE_EMAIL',
     passwordKey: 'E2E_POSTULANTE_PASSWORD',
@@ -8,6 +8,11 @@ const ENV_VARS = {
   reclutador: {
     emailKey: 'E2E_RECLUTADOR_EMAIL',
     passwordKey: 'E2E_RECLUTADOR_PASSWORD',
+  },
+  // Recién registrado: sin perfil ni empresa, todo el área lo manda al onboarding.
+  reclutadorSinEmpresa: {
+    emailKey: 'E2E_RECLUTADOR_SIN_EMPRESA_EMAIL',
+    passwordKey: 'E2E_RECLUTADOR_SIN_EMPRESA_PASSWORD',
   },
   admin: {
     emailKey: 'E2E_ADMIN_EMAIL',
@@ -33,6 +38,15 @@ export const USERS = {
       return process.env.E2E_RECLUTADOR_PASSWORD ?? ''
     },
     dashboard: '/reclutador',
+  },
+  reclutadorSinEmpresa: {
+    get email() {
+      return process.env.E2E_RECLUTADOR_SIN_EMPRESA_EMAIL ?? ''
+    },
+    get password() {
+      return process.env.E2E_RECLUTADOR_SIN_EMPRESA_PASSWORD ?? ''
+    },
+    dashboard: '/reclutador/onboarding',
   },
   admin: {
     get email() {

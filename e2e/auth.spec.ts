@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { loginAs, logout, USERS } from './fixtures/auth'
+import { confirmarEmail } from './support/datos-e2e'
 
 // TC-AUTH-* — M01 Authentication
 
@@ -124,13 +125,24 @@ test.describe('M01 — Auth: Registro', () => {
   })
 
   test('TC-AUTH-002 — Registro POSTULANTE exitoso → redirige a /postulante/onboarding', async ({ page }) => {
+    // Email confirmation is on (as in production): signup shows the notice and
+    // creates no session. Once the address is confirmed, the first login lands
+    // on the onboarding.
     const uniqueEmail = `e2e-postulante-${Date.now()}@mailinator.com`
+    const password = 'Admin1234!'
     await page.goto('/registro')
     await page.getByRole('button', { name: 'Postulante' }).click()
     await page.locator('[name="email"]').fill(uniqueEmail)
-    await page.locator('[name="password"]').fill('Admin1234!')
-    await page.locator('[name="confirmPassword"]').fill('Admin1234!')
+    await page.locator('[name="password"]').fill(password)
+    await page.locator('[name="confirmPassword"]').fill(password)
     await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.getByText(/te enviamos un mail de verificación/)).toBeVisible({ timeout: 15000 })
+
+    await confirmarEmail(uniqueEmail)
+    await page.goto('/iniciar-sesion')
+    await page.locator('[name="email"]').fill(uniqueEmail)
+    await page.locator('[name="password"]').fill(password)
+    await page.getByRole('button', { name: 'Ingresar' }).click()
     await page.waitForURL('**/postulante/onboarding**', { timeout: 15000 })
     await expect(page).toHaveURL(/\/postulante\/onboarding/)
   })
@@ -181,7 +193,7 @@ test.describe('M01 — Auth: Recuperar password', () => {
     await page.locator('[name="email"]').fill(USERS.postulante.email)
     await page.getByRole('button', { name: 'Enviar instrucciones' }).click()
     await expect(
-      page.getByText('Si existe una cuenta con ese email, recibirás las instrucciones para restablecer tu contraseña.')
+      page.getByText(/Si existe una cuenta con ese email, te enviamos las instrucciones/)
     ).toBeVisible({ timeout: 10000 })
   })
 
@@ -190,7 +202,7 @@ test.describe('M01 — Auth: Recuperar password', () => {
     await page.locator('[name="email"]').fill('noexiste@mailinator.com')
     await page.getByRole('button', { name: 'Enviar instrucciones' }).click()
     await expect(
-      page.getByText('Si existe una cuenta con ese email, recibirás las instrucciones para restablecer tu contraseña.')
+      page.getByText(/Si existe una cuenta con ese email, te enviamos las instrucciones/)
     ).toBeVisible({ timeout: 10000 })
   })
 })
