@@ -23,6 +23,7 @@ export type PostulanteCard = {
 }
 
 export type PostulanteDetalle = PostulanteCard & {
+  bloqueado_por_admin: boolean
   // Contacto: solo se incluye si hay autorización
   email: string | null
   telefono: string | null
@@ -108,10 +109,11 @@ export const buscarPostulantes = cache(async (filtros?: {
     let query = supabase
       .from('perfil_postulante')
       .select(`
-        id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, localidad_id,
+        id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, bloqueado_por_admin, localidad_id,
         provincia(nombre), ${embedUbicacion}${embedCompetencia}
       `, { count: 'exact' })
       .eq('perfil_en_busqueda', true)
+      .eq('bloqueado_por_admin', false)
 
     // `regexIMatch` y no `ilike`: ilike distingue tildes, así que buscar "gonzalez"
     // no encontraba a "González". El patrón acepta la vocal con y sin acento.
@@ -303,6 +305,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     carrera_otra: string | null
     carrera: { nombre: string } | null
     perfil_en_busqueda: boolean
+    bloqueado_por_admin: boolean
     telefono: string | null
     enlace_linkedin: string | null
     portfolio: string | null
@@ -316,11 +319,12 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     } | null
   }
 
-  // Gate: must be searchable OR have applied to this recruiter's jobs
-  if (!p.perfil_en_busqueda && !postuloAlReclutador) return null
+  // Gate: must be searchable (and not blocked by admin) OR have applied to this recruiter's jobs
+  const enBusquedaEfectiva = p.perfil_en_busqueda && !p.bloqueado_por_admin
+  if (!enBusquedaEfectiva && !postuloAlReclutador) return null
 
-  // Contact is released if searching actively or if they applied to this recruiter's jobs
-  const contactoLiberado = p.perfil_en_busqueda || postuloAlReclutador
+  // Contact is released if searching actively (and not blocked) or if they applied to this recruiter's jobs
+  const contactoLiberado = enBusquedaEfectiva || postuloAlReclutador
 
   const tecnico = pt as {
     formacion_academica: PostulanteDetalle['formaciones']
@@ -350,6 +354,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     nombre_completo: p.nombre_completo,
     carrera: p.carrera?.nombre ?? p.carrera_otra ?? null,
     perfil_en_busqueda: p.perfil_en_busqueda,
+    bloqueado_por_admin: p.bloqueado_por_admin,
     eneatipo_numero: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.numero_eneatipo ?? null,
     eneatipo_nombre: p.test_eneagrama?.test_eneagrama_dominante[0]?.eneatipo?.nombre ?? null,
     competencias,

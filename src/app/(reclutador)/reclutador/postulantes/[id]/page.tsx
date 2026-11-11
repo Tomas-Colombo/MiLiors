@@ -214,7 +214,7 @@ export default async function PostulanteDetallePage({
                   {postulante.eneatipo_nombre ? ` · ${postulante.eneatipo_nombre}` : ''}
                 </Badge>
               )}
-              {postulante.perfil_en_busqueda ? (
+              {postulante.perfil_en_busqueda && !postulante.bloqueado_por_admin ? (
                 <Badge tone="success" dot>En búsqueda activa</Badge>
               ) : (
                 <Badge tone="neutral" dot>No está en búsqueda</Badge>
