@@ -123,6 +123,44 @@ export type Database = {
         }
         Relationships: []
       }
+      competencia_sugerida: {
+        Row: {
+          created_at: string
+          id: string
+          nivel: Database["public"]["Enums"]["nivel_competencia"]
+          nombre: string
+          nombre_normalizado: string
+          perfil_tecnico_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nivel?: Database["public"]["Enums"]["nivel_competencia"]
+          nombre: string
+          nombre_normalizado: string
+          perfil_tecnico_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nivel?: Database["public"]["Enums"]["nivel_competencia"]
+          nombre?: string
+          nombre_normalizado?: string
+          perfil_tecnico_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competencia_sugerida_perfil_tecnico_id_fkey"
+            columns: ["perfil_tecnico_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_tecnico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracion_sistema: {
         Row: {
           dias_inactividad_cierre: number

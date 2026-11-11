@@ -96,3 +96,17 @@ supabase stop           # stop the stack, keeping its data
 ```
 
 Never run `db reset`, `db push` or `migration repair` with `--linked` without an explicit decision: the CLI is linked to production.
+
+## Deploy — controles previos a migraciones
+
+### Migración `20261114000000_competencia_sugerida.sql` (H-205)
+
+Antes de aplicar esta migración en producción, correr la siguiente consulta de solo lectura para detectar si existen competencias duplicadas que difieran únicamente en mayúsculas o espacios:
+
+```sql
+SELECT lower(btrim(nombre)) AS nombre, count(*), string_agg(id::text, ', ')
+FROM public.competencia GROUP BY 1 HAVING count(*) > 1;
+```
+
+Si devuelve filas, el control de la migración va a abortar y hay que unificar esos duplicados a mano antes del deploy.
+
