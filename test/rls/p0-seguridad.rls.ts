@@ -113,6 +113,26 @@ describe('Suite RLS P0 de Seguridad (PQ-02)', () => {
     ])
     if (errPerfPost) throw new Error(`perfil_postulante error: ${errPerfPost.message}`)
 
+    // Requisitos de visibilidad H-230: A y B necesitan test con dominante e informe LISTO para ser visibles
+    const { data: enea } = await adminClient.from('eneatipo').select('id').limit(1).single()
+    if (!enea) throw new Error('No hay eneatipo en catálogo')
+    for (const pId of [postulanteAId, postulanteBId]) {
+      const tId = crypto.randomUUID()
+      await adminClient.from('test_eneagrama').insert({ id: tId, postulante_id: pId })
+      await adminClient.from('test_eneagrama_dominante').insert({
+        id: crypto.randomUUID(),
+        test_eneagrama_id: tId,
+        eneatipo_id: enea.id,
+        puntaje_crudo: 40,
+        porcentaje: 80,
+      })
+      await adminClient.from('informe_personalidad').insert({
+        id: crypto.randomUUID(),
+        postulante_id: pId,
+        estado_informe: 'LISTO',
+      })
+    }
+
     // 4. Insertar perfiles técnicos
     ptAId = crypto.randomUUID()
     ptBId = crypto.randomUUID()
