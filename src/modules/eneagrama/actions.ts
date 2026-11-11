@@ -101,15 +101,18 @@ export async function guardarDatosBasicos(
 
   let error
   if (existente) {
+    const { usuario_id: _uid, ...updatePayload } = payload
     const result = await supabase.from('perfil_postulante')
-      .update(payload)
+      .update(updatePayload)
       .eq('id', (existente as { id: string }).id)
     error = result.error
   } else {
-    // Al crear el perfil por primera vez, el postulante queda visible para los
-    // reclutadores por defecto. Si no lo desea, puede desactivar la visibilidad
-    // desde su perfil. En la actualización nunca se toca este flag para respetar
-    // la elección previa del postulante.
+    // Al crear el perfil por primera vez, se guarda con perfil_en_busqueda = true
+    // para representar la intención del postulante de ser buscado. La visibilidad
+    // real en el buscador de reclutadores la decide la RLS: sólo aparecerá cuando
+    // cumpla los requisitos (test con dominante e informe en LISTO) y no esté
+    // bloqueado por la administración. En la actualización nunca se toca este flag
+    // para respetar la elección previa del postulante.
     const result = await supabase.from('perfil_postulante')
       .insert({
         ...payload,

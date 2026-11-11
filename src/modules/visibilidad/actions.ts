@@ -36,6 +36,12 @@ export async function togglePerfilEnBusqueda(activo: boolean): Promise<ActionRes
   // 2. Precondiciones para activar visibilidad
   if (activo) {
     const perfil = await getPerfilPostulanteActual()
+    if (perfil?.bloqueado_por_admin) {
+      return {
+        success: false,
+        error: 'Tu perfil fue pausado por la administración. Escribinos si creés que es un error.',
+      }
+    }
     const test = perfil ? await getTestEneagramaDePostulante(perfil.id) : null
     const tieneDominante = !!(test?.test_eneagrama_dominante && test.test_eneagrama_dominante.length > 0)
     const informe = perfil && tieneDominante ? await getInformeActual() : null

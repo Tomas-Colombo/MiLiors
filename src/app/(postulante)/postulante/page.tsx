@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { PERFILES_PROFESIONALES } from '@/modules/eneagrama/perfiles-profesionales'
 import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
 import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
+import { getInformeActual } from '@/modules/informe/queries'
 import { QuickLinksPostulante } from './quick-links'
 
 export const metadata = { title: 'Inicio — MiLiors' }
@@ -35,6 +36,7 @@ export default async function PostulanteDashboard() {
   // Perfil y test son las lecturas memoizadas que ya hicieron el layout y el
   // guard en este mismo render: no vuelven a ir a la base.
   const perfil = await getPerfilPostulanteActual()
+  const informe = await getInformeActual()
 
   const nombre = perfil?.nombre_completo ?? session.email
   const perfilEnBusqueda = perfil?.perfil_en_busqueda ?? false
@@ -158,6 +160,15 @@ export default async function PostulanteDashboard() {
               Visibilidad en búsquedas
             </h2>
             <VisibilityToggle initialValue={perfilEnBusqueda} />
+            {perfil?.bloqueado_por_admin ? (
+              <p className="mt-3 text-xs text-error-ink">
+                Tu perfil fue pausado por la administración. Escribinos si creés que es un error.
+              </p>
+            ) : perfilEnBusqueda && (dominantes.length === 0 || informe?.estado_informe !== 'LISTO') ? (
+              <p className="mt-3 text-xs text-muted">
+                Vas a aparecer en las búsquedas cuando tu informe de personalidad esté listo.
+              </p>
+            ) : null}
           </div>
 
           {/* Accesos rápidos */}

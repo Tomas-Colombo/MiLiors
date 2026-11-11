@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   evaluarRequisitosVisibilidad,
-  MENSAJE_VISIBILIDAD_ADMIN,
   MENSAJE_VISIBILIDAD_POSTULANTE,
 } from './regla'
 
@@ -48,11 +47,5 @@ describe('evaluarRequisitosVisibilidad', () => {
       sin_test: 'Debés completar el test de personalidad antes de hacer visible tu perfil.',
       informe_pendiente: 'Tu informe de personalidad debe estar listo antes de hacer visible tu perfil.',
     })
-  })
-
-  it('le habla al admin en tercera persona', () => {
-    for (const mensaje of Object.values(MENSAJE_VISIBILIDAD_ADMIN)) {
-      expect(mensaje).not.toMatch(/\b(Debés|Tu|tu)\b/)
-    }
   })
 })

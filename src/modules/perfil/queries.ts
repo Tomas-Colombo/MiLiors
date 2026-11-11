@@ -21,6 +21,7 @@ export type PerfilPostulanteActual = {
   localidad_id: string | null
   provincia_id: string | null
   perfil_en_busqueda: boolean
+  bloqueado_por_admin: boolean
   mostrar_personalidad_publico: boolean
 }
 
@@ -39,7 +40,7 @@ export const getPerfilPostulanteActual = cache(async (): Promise<PerfilPostulant
   const { data } = await supabase
     .from('perfil_postulante')
     .select(
-      'id, nombre_completo, nombre_preferido, fecha_nacimiento, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, provincia_id, perfil_en_busqueda, mostrar_personalidad_publico'
+      'id, nombre_completo, nombre_preferido, fecha_nacimiento, telefono, carrera_id, carrera_otra, enlace_linkedin, portfolio, localidad_id, provincia_id, perfil_en_busqueda, mostrar_personalidad_publico, bloqueado_por_admin'
     )
     .eq('usuario_id', session.id)
     .maybeSingle()

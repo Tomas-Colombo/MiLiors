@@ -80,6 +80,7 @@ describe('togglePerfilEnBusqueda', () => {
       localidad_id: null,
       provincia_id: null,
       perfil_en_busqueda: false,
+      bloqueado_por_admin: false,
       mostrar_personalidad_publico: false,
     })
     vi.mocked(getTestEneagramaDePostulante).mockResolvedValueOnce(null)
@@ -112,6 +113,7 @@ describe('togglePerfilEnBusqueda', () => {
       localidad_id: null,
       provincia_id: null,
       perfil_en_busqueda: false,
+      bloqueado_por_admin: false,
       mostrar_personalidad_publico: false,
     })
     vi.mocked(getTestEneagramaDePostulante).mockResolvedValueOnce({
@@ -152,6 +154,7 @@ describe('togglePerfilEnBusqueda', () => {
       localidad_id: null,
       provincia_id: null,
       perfil_en_busqueda: false,
+      bloqueado_por_admin: false,
       mostrar_personalidad_publico: false,
     })
     vi.mocked(getTestEneagramaDePostulante).mockResolvedValueOnce({
@@ -207,6 +210,7 @@ describe('togglePerfilEnBusqueda', () => {
       localidad_id: null,
       provincia_id: null,
       perfil_en_busqueda: false,
+      bloqueado_por_admin: false,
       mostrar_personalidad_publico: false,
     })
     vi.mocked(getTestEneagramaDePostulante).mockResolvedValueOnce({
@@ -263,5 +267,51 @@ describe('togglePerfilEnBusqueda', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/postulante')
     expect(revalidatePath).toHaveBeenCalledWith('/postulante/perfil')
     expect(revalidatePath).toHaveBeenCalledWith('/reclutador/postulantes')
+  })
+
+  it('rechaza activar la visibilidad si el postulante está bloqueado por el admin', async () => {
+    vi.mocked(verifySession).mockResolvedValueOnce({
+      id: 'usr-1',
+      email: 'post@example.com',
+      rol: ROL_USUARIO.POSTULANTE,
+    })
+    vi.mocked(getPerfilPostulanteActual).mockResolvedValueOnce({
+      id: 'perfil-1',
+      nombre_completo: 'Juan Pérez',
+      nombre_preferido: null,
+      fecha_nacimiento: null,
+      telefono: null,
+      carrera_id: null,
+      carrera_otra: null,
+      enlace_linkedin: null,
+      portfolio: null,
+      localidad_id: null,
+      provincia_id: null,
+      perfil_en_busqueda: false,
+      bloqueado_por_admin: true,
+      mostrar_personalidad_publico: false,
+    })
+
+    const resultado = await togglePerfilEnBusqueda(true)
+
+    expect(resultado).toEqual({
+      success: false,
+      error: 'Tu perfil fue pausado por la administración. Escribinos si creés que es un error.',
+    })
+    expect(fromMock).not.toHaveBeenCalled()
+  })
+
+  it('permite desactivar la visibilidad aun estando bloqueado por el admin', async () => {
+    vi.mocked(verifySession).mockResolvedValueOnce({
+      id: 'usr-1',
+      email: 'post@example.com',
+      rol: ROL_USUARIO.POSTULANTE,
+    })
+
+    const resultado = await togglePerfilEnBusqueda(false)
+
+    expect(resultado).toEqual({ success: true, data: undefined })
+    expect(updateMock).toHaveBeenCalledWith({ perfil_en_busqueda: false })
+    expect(eqMock).toHaveBeenCalledWith('usuario_id', 'usr-1')
   })
 })
