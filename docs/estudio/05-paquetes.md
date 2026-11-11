@@ -340,7 +340,7 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
 ### PQ-05: Postulante — Eneagrama, informe y certificados
 - **Objetivo en una línea:** Asegurar consistencia atómica en el cálculo de eneatipo, respetar el período de 6 meses para rehacer el test y corregir la hidratación en el informe.
 - **Hallazgos que aborda:** [H-107](hallazgos.md), [H-112](hallazgos.md), [H-115](hallazgos.md), [H-207](hallazgos.md), [H-209](hallazgos.md), [H-222](hallazgos.md).
-- **Hallazgos que cierra de forma definitiva:** [H-209](hallazgos.md), [H-222](hallazgos.md). ([H-207](hallazgos.md) se completa en Etapa B).
+- **Hallazgos que cierra de forma definitiva:** [H-207](hallazgos.md), [H-209](hallazgos.md), [H-222](hallazgos.md). (H-207 completado en Etapa B).
 - **Archivos que toca:**
   - `src/modules/eneagrama/actions.ts`
   - `src/modules/eneagrama/rehacer-policy.ts`
@@ -356,7 +356,7 @@ La Etapa B se ejecutará una vez configurado el proyecto de staging y abarca los
 - **Dependencias:** `PQ-03`, `PQ-04` (consume `getPostulanteId`).
 - **Cambios en base de datos:** Ninguno.
 - **Detalle de implementación:**
-  - [H-207](hallazgos.md): En `src/modules/eneagrama/actions.ts:calcularEneatipo`, capturar y manejar transaccionalmente los errores en la inserción de puntajes y dominantes para evitar descarte silencioso.
+  - [H-207](hallazgos.md): En `src/modules/eneagrama/actions.ts:calcularEneatipo`, persistencia atómica mediante la función RPC `guardar_resultado_eneagrama` (migración `20261115000000_guardar_resultado_eneagrama.sql`), evitando descarte silencioso o estados inconsistentes.
   - [H-209](hallazgos.md): Invocar `evaluarRehacer` de `rehacer-policy.ts` comprobando que hayan transcurrido 6 meses desde el último test válido antes de permitir rehacerlo (`TC-ENE-004`).
   - [H-222](hallazgos.md): Eliminar cálculo impuro de `Date.now()` en el render inicial de `informe-visor.tsx` para evitar discrepancias de hidratación entre SSR y cliente.
   - [H-107](hallazgos.md): Usar `getPostulanteId()` canónico en `certificado/actions.ts`.

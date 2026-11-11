@@ -110,3 +110,7 @@ FROM public.competencia GROUP BY 1 HAVING count(*) > 1;
 
 Si devuelve filas, el control de la migración va a abortar y hay que unificar esos duplicados a mano antes del deploy.
 
+
+### Migración `20261115000000_guardar_resultado_eneagrama.sql` (H-207)
+
+Esta migración crea la función transaccional `public.guardar_resultado_eneagrama(...)`. Debe estar aplicada en producción **antes** de desplegar el código que invoca a la RPC (`calcularEneatipo`), ya que versiones nuevas de la aplicación dependen de su existencia para persistir los resultados del test del Eneagrama.
