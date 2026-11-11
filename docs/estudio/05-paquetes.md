@@ -643,8 +643,9 @@ Tomás seleccionó la **Opción C** (tabla dedicada `puesto_criterio_psicologico
   - El índice único de nombre actual distingue mayúsculas; se normaliza a índice insensible a mayúsculas (`CITEXT` o `UNIQUE (LOWER(nombre))`).
 
 ### 4. Términos y Condiciones y Ley 25.326 (H-302)
-- El texto legal definitivo lo redacta Tomás.
-- El plan técnico cubre exclusivamente la arquitectura de software y base de datos (consentimiento explícito para evaluación psicométrica en registro, derecho de supresión con borrado seguro de cuenta y exportación de datos en formato JSON portable), ejecutándose en la Etapa B.
+- El texto legal definitivo lo decide la dueña de la plataforma.
+- El plan técnico cubre exclusivamente la arquitectura de software y base de datos (consentimiento explícito para evaluación psicométrica en registro, derecho de supresión con borrado seguro de cuenta y exportación de datos en formato JSON portable).
+- **Diferido a deuda técnica (Etapa B):** no se implementa hasta que la dueña de la plataforma defina los Términos y Condiciones y qué significa la baja (borrado o anonimización; postulaciones, notas privadas y certificados verificables por QR).
 
 ---
 
@@ -653,6 +654,7 @@ Tomás seleccionó la **Opción C** (tabla dedicada `puesto_criterio_psicologico
 Los siguientes ítems quedan expresamente fuera del plan de ejecución de la Fase 6 por motivos operativos y de infraestructura:
 - **H-007 (Protección contra contraseñas filtradas en Supabase Auth):** Lo activa Tomás directamente desde el panel de control de Supabase (Auth > Password security).
 - **H-219 (Notificaciones por email en postulaciones y verificación Resend):** Deuda técnica hasta que el proyecto se instale formalmente en su infraestructura definitiva.
+- **H-302 (Términos y Condiciones, consentimiento, baja y exportación de datos — Ley 25.326):** Deuda técnica hasta que la dueña de la plataforma defina los Términos y Condiciones. El riesgo es real y sigue abierto.
 - **H-305 (Monitoreo y observabilidad APM en producción):** Herramienta (Sentry/Vercel) e integración definidas directamente por Tomás.
 
 ---
