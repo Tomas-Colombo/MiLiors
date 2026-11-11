@@ -7,6 +7,7 @@ import { aiProvider } from '@/lib/ai'
 import { AIError } from '@/lib/ai/port'
 import { MAX_CANDIDATOS_SELECCION } from './constants'
 import { cargarContextoCandidato } from './contexto-candidato'
+import { evaluarCuotaInforme } from './cuota'
 import {
   buildSeleccionPrompts,
   type CandidatoContexto,
@@ -49,7 +50,8 @@ function parseInformeSeleccion(raw: string): InformeSeleccionJSON | null {
  * Genera el informe de selección grupal para un puesto: compara los candidatos
  * indicados y devuelve el JSON estructurado del ranking.
  *
- * No persiste nada: el informe se genera on-demand y se descarta.
+ * Registra el uso para control de cuota en informe_seleccion_generado, pero no
+ * persiste el contenido del informe: se genera on-demand y se descarta.
  */
 export async function generarInformeSeleccion(
   puestoId: string,
@@ -116,6 +118,40 @@ export async function generarInformeSeleccion(
     }
   }
 
+  // Control de cuota por reclutador (H-221). Se evalúa antes de cargar el
+  // contexto de los candidatos para no realizar lecturas pesadas si la cuota
+  // está agotada.
+  const ahora = Date.now()
+  const unaHoraAtras = new Date(ahora - 60 * 60 * 1000).toISOString()
+  const unDiaAtras = new Date(ahora - 24 * 60 * 60 * 1000).toISOString()
+
+  const [resHora, resDia] = await Promise.all([
+    admin
+      .from('informe_seleccion_generado')
+      .select('id', { count: 'exact', head: true })
+      .eq('reclutador_id', reclutadorId)
+      .gte('created_at', unaHoraAtras),
+    admin
+      .from('informe_seleccion_generado')
+      .select('id', { count: 'exact', head: true })
+      .eq('reclutador_id', reclutadorId)
+      .gte('created_at', unDiaAtras),
+  ])
+
+  if (resHora.error || resDia.error) {
+    console.error('[seleccion/service] Error verificando cuota de informes:', resHora.error || resDia.error)
+    return {
+      success: false,
+      error: 'No se pudo verificar el límite de informes. Intentá más tarde.',
+      status: 503,
+    }
+  }
+
+  const cuota = evaluarCuotaInforme(resHora.count ?? 0, resDia.count ?? 0)
+  if (!cuota.permitida) {
+    return { success: false, error: cuota.error, status: 429 }
+  }
+
   // Contexto por candidato (en paralelo): perfil técnico, informe, notas
   // Si falta un dato clave de un candidato se corta todo el informe: un ranking
   // armado con datos silenciosamente incompletos sería engañoso.
@@ -143,7 +179,56 @@ export async function generarInformeSeleccion(
     candidatos,
   })
 
+  // Registro del intento antes de invocar a la IA para imputar consumo de cuota
+  const { data: registroInsert, error: errInsert } = await admin
+    .from('informe_seleccion_generado')
+    .insert({
+      reclutador_id: reclutadorId,
+      puesto_id: puestoId,
+      cantidad_candidatos: validos.length,
+      estado: 'GENERANDO',
+    })
+    .select('id')
+    .single()
+
+  if (errInsert || !registroInsert) {
+    console.error('[seleccion/service] Error registrando intento de informe:', errInsert)
+    return {
+      success: false,
+      error: 'No se pudo verificar el límite de informes. Intentá más tarde.',
+      status: 503,
+    }
+  }
+
+  const informeGeneradoId = registroInsert.id
+
+  const actualizarRegistro = async (
+    estado: 'LISTO' | 'ERROR',
+    usage?: { inputTokens: number; outputTokens: number }
+  ) => {
+    const updatePayload: {
+      estado: 'LISTO' | 'ERROR'
+      tokens_entrada?: number
+      tokens_salida?: number
+    } = { estado }
+
+    if (usage) {
+      updatePayload.tokens_entrada = usage.inputTokens
+      updatePayload.tokens_salida = usage.outputTokens
+    }
+
+    const { error: errUpdate } = await admin
+      .from('informe_seleccion_generado')
+      .update(updatePayload)
+      .eq('id', informeGeneradoId)
+
+    if (errUpdate) {
+      console.error('[seleccion/service] Error actualizando informe_seleccion_generado:', errUpdate)
+    }
+  }
+
   let raw = ''
+  let ultimoUsage: { inputTokens: number; outputTokens: number } | undefined
   const MAX_INTENTOS = 2
   const TIMEOUT_MS = 120_000
   const ESPERA_REINTENTO_MS = 2_000
@@ -159,6 +244,7 @@ export async function generarInformeSeleccion(
         timeoutMs: TIMEOUT_MS,
       })
       raw = result.content
+      ultimoUsage = result.usage
       console.info(
         `[seleccion] Intento ${intento}/${MAX_INTENTOS} — Tokens: ${result.usage.inputTokens} in + ${result.usage.outputTokens} out (${result.model})`
       )
@@ -176,6 +262,7 @@ export async function generarInformeSeleccion(
         continue
       }
 
+      await actualizarRegistro('ERROR')
       return {
         success: false,
         error: 'El asistente no está disponible en este momento. Intentá más tarde.',
@@ -187,6 +274,7 @@ export async function generarInformeSeleccion(
   const informe = parseInformeSeleccion(raw)
   if (!informe) {
     console.error('[seleccion] Respuesta IA no parseable:', raw.slice(0, 300))
+    await actualizarRegistro('ERROR')
     return {
       success: false,
       error: 'No se pudo interpretar la respuesta del asistente. Intentá de nuevo.',
@@ -194,5 +282,6 @@ export async function generarInformeSeleccion(
     }
   }
 
+  await actualizarRegistro('LISTO', ultimoUsage)
   return { success: true, informe, tituloPuesto: puestoTyped.titulo_puesto }
 }

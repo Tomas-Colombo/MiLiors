@@ -7,25 +7,17 @@
  * de la zona horaria.
  */
 
+import { evaluarCuota, type CuotaResultado } from '@/lib/ai/cuota'
+
 export const LIMITE_CONSULTAS_HORA = 20
 export const LIMITE_CONSULTAS_DIA = 100
 
-export type CuotaAsistenteResultado =
-  | { permitida: true }
-  | { permitida: false; error: string }
+export type CuotaAsistenteResultado = CuotaResultado
 
 export function evaluarCuotaAsistente(conteoHora: number, conteoDia: number): CuotaAsistenteResultado {
-  if (conteoHora >= LIMITE_CONSULTAS_HORA) {
-    return {
-      permitida: false,
-      error: `Alcanzaste el límite de consultas al asistente (${LIMITE_CONSULTAS_HORA} por hora). Probá de nuevo más tarde.`,
-    }
-  }
-  if (conteoDia >= LIMITE_CONSULTAS_DIA) {
-    return {
-      permitida: false,
-      error: `Alcanzaste el límite de consultas al asistente (${LIMITE_CONSULTAS_DIA} por día). Probá de nuevo más tarde.`,
-    }
-  }
-  return { permitida: true }
+  return evaluarCuota(conteoHora, conteoDia, {
+    limiteHora: LIMITE_CONSULTAS_HORA,
+    limiteDia: LIMITE_CONSULTAS_DIA,
+    etiqueta: 'consultas al asistente',
+  })
 }
