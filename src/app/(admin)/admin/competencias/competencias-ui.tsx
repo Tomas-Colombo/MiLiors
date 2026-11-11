@@ -3,7 +3,14 @@
 import { useTransition, useRef, useState } from 'react'
 import { Button, Input, Field, Alert, ConfirmDialog } from '@/components/ui'
 import { PlusIcon } from '@/components/icons'
-import { crearCompetencia, desactivarCompetencia, reactivarCompetencia } from '@/modules/admin/actions'
+import {
+  crearCompetencia,
+  desactivarCompetencia,
+  reactivarCompetencia,
+  aprobarSugerencia,
+  descartarSugerencia,
+} from '@/modules/admin/actions'
+import type { CompetenciaSugeridaAdmin } from '@/modules/admin/queries'
 import { useFormAccion } from '@/components/shared/use-form-accion'
 
 // ─── Formulario crear competencia ─────────────────────────────────────────────
@@ -86,5 +93,96 @@ export function CompetenciaAcciones({ id, activa }: { id: string; activa: boolea
         ofrecerse en los formularios, y los perfiles que ya la tienen cargada la conservan.
       </ConfirmDialog>
     </>
+  )
+}
+
+// ─── Acciones de moderación de sugerencias (H-205) ────────────────────────────
+
+export function SugerenciaAcciones({
+  sugerencia,
+}: {
+  sugerencia: CompetenciaSugeridaAdmin
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [confirmandoAprobar, setConfirmandoAprobar] = useState(false)
+  const [confirmandoDescartar, setConfirmandoDescartar] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const esReactivacion = Boolean(sugerencia.coincidenciaCatalogo?.desactivada)
+
+  function handleAprobar() {
+    setErrorMsg(null)
+    startTransition(async () => {
+      const res = await aprobarSugerencia(sugerencia.nombreNormalizado)
+      if (!res.success) {
+        setErrorMsg(res.error ?? 'No se pudo aprobar la sugerencia.')
+      } else {
+        setConfirmandoAprobar(false)
+      }
+    })
+  }
+
+  function handleDescartar() {
+    setErrorMsg(null)
+    startTransition(async () => {
+      const res = await descartarSugerencia(sugerencia.nombreNormalizado)
+      if (!res.success) {
+        setErrorMsg(res.error ?? 'No se pudo descartar la sugerencia.')
+      } else {
+        setConfirmandoDescartar(false)
+      }
+    })
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-2">
+      {errorMsg && (
+        <span className="text-2xs text-error mr-2">{errorMsg}</span>
+      )}
+      <Button
+        variant={esReactivacion ? 'tonal' : 'secondary'}
+        size="sm"
+        onClick={() => setConfirmandoAprobar(true)}
+        loading={isPending}
+      >
+        {esReactivacion ? 'Aprobar (reactivar)' : 'Aprobar'}
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-neutral-500 hover:text-error"
+        onClick={() => setConfirmandoDescartar(true)}
+        loading={isPending}
+      >
+        Descartar
+      </Button>
+
+      <ConfirmDialog
+        open={confirmandoAprobar}
+        onClose={() => setConfirmandoAprobar(false)}
+        onConfirm={handleAprobar}
+        tone="primary"
+        title={esReactivacion ? '¿Aprobar y reactivar habilidad/tecnología?' : '¿Aprobar habilidad/tecnología?'}
+        confirmLabel={esReactivacion ? 'Aprobar y reactivar' : 'Aprobar'}
+        loading={isPending}
+      >
+        {esReactivacion
+          ? `Al aprobar, se reactivará la competencia existente "${sugerencia.coincidenciaCatalogo?.nombre}" en el catálogo oficial y se le asignará a los ${sugerencia.cantidadPostulantes} postulante(s) que la sugirieron.`
+          : `Al aprobar, se agregará "${sugerencia.nombre}" al catálogo oficial y se le asignará a los ${sugerencia.cantidadPostulantes} postulante(s) que la sugirieron.`}
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={confirmandoDescartar}
+        onClose={() => setConfirmandoDescartar(false)}
+        onConfirm={handleDescartar}
+        tone="destructive"
+        title="¿Descartar esta sugerencia?"
+        confirmLabel="Descartar"
+        loading={isPending}
+      >
+        Se eliminarán las sugerencias pendientes para &quot;{sugerencia.nombre}&quot; de los {sugerencia.cantidadPostulantes} postulante(s). Esta acción no se puede deshacer.
+      </ConfirmDialog>
+    </div>
   )
 }

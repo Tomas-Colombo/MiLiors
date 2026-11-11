@@ -15,7 +15,8 @@ import {
   SECCIONES_FEEDBACK_ANTERIORES,
   type NivelCompetencia,
 } from '@/lib/types/informe'
-import { patronSinTildes } from '@/lib/texto'
+import { patronSinTildes, normalizarTexto } from '@/lib/texto'
+import { requireAdmin } from '@/lib/guards'
 
 // ─── Métricas del dashboard ──────────────────────────────────────────────────
 
@@ -283,6 +284,109 @@ export async function getCompetenciasUsoAdmin(): Promise<CompetenciaUsoAdmin[]> 
     (a, b) => b.postulantes - a.postulantes || a.nombre.localeCompare(b.nombre, 'es'),
   )
 }
+
+
+export type CompetenciaSugeridaAdmin = {
+  nombreNormalizado: string
+  nombre: string
+  cantidadPostulantes: number
+  fechaReciente: string
+  coincidenciaCatalogo?: {
+    id: string
+    nombre: string
+    desactivada: boolean
+  }
+}
+
+/**
+ * Consulta de sugerencias pendientes agrupadas por nombre normalizado.
+ * Requiere rol ADMIN y utiliza el cliente admin para leer todas las sugerencias.
+ */
+export async function getCompetenciasSugeridasAdmin(): Promise<CompetenciaSugeridaAdmin[]> {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  const [sugerenciasRes, catalogoRes] = await Promise.all([
+    admin
+      .from('competencia_sugerida')
+      .select('id, perfil_tecnico_id, nombre, nombre_normalizado, created_at')
+      .order('created_at', { ascending: false }),
+    admin
+      .from('competencia')
+      .select('id, nombre, fecha_baja'),
+  ])
+
+  const sugerencias = sugerenciasRes.data ?? []
+  const catalogo = catalogoRes.data ?? []
+
+  const catalogoPorNorm = new Map<string, { id: string; nombre: string; fecha_baja: string | null }>()
+  for (const c of catalogo) {
+    catalogoPorNorm.set(normalizarTexto(c.nombre), c)
+  }
+
+  type Grupo = {
+    nombreNormalizado: string
+    nombres: Map<string, number>
+    primerNombre: string
+    postulantes: Set<string>
+    fechaReciente: string
+  }
+
+  const grupos = new Map<string, Grupo>()
+
+  for (const s of sugerencias) {
+    let g = grupos.get(s.nombre_normalizado)
+    if (!g) {
+      g = {
+        nombreNormalizado: s.nombre_normalizado,
+        nombres: new Map<string, number>(),
+        primerNombre: s.nombre,
+        postulantes: new Set<string>(),
+        fechaReciente: s.created_at,
+      }
+      grupos.set(s.nombre_normalizado, g)
+    }
+
+    g.nombres.set(s.nombre, (g.nombres.get(s.nombre) ?? 0) + 1)
+    g.postulantes.add(s.perfil_tecnico_id)
+    if (new Date(s.created_at) > new Date(g.fechaReciente)) {
+      g.fechaReciente = s.created_at
+    }
+  }
+
+  const resultado: CompetenciaSugeridaAdmin[] = []
+
+  for (const g of grupos.values()) {
+    let nombreRep = g.primerNombre
+    let maxFreq = 0
+    for (const [nombre, freq] of g.nombres.entries()) {
+      if (freq > maxFreq) {
+        maxFreq = freq
+        nombreRep = nombre
+      }
+    }
+
+    const match = catalogoPorNorm.get(g.nombreNormalizado)
+
+    resultado.push({
+      nombreNormalizado: g.nombreNormalizado,
+      nombre: nombreRep,
+      cantidadPostulantes: g.postulantes.size,
+      fechaReciente: g.fechaReciente,
+      coincidenciaCatalogo: match
+        ? {
+            id: match.id,
+            nombre: match.nombre,
+            desactivada: match.fecha_baja !== null,
+          }
+        : undefined,
+    })
+  }
+
+  return resultado.sort((a, b) => new Date(b.fechaReciente).getTime() - new Date(a.fechaReciente).getTime())
+}
+
+export const getSugerenciasCompetenciasAdmin = getCompetenciasSugeridasAdmin
 
 // ─── Idiomas ─────────────────────────────────────────────────────────────────
 

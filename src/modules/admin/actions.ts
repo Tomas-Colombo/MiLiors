@@ -6,7 +6,8 @@ import { requireAdmin } from '@/lib/guards'
 import { logAuditoria } from '@/lib/logger'
 import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
-import { patronTextoCompleto } from '@/lib/texto'
+import { patronTextoCompleto, normalizarTexto } from '@/lib/texto'
+import { marcarCertificadosDesactualizados } from '@/modules/perfil-tecnico/certificado'
 import { getRequisitosVisibilidadPostulante } from './queries'
 import { evaluarRequisitosVisibilidad, MENSAJE_VISIBILIDAD_ADMIN } from '@/modules/visibilidad/regla'
 import type { RequisitosVisibilidad } from '@/modules/visibilidad/regla'
@@ -101,6 +102,174 @@ export async function reactivarCompetencia(id: string): Promise<ActionResult> {
     .update({ fecha_baja: null })
     .eq('id', id)
   if (error) return { success: false, error: 'No se pudo reactivar.' }
+  revalidatePath('/admin/competencias')
+  return { success: true, data: undefined }
+}
+
+
+/**
+ * Aprueba un grupo de sugerencias pendientes en /admin/competencias (H-205).
+ *
+ * Flujo:
+ * 1. Busca en el catálogo una competencia que coincida (con normalizarTexto), activa o no.
+ *    - Si existe y está desactivada, la reactiva (fecha_baja = null).
+ *    - Si no existe, la crea con el nombre representativo.
+ * 2. Para cada sugerencia del grupo, inserta en postulante_competencia con su nivel
+ *    (ignora duplicados si ya existía la relación por la constraint única).
+ * 3. Borra las sugerencias del grupo en competencia_sugerida.
+ * 4. Marca como desactualizado el certificado de cada postulante afectado.
+ * 5. Registra logAuditoria y revalida /admin/competencias.
+ *
+ * Este orden hace que la operación sea idempotente y se pueda repetir sin
+ * problema si falla a mitad de camino.
+ */
+export async function aprobarSugerencia(nombreNormalizado: string): Promise<ActionResult> {
+  const session = await requireAdmin()
+  const admin = createAdminClient()
+
+  // 1. Obtener todas las sugerencias de este grupo
+  const { data: sugerencias, error: sugErr } = await admin
+    .from('competencia_sugerida')
+    .select('id, perfil_tecnico_id, nombre, nivel')
+    .eq('nombre_normalizado', nombreNormalizado)
+
+  if (sugErr) return { success: false, error: 'No se pudieron leer las sugerencias.' }
+  if (!sugerencias || sugerencias.length === 0) {
+    return { success: false, error: 'No se encontraron sugerencias pendientes para este grupo.' }
+  }
+
+  // Determinar nombre representativo (el más frecuente o el primero)
+  const freqs = new Map<string, number>()
+  for (const s of sugerencias) {
+    freqs.set(s.nombre, (freqs.get(s.nombre) ?? 0) + 1)
+  }
+  let nombreRep = sugerencias[0].nombre
+  let maxFreq = 0
+  for (const [n, f] of freqs.entries()) {
+    if (f > maxFreq) {
+      maxFreq = f
+      nombreRep = n
+    }
+  }
+
+  // Buscar en el catálogo una competencia que coincida (esté activa o no)
+  const { data: catalogo, error: catErr } = await admin
+    .from('competencia')
+    .select('id, nombre, fecha_baja')
+
+  if (catErr) return { success: false, error: 'Error al consultar el catálogo.' }
+
+  const match = (catalogo ?? []).find((c) => normalizarTexto(c.nombre) === nombreNormalizado)
+
+  let competenciaId: string
+  if (match) {
+    competenciaId = match.id
+    if (match.fecha_baja !== null) {
+      const { error: reactivarErr } = await admin
+        .from('competencia')
+        .update({ fecha_baja: null })
+        .eq('id', match.id)
+      if (reactivarErr) return { success: false, error: 'No se pudo reactivar la competencia.' }
+    }
+  } else {
+    const { data: creada, error: crearErr } = await admin
+      .from('competencia')
+      .insert({ nombre: nombreRep })
+      .select('id')
+      .single()
+
+    if (crearErr) {
+      if (crearErr.code === '23505') {
+        const { data: existente } = await admin
+          .from('competencia')
+          .select('id')
+          .eq('nombre', nombreRep)
+          .maybeSingle()
+        if (!existente) return { success: false, error: 'Error de concurrencia al crear la competencia.' }
+        competenciaId = existente.id
+      } else {
+        return { success: false, error: 'No se pudo crear la competencia en el catálogo.' }
+      }
+    } else {
+      competenciaId = creada.id
+    }
+  }
+
+  // 2. Insertar en postulante_competencia con su nivel
+  const pcRows = sugerencias.map((s) => ({
+    perfil_tecnico_id: s.perfil_tecnico_id,
+    competencia_id: competenciaId,
+    nivel: s.nivel,
+  }))
+
+  const { error: upsertErr } = await admin
+    .from('postulante_competencia')
+    .upsert(pcRows, { onConflict: 'perfil_tecnico_id,competencia_id', ignoreDuplicates: true })
+
+  if (upsertErr) return { success: false, error: 'No se pudieron asignar las competencias a los postulantes.' }
+
+  // 3. Borrar las sugerencias del grupo
+  const { error: delErr } = await admin
+    .from('competencia_sugerida')
+    .delete()
+    .eq('nombre_normalizado', nombreNormalizado)
+
+  if (delErr) return { success: false, error: 'No se pudieron borrar las sugerencias procesadas.' }
+
+  // 4. Marcar como desactualizado el certificado de cada postulante afectado
+  const ptIds = [...new Set(sugerencias.map((s) => s.perfil_tecnico_id))]
+  const { data: pts } = await admin
+    .from('perfil_tecnico')
+    .select('postulante_id')
+    .in('id', ptIds)
+
+  const postulanteIds = (pts ?? []).map((p) => p.postulante_id).filter(Boolean) as string[]
+  if (postulanteIds.length > 0) {
+    await marcarCertificadosDesactualizados(postulanteIds)
+  }
+
+  // 5. Registrar auditoría y revalidar
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'aprobar_competencia_sugerida',
+    entidad: 'competencia_sugerida',
+    entidadId: competenciaId,
+    detalle: {
+      nombreNormalizado,
+      competenciaId,
+      nombre: match ? match.nombre : nombreRep,
+      reactivada: !!match && match.fecha_baja !== null,
+      cantidadPostulantes: postulanteIds.length,
+    },
+  })
+
+  revalidatePath('/admin/competencias')
+  return { success: true, data: undefined }
+}
+
+/**
+ * Descarta un grupo de sugerencias pendientes (H-205).
+ * Borra las sugerencias del grupo, llama a logAuditoria y revalida la vista.
+ */
+export async function descartarSugerencia(nombreNormalizado: string): Promise<ActionResult> {
+  const session = await requireAdmin()
+  const admin = createAdminClient()
+
+  const { error } = await admin
+    .from('competencia_sugerida')
+    .delete()
+    .eq('nombre_normalizado', nombreNormalizado)
+
+  if (error) return { success: false, error: 'No se pudieron descartar las sugerencias.' }
+
+  logAuditoria({
+    usuarioId: session.id,
+    accion: 'descartar_competencia_sugerida',
+    entidad: 'competencia_sugerida',
+    entidadId: nombreNormalizado,
+    detalle: { nombreNormalizado },
+  })
+
   revalidatePath('/admin/competencias')
   return { success: true, data: undefined }
 }

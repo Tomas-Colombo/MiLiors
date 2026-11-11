@@ -3,6 +3,8 @@ import {
   getCompetenciasUsoAdmin,
   type CompetenciaAdmin,
   type CompetenciaUsoAdmin,
+  getCompetenciasSugeridasAdmin,
+  type CompetenciaSugeridaAdmin,
 } from '@/modules/admin/queries'
 import { filtrarCatalogo, ordenarCatalogo, qsExportCatalogo } from '@/modules/admin/catalogo-filtros'
 import { ExportarExcel } from '@/components/shared/exportar-excel'
@@ -10,7 +12,7 @@ import { formatFecha } from '@/lib/fecha'
 import { PageHeader, Table, Badge, EmptyState } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import { BarChartIcon } from '@/components/icons'
-import { CrearCompetenciaForm, CompetenciaAcciones } from './competencias-ui'
+import { CrearCompetenciaForm, CompetenciaAcciones, SugerenciaAcciones } from './competencias-ui'
 import { SearchInput, FilterSelect, FiltroFechas, ClearFilters, Paginador } from '@/components/shared/list-controls'
 import { paginar } from '@/lib/pagination'
 
@@ -50,7 +52,11 @@ export default async function CompetenciasPage({
   }>
 }) {
   const sp = await searchParams
-  const [todas, uso] = await Promise.all([getCompetenciasAdmin(), getCompetenciasUsoAdmin()])
+  const [todas, uso, sugerencias] = await Promise.all([
+    getCompetenciasAdmin(),
+    getCompetenciasUsoAdmin(),
+    getCompetenciasSugeridasAdmin(),
+  ])
 
   // Mismo filtrado y orden que usa la ruta del Excel: una sola implementación
   // para que lo que se descarga sea exactamente lo que se ve.
@@ -109,6 +115,52 @@ export default async function CompetenciasPage({
       header: '',
       align: 'right',
       cell: row => <CompetenciaAcciones id={row.id} activa={!row.fecha_baja} />,
+    },
+  ]
+
+  const sugerenciasColumns: Column<CompetenciaSugeridaAdmin>[] = [
+    {
+      key: 'nombre',
+      header: 'Habilidad / tecnología sugerida',
+      width: '2fr',
+      cell: row => (
+        <div>
+          <p className="font-medium text-ink leading-tight">{row.nombre}</p>
+          {row.coincidenciaCatalogo && (
+            <p className="text-2xs text-muted">
+              Coincide con catálogo: <span className="font-medium text-ink">{row.coincidenciaCatalogo.nombre}</span>{' '}
+              {row.coincidenciaCatalogo.desactivada ? (
+                <span className="text-warning font-medium">(desactivada — se reactivará al aprobar)</span>
+              ) : (
+                <span className="text-success font-medium">(activa)</span>
+              )}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'postulantes',
+      header: 'Postulantes',
+      align: 'right',
+      cell: row => (
+        <span className="text-compact font-semibold tabular-nums text-ink-soft">{row.cantidadPostulantes}</span>
+      ),
+    },
+    {
+      key: 'fecha',
+      header: 'Más reciente',
+      cell: row => (
+        <span className="text-muted">
+          {formatFecha(row.fechaReciente, 'corta')}
+        </span>
+      ),
+    },
+    {
+      key: 'acciones',
+      header: '',
+      align: 'right',
+      cell: row => <SugerenciaAcciones sugerencia={row} />,
     },
   ]
 
@@ -206,6 +258,34 @@ export default async function CompetenciasPage({
       </div>
 
       <Paginador page={page} pageCount={pageCount} />
+
+      {/* ─── Sugerencias pendientes de moderación (H-205) ───────────── */}
+      <div className="mt-10">
+        <div className="flex items-center gap-2">
+          <h2 className="text-md font-bold text-ink">Sugerencias pendientes</h2>
+          {sugerencias.length > 0 && (
+            <Badge tone="warning" dot>
+              {sugerencias.length}
+            </Badge>
+          )}
+        </div>
+        <p className="mt-1 text-compact text-muted">
+          Habilidades y tecnologías ingresadas como texto libre por postulantes que esperan moderación. Al aprobar una
+          sugerencia se incorpora al catálogo oficial (o se reactiva si existía desactivada) y se asigna al perfil de cada postulante.
+        </p>
+
+        <div className="mt-4">
+          {sugerencias.length === 0 ? (
+            <EmptyState
+              icon={<BarChartIcon size={22} />}
+              title="Sin sugerencias pendientes"
+              description="No hay habilidades o tecnologías libres pendientes de moderación."
+            />
+          ) : (
+            <Table columns={sugerenciasColumns} rows={sugerencias} rowKey={row => row.nombreNormalizado} />
+          )}
+        </div>
+      </div>
 
       {/* ─── Uso real por postulantes ─────────────────────────────── */}
       <h2 className="mt-10 text-md font-bold text-ink">Cargadas por postulantes</h2>
