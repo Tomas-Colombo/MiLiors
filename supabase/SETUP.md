@@ -145,3 +145,12 @@ WHERE pp.perfil_en_busqueda = true
     )
   );
 ```
+
+### Migración `20261117000000_rls_initplan.sql` (H-009)
+
+Envuelve `auth.uid()` y `public.get_my_rol()` en `(SELECT ...)` en las 95 políticas RLS de `public` que los usan, con `ALTER POLICY`. No cambia la lógica de ninguna política ni el código de la app.
+
+**Notas de deploy:**
+- Independiente del código: puede aplicarse antes o después del deploy de la app, siempre después de `20261116000000`.
+- Trae una postcondición: si en producción hubiera una política de `public` con esas llamadas sin envolver que la migración no contempla (deriva respecto del repo), aborta y no aplica nada. En ese caso, avisar antes de reintentar.
+- Después de aplicarla, el advisor `auth_rls_initplan` de Supabase no debería listar ninguna política de `public`.
