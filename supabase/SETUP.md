@@ -154,3 +154,12 @@ Envuelve `auth.uid()` y `public.get_my_rol()` en `(SELECT ...)` en las 95 polít
 - Independiente del código: puede aplicarse antes o después del deploy de la app, siempre después de `20261116000000`.
 - Trae una postcondición: si en producción hubiera una política de `public` con esas llamadas sin envolver que la migración no contempla (deriva respecto del repo), aborta y no aplica nada. En ese caso, avisar antes de reintentar.
 - Después de aplicarla, el advisor `auth_rls_initplan` de Supabase no debería listar ninguna política de `public`.
+
+### Migración `20261118000000_rls_politicas_permisivas.sql` (H-010)
+
+Deja una sola política permisiva por tabla, rol y acción en las 16 combinaciones que marcaba el advisor `multiple_permissive_policies`, sin cambiar el acceso: divide 13 políticas `ALL` en `INSERT`/`UPDATE`/`DELETE`, restringe a `anon` las lecturas públicas de `puesto` y `puesto_carrera`, y fusiona las dos de `historial_puesto` (SELECT) y las dos de `perfil_postulante` (UPDATE, ahora `postulante_update`).
+
+**Notas de deploy:**
+- Va después de `20261117000000`. Independiente del código.
+- Trae postcondiciones: si en producción quedara alguna política permisiva duplicada o una llamada sin envolver (deriva respecto del repo), aborta sin aplicar nada. En ese caso, avisar antes de reintentar.
+- Después de aplicarla, los advisors `multiple_permissive_policies` y `auth_rls_initplan` no deberían listar tablas de `public`.
