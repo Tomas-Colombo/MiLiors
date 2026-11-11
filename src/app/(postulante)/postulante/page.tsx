@@ -1,5 +1,6 @@
 import { buttonClassName } from '@/components/ui'
 import { verifySession } from '@/lib/dal'
+import { ESTADO_INFORME } from '@/lib/constants/enums'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { VisibilityToggle } from '@/modules/visibilidad/visibility-toggle'
 import {
@@ -159,16 +160,11 @@ export default async function PostulanteDashboard() {
             >
               Visibilidad en búsquedas
             </h2>
-            <VisibilityToggle initialValue={perfilEnBusqueda} />
-            {perfil?.bloqueado_por_admin ? (
-              <p className="mt-3 text-xs text-error-ink">
-                Tu perfil fue pausado por la administración. Escribinos si creés que es un error.
-              </p>
-            ) : perfilEnBusqueda && (dominantes.length === 0 || informe?.estado_informe !== 'LISTO') ? (
-              <p className="mt-3 text-xs text-muted">
-                Vas a aparecer en las búsquedas cuando tu informe de personalidad esté listo.
-              </p>
-            ) : null}
+            <VisibilityToggle
+              initialValue={perfilEnBusqueda}
+              bloqueado={perfil?.bloqueado_por_admin ?? false}
+              cumpleRequisitos={dominantes.length > 0 && informe?.estado_informe === ESTADO_INFORME.LISTO}
+            />
           </div>
 
           {/* Accesos rápidos */}
