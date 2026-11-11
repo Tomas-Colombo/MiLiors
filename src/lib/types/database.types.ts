@@ -884,6 +884,57 @@ export type Database = {
           },
         ]
       }
+      informe_seleccion_generado: {
+        Row: {
+          cantidad_candidatos: number
+          created_at: string
+          estado: string
+          id: string
+          puesto_id: string | null
+          reclutador_id: string
+          tokens_entrada: number | null
+          tokens_salida: number | null
+          updated_at: string
+        }
+        Insert: {
+          cantidad_candidatos: number
+          created_at?: string
+          estado?: string
+          id?: string
+          puesto_id?: string | null
+          reclutador_id: string
+          tokens_entrada?: number | null
+          tokens_salida?: number | null
+          updated_at?: string
+        }
+        Update: {
+          cantidad_candidatos?: number
+          created_at?: string
+          estado?: string
+          id?: string
+          puesto_id?: string | null
+          reclutador_id?: string
+          tokens_entrada?: number | null
+          tokens_salida?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informe_seleccion_generado_puesto_id_fkey"
+            columns: ["puesto_id"]
+            isOneToOne: false
+            referencedRelation: "puesto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "informe_seleccion_generado_reclutador_id_fkey"
+            columns: ["reclutador_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_reclutador"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       localidad: {
         Row: {
           codigo_indec: string | null
