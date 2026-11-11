@@ -53,6 +53,7 @@ export type CompetenciaItem = {
   nombre: string
   /** Nivel de dominio del postulante. Ausente en los items del catálogo. */
   nivel?: NivelCompetencia
+  pendiente?: boolean
 }
 
 /** Loads the full technical profile for the current applicant */
@@ -85,7 +86,7 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
 
   const ptTyped = pt as { id: string; postulante_id: string; resumen_profesional_llm: string | null; fecha_actualizacion: string }
 
-  const [formaciones, cursos, experiencias, idiomas, competenciasJoin] = await Promise.all([
+  const [formaciones, cursos, experiencias, idiomas, competenciasJoin, sugerencias] = await Promise.all([
     supabase
       .from('formacion_academica')
       .select('id, institucion, titulo, fecha_graduacion')
@@ -109,7 +110,29 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
       .from('postulante_competencia')
       .select('competencia_id, nivel, competencia(id, nombre)')
       .eq('perfil_tecnico_id', ptTyped.id),
+    supabase
+      .from('competencia_sugerida')
+      .select('id, nombre, nivel')
+      .eq('perfil_tecnico_id', ptTyped.id)
+      .order('created_at', { ascending: true }),
   ])
+
+  const competenciasGuardadas: CompetenciaItem[] = (competenciasJoin.data ?? [])
+    .map((row: unknown) => {
+      const r = row as { nivel: NivelCompetencia | null; competencia: { id: string; nombre: string } | null }
+      if (!r.competencia) return null
+      const item: CompetenciaItem = { id: r.competencia.id, nombre: r.competencia.nombre, nivel: r.nivel ?? 'BASICO' }
+      return item
+    })
+    .filter((c): c is CompetenciaItem => c !== null)
+
+  const competenciasSugeridas: CompetenciaItem[] = ((sugerencias.data ?? []) as { id: string; nombre: string; nivel: NivelCompetencia | null }[])
+    .map((s) => ({
+      id: `custom:${s.nombre}`,
+      nombre: s.nombre,
+      nivel: s.nivel ?? 'BASICO',
+      pendiente: true,
+    }))
 
   return {
     id: ptTyped.id,
@@ -120,14 +143,11 @@ export const getPerfilTecnicoCompleto = cache(async (): Promise<PerfilTecnicoCom
     cursos: ((cursos.data ?? []) as CursoItem[]),
     experiencias: ((experiencias.data ?? []) as ExperienciaItem[]),
     idiomas: ((idiomas.data ?? []) as IdiomaItem[]),
-    competencias: (competenciasJoin.data ?? []).map((row: unknown) => {
-      const r = row as { nivel: NivelCompetencia | null; competencia: { id: string; nombre: string } | null }
-      if (!r.competencia) return null
-      const item: CompetenciaItem = { id: r.competencia.id, nombre: r.competencia.nombre, nivel: r.nivel ?? 'BASICO' }
-      return item
-    }).filter((c): c is CompetenciaItem => c !== null),
+    competencias: [...competenciasGuardadas, ...competenciasSugeridas],
   }
 })
+
+export const getPerfilTecnico = getPerfilTecnicoCompleto
 
 /** Loads the active competencies catalog (without logical deletion) */
 export const getCompetenciasCatalogo = cache(async (): Promise<CompetenciaItem[]> => {

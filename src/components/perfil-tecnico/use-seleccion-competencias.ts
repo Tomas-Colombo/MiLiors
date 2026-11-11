@@ -12,14 +12,15 @@ export const MAX_COMPETENCIAS = 15
  * Una competencia dentro de la selección en curso.
  *
  * Las del catálogo traen su UUID real. Las que escribe el postulante viven con
- * una clave temporal `custom:<nombre>` hasta que se guardan: recién ahí el
- * server devuelve los UUID definitivos y se reemplaza el array entero.
+ * una clave temporal `custom:<nombre>` hasta que se guardan: si quedan como
+ * pendientes de revisión, conservan `custom:<nombre>`, `isCustom: true` y `pendiente: true`.
  */
 export type SeleccionItem = {
   id: string
   nombre: string
   nivel: NivelCompetencia
   isCustom?: boolean
+  pendiente?: boolean
 }
 
 /**
@@ -31,7 +32,13 @@ export type SeleccionItem = {
  */
 export function useSeleccionCompetencias(catalogo: CompetenciaItem[], actuales: CompetenciaItem[]) {
   const [seleccionadas, setSeleccionadas] = useState<SeleccionItem[]>(() =>
-    actuales.map((c) => ({ id: c.id, nombre: c.nombre, nivel: c.nivel ?? 'BASICO' })),
+    actuales.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      nivel: c.nivel ?? 'BASICO',
+      isCustom: c.pendiente ? true : undefined,
+      pendiente: c.pendiente,
+    })),
   )
   const [query, setQuery] = useState('')
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
@@ -118,12 +125,18 @@ export function useSeleccionCompetencias(catalogo: CompetenciaItem[], actuales: 
     startTransition(async () => {
       const result = await guardarCompetenciasConCustom(existentes, customs)
       if (result.success) {
-        // Reconciliación: las claves `custom:` se reemplazan por los UUID que
-        // acaba de crear el server. Sin esto, volver a guardar sin recargar
-        // mandaría de nuevo las mismas competencias como si fueran nuevas.
-        if (result.items && result.items.length > 0) {
+        // Reconciliación: las claves `custom:` se reemplazan por los UUID definitivos
+        // si coincidieron con el catálogo, o se conservan como `custom:<nombre>` con
+        // pendiente: true e isCustom: true para moderación.
+        if (result.items !== undefined) {
           setSeleccionadas(
-            result.items.map((i) => ({ id: i.id, nombre: i.nombre, nivel: i.nivel })),
+            result.items.map((i) => ({
+              id: i.id,
+              nombre: i.nombre,
+              nivel: i.nivel,
+              isCustom: i.pendiente ? true : undefined,
+              pendiente: i.pendiente,
+            })),
           )
         }
         setFeedback({ ok: true, msg: 'Competencias guardadas.' })

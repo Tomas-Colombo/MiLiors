@@ -1,12 +1,13 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server-admin'
 import { getPostulanteId } from '@/modules/perfil/queries'
 import { formacionSchema, experienciaSchema, idiomaSchema, cursoSchema } from './schema'
 import type { ActionResult } from '@/lib/types/domain'
 import { NIVEL_COMPETENCIA, type NivelCompetencia } from '@/lib/constants/enums'
+import { normalizarTexto } from '@/lib/texto'
+import { crearSchemaNombreCatalogo } from '@/modules/admin/schema'
+import { marcarCambioPerfilTecnico } from './certificado'
 
 // Converts YYYY-MM → YYYY-MM-01 for Postgres DATE columns
 function toDate(mesAnio: string | undefined): string | null {
@@ -35,31 +36,6 @@ async function getOrCreatePerfilTecnico(postulanteId: string): Promise<string | 
   if (error || !created) return null
 
   return (created as { id: string }).id
-}
-
-
-/**
- * El certificado emitido es una foto firmada del perfil tecnico: cualquier
- * cambio de formacion, cursos, experiencia, idiomas o competencias lo deja
- * viejo. Aca solo prendemos el flag (una escritura, sin LLM); regenerar la
- * sintesis y re-emitir el PDF queda a cargo del boton "Actualizar certificado"
- * en /postulante/certificado. Mismo patron que eneagrama.
- *
- * Se usa createAdminClient() porque certificado_pdf está cerrada a escritura de
- * usuarios por diseño (migración archivada 20260924000007_restringir_escritura_informe_certificado.sql).
- */
-async function marcarCambioPerfilTecnico(postulanteId: string | null): Promise<void> {
-  if (postulanteId) {
-    const admin = createAdminClient()
-    const { error } = await admin.from('certificado_pdf')
-      .update({ desactualizado: true })
-      .eq('postulante_id', postulanteId)
-    if (error) {
-      console.error('[perfil-tecnico] No se pudo marcar el certificado desactualizado:', error.message)
-    }
-  }
-  revalidatePath('/postulante/perfil')
-  revalidatePath('/postulante/certificado')
 }
 
 // ─── FORMACIÓN ────────────────────────────────────────────────────────────────
@@ -408,18 +384,33 @@ export async function guardarCompetencias(competenciaIds: string[]): Promise<Act
 export type CompetenciaExistenteInput = { id: string; nivel: NivelCompetencia }
 export type CompetenciaCustomInput = { nombre: string; nivel: NivelCompetencia }
 
+export type CompetenciaGuardadaItem = {
+  id: string
+  nombre: string
+  nivel: NivelCompetencia
+  pendiente?: boolean
+}
+
 /**
- * Saves competencies for the current applicant.
- * `existentes` — items already in the catalog, with their level.
- * `customs` — free-text names to upsert into the catalog first, with their level.
- * Returns the final list of saved items so the UI can update optimistically.
+ * Guarda competencias para el postulante actual.
+ * `existentes` — items del catálogo, con su nivel.
+ * `customs` — nombres libres: si coinciden con una activa van al catálogo; si no, van a `competencia_sugerida`.
+ * Retorna la lista de items guardados (incluyendo sugerencias con pendiente: true).
  */
 export async function guardarCompetenciasConCustom(
   existentes: CompetenciaExistenteInput[],
   customs: CompetenciaCustomInput[]
-): Promise<ActionResult & { items?: { id: string; nombre: string; nivel: NivelCompetencia }[] }> {
+): Promise<ActionResult & { items?: CompetenciaGuardadaItem[] }> {
   if (existentes.length + customs.length > 15) {
     return { success: false, error: 'Podés seleccionar hasta 15 competencias.' }
+  }
+
+  const schemaNombre = crearSchemaNombreCatalogo('Ingresá un nombre de competencia.')
+  for (const c of customs) {
+    const parsed = schemaNombre.safeParse(c.nombre)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0].message }
+    }
   }
 
   const postulanteId = await getPostulanteId()
@@ -429,42 +420,96 @@ export async function guardarCompetenciasConCustom(
   if (!perfilTecnicoId) return { success: false, error: 'No se pudo preparar el perfil técnico.' }
 
   const supabase = await createClient()
-  const admin = createAdminClient()
 
-  // id → nivel (dedupes; el último gana)
-  const niveles = new Map<string, NivelCompetencia>()
-  for (const e of existentes) {
-    niveles.set(e.id, NIVEL_COMPETENCIA.includes(e.nivel) ? e.nivel : 'BASICO')
+  // 1. Leer catálogo activo con el cliente del usuario
+  const { data: catalogoActivo, error: catError } = await supabase
+    .from('competencia')
+    .select('id, nombre')
+    .is('fecha_baja', null)
+
+  if (catError) {
+    return { success: false, error: 'No se pudieron guardar las competencias.' }
   }
 
-  // Resolve custom names → IDs (upsert by nombre, which is UNIQUE)
-  // Nota H-205: Se usa createAdminClient porque hoy solo ADMIN puede insertar en el catálogo
-  // `competencia`. Este flujo lo rehace H-205 con la tabla de sugerencias.
+  const catalogoMap = new Map<string, { id: string; nombre: string }>()
+  for (const cat of catalogoActivo ?? []) {
+    catalogoMap.set(normalizarTexto(cat.nombre), cat)
+  }
+
+  // 2. Resolver items del catálogo (existentes + customs que coinciden con activas)
+  const competenciasCatalogo = new Map<string, NivelCompetencia>()
+  for (const e of existentes) {
+    competenciasCatalogo.set(e.id, NIVEL_COMPETENCIA.includes(e.nivel) ? e.nivel : 'BASICO')
+  }
+
+  const sugerenciasMap = new Map<string, { nombre: string; nombre_normalizado: string; nivel: NivelCompetencia }>()
+
   for (const c of customs) {
     const trimmed = c.nombre.trim()
-    if (!trimmed) continue
     const nivel: NivelCompetencia = NIVEL_COMPETENCIA.includes(c.nivel) ? c.nivel : 'BASICO'
+    const norm = normalizarTexto(trimmed)
 
-    // Try insert; if the nombre already exists the conflict returns nothing
-    const { data: inserted } = await admin.from('competencia')
-      .insert({ nombre: trimmed })
-      .select('id')
-      .single()
-
-    if (inserted) {
-      niveles.set((inserted as { id: string }).id, nivel)
+    const matchActiva = catalogoMap.get(norm)
+    if (matchActiva) {
+      // Coincide con competencia activa: va a postulante_competencia
+      competenciasCatalogo.set(matchActiva.id, nivel)
     } else {
-      // nombre already exists — fetch the existing id
-      const { data: existing } = await admin.from('competencia')
-        .select('id')
-        .eq('nombre', trimmed)
-        .single()
-      if (existing) niveles.set((existing as { id: string }).id, nivel)
+      // No coincide con ninguna activa (nueva o coincide con desactivada): va a sugerencias
+      sugerenciasMap.set(norm, {
+        nombre: trimmed,
+        nombre_normalizado: norm,
+        nivel,
+      })
     }
   }
 
-  // Replace all competencies for this profile
-  const { error: deleteError } = await supabase.from('postulante_competencia')
+  // 3. Sugerencias del postulante con el cliente del usuario
+  const rowsSugerencias = [...sugerenciasMap.values()].map((s) => ({
+    perfil_tecnico_id: perfilTecnicoId,
+    nombre: s.nombre,
+    nombre_normalizado: s.nombre_normalizado,
+    nivel: s.nivel,
+  }))
+
+  if (rowsSugerencias.length > 0) {
+    const { error: upsertErr } = await supabase
+      .from('competencia_sugerida')
+      .upsert(rowsSugerencias, { onConflict: 'perfil_tecnico_id,nombre_normalizado' })
+
+    if (upsertErr) {
+      return { success: false, error: 'No se pudieron guardar las competencias.' }
+    }
+  }
+
+  // Borrado de las sugerencias del postulante cuyo nombre_normalizado ya no está en la selección
+  const { data: prevSugerencias, error: fetchSugErr } = await supabase
+    .from('competencia_sugerida')
+    .select('id, nombre_normalizado')
+    .eq('perfil_tecnico_id', perfilTecnicoId)
+
+  if (fetchSugErr) {
+    return { success: false, error: 'No se pudieron guardar las competencias.' }
+  }
+
+  const normasActuales = new Set(rowsSugerencias.map((s) => s.nombre_normalizado))
+  const aBorrarIds = (prevSugerencias ?? [])
+    .filter((s) => !normasActuales.has(s.nombre_normalizado))
+    .map((s) => s.id)
+
+  if (aBorrarIds.length > 0) {
+    const { error: delSugErr } = await supabase
+      .from('competencia_sugerida')
+      .delete()
+      .in('id', aBorrarIds)
+
+    if (delSugErr) {
+      return { success: false, error: 'No se pudieron guardar las competencias.' }
+    }
+  }
+
+  // 4. postulante_competencia: borrado previo con chequeo de error, después insert
+  const { error: deleteError } = await supabase
+    .from('postulante_competencia')
     .delete()
     .eq('perfil_tecnico_id', perfilTecnicoId)
 
@@ -472,29 +517,39 @@ export async function guardarCompetenciasConCustom(
     return { success: false, error: 'No se pudieron guardar las competencias.' }
   }
 
-  if (niveles.size === 0) {
-    await marcarCambioPerfilTecnico(postulanteId)
-    return { success: true, data: undefined, items: [] }
+  if (competenciasCatalogo.size > 0) {
+    const rows = [...competenciasCatalogo.entries()].map(([cid, nivel]) => ({
+      perfil_tecnico_id: perfilTecnicoId,
+      competencia_id: cid,
+      nivel,
+    }))
+
+    const { error: insertError } = await supabase.from('postulante_competencia').insert(rows)
+    if (insertError) return { success: false, error: 'No se pudieron guardar las competencias.' }
   }
 
-  const rows = [...niveles].map(([cid, nivel]) => ({
-    perfil_tecnico_id: perfilTecnicoId,
-    competencia_id: cid,
-    nivel,
+  // 5. Construir items de retorno para actualización optimista de la UI
+  let savedItems: CompetenciaGuardadaItem[] = []
+  if (competenciasCatalogo.size > 0) {
+    const { data: saved } = await supabase
+      .from('competencia')
+      .select('id, nombre')
+      .in('id', [...competenciasCatalogo.keys()])
+
+    savedItems = ((saved ?? []) as { id: string; nombre: string }[]).map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      nivel: competenciasCatalogo.get(c.id) ?? ('BASICO' as NivelCompetencia),
+    }))
+  }
+
+  const sugerenciasItems: CompetenciaGuardadaItem[] = rowsSugerencias.map((s) => ({
+    id: `custom:${s.nombre}`,
+    nombre: s.nombre,
+    nivel: s.nivel,
+    pendiente: true,
   }))
-
-  const { error } = await supabase.from('postulante_competencia').insert(rows)
-  if (error) return { success: false, error: 'No se pudieron guardar las competencias.' }
-
-  // Fetch the saved items to return updated state to the UI (competencia_select_autenticado permite SELECT a authenticated)
-  const { data: saved } = await supabase.from('competencia')
-    .select('id, nombre')
-    .in('id', [...niveles.keys()])
 
   await marcarCambioPerfilTecnico(postulanteId)
-  const items = ((saved ?? []) as { id: string; nombre: string }[]).map((c) => ({
-    ...c,
-    nivel: niveles.get(c.id) ?? ('BASICO' as NivelCompetencia),
-  }))
-  return { success: true, data: undefined, items }
+  return { success: true, data: undefined, items: [...savedItems, ...sugerenciasItems] }
 }

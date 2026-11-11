@@ -1,6 +1,6 @@
 'use client'
 
-import { Segmented } from '@/components/ui'
+import { Segmented, Badge } from '@/components/ui'
 import { nivelCompetenciaOptions } from './opciones'
 import type { SeleccionItem } from './use-seleccion-competencias'
 import type { NivelCompetencia } from '@/lib/constants/enums'
@@ -47,7 +47,14 @@ export function CompetenciasSeleccionadas({
               key={s.id}
               className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
             >
-              <span className="text-sm font-medium text-ink">{s.nombre}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-ink">{s.nombre}</span>
+                {s.pendiente && (
+                  <Badge tone="warning" aria-label="Pendiente de revisión">
+                    Pendiente de revisión
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Segmented
                   value={s.nivel}
