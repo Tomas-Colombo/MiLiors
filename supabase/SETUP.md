@@ -114,3 +114,34 @@ Si devuelve filas, el control de la migración va a abortar y hay que unificar e
 ### Migración `20261115000000_guardar_resultado_eneagrama.sql` (H-207)
 
 Esta migración crea la función transaccional `public.guardar_resultado_eneagrama(...)`. Debe estar aplicada en producción **antes** de desplegar el código que invoca a la RPC (`calcularEneatipo`), ya que versiones nuevas de la aplicación dependen de su existencia para persistir los resultados del test del Eneagrama.
+
+
+### Migración `20261116000000_moderacion_postulante.sql` (H-230)
+
+Esta migración agrega la columna `bloqueado_por_admin` en `public.perfil_postulante`, la función `private.postulante_cumple_visibilidad(uuid)` y actualiza la política RLS `postulante_select_propio` para aplicar la regla "visible al estar listo", restringiendo además los permisos de `INSERT` y `UPDATE` por columna para el rol `authenticated`.
+
+**Notas de deploy:**
+- La migración `20261116000000_moderacion_postulante.sql` debe aplicarse **antes** del despliegue del código.
+- Al aplicarla, los perfiles sin test de Eneagrama (con dominante) o sin informe de personalidad en estado `LISTO` dejan de aparecer en el buscador de reclutadores. Es el comportamiento buscado.
+- Las desactivaciones previas realizadas por administradores no se pueden distinguir de las desactivaciones por decisión propia del postulante (`logAuditoria` no persiste en la base de datos, por lo que no hay backfill).
+- **Consulta de solo lectura previa al deploy:** correr la siguiente consulta en producción para saber cuántos perfiles con `perfil_en_busqueda = true` no cumplen actualmente los requisitos y dejarán de ser visibles en el buscador:
+
+```sql
+SELECT count(*) AS perfiles_que_dejaran_de_ser_visibles
+FROM public.perfil_postulante pp
+WHERE pp.perfil_en_busqueda = true
+  AND NOT (
+    EXISTS (
+      SELECT 1
+      FROM public.test_eneagrama te
+      JOIN public.test_eneagrama_dominante ted ON ted.test_eneagrama_id = te.id
+      WHERE te.postulante_id = pp.id
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM public.informe_personalidad ip
+      WHERE ip.postulante_id = pp.id
+        AND ip.estado_informe = 'LISTO'::public.estado_informe
+    )
+  );
+```
