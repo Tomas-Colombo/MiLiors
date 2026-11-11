@@ -56,6 +56,10 @@ const RPCS = {
   cerrar_puestos_inactivos: { args: 'Record<PropertyKey, never>', returns: 'number' },
   check_session: { args: 'Record<PropertyKey, never>', returns: 'string | null' },
   get_my_rol: { args: 'Record<PropertyKey, never>', returns: 'Database["public"]["Enums"]["rol_usuario"]' },
+  guardar_resultado_eneagrama: {
+    args: `{\n          p_ala: number | null\n          p_dominantes: Json\n          p_dominantes_empate: number[] | null\n          p_puntajes: Json\n          p_test_id: string\n          p_tiene_empate_ala: boolean\n          p_tiene_empate_dominante: boolean\n        }`,
+    returns: 'undefined',
+  },
   touch_session_activity: { args: 'Record<PropertyKey, never>', returns: 'undefined' },
 }
 

@@ -1968,6 +1968,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["rol_usuario"]
       }
+      guardar_resultado_eneagrama: {
+        Args: {
+          p_ala: number | null
+          p_dominantes: Json
+          p_dominantes_empate: number[] | null
+          p_puntajes: Json
+          p_test_id: string
+          p_tiene_empate_ala: boolean
+          p_tiene_empate_dominante: boolean
+        }
+        Returns: undefined
+      }
       touch_session_activity: {
         Args: Record<PropertyKey, never>
         Returns: undefined
