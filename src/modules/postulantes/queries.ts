@@ -252,7 +252,7 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     admin
       .from('perfil_postulante')
       .select(`
-        id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda,
+        id, nombre_completo, carrera_otra, carrera:carrera_id(nombre), perfil_en_busqueda, bloqueado_por_admin,
         telefono, enlace_linkedin, portfolio, ultima_conexion,
         usuario(email), provincia(nombre), localidad(nombre, departamento(nombre)),
         test_eneagrama(tiene_empate_dominante, test_eneagrama_dominante(eneatipo(numero_eneatipo, nombre)))
@@ -319,8 +319,13 @@ export async function getPostulanteDetalle(postulanteId: string): Promise<Postul
     } | null
   }
 
-  // Gate: must be searchable (and not blocked by admin) OR have applied to this recruiter's jobs
-  const enBusquedaEfectiva = p.perfil_en_busqueda && !p.bloqueado_por_admin
+  // Gate: must be searchable OR have applied to this recruiter's jobs. These reads
+  // use the admin client, so RLS does not apply here: the visibility rule of the
+  // `postulante_select_propio` policy (H-230) is repeated in memory — wants to be
+  // found, not blocked by admin, test with a dominant type and a LISTO informe.
+  const cumpleRequisitos =
+    (p.test_eneagrama?.test_eneagrama_dominante.length ?? 0) > 0 && !!informe
+  const enBusquedaEfectiva = p.perfil_en_busqueda && !p.bloqueado_por_admin && cumpleRequisitos
   if (!enBusquedaEfectiva && !postuloAlReclutador) return null
 
   // Contact is released if searching actively (and not blocked) or if they applied to this recruiter's jobs
