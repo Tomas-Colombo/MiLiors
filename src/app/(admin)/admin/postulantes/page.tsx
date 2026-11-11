@@ -68,6 +68,7 @@ type Postulante = {
   nombre_completo: string
   email: string | null
   perfil_en_busqueda: boolean
+  bloqueado_por_admin: boolean
   eneagrama_completo: boolean
   estado_informe: string | null
   created_at: string
@@ -213,12 +214,18 @@ export default async function PostulantesPage({
       key: 'busqueda',
       header: 'En búsqueda',
       align: 'center',
-      cell: row =>
-        row.perfil_en_busqueda ? (
+      cell: row => {
+        if (row.bloqueado_por_admin) {
+          return <Badge tone="error">Bloqueado</Badge>
+        }
+        return row.perfil_en_busqueda ? (
           <CheckIcon size={16} className="mx-auto text-success" />
         ) : (
-          <CloseIcon size={16} className="mx-auto text-neutral-300" />
-        ),
+          <span className="text-xs text-neutral-400" title="No visible por decisión propia">
+            No visible (propio)
+          </span>
+        )
+      },
     },
     {
       key: 'created_at',
@@ -233,13 +240,13 @@ export default async function PostulantesPage({
       key: 'acciones',
       header: '',
       align: 'right',
-      cell: row => <DesactivarPostulanteBtn id={row.id} activo={row.perfil_en_busqueda} />,
+      cell: row => <DesactivarPostulanteBtn id={row.id} activo={!row.bloqueado_por_admin} />,
     },
   ]
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      <PageHeader title="Postulantes" description={<>{todos.length} registros. Desactivar un perfil lo saca de búsquedas (baja lógica).</>} />
+      <PageHeader title="Postulantes" description={<>{todos.length} registros. Bloquear un perfil lo saca de búsquedas de los reclutadores.</>} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput placeholder="Buscar por nombre o email…" />

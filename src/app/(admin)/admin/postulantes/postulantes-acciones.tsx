@@ -35,7 +35,7 @@ export function DesactivarPostulanteBtn({ id, activo }: { id: string; activo: bo
     return (
       <>
         <Button variant="tonal" size="sm" onClick={handleReactivar} loading={isPending}>
-          Reactivar
+          Desbloquear
         </Button>
         {error && <p className="text-xs text-error-ink mt-1">{error}</p>}
       </>
@@ -53,7 +53,7 @@ export function DesactivarPostulanteBtn({ id, activo }: { id: string; activo: bo
         }}
         loading={isPending}
       >
-        Desactivar
+        Bloquear
       </Button>
 
       {error && <p className="text-xs text-error-ink mt-1">{error}</p>}
@@ -66,13 +66,13 @@ export function DesactivarPostulanteBtn({ id, activo }: { id: string; activo: bo
         }}
         onConfirm={handleDesactivar}
         tone="destructive"
-        title="¿Desactivar el perfil de este postulante?"
-        confirmLabel="Desactivar"
+        title="¿Bloquear el perfil de este postulante?"
+        confirmLabel="Bloquear"
         loading={isPending}
         error={error ?? undefined}
       >
         El perfil deja de aparecer en las búsquedas de los reclutadores. No se borra ningún dato
-        y podés reactivarlo cuando quieras.
+        y podés desbloquearlo cuando quieras.
       </ConfirmDialog>
     </>
   )

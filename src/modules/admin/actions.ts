@@ -8,9 +8,6 @@ import type { ActionResult } from '@/lib/types/domain'
 import { resetearTestsEnProgreso } from '@/modules/eneagrama/service'
 import { patronTextoCompleto, normalizarTexto } from '@/lib/texto'
 import { marcarCertificadosDesactualizados } from '@/modules/perfil-tecnico/certificado'
-import { getRequisitosVisibilidadPostulante } from './queries'
-import { evaluarRequisitosVisibilidad, MENSAJE_VISIBILIDAD_ADMIN } from '@/modules/visibilidad/regla'
-import type { RequisitosVisibilidad } from '@/modules/visibilidad/regla'
 import {
   crearSchemaNombreCatalogo,
   schemaNombreCatalogo,
@@ -863,7 +860,7 @@ export async function desactivarPostulante(postulanteId: string): Promise<Action
   const session = await requireAdmin()
   const admin = createAdminClient()
   const { data, error } = await admin.from('perfil_postulante')
-    .update({ perfil_en_busqueda: false })
+    .update({ bloqueado_por_admin: true })
     .eq('id', postulanteId)
     .select('id')
   if (error) return { success: false, error: 'No se pudo desactivar el perfil.' }
@@ -882,24 +879,13 @@ export async function desactivarPostulante(postulanteId: string): Promise<Action
 
 export async function reactivarPostulante(postulanteId: string): Promise<ActionResult> {
   const session = await requireAdmin()
-  let requisitos: RequisitosVisibilidad
-  try {
-    requisitos = await getRequisitosVisibilidadPostulante(postulanteId)
-  } catch (err) {
-    console.error('[reactivarPostulante] Error leyendo los requisitos de visibilidad:', err)
-    return { success: false, error: 'No se pudo reactivar el perfil.' }
-  }
-
-  const evaluacion = evaluarRequisitosVisibilidad(requisitos)
-  if (!evaluacion.ok) {
-    return { success: false, error: MENSAJE_VISIBILIDAD_ADMIN[evaluacion.motivo] }
-  }
-
   const admin = createAdminClient()
-  const { error } = await admin.from('perfil_postulante')
-    .update({ perfil_en_busqueda: true })
+  const { data, error } = await admin.from('perfil_postulante')
+    .update({ bloqueado_por_admin: false })
     .eq('id', postulanteId)
+    .select('id')
   if (error) return { success: false, error: 'No se pudo reactivar el perfil.' }
+  if (!data || data.length === 0) return { success: false, error: 'Postulante no encontrado.' }
 
   logAuditoria({
     usuarioId: session.id,

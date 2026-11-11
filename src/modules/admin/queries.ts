@@ -1,8 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { COMPETENCIAS } from '@/modules/informe/competencias'
-import { ESTADO_INFORME } from '@/lib/constants/enums'
-import type { RequisitosVisibilidad } from '@/modules/visibilidad/regla'
 import {
   VALORACION_COMPETENCIA,
   valorEnum,
@@ -38,7 +36,7 @@ export async function getMetricas() {
     { count: consultasIAEsteMes },
   ] = await Promise.all([
     admin.from('perfil_postulante').select('*', { count: 'exact', head: true }),
-    admin.from('perfil_postulante').select('*', { count: 'exact', head: true }).eq('perfil_en_busqueda', true),
+    admin.from('perfil_postulante').select('*', { count: 'exact', head: true }).eq('perfil_en_busqueda', true).eq('bloqueado_por_admin', false),
     admin.from('informe_personalidad').select('*', { count: 'exact', head: true }).eq('estado_informe', 'LISTO'),
     admin.from('informe_personalidad').select('*', { count: 'exact', head: true }).eq('estado_informe', 'PENDIENTE'),
     admin.from('informe_personalidad').select('*', { count: 'exact', head: true }).eq('estado_informe', 'ERROR'),
@@ -407,7 +405,7 @@ export async function getPostulantesAdmin() {
   const { data } = await admin
     .from('perfil_postulante')
     .select(`
-      id, nombre_completo, perfil_en_busqueda, created_at, carrera_id, carrera_otra,
+      id, nombre_completo, perfil_en_busqueda, bloqueado_por_admin, created_at, carrera_id, carrera_otra,
       provincia_id,
       usuario(email),
       carrera:carrera_id(nombre),
@@ -420,7 +418,7 @@ export async function getPostulantesAdmin() {
 
   return (data ?? []).map((row: unknown) => {
     const r = row as {
-      id: string; nombre_completo: string; perfil_en_busqueda: boolean; created_at: string
+      id: string; nombre_completo: string; perfil_en_busqueda: boolean; bloqueado_por_admin: boolean; created_at: string
       carrera_id: string | null; carrera_otra: string | null
       provincia_id: string | null
       usuario: { email: string } | null
@@ -438,6 +436,7 @@ export async function getPostulantesAdmin() {
       id: r.id,
       nombre_completo: r.nombre_completo,
       perfil_en_busqueda: r.perfil_en_busqueda,
+      bloqueado_por_admin: r.bloqueado_por_admin,
       created_at: r.created_at,
       email: r.usuario?.email ?? null,
       carrera_id: r.carrera_id,
@@ -1141,66 +1140,4 @@ export function agregarPorCompetencia(rows: FeedbackCompetenciaRow[]): AgregadoC
   return [...porKey.values()]
     .map(a => ({ ...a, sesgo: Math.round(((a.subestima - a.sobrestima) / a.total) * 100) }))
     .sort((a, b) => Math.abs(b.sesgo) - Math.abs(a.sesgo))
-}
-
-/**
- * Consulta con cliente admin (bypasseando RLS) los requisitos para que un
- * postulante pueda tener visibilidad de búsqueda activa (H-215).
- *
- * Lanza si alguna consulta falla: un error de lectura no puede confundirse con
- * "no cumple el requisito", porque el admin vería un motivo falso.
- */
-export async function getRequisitosVisibilidadPostulante(
-  postulanteId: string,
-): Promise<RequisitosVisibilidad> {
-  const admin = createAdminClient()
-
-  // 1. Verificar si existe el perfil del postulante
-  const { data: perfil, error: errorPerfil } = await admin
-    .from('perfil_postulante')
-    .select('id')
-    .eq('id', postulanteId)
-    .maybeSingle()
-
-  if (errorPerfil) throw new Error(`No se pudo leer el perfil: ${errorPerfil.message}`)
-
-  if (!perfil) {
-    return {
-      existePerfil: false,
-      tieneDominante: false,
-      informeListo: false,
-    }
-  }
-
-  // 2. Test de eneagrama con al menos un dominante y 3. informe en estado LISTO.
-  // Mismos criterios que getTestEneagramaDePostulante y getInformeActual.
-  const [resTest, resInforme] = await Promise.all([
-    admin
-      .from('test_eneagrama')
-      .select('id, test_eneagrama_dominante(id)')
-      .eq('postulante_id', postulanteId)
-      .maybeSingle(),
-    admin
-      .from('informe_personalidad')
-      .select('id, estado_informe')
-      .eq('postulante_id', postulanteId)
-      .maybeSingle(),
-  ])
-
-  if (resTest.error) throw new Error(`No se pudo leer el test: ${resTest.error.message}`)
-  if (resInforme.error) throw new Error(`No se pudo leer el informe: ${resInforme.error.message}`)
-
-  const test = resTest.data
-  const informe = resInforme.data
-
-  const dominantes = (test as unknown as { test_eneagrama_dominante?: { id: string }[] } | null)?.test_eneagrama_dominante
-  const tieneDominante = Array.isArray(dominantes) && dominantes.length > 0
-
-  const informeListo = (informe as { estado_informe: string } | null)?.estado_informe === ESTADO_INFORME.LISTO
-
-  return {
-    existePerfil: true,
-    tieneDominante,
-    informeListo,
-  }
 }
