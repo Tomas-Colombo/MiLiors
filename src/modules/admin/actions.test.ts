@@ -73,6 +73,10 @@ describe('admin/actions — moderación de sugerencias (H-205)', () => {
                 competenciaSugeridaDeletes.push(val)
                 return Promise.resolve({ error: null })
               }),
+              in: vi.fn().mockImplementation((_col: string, ids: string[]) => {
+                competenciaSugeridaDeletes.push(...ids)
+                return Promise.resolve({ error: null })
+              }),
             }),
           }
         }
@@ -170,7 +174,7 @@ describe('admin/actions — moderación de sugerencias (H-205)', () => {
         },
       ])
       // 3. Borra el grupo de sugerencias
-      expect(competenciaSugeridaDeletes).toContain('docker')
+      expect(competenciaSugeridaDeletes).toEqual(['sug-1', 'sug-2'])
       // 4. Marca los certificados
       expect(marcarCertificadosDesactualizados).toHaveBeenCalledWith(['post-1', 'post-2'])
       // 5. Registra auditoría
@@ -209,7 +213,7 @@ describe('admin/actions — moderación de sugerencias (H-205)', () => {
         },
       ])
       // Borra la sugerencia
-      expect(competenciaSugeridaDeletes).toContain('cobol')
+      expect(competenciaSugeridaDeletes).toEqual(['sug-1'])
     })
   })
 

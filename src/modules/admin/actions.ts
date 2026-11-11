@@ -208,11 +208,13 @@ export async function aprobarSugerencia(nombreNormalizado: string): Promise<Acti
 
   if (upsertErr) return { success: false, error: 'No se pudieron asignar las competencias a los postulantes.' }
 
-  // 3. Borrar las sugerencias del grupo
+  // 3. Borrar las sugerencias procesadas. Se borran por id, no por grupo: una
+  // sugerencia que llegue mientras tanto queda pendiente en vez de perderse sin
+  // haber sido asignada.
   const { error: delErr } = await admin
     .from('competencia_sugerida')
     .delete()
-    .eq('nombre_normalizado', nombreNormalizado)
+    .in('id', sugerencias.map((s) => s.id))
 
   if (delErr) return { success: false, error: 'No se pudieron borrar las sugerencias procesadas.' }
 
