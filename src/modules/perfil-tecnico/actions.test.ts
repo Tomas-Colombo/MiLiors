@@ -178,7 +178,7 @@ describe('perfil-tecnico/actions — guardarCompetenciasConCustom (H-205)', () =
       },
     ])
     // Se devuelve en items con pendiente: true
-    expect(res.items).toContainEqual({
+    expect(res.success && res.data.items).toContainEqual({
       id: 'custom:Cobol',
       nombre: 'Cobol',
       nivel: 'INTERMEDIO',
@@ -202,7 +202,7 @@ describe('perfil-tecnico/actions — guardarCompetenciasConCustom (H-205)', () =
         nivel: 'BASICO',
       },
     ])
-    expect(res.items).toContainEqual({
+    expect(res.success && res.data.items).toContainEqual({
       id: 'custom:Rust',
       nombre: 'Rust',
       nivel: 'BASICO',

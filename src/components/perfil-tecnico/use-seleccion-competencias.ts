@@ -128,20 +128,18 @@ export function useSeleccionCompetencias(catalogo: CompetenciaItem[], actuales: 
         // Reconciliación: las claves `custom:` se reemplazan por los UUID definitivos
         // si coincidieron con el catálogo, o se conservan como `custom:<nombre>` con
         // pendiente: true e isCustom: true para moderación.
-        if (result.items !== undefined) {
-          setSeleccionadas(
-            result.items.map((i) => ({
-              id: i.id,
-              nombre: i.nombre,
-              nivel: i.nivel,
-              isCustom: i.pendiente ? true : undefined,
-              pendiente: i.pendiente,
-            })),
-          )
-        }
+        setSeleccionadas(
+          result.data.items.map((i) => ({
+            id: i.id,
+            nombre: i.nombre,
+            nivel: i.nivel,
+            isCustom: i.pendiente ? true : undefined,
+            pendiente: i.pendiente,
+          })),
+        )
         setFeedback({ ok: true, msg: 'Competencias guardadas.' })
       } else {
-        setFeedback({ ok: false, msg: result.error ?? 'Error al guardar.' })
+        setFeedback({ ok: false, msg: result.error || 'Error al guardar.' })
       }
     })
   }

@@ -400,7 +400,7 @@ export type CompetenciaGuardadaItem = {
 export async function guardarCompetenciasConCustom(
   existentes: CompetenciaExistenteInput[],
   customs: CompetenciaCustomInput[]
-): Promise<ActionResult & { items?: CompetenciaGuardadaItem[] }> {
+): Promise<ActionResult<{ items: CompetenciaGuardadaItem[] }>> {
   if (existentes.length + customs.length > 15) {
     return { success: false, error: 'Podés seleccionar hasta 15 competencias.' }
   }
@@ -551,5 +551,5 @@ export async function guardarCompetenciasConCustom(
   }))
 
   await marcarCambioPerfilTecnico(postulanteId)
-  return { success: true, data: undefined, items: [...savedItems, ...sugerenciasItems] }
+  return { success: true, data: { items: [...savedItems, ...sugerenciasItems] } }
 }
