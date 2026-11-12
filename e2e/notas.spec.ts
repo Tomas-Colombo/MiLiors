@@ -94,17 +94,21 @@ test.describe('M08 — Notas Privadas: seguridad 🔒', () => {
     await expect(page.getByRole('heading', { name: 'Notas privadas' })).not.toBeVisible()
   })
 
-  test('TC-NOTA-005 — Nota de Reclutador A no aparece para Reclutador B (visibilidad básica)', async ({ page }) => {
-    // This test verifies the page structure only — full isolation requires two recruiter accounts.
-    // We verify that /reclutador/postulantes/[id] shows "Notas privadas" scoped to logged-in user.
+  test('TC-NOTA-005 — Nota de Reclutador A no aparece para Reclutador B', async ({ page }) => {
     await loginAs(page, 'reclutador')
     const candidateUrl = await getFirstCandidateUrl(page)
 
     await page.goto(candidateUrl)
-    // Notes section must be visible to the recruiter
+    await page.getByRole('heading', { name: 'Notas privadas' }).waitFor()
+
+    const noteText = `Nota privada R1 ${Date.now()}`
+    await page.getByPlaceholder('Escribí tus observaciones sobre este candidato…').fill(noteText)
+    await page.getByRole('button', { name: 'Guardar nota' }).click()
+    await expect(page.getByText(noteText)).toBeVisible({ timeout: 10000 })
+
+    await loginAs(page, 'reclutador2')
+    await page.goto(candidateUrl)
     await expect(page.getByRole('heading', { name: 'Notas privadas' })).toBeVisible()
-    // But the page should not show notes from other recruiters (RLS enforced at DB level)
-    // We verify the page loads without error
-    await expect(page).not.toHaveURL(/iniciar-sesion/)
+    await expect(page.getByText(noteText)).not.toBeVisible()
   })
 })

@@ -5,9 +5,17 @@ export const ENV_VARS = {
     emailKey: 'E2E_POSTULANTE_EMAIL',
     passwordKey: 'E2E_POSTULANTE_PASSWORD',
   },
+  postulanteToggle: {
+    emailKey: 'E2E_POSTULANTE_TOGGLE_EMAIL',
+    passwordKey: 'E2E_POSTULANTE_TOGGLE_PASSWORD',
+  },
   reclutador: {
     emailKey: 'E2E_RECLUTADOR_EMAIL',
     passwordKey: 'E2E_RECLUTADOR_PASSWORD',
+  },
+  reclutador2: {
+    emailKey: 'E2E_RECLUTADOR2_EMAIL',
+    passwordKey: 'E2E_RECLUTADOR2_PASSWORD',
   },
   // Recién registrado: sin perfil ni empresa, todo el área lo manda al onboarding.
   reclutadorSinEmpresa: {
@@ -17,6 +25,32 @@ export const ENV_VARS = {
   admin: {
     emailKey: 'E2E_ADMIN_EMAIL',
     passwordKey: 'E2E_ADMIN_PASSWORD',
+  },
+} as const
+
+export const POSTULANTE_ID_ENV_VARS = {
+  postulante: 'E2E_POSTULANTE_ID',
+  postulanteSinInforme: 'E2E_POSTULANTE_SIN_INFORME_ID',
+  postulanteBloqueado: 'E2E_POSTULANTE_BLOQUEADO_ID',
+  postulanteOculto: 'E2E_POSTULANTE_OCULTO_ID',
+  postulanteToggle: 'E2E_POSTULANTE_TOGGLE_ID',
+} as const
+
+export const POSTULANTE_IDS = {
+  get postulante() {
+    return process.env[POSTULANTE_ID_ENV_VARS.postulante] ?? ''
+  },
+  get postulanteSinInforme() {
+    return process.env[POSTULANTE_ID_ENV_VARS.postulanteSinInforme] ?? ''
+  },
+  get postulanteBloqueado() {
+    return process.env[POSTULANTE_ID_ENV_VARS.postulanteBloqueado] ?? ''
+  },
+  get postulanteOculto() {
+    return process.env[POSTULANTE_ID_ENV_VARS.postulanteOculto] ?? ''
+  },
+  get postulanteToggle() {
+    return process.env[POSTULANTE_ID_ENV_VARS.postulanteToggle] ?? ''
   },
 } as const
 
@@ -30,12 +64,30 @@ export const USERS = {
     },
     dashboard: '/postulante',
   },
+  postulanteToggle: {
+    get email() {
+      return process.env.E2E_POSTULANTE_TOGGLE_EMAIL ?? ''
+    },
+    get password() {
+      return process.env.E2E_POSTULANTE_TOGGLE_PASSWORD ?? ''
+    },
+    dashboard: '/postulante',
+  },
   reclutador: {
     get email() {
       return process.env.E2E_RECLUTADOR_EMAIL ?? ''
     },
     get password() {
       return process.env.E2E_RECLUTADOR_PASSWORD ?? ''
+    },
+    dashboard: '/reclutador',
+  },
+  reclutador2: {
+    get email() {
+      return process.env.E2E_RECLUTADOR2_EMAIL ?? ''
+    },
+    get password() {
+      return process.env.E2E_RECLUTADOR2_PASSWORD ?? ''
     },
     dashboard: '/reclutador',
   },

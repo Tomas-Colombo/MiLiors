@@ -116,9 +116,22 @@ test.describe('M06 — Postulaciones: flujo reclutador', () => {
   })
 
   test('TC-POST-010 — Reclutador no ve postulaciones de puestos ajenos', async ({ page }) => {
+    const title = `E2E Aislamiento ${Date.now()}`
     await loginAs(page, 'reclutador')
+    const puestoId = await publicarPuesto(page, title)
+
+    await loginAs(page, 'postulante')
+    const applyBtn = await getApplyButton(page, `/postulante/puestos/${puestoId}`)
+    await applyBtn.click()
+    await expect(page.getByRole('button', { name: 'Ya postulaste' })).toBeVisible({ timeout: 10000 })
+
+    // Segundo reclutador (otra empresa) no debe ver ni el puesto ni la postulación.
+    await loginAs(page, 'reclutador2')
     await page.goto('/reclutador/postulaciones')
     await page.getByRole('heading', { name: /postulaciones recibidas/i }).waitFor()
-    await expect(page).not.toHaveURL(/iniciar-sesion/)
+    await expect(page.getByText(title)).not.toBeVisible()
+
+    await page.goto(`/reclutador/postulaciones?puesto=${puestoId}`)
+    await expect(page.getByText('Ana E2E Postulante')).not.toBeVisible()
   })
 })

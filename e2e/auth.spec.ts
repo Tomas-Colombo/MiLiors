@@ -155,9 +155,13 @@ test.describe('M01 — Auth: Logout y protección de rutas', () => {
     await expect(page).toHaveURL(/\/iniciar-sesion/)
   })
 
-  test('TC-AUTH-015 — Post-logout: ruta protegida → redirige a /iniciar-sesion', async ({ page }) => {
+  test('TC-AUTH-015 — Post-logout: botón atrás y ruta protegida → redirige a /iniciar-sesion', async ({ page }) => {
     await loginAs(page, 'postulante')
     await logout(page)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/iniciar-sesion/, { timeout: 10000 })
+    await expect(page.getByText('Tu perfil profesional')).not.toBeVisible()
+
     await page.goto('/postulante')
     await expect(page).toHaveURL(/\/iniciar-sesion/)
   })
@@ -188,13 +192,37 @@ test.describe('M01 — Auth: Logout y protección de rutas', () => {
 })
 
 test.describe('M01 — Auth: Recuperar password', () => {
-  test('TC-AUTH-016 — Recuperar password con email registrado → mensaje de éxito', async ({ page }) => {
+  test('TC-AUTH-016 — Recuperar password con email registrado → mensaje de éxito y mail en Mailpit', async ({ page }) => {
+    const mailpitUrl = 'http://127.0.0.1:55324/api/v1/messages'
+    const antesRes = await fetch(mailpitUrl)
+    expect(antesRes.ok).toBe(true)
+    const antesData = (await antesRes.json()) as { messages?: { ID: string; To?: { Address: string }[] }[] }
+    const idsPrevios = new Set(
+      (antesData.messages ?? [])
+        .filter((m) => m.To?.some((t) => t.Address === USERS.postulante.email))
+        .map((m) => m.ID)
+    )
+
     await page.goto('/recuperar-password')
     await page.locator('[name="email"]').fill(USERS.postulante.email)
     await page.getByRole('button', { name: 'Enviar instrucciones' }).click()
     await expect(
       page.getByText(/Si existe una cuenta con ese email, te enviamos las instrucciones/)
     ).toBeVisible({ timeout: 10000 })
+
+    await expect
+      .poll(
+        async () => {
+          const res = await fetch(mailpitUrl)
+          if (!res.ok) return false
+          const data = (await res.json()) as { messages?: { ID: string; To?: { Address: string }[] }[] }
+          return (data.messages ?? []).some(
+            (m) => !idsPrevios.has(m.ID) && m.To?.some((t) => t.Address === USERS.postulante.email)
+          )
+        },
+        { timeout: 15000, message: 'El mail de recuperación no llegó a Mailpit' }
+      )
+      .toBe(true)
   })
 
   test('TC-AUTH-017 — Recuperar password con email no registrado → mismo mensaje (no revela existencia)', async ({ page }) => {

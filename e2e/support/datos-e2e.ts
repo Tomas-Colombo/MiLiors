@@ -18,7 +18,12 @@ const EMAIL_E2E = /^e2e[.-][^@]*@(example\.test|mailinator\.com)$/
 
 export const CUENTAS = {
   postulante: 'e2e.postulante@example.test',
+  postulanteSinInforme: 'e2e.postulante.sin.informe@example.test',
+  postulanteBloqueado: 'e2e.postulante.bloqueado@example.test',
+  postulanteOculto: 'e2e.postulante.oculto@example.test',
+  postulanteToggle: 'e2e.postulante.toggle@example.test',
   reclutador: 'e2e.reclutador@example.test',
+  reclutador2: 'e2e.reclutador2@example.test',
   reclutadorSinEmpresa: 'e2e.reclutador.nuevo@example.test',
   admin: 'e2e.admin@example.test',
 } as const
@@ -116,6 +121,7 @@ export async function limpiarDatosE2E(admin: Admin = clienteAdmin()): Promise<vo
     must(await admin.from('contratacion').delete().in('postulante_id', postulanteIds), 'contrataciones')
     must(await admin.from('nota_privada').delete().in('postulante_id', postulanteIds), 'notas')
     must(await admin.from('consulta_asistente_ia').delete().in('postulante_id', postulanteIds), 'consultas')
+    must(await admin.from('postulacion').delete().in('postulante_id', postulanteIds), 'postulaciones por postulante')
   }
 
   // usuario y los perfiles caen en cascada desde auth.users.
@@ -131,8 +137,19 @@ export async function limpiarDatosE2E(admin: Admin = clienteAdmin()): Promise<vo
 
 type CredencialesE2E = Record<keyof typeof CUENTAS, { email: string; password: string }>
 
-/** Limpia y vuelve a sembrar. Devuelve las credenciales de esta corrida. */
-export async function sembrarDatosE2E(): Promise<CredencialesE2E> {
+export type SemillaE2E = {
+  credenciales: CredencialesE2E
+  postulanteIds: {
+    postulante: string
+    postulanteSinInforme: string
+    postulanteBloqueado: string
+    postulanteOculto: string
+    postulanteToggle: string
+  }
+}
+
+/** Limpia y vuelve a sembrar. Devuelve las credenciales e IDs de esta corrida. */
+export async function sembrarDatosE2E(): Promise<SemillaE2E> {
   const admin = clienteAdmin()
   await limpiarDatosE2E(admin)
 
@@ -146,7 +163,12 @@ export async function sembrarDatosE2E(): Promise<CredencialesE2E> {
   }
 
   const userPostulante = await crear(CUENTAS.postulante, 'POSTULANTE')
+  const userPostulanteSinInforme = await crear(CUENTAS.postulanteSinInforme, 'POSTULANTE')
+  const userPostulanteBloqueado = await crear(CUENTAS.postulanteBloqueado, 'POSTULANTE')
+  const userPostulanteOculto = await crear(CUENTAS.postulanteOculto, 'POSTULANTE')
+  const userPostulanteToggle = await crear(CUENTAS.postulanteToggle, 'POSTULANTE')
   const userReclutador = await crear(CUENTAS.reclutador, 'RECLUTADOR')
+  const userReclutador2 = await crear(CUENTAS.reclutador2, 'RECLUTADOR')
   const userReclutadorNuevo = await crear(CUENTAS.reclutadorSinEmpresa, 'RECLUTADOR')
   const userAdmin = await crear(CUENTAS.admin, 'ADMIN')
 
@@ -164,7 +186,17 @@ export async function sembrarDatosE2E(): Promise<CredencialesE2E> {
   if (tyc) {
     must(
       await admin.from('aceptacion_tyc').insert(
-        [userPostulante, userReclutador, userReclutadorNuevo, userAdmin].map((usuario_id) => ({
+        [
+          userPostulante,
+          userPostulanteSinInforme,
+          userPostulanteBloqueado,
+          userPostulanteOculto,
+          userPostulanteToggle,
+          userReclutador,
+          userReclutador2,
+          userReclutadorNuevo,
+          userAdmin,
+        ].map((usuario_id) => ({
           usuario_id,
           tyc_id: tyc.id,
         }))
@@ -173,46 +205,100 @@ export async function sembrarDatosE2E(): Promise<CredencialesE2E> {
     )
   }
 
-  // Postulante visible en búsquedas (H-230): en búsqueda, test con dominante,
-  // informe LISTO y certificado vigente para poder postularse.
   const provincia = mustUno(await admin.from('provincia').select('id').limit(1).single(), 'provincia')
-  const postulanteId = randomUUID()
-  must(
-    await admin.from('perfil_postulante').insert({
-      id: postulanteId,
-      usuario_id: userPostulante,
-      nombre_completo: 'Ana E2E Postulante',
-      provincia_id: provincia.id,
-      perfil_en_busqueda: true,
-    }),
-    'perfil de postulante'
-  )
   const eneatipo = mustUno(await admin.from('eneatipo').select('id').limit(1).single(), 'eneatipo')
-  const test = mustUno(
-    await admin.from('test_eneagrama').insert({ postulante_id: postulanteId, veces_completado: 1 }).select('id').single(),
-    'test de eneagrama'
-  )
-  must(
-    await admin.from('test_eneagrama_dominante').insert({
-      test_eneagrama_id: test.id,
-      eneatipo_id: eneatipo.id,
-      puntaje_crudo: 30,
-      porcentaje: 80,
-    }),
-    'eneatipo dominante'
-  )
-  must(
-    await admin.from('informe_personalidad').insert({
-      postulante_id: postulanteId,
-      estado_informe: 'LISTO',
-      contenido_informe: 'Informe de prueba E2E.',
-    }),
-    'informe'
-  )
-  must(await admin.from('certificado_pdf').insert({ postulante_id: postulanteId }), 'certificado')
 
-  // Reclutador con empresa. El otro queda como recién registrado, sin perfil ni
-  // empresa: el perfil lo crea el onboarding junto con la primera empresa.
+  const crearPostulante = async (opts: {
+    usuarioId: string
+    nombre: string
+    enBusqueda: boolean
+    bloqueado: boolean
+    estadoInforme: Database['public']['Enums']['estado_informe']
+    conCertificado?: boolean
+  }): Promise<string> => {
+    const id = randomUUID()
+    must(
+      await admin.from('perfil_postulante').insert({
+        id,
+        usuario_id: opts.usuarioId,
+        nombre_completo: opts.nombre,
+        provincia_id: provincia.id,
+        perfil_en_busqueda: opts.enBusqueda,
+        bloqueado_por_admin: opts.bloqueado,
+      }),
+      `perfil de ${opts.nombre}`
+    )
+    const test = mustUno(
+      await admin.from('test_eneagrama').insert({ postulante_id: id, veces_completado: 1 }).select('id').single(),
+      `test de ${opts.nombre}`
+    )
+    must(
+      await admin.from('test_eneagrama_dominante').insert({
+        test_eneagrama_id: test.id,
+        eneatipo_id: eneatipo.id,
+        puntaje_crudo: 30,
+        porcentaje: 80,
+      }),
+      `dominante de ${opts.nombre}`
+    )
+    must(
+      await admin.from('informe_personalidad').insert({
+        postulante_id: id,
+        estado_informe: opts.estadoInforme,
+        contenido_informe: opts.estadoInforme === 'LISTO' ? `Informe E2E de ${opts.nombre}.` : null,
+      }),
+      `informe de ${opts.nombre}`
+    )
+    if (opts.conCertificado) {
+      must(await admin.from('certificado_pdf').insert({ postulante_id: id }), `certificado de ${opts.nombre}`)
+    }
+    return id
+  }
+
+  // Postulante principal visible en búsquedas (H-230) y con certificado vigente.
+  const postulanteId = await crearPostulante({
+    usuarioId: userPostulante,
+    nombre: 'Ana E2E Postulante',
+    enBusqueda: true,
+    bloqueado: false,
+    estadoInforme: 'LISTO',
+    conCertificado: true,
+  })
+  // Sin informe LISTO (PENDIENTE): no debe aparecer en búsquedas aunque tenga toggle ON.
+  const postulanteSinInformeId = await crearPostulante({
+    usuarioId: userPostulanteSinInforme,
+    nombre: 'Bruno Sin Informe E2E',
+    enBusqueda: true,
+    bloqueado: false,
+    estadoInforme: 'PENDIENTE',
+  })
+  // Bloqueado por admin: no debe aparecer en búsquedas aunque tenga toggle ON e informe LISTO.
+  const postulanteBloqueadoId = await crearPostulante({
+    usuarioId: userPostulanteBloqueado,
+    nombre: 'Carla Bloqueada E2E',
+    enBusqueda: true,
+    bloqueado: true,
+    estadoInforme: 'LISTO',
+  })
+  // Toggle OFF pero postuló a un puesto de Reclutador 1 (visible solo para él).
+  const postulanteOcultoId = await crearPostulante({
+    usuarioId: userPostulanteOculto,
+    nombre: 'Diego Oculto E2E',
+    enBusqueda: false,
+    bloqueado: false,
+    estadoInforme: 'LISTO',
+    conCertificado: true,
+  })
+  // Postulante dedicado a pruebas de toggle ON/OFF para no interferir con Ana.
+  const postulanteToggleId = await crearPostulante({
+    usuarioId: userPostulanteToggle,
+    nombre: 'Elena Toggle E2E',
+    enBusqueda: true,
+    bloqueado: false,
+    estadoInforme: 'LISTO',
+  })
+
+  // Reclutador 1 con su empresa.
   const empresaId = randomUUID()
   must(await admin.from('empresa').insert({ id: empresaId, nombre_empresa: 'Empresa E2E' }), 'empresa')
   const reclutadorId = randomUUID()
@@ -230,11 +316,71 @@ export async function sembrarDatosE2E(): Promise<CredencialesE2E> {
     'vínculo reclutador-empresa'
   )
 
+  // Puesto de Reclutador 1 con postulación de Diego Oculto (para TC-CAND-005 / TC-CAND-006).
+  const puestoOcultoId = randomUUID()
+  must(
+    await admin.from('puesto').insert({
+      id: puestoOcultoId,
+      empresa_id: empresaId,
+      reclutador_id: reclutadorId,
+      titulo_puesto: 'Puesto E2E Visibilidad Base',
+      carga_horaria: 'TIEMPO_COMPLETO',
+      ubicacion: 'REMOTO',
+      activo: true,
+    }),
+    'puesto visibilidad base'
+  )
+  const historialOculto = mustUno(
+    await admin.from('historial_puesto').insert({ puesto_id: puestoOcultoId }).select('id').single(),
+    'historial puesto visibilidad base'
+  )
+  must(
+    await admin.from('postulacion').insert({
+      puesto_id: puestoOcultoId,
+      postulante_id: postulanteOcultoId,
+      historial_puesto_id: historialOculto.id,
+      estado: 'ENVIADA',
+    }),
+    'postulacion de postulante oculto'
+  )
+
+  // Reclutador 2 con su propia empresa (aislamiento entre empresas/reclutadores).
+  const empresa2Id = randomUUID()
+  must(await admin.from('empresa').insert({ id: empresa2Id, nombre_empresa: 'Empresa E2E 2' }), 'empresa 2')
+  const reclutador2Id = randomUUID()
+  must(
+    await admin.from('perfil_reclutador').insert({
+      id: reclutador2Id,
+      usuario_id: userReclutador2,
+      nombre_reclutador: 'Reclutador E2E 2',
+      empresa_id: empresa2Id,
+    }),
+    'perfil de reclutador 2'
+  )
+  must(
+    await admin.from('reclutador_empresa').insert({ reclutador_id: reclutador2Id, empresa_id: empresa2Id }),
+    'vínculo reclutador2-empresa2'
+  )
+
   return {
-    postulante: { email: CUENTAS.postulante, password },
-    reclutador: { email: CUENTAS.reclutador, password },
-    reclutadorSinEmpresa: { email: CUENTAS.reclutadorSinEmpresa, password },
-    admin: { email: CUENTAS.admin, password },
+    credenciales: {
+      postulante: { email: CUENTAS.postulante, password },
+      postulanteSinInforme: { email: CUENTAS.postulanteSinInforme, password },
+      postulanteBloqueado: { email: CUENTAS.postulanteBloqueado, password },
+      postulanteOculto: { email: CUENTAS.postulanteOculto, password },
+      postulanteToggle: { email: CUENTAS.postulanteToggle, password },
+      reclutador: { email: CUENTAS.reclutador, password },
+      reclutador2: { email: CUENTAS.reclutador2, password },
+      reclutadorSinEmpresa: { email: CUENTAS.reclutadorSinEmpresa, password },
+      admin: { email: CUENTAS.admin, password },
+    },
+    postulanteIds: {
+      postulante: postulanteId,
+      postulanteSinInforme: postulanteSinInformeId,
+      postulanteBloqueado: postulanteBloqueadoId,
+      postulanteOculto: postulanteOcultoId,
+      postulanteToggle: postulanteToggleId,
+    },
   }
 }
 

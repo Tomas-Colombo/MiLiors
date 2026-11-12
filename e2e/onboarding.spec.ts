@@ -27,15 +27,14 @@ test.describe('M02 — Onboarding Reclutador: validaciones', () => {
     await expect(page.getByText('Ingresá el nombre de la empresa.')).toBeVisible()
   })
 
-  test('TC-ONB-REC-005 — url_empresa con formato inválido → bloqueado (validación nativa o Zod)', async ({ page }) => {
+  test('TC-ONB-REC-005 — url_empresa con formato inválido → error de validación', async ({ page }) => {
+    await page.locator('form').evaluate((form: HTMLFormElement) => {
+      form.noValidate = true
+    })
     await page.locator('[name="nombre_empresa"]').fill('Empresa Test')
-    // Bypass native URL validation to reach Zod server-side error
-    await page.locator('[name="link_url"]').evaluate(
-      (el, val) => { (el as HTMLInputElement).value = val },
-      'no-es-una-url'
-    )
+    await page.locator('[name="link_url"]').fill('no-es-una-url')
     await page.getByRole('button', { name: 'Guardar empresa y continuar' }).click()
-    // Either the browser blocks (input stays, no redirect) or Zod shows error
+    await expect(page.getByText('Ingresá una URL válida.')).toBeVisible({ timeout: 8000 })
     await expect(page).not.toHaveURL(/\/reclutador\/puestos/)
   })
 })
@@ -52,25 +51,25 @@ test.describe('M03 — Onboarding Postulante: validaciones', () => {
     await expect(page.locator('text=/nombre|requerido|obligatorio/i').first()).toBeVisible({ timeout: 8000 })
   })
 
-  test('TC-ONB-POS-003 — LinkedIn con URL inválida → bloqueado (validación nativa o Zod)', async ({ page }) => {
+  test('TC-ONB-POS-003 — LinkedIn con URL inválida → error de validación', async ({ page }) => {
+    await page.locator('form').evaluate((form: HTMLFormElement) => {
+      form.noValidate = true
+    })
     await page.locator('[name="nombre_completo"]').fill('Test User')
-    // Bypass native URL validation to reach server-side Zod check
-    await page.locator('[name="enlace_linkedin"]').evaluate(
-      (el, val) => { (el as HTMLInputElement).value = val },
-      'perfil-linkedin-sin-https'
-    )
+    await page.locator('[name="enlace_linkedin"]').fill('perfil-linkedin-sin-https')
     await page.getByRole('button', { name: /continuar|guardando/i }).click()
-    // Must not redirect to eneagrama — either stays or shows error
+    await expect(page.getByText('Ingresá una URL válida.')).toBeVisible({ timeout: 8000 })
     await expect(page).not.toHaveURL(/\/postulante\/eneagrama/)
   })
 
-  test('TC-ONB-POS-004 — Portfolio con URL inválida → bloqueado (validación nativa o Zod)', async ({ page }) => {
+  test('TC-ONB-POS-004 — Portfolio con URL inválida → error de validación', async ({ page }) => {
+    await page.locator('form').evaluate((form: HTMLFormElement) => {
+      form.noValidate = true
+    })
     await page.locator('[name="nombre_completo"]').fill('Test User')
-    await page.locator('[name="portfolio"]').evaluate(
-      (el, val) => { (el as HTMLInputElement).value = val },
-      'mi-portfolio-sin-https'
-    )
+    await page.locator('[name="portfolio"]').fill('mi-portfolio-sin-https')
     await page.getByRole('button', { name: /continuar|guardando/i }).click()
+    await expect(page.getByText('Ingresá una URL válida.')).toBeVisible({ timeout: 8000 })
     await expect(page).not.toHaveURL(/\/postulante\/eneagrama/)
   })
 })
