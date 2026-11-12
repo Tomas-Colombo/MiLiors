@@ -9,14 +9,15 @@ import {
   SearchInput,
   useSetParam,
 } from '@/components/shared/list-controls'
-import { ESTADO_POSTULACION } from '@/lib/constants/enums'
+import { ESTADO_POSTULACION, ESTADO_POSTULACION_BADGE_POSTULANTE } from '@/lib/constants/enums'
 
+// Mismos textos que el badge de cada postulación: un solo lugar para cambiarlos.
 const ESTADO_OPTS = [
   { value: '', label: 'Todos los estados' },
-  { value: ESTADO_POSTULACION.ENVIADA, label: 'Enviada' },
-  { value: ESTADO_POSTULACION.VISTO, label: 'Vista' },
-  { value: ESTADO_POSTULACION.PROCESO_FINALIZADO, label: 'No avanza' },
-  { value: ESTADO_POSTULACION.CERRADA, label: 'Cerrada' },
+  ...Object.values(ESTADO_POSTULACION).map((estado) => ({
+    value: estado,
+    label: ESTADO_POSTULACION_BADGE_POSTULANTE[estado],
+  })),
 ]
 
 const ORDEN_OPTS = [

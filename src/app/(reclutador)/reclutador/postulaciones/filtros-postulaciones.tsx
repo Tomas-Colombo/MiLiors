@@ -71,6 +71,8 @@ export function FiltrosPostulaciones({
   const marcaActual = searchParams.get('marca') ?? ''
   const provinciaOpts = provincias.map((p) => ({ value: p.id, label: p.nombre }))
 
+  // Textos propios del filtro, en plural, elegidos por la dueña de la plataforma:
+  // no se derivan de ESTADO_POSTULACION_BADGE_RECLUTADOR a propósito (H-117).
   const estadoOpts = [
     { value: '', label: 'Todos los estados' },
     { value: 'ENVIADA', label: 'Sin evaluar' },
