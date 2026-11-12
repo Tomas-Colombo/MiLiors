@@ -132,6 +132,8 @@ test.describe('M06 — Postulaciones: flujo reclutador', () => {
     await expect(page.getByText(title)).not.toBeVisible()
 
     await page.goto(`/reclutador/postulaciones?puesto=${puestoId}`)
+    await page.getByRole('heading', { name: /postulaciones recibidas/i }).waitFor()
+    await expect(page.getByText(title)).not.toBeVisible()
     await expect(page.getByText('Ana E2E Postulante')).not.toBeVisible()
   })
 })
