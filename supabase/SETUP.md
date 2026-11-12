@@ -163,3 +163,10 @@ Deja una sola política permisiva por tabla, rol y acción en las 16 combinacion
 - Va después de `20261117000000`. Independiente del código.
 - Trae postcondiciones: si en producción quedara alguna política permisiva duplicada o una llamada sin envolver (deriva respecto del repo), aborta sin aplicar nada. En ese caso, avisar antes de reintentar.
 - Después de aplicarla, los advisors `multiple_permissive_policies` y `auth_rls_initplan` no deberían listar tablas de `public`.
+
+### Deploy a producción (12/11/2026)
+
+- Se ejecutó `supabase migration repair 20261110000000 --status applied --linked` (producción ya tiene historial de migraciones, H-006) y `supabase db push --linked` aplicó las 9 migraciones `20261111000000` a `20261118000000`.
+- Controles previos: `0` competencias duplicadas; `46` perfiles dejaron de ser visibles (`40` con test sin terminar, `6` sin test).
+- Advisors post-deploy: `auth_rls_initplan` en `0` (antes `71`) y `multiple_permissive_policies` en `0` (antes `16`).
+- Vercel Preview comparte URL y claves con producción (rama `fase-6/etapa-a` con *Ignored Build Step*); queda pendiente una base de staging para previews. Si Turbopack falla con `next/font/google`, reintentar sin caché o usar `next build --webpack`.

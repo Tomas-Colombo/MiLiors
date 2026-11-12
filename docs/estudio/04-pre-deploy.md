@@ -230,3 +230,20 @@ WHERE policyname IN (
   'reclutador_empresa_insert'
 );
 ```
+
+---
+
+## Registro del deploy a producción (12/11/2026)
+
+1. **Historial de migraciones (H-006):** se ejecutó `supabase migration repair 20261110000000 --status applied --linked`. Producción ahora cuenta con historial de migraciones registrado.
+2. **Controles previos de solo lectura:** antes del push a la base, se ejecutaron las dos consultas de verificación:
+   - `0` competencias duplicadas (H-205).
+   - `46` perfiles que dejaban de ser visibles en el buscador por la regla H-230 (`40` con test sin terminar y `6` sin test; ninguno con informe trabado).
+3. **Migraciones y código:** `supabase db push --linked` aplicó las 9 migraciones (`20261111000000` a `20261118000000`), seguido del merge a `master`.
+4. **Build en Vercel:** el primer build falló con un error de Turbopack en `next/font/google` (`"next/font/google queries have exactly one entry"`) y pasó al hacer **Redeploy** sin caché. Si se repite en futuros deploys, el plan B probado es usar `"next build --webpack"`.
+5. **Advisors de Supabase tras el deploy:**
+   - `auth_rls_initplan`: `0` (antes `71`).
+   - `multiple_permissive_policies`: `0` (antes `16`).
+   - `reclutador_ve_postulante` ya no figura en los advisors.
+   - Quedan únicamente avisos `INFO` de índices, los `WARN` intencionales (`check_session`, `get_my_rol`, `touch_session_activity`) y [H-007](hallazgos.md).
+6. **Entorno de previews en Vercel:** Vercel Preview usa la misma URL y claves de Supabase que producción, por lo que toda preview le pega a la base de producción. La rama `fase-6/etapa-a` tiene configurado un *Ignored Build Step*. Queda como mejora pendiente contar con una base de staging dedicada para las previews.

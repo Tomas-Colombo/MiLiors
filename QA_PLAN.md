@@ -2,7 +2,7 @@
 
 > Leyenda: ⬜ Pendiente · ✅ Aprobado · ❌ Falló
 >
-> **E2E automatizados (Playwright):** corren solo contra el Supabase local. Con el stack levantado (`supabase start`), `npm run test:e2e` siembra las cuentas, levanta la app en el puerto 3100 y al final borra todo. La config aborta si el entorno no es local. Última corrida: 11/11/2026, 53/53 sin skips.
+> **E2E automatizados (Playwright):** corren solo contra el Supabase local. Con el stack levantado (`supabase start`), `npm run test:e2e` siembra las cuentas, levanta la app en el puerto 3100 y al final borra todo. La config aborta si el entorno no es local. Última corrida: 12/11/2026, 58/58 sin skips.
 
 ---
 
@@ -24,8 +24,8 @@
 | TC-AUTH-012 | Login con password incorrecto → error genérico (no revela si el email existe) | 🔴 | ✅ |
 | TC-AUTH-013 | Login con email no registrado → mismo mensaje que TC-AUTH-012 | 🔴 | ✅ |
 | TC-AUTH-014 | Logout → sesión destruida, redirige a /iniciar-sesion | 🔴 | ✅ |
-| TC-AUTH-015 | Post-logout, botón atrás del browser → no accede a páginas protegidas | 🔴 | ⬜ |
-| TC-AUTH-016 | Recuperar password con email registrado → email enviado | 🟡 | ⬜ |
+| TC-AUTH-015 | Post-logout, botón atrás del browser → no accede a páginas protegidas | 🔴 | ✅ |
+| TC-AUTH-016 | Recuperar password con email registrado → email enviado | 🟡 | ✅ |
 | TC-AUTH-017 | Recuperar password con email no registrado → misma respuesta (no revela existencia) | 🔴 | ✅ |
 | TC-AUTH-018 | Acceso directo a /reclutador sin sesión → redirige a /iniciar-sesion | 🔴 | ✅ |
 | TC-AUTH-019 | POSTULANTE intenta acceder a /reclutador → prohibido | 🔴 | ✅ |
@@ -44,7 +44,7 @@
 | TC-ONB-REC-002 | Completar con todos los campos (nombre, descripción, URL) | 🟡 | ⬜ |
 | TC-ONB-REC-003 | nombre_empresa < 2 chars → error | 🟡 | ✅ |
 | TC-ONB-REC-004 | descripcion > 1000 chars → error | 🟡 | ⬜ |
-| TC-ONB-REC-005 | url_empresa con formato inválido → error | 🟡 | ⬜ |
+| TC-ONB-REC-005 | url_empresa con formato inválido → error | 🟡 | ✅ |
 | TC-ONB-REC-006 | url_empresa vacía → aceptada (opcional) | 🟢 | ✅ |
 | TC-ONB-REC-007 | Reclutador con empresa ya creada accede a /onboarding → redirige al dashboard | 🟡 | ✅ |
 
@@ -56,8 +56,8 @@
 |----|------|-----|--------|
 | TC-ONB-POS-001 | Completar con solo nombre_completo → redirige a /postulante/eneagrama | 🔴 | ✅ |
 | TC-ONB-POS-002 | nombre_completo vacío → error | 🔴 | ✅ |
-| TC-ONB-POS-003 | enlace_linkedin con URL inválida → error | 🟡 | ⬜ |
-| TC-ONB-POS-004 | portfolio con URL inválida → error | 🟡 | ⬜ |
+| TC-ONB-POS-003 | enlace_linkedin con URL inválida → error | 🟡 | ✅ |
+| TC-ONB-POS-004 | portfolio con URL inválida → error | 🟡 | ✅ |
 | TC-ONB-POS-005 | especificidad_puesto > 200 chars → error | 🟡 | ⬜ |
 
 ---
@@ -110,7 +110,7 @@
 | TC-POST-007 | Reclutador avanza VISTO → PROCESO_FINALIZADO | 🔴 | ✅ |
 | TC-POST-008 | Al pasar a PROCESO_FINALIZADO → candidato recibe email | 🔴 | ⬜ |
 | TC-POST-009 | Fallo de Resend (email) → postulación sigue avanzando igual | 🟡 | ⬜ |
-| TC-POST-010 | Reclutador no ve postulaciones de puestos ajenos | 🔴 🔒 | ⬜ |
+| TC-POST-010 | Reclutador no ve postulaciones de puestos ajenos | 🔴 🔒 | ✅ |
 
 ---
 
@@ -118,12 +118,12 @@
 
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
-| TC-CAND-001 | Solo aparecen candidatos con perfil_en_busqueda=true | 🔴 | ⬜ |
+| TC-CAND-001 | Solo aparecen candidatos con perfil_en_busqueda=true | 🔴 | ✅ |
 | TC-CAND-002 | Buscar por nombre → resultados filtrados | 🟡 | ⬜ |
 | TC-CAND-003 | Filtrar por competencia → resultados filtrados | 🟡 | ⬜ |
-| TC-CAND-004 | Contacto visible si perfil_en_busqueda=true | 🔴 | ⬜ |
-| TC-CAND-005 | Contacto visible si candidato aplicó a puesto del reclutador (aunque tenga toggle OFF) | 🔴 | ⬜ |
-| TC-CAND-006 | **Contacto OCULTO si toggle OFF y no aplicó a ningún puesto del reclutador** | 🔴 🔒 | ⬜ |
+| TC-CAND-004 | Contacto visible si perfil_en_busqueda=true | 🔴 | ✅ |
+| TC-CAND-005 | Contacto visible si candidato aplicó a puesto del reclutador (aunque tenga toggle OFF) | 🔴 | ✅ |
+| TC-CAND-006 | **Contacto OCULTO si toggle OFF y no aplicó a ningún puesto del reclutador** | 🔴 🔒 | ✅ |
 | TC-CAND-007 | Informe visible en perfil si toggle ON e informe=LISTO | 🔴 | ⬜ |
 | TC-CAND-008 | **Informe OCULTO si toggle OFF** | 🔴 🔒 | ⬜ |
 
@@ -137,7 +137,7 @@
 | TC-NOTA-002 | Crear nota asociada a un puesto → guardada con relación | 🟡 | ⬜ |
 | TC-NOTA-003 | Editar nota existente → contenido actualizado | 🟡 | ✅ |
 | TC-NOTA-004 | Eliminar nota → desaparece | 🟡 | ✅ |
-| TC-NOTA-005 | **Nota de Reclutador A no visible para Reclutador B** | 🔴 🔒 | ⬜ |
+| TC-NOTA-005 | **Nota de Reclutador A no visible para Reclutador B** | 🔴 🔒 | ✅ |
 | TC-NOTA-006 | **Candidato NO puede ver sus propias notas** | 🔴 🔒 | ✅ |
 
 ---
@@ -197,8 +197,8 @@
 
 | ID | Caso | Pri | Estado |
 |----|------|-----|--------|
-| TC-VIS-001 | Toggle ON → candidato aparece en búsqueda de reclutadores | 🔴 | ⬜ |
-| TC-VIS-002 | Toggle OFF → candidato desaparece de búsqueda | 🔴 | ⬜ |
+| TC-VIS-001 | Toggle ON → candidato aparece en búsqueda de reclutadores | 🔴 | ✅ |
+| TC-VIS-002 | Toggle OFF → candidato desaparece de búsqueda | 🔴 | ✅ |
 | TC-VIS-003 | Toggle OFF → contacto e informe ocultos para reclutadores | 🔴 🔒 | ⬜ |
 
 ---
