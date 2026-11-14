@@ -43,6 +43,20 @@ function isEmailPostulacionesHabilitado(): boolean {
   return getEnvServidor().EMAIL_POSTULACIONES_HABILITADO === 'true'
 }
 
+// Los datos del mail los cargan postulantes y reclutadores: sin escapar, un
+// nombre o un título de puesto con HTML se inyectaría en el cuerpo del mensaje.
+function escaparHtml(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** Sin tope, un Resend colgado deja colgada la server action que cambia el estado. */
+const TIMEOUT_RESEND_MS = 5000
+
 // Helper: send email via Resend (no SDK — native fetch)
 async function enviarEmailCambioEstado(
   emailDestino: string,
@@ -58,11 +72,15 @@ async function enviarEmailCambioEstado(
     return
   }
 
-  const estadoLabel = ESTADO_POSTULACION_LABEL[nuevoEstado] ?? nuevoEstado
+  const estadoLabel = escaparHtml(ESTADO_POSTULACION_LABEL[nuevoEstado] ?? nuevoEstado)
+  const nombre = escaparHtml(nombrePostulante)
+  const puesto = escaparHtml(tituloPuesto)
+  const empresa = escaparHtml(empresaNombre)
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
+      signal: AbortSignal.timeout(TIMEOUT_RESEND_MS),
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
@@ -72,8 +90,8 @@ async function enviarEmailCambioEstado(
         to: emailDestino,
         subject: `Actualización en tu postulación — ${tituloPuesto}`,
         html: `
-          <p>Hola ${nombrePostulante},</p>
-          <p>Tu postulación al puesto <strong>${tituloPuesto}</strong> en <strong>${empresaNombre}</strong> fue actualizada.</p>
+          <p>Hola ${nombre},</p>
+          <p>Tu postulación al puesto <strong>${puesto}</strong> en <strong>${empresa}</strong> fue actualizada.</p>
           <p><strong>Estado actual:</strong> ${estadoLabel}</p>
           <p>Ingresa a <a href="${env.NEXT_PUBLIC_APP_URL}/postulante/postulaciones">MiLiors</a> para ver el detalle.</p>
           <p>— El equipo de MiLiors</p>

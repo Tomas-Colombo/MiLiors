@@ -88,7 +88,25 @@ export function formatFecha(
   }
 }
 
-const MESES_ABREVIADOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+/**
+ * Instante (ISO, UTC) en que empieza el mes en curso en Argentina.
+ *
+ * El runtime del servidor corre en UTC: `new Date(año, mes, 1)` da las 00:00Z,
+ * que son las 21:00 del último día del mes anterior en Argentina. Argentina no
+ * tiene horario de verano desde 2009, así que el offset fijo -03:00 es exacto.
+ */
+export function inicioMesArgentina(ahora: Date = new Date()): string {
+  const [anio, mes] = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+  })
+    .format(ahora)
+    .split('-')
+  return new Date(`${anio}-${mes}-01T00:00:00-03:00`).toISOString()
+}
+
+const MESES_ABREVIADOS =['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 /**
  * Mes y año de una columna DATE, como los muestra el certificado: "Mar 2026".
