@@ -164,6 +164,10 @@ Deja una sola política permisiva por tabla, rol y acción en las 16 combinacion
 - Trae postcondiciones: si en producción quedara alguna política permisiva duplicada o una llamada sin envolver (deriva respecto del repo), aborta sin aplicar nada. En ese caso, avisar antes de reintentar.
 - Después de aplicarla, los advisors `multiple_permissive_policies` y `auth_rls_initplan` no deberían listar tablas de `public`.
 
+### Migración `20261119000000_indices_fk.sql` (F-11) — pendiente de deploy
+
+Agrega índices a las 10 FKs sin índice (las 9 del advisor `unindexed_foreign_keys` más `informe_seleccion_generado.puesto_id`). Solo `CREATE INDEX IF NOT EXISTS`: no cambia datos ni acceso, y es independiente del código. Después de aplicarla, `unindexed_foreign_keys` debería quedar en `0`.
+
 ### Deploy a producción (12/11/2026)
 
 - Se ejecutó `supabase migration repair 20261110000000 --status applied --linked` (producción ya tiene historial de migraciones, H-006) y `supabase db push --linked` aplicó las 9 migraciones `20261111000000` a `20261118000000`.

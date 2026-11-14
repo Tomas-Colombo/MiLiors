@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest'
-import { formatFecha, formatMesAnioCertificado } from './fecha'
+import { formatFecha, formatMesAnioCertificado, inicioMesArgentina } from './fecha'
+
+describe('inicioMesArgentina', () => {
+  it('devuelve las 00:00 del día 1 en Argentina (03:00Z)', () => {
+    expect(inicioMesArgentina(new Date('2026-11-14T15:00:00Z'))).toBe('2026-11-01T03:00:00.000Z')
+  })
+
+  it('a las 22:00 del último día en Argentina sigue siendo el mes anterior, aunque en UTC ya cambió', () => {
+    // 2026-12-01T01:00Z son las 22:00 del 30/11 en Argentina.
+    expect(inicioMesArgentina(new Date('2026-12-01T01:00:00Z'))).toBe('2026-11-01T03:00:00.000Z')
+  })
+
+  it('cruza el año', () => {
+    expect(inicioMesArgentina(new Date('2027-01-01T02:59:00Z'))).toBe('2026-12-01T03:00:00.000Z')
+    expect(inicioMesArgentina(new Date('2027-01-01T03:00:00Z'))).toBe('2027-01-01T03:00:00.000Z')
+  })
+})
 
 describe('formatFecha', () => {
   it('formatea string de solo fecha (YYYY-MM-DD) preservando el día civil (1 de marzo)', () => {

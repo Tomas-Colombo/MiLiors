@@ -6,7 +6,7 @@
 ## 1. Contexto y advertencia crítica de base de datos
 
 > [!WARNING]
-> **Base de datos compartida:** Actualmente el entorno de desarrollo y producción comparten la misma instancia de base de datos en Supabase. Un rollback en Vercel revierte **únicamente el código del frontend y las server actions**, pero **NO revierte datos, filas insertadas ni el esquema DDL** de PostgreSQL.
+> **Una sola base para producción y previews:** El desarrollo y los E2E corren contra el stack local de Supabase (`supabase/SETUP.md`, H-002), pero **Vercel Preview usa la misma URL y claves que producción**: toda preview lee y escribe en la base productiva (no hay staging todavía). Un rollback en Vercel revierte **únicamente el código del frontend y las server actions**, pero **NO revierte datos, filas insertadas ni el esquema DDL** de PostgreSQL.
 
 ### Regla de compatibilidad hacia atrás (Expand and Contract)
 Cualquier migración en la base de datos debe diseñarse para ser tolerante a versiones anteriores del código:

@@ -4,9 +4,12 @@
 
 Para testing rápido sin responder 135 preguntas:
 
+> [!WARNING]
+> **Solo contra el stack local** (`supabase start`, Studio en http://127.0.0.1:55323). El dashboard de Supabase y el CLI linkeado apuntan a **producción**: estos pasos borran preguntas reales del test. Ver `AGENTS.md`.
+
 ### Opción 1: SQL directo (más simple)
 
-Pegá esto en el **SQL Editor** de tu dashboard Supabase:
+Pegá esto en el **SQL Editor** del Studio local:
 
 ```sql
 DELETE FROM pregunta_eneagrama WHERE numero_pregunta > 5;
@@ -24,14 +27,6 @@ Para revertir (restaurar todas las 135):
 ```bash
 node scripts/trim-eneagrama-for-testing.mjs --restore
 ```
-
-### Opción 3: Con Supabase CLI
-
-```bash
-supabase db push --remote
-```
-
-(Solo funciona si tenés `supabase` CLI instalado)
 
 ## Cómo funciona
 

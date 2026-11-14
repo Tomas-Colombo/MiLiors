@@ -15,13 +15,14 @@ import {
 } from '@/lib/types/informe'
 import { patronSinTildes, normalizarTexto } from '@/lib/texto'
 import { requireAdmin } from '@/lib/guards'
+import { inicioMesArgentina } from '@/lib/fecha'
 
 // ─── Métricas del dashboard ──────────────────────────────────────────────────
 
 export async function getMetricas() {
   const admin = createAdminClient()
 
-  const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+  const inicioMes = inicioMesArgentina()
 
   const [
     { count: totalPostulantes },
@@ -402,9 +403,11 @@ export async function getIdiomasAdmin(): Promise<IdiomaAdmin[]> {
 
 export async function getPostulantesAdmin() {
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('perfil_postulante')
-    .select(`
+  const data = await traerPaginado<unknown>(
+    () =>
+      admin
+        .from('perfil_postulante')
+        .select(`
       id, nombre_completo, perfil_en_busqueda, bloqueado_por_admin, created_at, carrera_id, carrera_otra,
       provincia_id,
       usuario(email),
@@ -414,9 +417,12 @@ export async function getPostulantesAdmin() {
       test_eneagrama(test_eneagrama_dominante(id)),
       informe_personalidad(estado_informe)
     `)
-    .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .order('id'),
+    'el listado de postulantes',
+  )
 
-  return (data ?? []).map((row: unknown) => {
+  return data.map((row: unknown) => {
     const r = row as {
       id: string; nombre_completo: string; perfil_en_busqueda: boolean; bloqueado_por_admin: boolean; created_at: string
       carrera_id: string | null; carrera_otra: string | null
@@ -557,15 +563,20 @@ export async function getTyCVersiones() {
 
 export async function getInformesAdmin() {
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('informe_personalidad')
-    .select(`
+  const data = await traerPaginado<unknown>(
+    () =>
+      admin
+        .from('informe_personalidad')
+        .select(`
       id, estado_informe, fecha_generacion, updated_at,
       perfil_postulante(nombre_completo, usuario(email))
     `)
-    .order('updated_at', { ascending: false })
+        .order('updated_at', { ascending: false })
+        .order('id'),
+    'el monitor de informes',
+  )
 
-  return (data ?? []).map((row: unknown) => {
+  return data.map((row: unknown) => {
     const r = row as {
       id: string; estado_informe: string; fecha_generacion: string; updated_at: string
       perfil_postulante: { nombre_completo: string; usuario: { email: string } | null } | null
