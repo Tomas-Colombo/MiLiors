@@ -9,6 +9,7 @@ import { fortalezasDelInforme, nivelTecnicoACert, primerParrafo, type NivelCert 
 import {
   clavesDescartadas,
   estaDescartada,
+  filtrarSinVaciar,
   type CertificadoSintesisJSON,
   type SintesisDescarte,
   type SintesisEstado,
@@ -158,6 +159,9 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
   const cursosDescartados = clavesDescartadas(sintesis?.descartados, 'curso')
   const experienciasDescartadas = clavesDescartadas(sintesis?.descartados, 'experiencia')
   const competenciasDescartadas = clavesDescartadas(sintesis?.descartados, 'competencia')
+  // Secciones obligatorias que el triage vaciaba y `filtrarSinVaciar` restauró:
+  // sus descartes no se listan como "No incluido", porque sí se muestran.
+  const tiposRestaurados = new Set<SintesisDescarte['tipo']>()
 
   if (ptTyped) {
     const ptId = ptTyped.id
@@ -183,8 +187,11 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
       supabase.from('idioma').select('nombre, nivel_idioma').eq('perfil_tecnico_id', ptId).order('nombre'),
       supabase.from('postulante_competencia').select('nivel, competencia(nombre)').eq('perfil_tecnico_id', ptId),
     ])
-    formaciones = ((f.data ?? []) as { id: string; titulo: string; institucion: string; fecha_graduacion: string | null }[])
-      .filter(item => !estaDescartada(formacionesDescartadas, item.id))
+    const formacionesRaw = (f.data ?? []) as { id: string; titulo: string; institucion: string; fecha_graduacion: string | null }[]
+    if (formacionesRaw.length > 0 && formacionesRaw.every(item => estaDescartada(formacionesDescartadas, item.id))) {
+      tiposRestaurados.add('formacion')
+    }
+    formaciones = filtrarSinVaciar(formacionesRaw, formacionesDescartadas, item => item.id)
       .map(({ titulo, institucion, fecha_graduacion }) => ({ titulo, institucion, fecha_graduacion }))
     cursos = ((cu.data ?? []) as { id: string; nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[])
       .filter(item => !estaDescartada(cursosDescartados, item.id))
@@ -195,9 +202,13 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
       // El certificado muestra los últimos 3 puestos; el historial completo vive en el perfil.
       .slice(0, 3)
     idiomas = (i.data ?? []) as CertificadoContenido['idiomas']
-    competencias = ((c.data ?? []) as { nivel: NivelCompetencia | null; competencia: { nombre: string } | null }[])
-      .filter(row => row.competencia !== null && !estaDescartada(competenciasDescartadas, row.competencia.nombre))
-      .map(row => ({ nombre: row.competencia!.nombre, nivel: nivelTecnicoACert(row.nivel ?? undefined) }))
+    const competenciasRaw = ((c.data ?? []) as { nivel: NivelCompetencia | null; competencia: { nombre: string } | null }[])
+      .filter((row): row is { nivel: NivelCompetencia | null; competencia: { nombre: string } } => row.competencia !== null)
+    if (competenciasRaw.length > 0 && competenciasRaw.every(row => estaDescartada(competenciasDescartadas, row.competencia.nombre))) {
+      tiposRestaurados.add('competencia')
+    }
+    competencias = filtrarSinVaciar(competenciasRaw, competenciasDescartadas, row => row.competencia.nombre)
+      .map(row => ({ nombre: row.competencia.nombre, nivel: nivelTecnicoACert(row.nivel ?? undefined) }))
       // Ordenar acá y no en la query: PostgREST no ordena el padre por una columna
       // del embed. Sin esto, previsualización y PDF pueden listarlas distinto.
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -231,7 +242,7 @@ export const getCertificadoContenido = cache(async (): Promise<CertificadoConten
     fortalezas: sintesis?.fortalezas,
     contextoIdeal: sintesis?.contextoIdeal,
     sintesisEstado: ptTyped?.sintesis_estado ?? 'PENDIENTE',
-    descartados: sintesis?.descartados,
+    descartados: sintesis?.descartados?.filter(d => !tiposRestaurados.has(d.tipo)),
   }
 })
 

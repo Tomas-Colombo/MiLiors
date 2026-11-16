@@ -1,6 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { clavesDescartadas, estaDescartada, type CertificadoSintesisJSON } from '@/lib/types/certificado'
+import { clavesDescartadas, estaDescartada, filtrarSinVaciar, type CertificadoSintesisJSON } from '@/lib/types/certificado'
 import { esFormatoAnterior, type InformePersonalidadJSON } from '@/lib/types/informe'
 import type { NivelCompetencia } from '@/lib/constants/enums'
 import { fortalezasDelInforme, nivelTecnicoACert, primerParrafo } from './niveles'
@@ -136,8 +136,11 @@ export async function construirPropsCertificado({
     competencia: clavesDescartadas(sintesis.descartados, 'competencia'),
   }
 
-  const formaciones = ((f.data ?? []) as { id: string; institucion: string; titulo: string; fecha_graduacion: string | null }[])
-    .filter(item => !estaDescartada(descartes.formacion, item.id))
+  const formaciones = filtrarSinVaciar(
+    (f.data ?? []) as { id: string; institucion: string; titulo: string; fecha_graduacion: string | null }[],
+    descartes.formacion,
+    item => item.id,
+  )
     .map(({ titulo, institucion, fecha_graduacion }) => ({ titulo, institucion, fecha_graduacion }))
 
   const cursos = ((cu.data ?? []) as { id: string; nombre: string; institucion: string; fecha_fin: string | null; duracion_horas: number | null }[])
@@ -152,9 +155,13 @@ export async function construirPropsCertificado({
 
   const idiomas = (i.data ?? []) as { nombre: string; nivel_idioma: string }[]
 
-  const competencias = ((c.data ?? []) as { nivel: NivelCompetencia | null; competencia: { nombre: string } | null }[])
-    .filter(row => row.competencia !== null && !estaDescartada(descartes.competencia, row.competencia.nombre))
-    .map(row => ({ nombre: row.competencia!.nombre, nivel: nivelTecnicoACert(row.nivel ?? undefined) }))
+  const competencias = filtrarSinVaciar(
+    ((c.data ?? []) as { nivel: NivelCompetencia | null; competencia: { nombre: string } | null }[])
+      .filter((row): row is { nivel: NivelCompetencia | null; competencia: { nombre: string } } => row.competencia !== null),
+    descartes.competencia,
+    row => row.competencia.nombre,
+  )
+    .map(row => ({ nombre: row.competencia.nombre, nivel: nivelTecnicoACert(row.nivel ?? undefined) }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
   if (formaciones.length === 0) {

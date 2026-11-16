@@ -104,3 +104,14 @@ export function clavesDescartadas(
 export function estaDescartada(claves: Set<string>, clave: string): boolean {
   return claves.has(normClave(clave))
 }
+
+/**
+ * Aplica los descartes del triage a una sección obligatoria del certificado
+ * (formación, competencias) sin dejarla vacía: si el triage descartó todos los
+ * ítems, se muestran todos. El requisito es tener al menos uno cargado, no que
+ * el triage lo considere relevante para la búsqueda.
+ */
+export function filtrarSinVaciar<T>(items: T[], claves: Set<string>, clave: (item: T) => string): T[] {
+  const filtrados = items.filter(item => !estaDescartada(claves, clave(item)))
+  return filtrados.length > 0 ? filtrados : items
+}
