@@ -29,6 +29,8 @@ export function TyCModal({ tyc }: { tyc: TyC }) {
   return (
     <Modal
       open={true}
+      // Llega abierto desde el SSR: sin portal, para que esté en el HTML inicial.
+      portal={false}
       onClose={() => {}} // No se puede cerrar — es bloqueante
       title={`Términos y Condiciones — v${tyc.version}`}
       width={TYC_MODAL_WIDTH}

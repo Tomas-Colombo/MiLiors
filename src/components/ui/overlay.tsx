@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -99,7 +100,15 @@ export interface ModalProps {
   children?: ReactNode;
   footer?: ReactNode;
   width?: number;
+  /**
+   * `false` lo renderiza en el lugar, sin portal. Solo para un modal que ya
+   * llega abierto desde el servidor (TyCModal): el portal no existe en el SSR,
+   * así que ese modal recién aparecería al hidratar.
+   */
+  portal?: boolean;
 }
+
+const suscribirNada = () => () => {};
 
 /**
  * Diálogo modal.
@@ -110,15 +119,18 @@ export interface ModalProps {
  * `data-autofocus` si lo hay, y si no al contenedor, para que el lector de
  * pantalla anuncie el título antes que los botones.
  */
-export function Modal({ open, onClose, icon, title, children, footer, width = 480 }: ModalProps) {
+export function Modal({ open, onClose, icon, title, children, footer, width = 480, portal = true }: ModalProps) {
   const dialogoRef = useRef<HTMLDivElement>(null);
   const tituloId = useId();
+  // `false` en el servidor y durante la hidratación, `true` después: así el
+  // primer render del cliente coincide con el HTML del servidor.
+  const enCliente = useSyncExternalStore(suscribirNada, () => true, () => false);
 
   useDialogo(open, dialogoRef, onClose);
 
   if (!open) return null;
 
-  return (
+  const dialogo = (
     <div
       // `p-4` en celular y `p-12` de tablet para arriba: los 48px fijos de
       // margen dejaban el diálogo en 279px de ancho útil en una pantalla de
@@ -182,6 +194,16 @@ export function Modal({ open, onClose, icon, title, children, footer, width = 48
       </div>
     </div>
   );
+
+  if (!portal) return dialogo;
+
+  // Portal a `body`: un ancestro con `backdrop-filter` (las tarjetas
+  // `bg-surface`), `transform` o `filter` pasa a ser el bloque contenedor de
+  // los `fixed` y abre su propio contexto de apilamiento. Montado adentro de
+  // una tarjeta, el `inset-0` del modal se medía contra la tarjeta y su `z-50`
+  // quedaba por debajo de la barra de navegación mobile (`z-40` en la raíz),
+  // que tapaba los botones del pie del formulario.
+  return enCliente ? createPortal(dialogo, document.body) : null;
 }
 
 /* ============================ Icono del diálogo ========================= */
