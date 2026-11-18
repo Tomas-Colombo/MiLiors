@@ -413,6 +413,13 @@ export const getPuestosActivos = async (filtros?: {
     .order('fecha_publicacion', { ascending: false })
     .range(from, to)
 
+  // Defensa en profundidad sobre RLS: el buscador sólo lista puestos públicos.
+  // Con el filtro "postulados" se omite: quien ya se postuló conserva el acceso
+  // aunque el puesto haya pasado a privado (RLS lo permite por la cláusula
+  // "postulado"), y esos ids ya vienen acotados a sus postulaciones.
+  const soloPostulados = filtros?.postulacion === 'postulados' && (filtros.postulacionIds?.length ?? 0) > 0
+  if (!soloPostulados) query = query.eq('visibilidad', 'PUBLICA')
+
   if (filtros?.sectorId) query = query.eq('sector_id', filtros.sectorId)
   if (carreraPuestoIds) query = query.in('id', carreraPuestoIds)
   const cargaHoraria = valorEnum(CARGA_HORARIA, filtros?.cargaHoraria)
@@ -986,6 +993,8 @@ export const getReclutadorPublico = cache(async (reclutadorId: string): Promise<
     .select('id, titulo_puesto, ubicacion, carga_horaria, fecha_publicacion, descripcion_texto, nivel_experiencia, sector_industrial(nombre_sector), empresa(nombre_empresa)')
     .eq('reclutador_id', reclutadorId)
     .eq('activo', true)
+    // Service role: RLS does not apply, so private puestos must be filtered out here.
+    .eq('visibilidad', 'PUBLICA')
     .order('fecha_publicacion', { ascending: false })
 
   const puestos: ReclutadorPublicoPuesto[] = (puestosData ?? []).map((row: unknown) => {
