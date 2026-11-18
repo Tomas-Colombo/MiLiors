@@ -290,6 +290,22 @@ export const getPuestoById = cache(async (
   }
 })
 
+/**
+ * Token del link para compartir de un puesto propio. Va con el cliente RLS: la
+ * policy de `puesto_enlace` sólo deja leer al reclutador dueño y al admin, así
+ * que para el resto devuelve null.
+ */
+export const getEnlacePuesto = cache(async (puestoId: string): Promise<string | null> => {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('puesto_enlace')
+    .select('token')
+    .eq('puesto_id', puestoId)
+    .maybeSingle()
+
+  return (data as { token: string } | null)?.token ?? null
+})
+
 /** Total de postulaciones recibidas por un puesto propio (todos los ciclos). */
 export const getTotalPostulacionesDePuesto = cache(async (puestoId: string): Promise<number> => {
   // getPuestoById ya valida propiedad y está cacheado por request.

@@ -733,3 +733,32 @@ export async function reactivarPuesto(puestoId: string): Promise<ActionResult> {
   revalidarPuesto(puestoId)
   return { success: true, data: undefined }
 }
+
+/**
+ * Genera un link nuevo para compartir el puesto: el anterior deja de funcionar.
+ * La RPC corre con el JWT del reclutador y verifica adentro que sea el dueño;
+ * las postulaciones existentes no se tocan (el acceso de quien ya se postuló no
+ * depende del token).
+ */
+export async function regenerarEnlacePuesto(puestoId: string): Promise<ActionResult<{ token: string }>> {
+  const ctx = await getReclutadorContext()
+  if (!ctx) return { success: false, error: 'No autorizado.' }
+  if (!isUuid(puestoId)) return { success: false, error: 'No se pudo regenerar el link.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('regenerar_enlace_puesto', { p_puesto_id: puestoId })
+
+  if (error || typeof data !== 'string' || data === '') {
+    return { success: false, error: 'No se pudo regenerar el link.' }
+  }
+
+  logAuditoria({
+    usuarioId: ctx.reclutadorId,
+    accion: 'regenerar_enlace_puesto',
+    entidad: 'puesto',
+    entidadId: puestoId,
+  })
+
+  revalidatePath(`/reclutador/puestos/${puestoId}`)
+  return { success: true, data: { token: data } }
+}
