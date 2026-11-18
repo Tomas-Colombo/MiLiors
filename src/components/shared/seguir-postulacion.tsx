@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { leerDestino } from '@/lib/destino-cookie'
+import { createClient } from '@/lib/supabase/server'
+import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 import { tokenDeDestinoEmpleos } from '@/lib/sanitizar-next'
 import { Alert, Button } from '@/components/ui'
 import { getMisPostulacionesPuestoIds, getPuestoPorEnlace } from '@/modules/puestos/queries'
@@ -18,7 +20,9 @@ import { descartarDestino } from '@/modules/puestos/destino-actions'
  * ruido. Un destino /postulante/... usa un texto genérico.
  */
 export async function SeguirPostulacion() {
-  const destino = await leerDestino()
+  // La cookie es por navegador: sólo vale si es de este usuario (o todavía sin dueño).
+  const usuario = await getUsuarioAutenticado(await createClient())
+  const destino = await leerDestino(usuario?.id ?? null)
   if (!destino) return null
 
   let titulo: string | null = null
@@ -27,7 +31,10 @@ export async function SeguirPostulacion() {
     const puesto = await getPuestoPorEnlace(token)
     if (!puesto) return null
     if ((await getMisPostulacionesPuestoIds()).has(puesto.puestoId)) return null
-    titulo = puesto.titulo_puesto
+    // Con la empresa al lado: un link ajeno no puede hacerse pasar por otro puesto.
+    titulo = puesto.nombre_empresa
+      ? `${puesto.titulo_puesto} en ${puesto.nombre_empresa}`
+      : puesto.titulo_puesto
   }
 
   return (

@@ -13,8 +13,9 @@ import type { ActionResult } from '@/lib/types/domain'
 import { RUTAS_POR_ROL } from '@/lib/constants/enums'
 import { rolDeUsuario } from '@/lib/rol'
 import { appUrl } from '@/lib/app-url'
-import { sanitizarNext, sanitizarNextParaRol } from '@/lib/sanitizar-next'
-import { borrarDestino, guardarDestino, leerDestino } from '@/lib/destino-cookie'
+import { sanitizarNext, sanitizarNextParaRol, tokenDeDestinoEmpleos } from '@/lib/sanitizar-next'
+import { adoptarDestino, borrarDestino, guardarDestino } from '@/lib/destino-cookie'
+import { getPuestoPorEnlace } from '@/modules/puestos/queries'
 import type { RolUsuario } from '@/lib/types/domain'
 import type { TablesInsert } from '@/lib/types/database.types'
 
@@ -218,13 +219,26 @@ export async function iniciarSesion(
   // login anterior, si no el panel del rol. `/postulante/...` sólo vale para un
   // POSTULANTE; `/empleos/...` (vista previa pública) para cualquiera.
   const nextForm = sanitizarNextParaRol(formData.get('next'), rol)
-  if (nextForm) {
+  // La cookie es sólo del embudo del POSTULANTE: un reclutador o admin que prueba
+  // un link no deja rastro. Queda atada al usuario que ingresa.
+  const esPostulante = rol === 'POSTULANTE'
+  if (nextForm && esPostulante) {
     // Se guarda también la cookie: si de acá se pasa por onboarding, Eneagrama o
     // certificado, el aviso del panel conserva el camino de vuelta.
-    await guardarDestino(nextForm)
+    await guardarDestino(nextForm, data.user.id)
   }
-  const destino =
-    nextForm ?? sanitizarNextParaRol(await leerDestino(), rol) ?? RUTAS_POR_ROL[rol]
+  let destinoCookie: string | null = null
+  if (!nextForm && esPostulante) {
+    destinoCookie = sanitizarNextParaRol(await adoptarDestino(data.user.id), rol)
+    // Un link /empleos regenerado o de un puesto dado de baja ya no resuelve: se
+    // descarta la cookie y se sigue al panel.
+    const token = destinoCookie ? tokenDeDestinoEmpleos(destinoCookie) : null
+    if (token && !(await getPuestoPorEnlace(token))) {
+      await borrarDestino()
+      destinoCookie = null
+    }
+  }
+  const destino = nextForm ?? destinoCookie ?? RUTAS_POR_ROL[rol]
 
   revalidatePath('/', 'layout')
   redirect(destino)
@@ -245,6 +259,7 @@ export async function cerrarSesion(): Promise<void> {
 export async function cerrarSesionPorInactividad(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  await borrarDestino()
   revalidatePath('/', 'layout')
   redirect('/iniciar-sesion?motivo=inactividad')
 }

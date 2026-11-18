@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { iniciarSesion, registrarUsuario } from './actions'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server-admin'
-import { guardarDestino, leerDestino } from '@/lib/destino-cookie'
+import { adoptarDestino, borrarDestino, guardarDestino } from '@/lib/destino-cookie'
+import { getPuestoPorEnlace } from '@/modules/puestos/queries'
 import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
 // redirect() de Next lanza para cortar la ejecución; el test lee el destino del error.
@@ -16,9 +17,10 @@ vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }))
 vi.mock('@/lib/supabase/server-admin', () => ({ createAdminClient: vi.fn() }))
 vi.mock('@/lib/destino-cookie', () => ({
   guardarDestino: vi.fn(),
-  leerDestino: vi.fn(),
+  adoptarDestino: vi.fn(),
   borrarDestino: vi.fn(),
 }))
+vi.mock('@/modules/puestos/queries', () => ({ getPuestoPorEnlace: vi.fn() }))
 
 const TOKEN = 'A'.repeat(32)
 
@@ -76,7 +78,8 @@ async function destinoDe(promesa: Promise<unknown>): Promise<string> {
 describe('iniciarSesion — destino después del login', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(leerDestino).mockResolvedValue(null)
+    vi.mocked(adoptarDestino).mockResolvedValue(null)
+    vi.mocked(getPuestoPorEnlace).mockResolvedValue({ puestoId: 'p1' } as never)
     adminFalso()
   })
 
@@ -91,7 +94,7 @@ describe('iniciarSesion — destino después del login', () => {
   it('con next válido va ahí y lo guarda en la cookie', async () => {
     supabaseLogin('POSTULANTE')
     expect(await destinoDe(login({ next: `/empleos/${TOKEN}` }))).toBe(`/empleos/${TOKEN}`)
-    expect(guardarDestino).toHaveBeenCalledWith(`/empleos/${TOKEN}`)
+    expect(guardarDestino).toHaveBeenCalledWith(`/empleos/${TOKEN}`, 'u1')
   })
 
   it.each(['https://evil.com', '//evil.com', '/\\evil.com', '/admin'])(
@@ -106,6 +109,15 @@ describe('iniciarSesion — destino después del login', () => {
   it('un reclutador con next=/empleos/... va a la vista previa', async () => {
     supabaseLogin('RECLUTADOR')
     expect(await destinoDe(login({ next: `/empleos/${TOKEN}` }))).toBe(`/empleos/${TOKEN}`)
+    // Un reclutador que prueba su propio link no deja cookie de destino.
+    expect(guardarDestino).not.toHaveBeenCalled()
+  })
+
+  it('un reclutador no adopta la cookie de destino y va a su panel', async () => {
+    supabaseLogin('RECLUTADOR')
+    vi.mocked(adoptarDestino).mockResolvedValue(`/empleos/${TOKEN}`)
+    expect(await destinoDe(login())).toBe('/reclutador')
+    expect(adoptarDestino).not.toHaveBeenCalled()
   })
 
   it('un reclutador con next=/postulante/... va a su panel', async () => {
@@ -115,13 +127,22 @@ describe('iniciarSesion — destino después del login', () => {
 
   it('sin next usa la cookie del registro', async () => {
     supabaseLogin('POSTULANTE')
-    vi.mocked(leerDestino).mockResolvedValue(`/empleos/${TOKEN}`)
+    vi.mocked(adoptarDestino).mockResolvedValue(`/empleos/${TOKEN}`)
     expect(await destinoDe(login())).toBe(`/empleos/${TOKEN}`)
+    expect(adoptarDestino).toHaveBeenCalledWith('u1')
+  })
+
+  it('sin next, si el token de la cookie ya no resuelve, borra la cookie y va al panel', async () => {
+    supabaseLogin('POSTULANTE')
+    vi.mocked(adoptarDestino).mockResolvedValue(`/empleos/${TOKEN}`)
+    vi.mocked(getPuestoPorEnlace).mockResolvedValue(null)
+    expect(await destinoDe(login())).toBe('/postulante')
+    expect(borrarDestino).toHaveBeenCalledTimes(1)
   })
 
   it('el next del formulario gana sobre la cookie', async () => {
     supabaseLogin('POSTULANTE')
-    vi.mocked(leerDestino).mockResolvedValue('/postulante/puestos/viejo')
+    vi.mocked(adoptarDestino).mockResolvedValue('/postulante/puestos/viejo')
     expect(await destinoDe(login({ next: `/empleos/${TOKEN}` }))).toBe(`/empleos/${TOKEN}`)
   })
 })

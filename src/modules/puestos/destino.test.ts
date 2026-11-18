@@ -6,6 +6,10 @@ import { getPuestoPorEnlace } from './queries'
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/destino-cookie', () => ({ borrarDestino: vi.fn(), leerDestino: vi.fn() }))
 vi.mock('./queries', () => ({ getPuestoPorEnlace: vi.fn() }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn().mockResolvedValue({}) }))
+vi.mock('@/lib/supabase/claims', () => ({
+  getUsuarioAutenticado: vi.fn().mockResolvedValue({ id: 'u1', email: undefined, app_metadata: {} }),
+}))
 
 const PUESTO = '11111111-1111-4111-8111-111111111111'
 const OTRO = '22222222-2222-4222-8222-222222222222'
@@ -32,6 +36,13 @@ describe('limpiarDestinoDePuesto', () => {
     vi.mocked(getPuestoPorEnlace).mockResolvedValue({ puestoId: OTRO } as never)
     await limpiarDestinoDePuesto(PUESTO)
     expect(borrarDestino).not.toHaveBeenCalled()
+  })
+
+  it('borra la cookie si el link de /empleos ya no resuelve', async () => {
+    vi.mocked(leerDestino).mockResolvedValue(`/empleos/${TOKEN}`)
+    vi.mocked(getPuestoPorEnlace).mockResolvedValue(null)
+    await limpiarDestinoDePuesto(PUESTO)
+    expect(borrarDestino).toHaveBeenCalledTimes(1)
   })
 
   it('sin cookie no hace nada', async () => {

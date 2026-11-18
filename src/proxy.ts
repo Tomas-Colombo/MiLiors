@@ -5,6 +5,7 @@ import { rolDeUsuario, rutaDeRol } from '@/lib/rol'
 import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 import { checkSessionCacheado } from '@/lib/session/check-session-cache'
 import { getEnvServidor } from '@/lib/env'
+import { COOKIE_DESTINO } from '@/lib/destino-cookie-nombre'
 import { sanitizarNext, sanitizarNextParaRol, urlIniciarSesionConNext } from '@/lib/sanitizar-next'
 
 // Rutas que NO requieren autenticación
@@ -114,6 +115,8 @@ export async function proxy(request: NextRequest) {
       const cierre = NextResponse.redirect(new URL(urlIniciarSesionConNext(volverA, { motivo: String(motivo) }), request.url))
       // Propagar las cookies de limpieza de sesión que signOut() escribió en `response`.
       response.cookies.getAll().forEach((cookie) => cierre.cookies.set(cookie))
+      // Fin de sesión: el destino guardado era de quien estaba en este navegador.
+      cierre.cookies.delete(COOKIE_DESTINO)
       return cierre
     }
   }
