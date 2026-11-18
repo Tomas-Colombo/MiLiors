@@ -214,7 +214,11 @@ Construido: la página llama a `resolverAccesoPuesto(id, enlace)` (`null` → `n
 - **Registro (lo construido):** el embudo pasa por verificación de email, onboarding, Eneagrama y certificado, y el email de verificación puede abrirse en otro navegador. **No hay callback de email que retome el `next`**: no se tocó la configuración de confirmación ni `emailRedirectTo` (eso es configuración del dashboard de Supabase). Lo que sí hay:
   - Con `next` válido, `registrarUsuario` **fuerza el rol POSTULANTE en el servidor** (el formulario solo oculta el selector de tipo de cuenta) y guarda la cookie `miliors-destino` (httpOnly, `SameSite=Lax`, `path=/`, 7 días, valor saneado).
   - Al confirmar el mail e ingresar, el login usa la cookie y vuelve a la vista previa.
-  - El aviso "Seguí con tu postulación a {Puesto}" (Server Component de solo lectura, con link y *Descartar*) aparece en el inicio, Buscar puestos, certificado, Eneagrama y datos básicos mientras exista la cookie. Si el destino es un `/empleos/{token}` que ya no resuelve (link regenerado, puesto dado de baja) o el puesto ya está postulado, no se muestra. La cookie se borra al postularse a ese puesto (en las dos actions), al descartar (server action) y al cerrar sesión.
+  - **Dueño de la cookie:** el valor es JSON `{ d: destino, u: usuarioId | null }`. El registro todavía no tiene sesión y guarda `u: null`; en el primer login la cookie se ata a ese usuario. Si `u` es de otro usuario, el login la ignora **y la borra**, y el aviso tampoco la muestra. Al leerla se vuelve a sanear el destino y un valor ilegible (incluido el formato viejo, un string suelto) se ignora.
+  - **Solo POSTULANTE:** el login escribe y usa la cookie únicamente para el rol POSTULANTE; un reclutador o admin que prueba su propio link no deja cookie ni la adopta.
+  - **Link vencido:** si el login cae a la cookie y el destino es un `/empleos/{token}` que ya no resuelve (regenerado o puesto dado de baja), se borra la cookie y se sigue al panel del rol. `limpiarDestinoDePuesto` también la borra en ese caso.
+  - **Fin de sesión:** la cookie se borra en `cerrarSesion`, en `cerrarSesionPorInactividad` y en el cierre forzado del proxy (revocada o inactiva).
+  - El aviso "Seguí con tu postulación a {Puesto} en {Empresa}" (Server Component de solo lectura, con link y *Descartar*) aparece en el inicio, Buscar puestos, certificado, Eneagrama y datos básicos mientras exista la cookie. Si el destino es un `/empleos/{token}` que ya no resuelve (link regenerado, puesto dado de baja) o el puesto ya está postulado, no se muestra. La cookie se borra al postularse a ese puesto (en las dos actions), al descartar (server action) y al cerrar sesión.
   - Si la cookie se perdió, el usuario vuelve a abrir el link y entra directo. Es aceptable.
 - **Proxy:** `?next=` (saneado, solo si cae en la allowlist) se agrega en tres redirecciones: ruta protegida sin sesión, sesión revocada o inactiva (`/iniciar-sesion?motivo=…&next=…`) y, a la inversa, un usuario ya logueado que abre `/iniciar-sesion?next=…` o `/registro?next=…` va directo al `next` compatible con su rol en lugar de a su panel. Los POST (server actions) siguen sin redirigirse.
 
@@ -224,7 +228,7 @@ Construido: la página llama a `resolverAccesoPuesto(id, enlace)` (`null` → `n
 |---|---|
 | Buscador `getPuestosActivos` (`queries.ts:349`) | RLS ya filtra. Sumar además `.eq('visibilidad', 'PUBLICA')` explícito, como defensa en profundidad e intención legible. |
 | `getReclutadorPublico` (service role) | Filtrar `visibilidad = 'PUBLICA'`. |
-| `getPuestoPublicoById` | Reemplazar su uso en la página por `resolverAccesoPuesto` + lectura correspondiente. |
+| `getPuestoPublicoById` | Reemplazada por `resolverAccesoPuesto` + `getPuestoParaPostulante`; la función se eliminó por no tener usos. |
 | Cualquier otra lectura de `puesto` con `createAdminClient` del lado postulante | Auditar con `rg "from\('puesto'\)"` sobre los usos de admin y aplicar el mismo filtro. |
 
 ## H. Escenarios (criterios de aceptación)
@@ -292,8 +296,9 @@ La migración se aplica a producción **solo en el deploy**, con OK explícito d
 2. **Exponer el nombre de la empresa sin login:** la vista previa muestra empresa y descripción a cualquiera con el link, incluso en puestos públicos. Hoy anon ya puede leer puestos activos vía RLS, así que no empeora, pero conviene confirmarlo con negocio.
    - **Corrección (hallazgo al construir el PR 3):** la premisa "postulantes ya ven la empresa vía `getReclutadorPublico`" es cierta solo porque esa query usa service role. Por RLS, `empresa_select` es solo admin y reclutador: **un postulante no lee `empresa`**, así que los embeds `empresa(nombre_empresa)` hechos con el cliente RLS (`getPuestosActivos`, `getPuestoPublicoById`) devuelven `null` para un postulante. Es un bug previo y queda **fuera de alcance**; hay que corregirlo aparte (leer el nombre con service role o abrir una policy acotada). El detalle del postulante nuevo (`getPuestoParaPostulante`, service role tras validar el acceso) sí trae la empresa; el buscador todavía no.
 
+3. **Cambio de visibilidad con el puesto pausado:** se permite. Confirmar que no haga falta un aviso extra.
+
 **Limitaciones conocidas de la v1:**
 - **Co-reclutadores de la misma empresa:** `puesto_enlace` solo se lee para el reclutador dueño del puesto y el admin, así que otro reclutador de la misma empresa no puede ver ni copiar el link ni regenerarlo. Si hace falta, se abre la policy y la RPC al resto de los reclutadores vinculados a la empresa.
-- **Cookie de destino compartida:** `miliors-destino` es por navegador. Un login sin `next` usa la cookie vigente (hasta 7 días, o hasta postularse, descartar el aviso o cerrar sesión), así que quien ingresa sin `next` puede terminar en la vista previa de un puesto que dejó pendiente.
+- **Cookie de destino por navegador:** `miliors-destino` está atada al usuario (ver F.4), así que otra persona que use el mismo navegador no la hereda. Pero la misma persona que ingresa sin `next` usa la cookie vigente (hasta 7 días, o hasta postularse, descartar el aviso o cerrar sesión) y puede terminar en la vista previa de un puesto que dejó pendiente.
 - **Sin callback de email** (ver F.4): si el mail de verificación se abre en otro navegador, la cookie no viaja y el usuario tiene que volver a abrir el link.
-3. **Cambio de visibilidad con el puesto pausado:** se permite. Confirmar que no haga falta un aviso extra.
