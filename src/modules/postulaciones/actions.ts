@@ -17,6 +17,7 @@ import { resolverAccesoPuesto } from '@/modules/puestos/acceso'
 import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/preselector/evaluador'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { getCicloAbierto } from '@/modules/puestos/ciclos'
+import { limpiarDestinoDePuesto } from '@/modules/puestos/destino'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import {
   esOrigenValidoVisto,
@@ -236,6 +237,7 @@ export async function postularAPuesto(puestoId: string, enlace?: string | null):
     return { success: false, error: 'No se pudo registrar la postulación.' }
   }
 
+  await limpiarDestinoDePuesto(puestoId)
   revalidatePath('/postulante/puestos')
   revalidatePath('/postulante/postulaciones')
   return { success: true, data: undefined }
@@ -354,6 +356,7 @@ export async function postularAPuestoConFormulario(
       .eq('id', postulacionId)
   }
 
+  await limpiarDestinoDePuesto(puestoId)
   revalidatePath('/postulante/puestos')
   revalidatePath('/postulante/postulaciones')
   return { success: true, data: { descartada } }

@@ -5,6 +5,7 @@ import { rolDeUsuario, rutaDeRol } from '@/lib/rol'
 import { getUsuarioAutenticado } from '@/lib/supabase/claims'
 import { checkSessionCacheado } from '@/lib/session/check-session-cache'
 import { getEnvServidor } from '@/lib/env'
+import { sanitizarNext, sanitizarNextParaRol, urlIniciarSesionConNext } from '@/lib/sanitizar-next'
 
 // Rutas que NO requieren autenticación
 const PUBLIC_PATHS = [
@@ -65,7 +66,11 @@ export async function proxy(request: NextRequest) {
     // falla con "An unexpected response was received from the server". La
     // acción de login ya redirige sola al panel del rol.
     if (user && request.method === 'GET' && (pathname === '/iniciar-sesion' || pathname === '/registro')) {
-      const destino = rutaDeRol(rolDeUsuario(user))
+      const rolActual = rolDeUsuario(user)
+      // Con un `next` válido y compatible con el rol (p. ej. el link de un puesto) se
+      // va ahí en lugar de al panel.
+      const nextCompatible = sanitizarNextParaRol(request.nextUrl.searchParams.get('next'), rolActual)
+      const destino = nextCompatible ?? rutaDeRol(rolActual)
       // Sin rol utilizable no hay adónde mandarlo: se lo deja ver la pantalla
       // de acceso en lugar de redirigir /iniciar-sesion → /iniciar-sesion, que
       // es un bucle de redirección.
@@ -75,8 +80,11 @@ export async function proxy(request: NextRequest) {
   }
 
   // Si la ruta es protegida y no hay sesión, redirigir al login
+  // Se conserva adónde iba (sólo si el saneado lo permite) para volver después de ingresar.
+  const volverA = sanitizarNext(pathname + request.nextUrl.search)
+
   if (!user) {
-    return NextResponse.redirect(new URL('/iniciar-sesion', request.url))
+    return NextResponse.redirect(new URL(urlIniciarSesionConNext(volverA), request.url))
   }
 
   // ─── Política de sesión: revocación (todos) + inactividad (admin) ───────────
@@ -103,7 +111,7 @@ export async function proxy(request: NextRequest) {
     }).catch(() => null)
     if (motivo) {
       await supabase.auth.signOut()
-      const cierre = NextResponse.redirect(new URL(`/iniciar-sesion?motivo=${motivo}`, request.url))
+      const cierre = NextResponse.redirect(new URL(urlIniciarSesionConNext(volverA, { motivo: String(motivo) }), request.url))
       // Propagar las cookies de limpieza de sesión que signOut() escribió en `response`.
       response.cookies.getAll().forEach((cookie) => cierre.cookies.set(cookie))
       return cierre

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin'
 import { resolverAccesoPuesto } from '@/modules/puestos/acceso'
 import { getFormularioDePuestoAdmin } from '@/modules/preselector/queries'
 import { getCicloAbierto } from '@/modules/puestos/ciclos'
+import { limpiarDestinoDePuesto } from '@/modules/puestos/destino'
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }))
@@ -15,6 +16,7 @@ vi.mock('@/lib/dal', () => ({
 vi.mock('@/modules/puestos/acceso', () => ({ resolverAccesoPuesto: vi.fn() }))
 vi.mock('@/modules/preselector/queries', () => ({ getFormularioDePuestoAdmin: vi.fn() }))
 vi.mock('@/modules/puestos/ciclos', () => ({ getCicloAbierto: vi.fn() }))
+vi.mock('@/modules/puestos/destino', () => ({ limpiarDestinoDePuesto: vi.fn() }))
 vi.mock('@/modules/puestos/actividad', () => ({ marcarActividadPuesto: vi.fn() }))
 vi.mock('@/modules/empresas/queries', () => ({ getReclutadorId: vi.fn() }))
 
@@ -106,6 +108,7 @@ describe('postulaciones/actions — acceso al puesto (visibilidad)', () => {
       const res = await postularAPuesto(PUESTO, TOKEN)
 
       expect(res).toEqual({ success: true, data: undefined })
+      expect(limpiarDestinoDePuesto).toHaveBeenCalledWith(PUESTO)
       expect(inserts).toEqual([
         {
           tabla: 'postulacion',
@@ -189,6 +192,7 @@ describe('postulaciones/actions — acceso al puesto (visibilidad)', () => {
       )
 
       expect(res).toEqual({ success: true, data: { descartada: false } })
+      expect(limpiarDestinoDePuesto).toHaveBeenCalledWith(PUESTO)
       expect(inserts.map((i) => i.tabla)).toEqual(['postulacion', 'respuesta_preselector'])
     })
 

@@ -13,6 +13,8 @@ import type { ActionResult } from '@/lib/types/domain'
 import { RUTAS_POR_ROL } from '@/lib/constants/enums'
 import { rolDeUsuario } from '@/lib/rol'
 import { appUrl } from '@/lib/app-url'
+import { sanitizarNext, sanitizarNextParaRol } from '@/lib/sanitizar-next'
+import { borrarDestino, guardarDestino, leerDestino } from '@/lib/destino-cookie'
 import type { RolUsuario } from '@/lib/types/domain'
 import type { TablesInsert } from '@/lib/types/database.types'
 
@@ -21,11 +23,15 @@ export async function registrarUsuario(
   _prevState: ActionResult<RegistroPendiente>,
   formData: FormData
 ): Promise<ActionResult<RegistroPendiente>> {
+  // Quien se registra para postularse a un puesto (viene con `next`) es siempre
+  // POSTULANTE: lo impone el servidor, no el formulario, que sólo lo oculta.
+  const destino = sanitizarNext(formData.get('next'))
+
   const raw = {
     email: formData.get('email'),
     password: formData.get('password'),
     confirmPassword: formData.get('confirmPassword'),
-    rol: formData.get('rol'),
+    rol: destino ? 'POSTULANTE' : formData.get('rol'),
   }
 
   const parsed = registroSchema.safeParse(raw)
@@ -70,6 +76,7 @@ export async function registrarUsuario(
         }
         return { success: false, error: 'No se pudo reenviar el mail. Intentá de nuevo.', fieldErrors: { _email: [email] } }
       }
+      if (destino) await guardarDestino(destino)
       return { success: true, data: { email, reenviado: true } }
     }
   }
@@ -131,6 +138,11 @@ export async function registrarUsuario(
   // palabra — la persona quedaba mirando el formulario de ingreso sin saber que
   // su cuenta existe y que tiene un mail esperando. Se devuelve el aviso y lo
   // muestra el formulario.
+  // El destino queda en una cookie: el mail de verificación puede abrirse en otro
+  // navegador y el embudo (onboarding, Eneagrama, certificado) tiene varios pasos;
+  // el aviso del panel del postulante lo usa para volver al puesto.
+  if (destino) await guardarDestino(destino)
+
   if (!authData.session) {
     return { success: true, data: { email } }
   }
@@ -202,14 +214,28 @@ export async function iniciarSesion(
     actualizado_en: new Date().toISOString(),
   })
 
+  // Adónde seguir: el `next` del formulario, si no la cookie que dejó el registro o un
+  // login anterior, si no el panel del rol. `/postulante/...` sólo vale para un
+  // POSTULANTE; `/empleos/...` (vista previa pública) para cualquiera.
+  const nextForm = sanitizarNextParaRol(formData.get('next'), rol)
+  if (nextForm) {
+    // Se guarda también la cookie: si de acá se pasa por onboarding, Eneagrama o
+    // certificado, el aviso del panel conserva el camino de vuelta.
+    await guardarDestino(nextForm)
+  }
+  const destino =
+    nextForm ?? sanitizarNextParaRol(await leerDestino(), rol) ?? RUTAS_POR_ROL[rol]
+
   revalidatePath('/', 'layout')
-  redirect(RUTAS_POR_ROL[rol])
+  redirect(destino)
 }
 
 // ─── Logout ──────────────────────────────────────────────────────────────────
 export async function cerrarSesion(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  // El destino guardado era de quien estaba en este navegador: no se hereda.
+  await borrarDestino()
   revalidatePath('/', 'layout')
   redirect('/iniciar-sesion')
 }
