@@ -4,6 +4,7 @@ import { getProvincias, getUbicacionInicial } from '@/modules/ubicacion/queries'
 import { getCarreras } from '@/modules/carreras/queries'
 import { OnboardingForm } from './onboarding-form'
 import { BrandLogo } from '@/components/shared/brand-logo'
+import { SeguirPostulacion } from '@/components/shared/seguir-postulacion'
 
 export const metadata = { title: 'Datos básicos — MiLiors' }
 
@@ -17,6 +18,7 @@ export default async function OnboardingPage() {
   return (
     <div className="flex min-h-screen items-start justify-center bg-surface-page px-4 py-10">
       <div className="w-full max-w-lg">
+        <SeguirPostulacion />
         <div className="mb-8 flex flex-col items-center gap-3">
           <BrandLogo size={48} />
           <div className="text-center">
