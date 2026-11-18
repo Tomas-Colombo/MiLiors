@@ -85,6 +85,13 @@ export const UBICACION_LABEL: Record<string, string> = {
   LOCALIDADES: 'Presencial',
 }
 
+export const VISIBILIDAD_PUESTO = {
+  PUBLICA: 'PUBLICA',
+  PRIVADA: 'PRIVADA',
+} as const
+
+export type VisibilidadPuesto = (typeof VISIBILIDAD_PUESTO)[keyof typeof VISIBILIDAD_PUESTO]
+
 export const NIVEL_IDIOMA = {
   BASICO: 'BASICO',
   INTERMEDIO: 'INTERMEDIO',

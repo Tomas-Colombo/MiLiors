@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { PageHeader, Badge, EmptyState, Table, buttonClassName } from '@/components/ui'
 import type { Column } from '@/components/ui'
-import { BuildingIcon, PlusIcon, AlertTriangleIcon, AlertCircleIcon } from '@/components/icons'
+import { BuildingIcon, PlusIcon, AlertTriangleIcon, AlertCircleIcon, LockIcon } from '@/components/icons'
 import {
   getMisPuestos,
   getConteoPostulacionesCicloActual,
@@ -133,6 +133,12 @@ export default async function MisPuestosPage({
             ) : (
               <Badge tone={p.activo ? 'success' : 'neutral'} dot>
                 {p.activo ? 'Activo' : 'Pausado'}
+              </Badge>
+            )}
+            {p.visibilidad === 'PRIVADA' && (
+              <Badge tone="primary" className="whitespace-nowrap">
+                <LockIcon size={13} strokeWidth={2.5} className="flex-none" />
+                Privado
               </Badge>
             )}
             {alerta && (

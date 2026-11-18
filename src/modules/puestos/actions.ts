@@ -268,6 +268,7 @@ export async function publicarPuesto(
     departamento_id: formData.get('departamento_id') || undefined,
     localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
+    visibilidad: formData.get('visibilidad'),
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
   })
 
@@ -371,6 +372,7 @@ export async function editarPuesto(
     departamento_id: formData.get('departamento_id') || undefined,
     localidad_id: formData.get('localidad_id') || undefined,
     nivel_experiencia: formData.get('nivel_experiencia') || undefined,
+    visibilidad: formData.get('visibilidad'),
     perfil_psicologico_deseado: formData.get('perfil_psicologico_deseado') || undefined,
   })
 

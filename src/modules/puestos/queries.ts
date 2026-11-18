@@ -11,6 +11,7 @@ import {
   UBICACION,
   valorEnum,
   type MarcaPostulacion,
+  type VisibilidadPuesto,
 } from '@/lib/constants/enums'
 
 export type PuestoItem = {
@@ -27,6 +28,8 @@ export type PuestoItem = {
   // Solo se completa en las vistas propias del reclutador (getMisPuestos); no se
   // expone a los postulantes. Base de la alerta de cierre por inactividad.
   fecha_ultima_actividad?: string
+  // Igual que fecha_ultima_actividad: sólo en las vistas propias del reclutador.
+  visibilidad?: VisibilidadPuesto
   empresa_id: string
   sector_id: string | null
   departamento_id: string | null
@@ -163,7 +166,7 @@ export async function getCiclosVigentes(puestoIds: string[]): Promise<Map<string
 export type PuestoLista = Pick<
   PuestoItem,
   | 'id' | 'titulo_puesto' | 'activo' | 'empresa_id' | 'fecha_publicacion'
-  | 'fecha_ultima_actividad' | 'nombre_empresa' | 'nombre_sector'
+  | 'fecha_ultima_actividad' | 'nombre_empresa' | 'nombre_sector' | 'visibilidad'
 >
 
 /** Puestos publicados por el reclutador actual (incluye activos e inactivos) */
@@ -175,7 +178,7 @@ export const getMisPuestos = cache(async (): Promise<PuestoLista[]> => {
   const { data } = await supabase
     .from('puesto')
     .select(`
-      id, titulo_puesto, activo, fecha_publicacion, fecha_ultima_actividad, empresa_id,
+      id, titulo_puesto, activo, visibilidad, fecha_publicacion, fecha_ultima_actividad, empresa_id,
       empresa(nombre_empresa), sector_industrial(nombre_sector)
     `)
     .eq('reclutador_id', reclutadorId)
@@ -185,6 +188,7 @@ export const getMisPuestos = cache(async (): Promise<PuestoLista[]> => {
   return (data ?? []).map((row: unknown) => {
     const r = row as {
       id: string; titulo_puesto: string; activo: boolean
+      visibilidad: VisibilidadPuesto
       fecha_publicacion: string; fecha_ultima_actividad: string
       empresa_id: string
       empresa: { nombre_empresa: string } | null
@@ -194,6 +198,7 @@ export const getMisPuestos = cache(async (): Promise<PuestoLista[]> => {
       id: r.id,
       titulo_puesto: r.titulo_puesto,
       activo: r.activo,
+      visibilidad: r.visibilidad,
       fecha_publicacion: r.fecha_publicacion,
       fecha_ultima_actividad: r.fecha_ultima_actividad,
       empresa_id: r.empresa_id,
@@ -215,7 +220,7 @@ export const getPuestoById = cache(async (
     .from('puesto')
     .select(`
       id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
-      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
+      nivel_experiencia, activo, visibilidad, fecha_publicacion, fecha_baja_puesto, fecha_ultima_actividad,
       empresa_id, sector_id, departamento_id, localidad_id,
       puesto_criterio_psicologico(perfil_psicologico_deseado),
       empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
@@ -233,6 +238,7 @@ export const getPuestoById = cache(async (
     id: string; titulo_puesto: string; descripcion_texto: string | null
     idioma: string; carga_horaria: string; ubicacion: string
     nivel_experiencia: string | null; activo: boolean
+    visibilidad: VisibilidadPuesto
     fecha_publicacion: string; fecha_baja_puesto: string | null
     fecha_ultima_actividad: string
     empresa_id: string; sector_id: string | null
@@ -262,6 +268,7 @@ export const getPuestoById = cache(async (
     ubicacion: r.ubicacion,
     nivel_experiencia: r.nivel_experiencia,
     activo: r.activo,
+    visibilidad: r.visibilidad,
     fecha_publicacion: r.fecha_publicacion,
     fecha_baja_puesto: r.fecha_baja_puesto,
     fecha_ultima_actividad: r.fecha_ultima_actividad,

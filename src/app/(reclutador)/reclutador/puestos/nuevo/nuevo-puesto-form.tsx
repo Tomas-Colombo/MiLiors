@@ -11,11 +11,19 @@ import { CarrerasMultiSelect } from '@/components/shared/carreras-multi-select'
 import { publicarPuesto } from '@/modules/puestos/actions'
 import { cn } from '@/lib/utils'
 import { DESCRIPCION_MAX } from '@/modules/puestos/schema'
-import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
+import {
+  CARGA_HORARIA_LABEL,
+  UBICACION_LABEL,
+  UBICACION,
+  IDIOMAS_COMUNES,
+  VISIBILIDAD_PUESTO,
+  type VisibilidadPuesto,
+} from '@/lib/constants/enums'
 import { INITIAL_ACTION_STATE, type ActionResult } from '@/lib/types/domain'
 import type { CarreraOption } from '@/modules/carreras/queries'
 import type { EmpresaOption } from '@/modules/empresas/queries'
 import { FormularioPreselectorEditor } from '../formulario-preselector-editor'
+import { VisibilidadField } from '../visibilidad-field'
 
 type Props = {
   /** Empresas activas del reclutador: el puesto se publica para una de ellas. */
@@ -34,6 +42,8 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
     INITIAL_ACTION_STATE as ActionResult<{ puestoId: string }>
   )
   const [modalidad, setModalidad] = useState('')
+  // Público por defecto: es el comportamiento de siempre.
+  const [visibilidad, setVisibilidad] = useState<VisibilidadPuesto>(VISIBILIDAD_PUESTO.PUBLICA)
   const [empresaModalAbierto, setEmpresaModalAbierto] = useState(false)
   // Empresas dadas de alta desde el modal. Se suman al select en el acto para
   // no depender de que la revalidación del server llegue antes de elegirlas.
@@ -272,6 +282,12 @@ export function NuevoPuestoForm({ empresas, sectores, provincias, carreras, dias
           error={fieldErrors.departamento_id?.[0]}
         />
       )}
+
+      <VisibilidadField
+        value={visibilidad}
+        onChange={setVisibilidad}
+        error={fieldErrors.visibilidad?.[0]}
+      />
 
       <Field
         label="Notas privadas sobre el puesto"

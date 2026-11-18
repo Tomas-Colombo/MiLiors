@@ -12,13 +12,21 @@ import { CarrerasMultiSelect } from '@/components/shared/carreras-multi-select'
 import { editarPuesto } from '@/modules/puestos/actions'
 import { cn } from '@/lib/utils'
 import { DESCRIPCION_MAX } from '@/modules/puestos/schema'
-import { CARGA_HORARIA_LABEL, UBICACION_LABEL, UBICACION, IDIOMAS_COMUNES } from '@/lib/constants/enums'
+import {
+  CARGA_HORARIA_LABEL,
+  UBICACION_LABEL,
+  UBICACION,
+  IDIOMAS_COMUNES,
+  VISIBILIDAD_PUESTO,
+  type VisibilidadPuesto,
+} from '@/lib/constants/enums'
 import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 import type { PuestoItem } from '@/modules/puestos/queries'
 import type { FormularioPreselector } from '@/modules/preselector/queries'
 import type { CarreraOption } from '@/modules/carreras/queries'
 import type { EmpresaOption } from '@/modules/empresas/queries'
 import { FormularioPreselectorEditor } from '../../formulario-preselector-editor'
+import { VisibilidadField } from '../../visibilidad-field'
 
 type Props = {
   puestoId: string
@@ -39,6 +47,9 @@ export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carrera
   const boundAction = editarPuesto.bind(null, puestoId)
   const [state, action, isPending] = useActionState(boundAction, INITIAL_ACTION_STATE)
   const [modalidad, setModalidad] = useState(puesto.ubicacion)
+  const [visibilidad, setVisibilidad] = useState<VisibilidadPuesto>(
+    puesto.visibilidad ?? VISIBILIDAD_PUESTO.PUBLICA,
+  )
   // Campos controlados: al fallar el guardado, React 19 resetea los <input> no
   // controlados a su defaultValue y se perderían los cambios sin guardar. El
   // estado los preserva para que solo se corrija el campo con error.
@@ -241,6 +252,13 @@ export function EditarPuestoForm({ puestoId, puesto, empresas, sectores, carrera
           error={fieldErrors.departamento_id?.[0]}
         />
       )}
+
+      <VisibilidadField
+        value={visibilidad}
+        onChange={setVisibilidad}
+        avisarAlPasarAPrivado={puesto.visibilidad !== VISIBILIDAD_PUESTO.PRIVADA}
+        error={fieldErrors.visibilidad?.[0]}
+      />
 
       <Field
         label="Notas privadas sobre el puesto"
