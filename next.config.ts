@@ -104,6 +104,11 @@ const nextConfig: NextConfig = {
         source: "/empleos/:path*",
         headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
       },
+      // Mismo motivo: el detalle del postulante recibe el token en `?enlace=`.
+      {
+        source: "/postulante/puestos/:path*",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
     ];
   },
 

@@ -578,19 +578,6 @@ function mapPuestoPublico(data: unknown): PuestoItem {
   }
 }
 
-/** Detalle de un puesto público para postulantes (SIN perfil_psicologico_deseado) */
-export const getPuestoPublicoById = cache(async (puestoId: string): Promise<PuestoItem | null> => {
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('puesto')
-    .select(PUESTO_PUBLICO_SELECT)
-    .eq('id', puestoId)
-    .maybeSingle()
-
-  return data ? mapPuestoPublico(data) : null
-})
-
 export type PuestoParaPostulante = PuestoItem & {
   /** Activo, sin baja y con un ciclo abierto: es lo que habilita el botón Postularme. */
   recibePostulaciones: boolean
