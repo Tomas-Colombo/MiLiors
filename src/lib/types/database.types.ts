@@ -1490,6 +1490,7 @@ export type Database = {
           titulo_puesto: string
           ubicacion: Database["public"]["Enums"]["ubicacion"]
           updated_at: string
+          visibilidad: Database["public"]["Enums"]["visibilidad_puesto"]
         }
         Insert: {
           activo?: boolean
@@ -1510,6 +1511,7 @@ export type Database = {
           titulo_puesto: string
           ubicacion: Database["public"]["Enums"]["ubicacion"]
           updated_at?: string
+          visibilidad?: Database["public"]["Enums"]["visibilidad_puesto"]
         }
         Update: {
           activo?: boolean
@@ -1530,6 +1532,7 @@ export type Database = {
           titulo_puesto?: string
           ubicacion?: Database["public"]["Enums"]["ubicacion"]
           updated_at?: string
+          visibilidad?: Database["public"]["Enums"]["visibilidad_puesto"]
         }
         Relationships: [
           {
@@ -1621,6 +1624,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "puesto_criterio_psicologico_puesto_id_fkey"
+            columns: ["puesto_id"]
+            isOneToOne: true
+            referencedRelation: "puesto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      puesto_enlace: {
+        Row: {
+          creado_en: string
+          puesto_id: string
+          regenerado_en: string | null
+          token: string
+        }
+        Insert: {
+          creado_en?: string
+          puesto_id: string
+          regenerado_en?: string | null
+          token: string
+        }
+        Update: {
+          creado_en?: string
+          puesto_id?: string
+          regenerado_en?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puesto_enlace_puesto_id_fkey"
             columns: ["puesto_id"]
             isOneToOne: true
             referencedRelation: "puesto"
@@ -1983,6 +2015,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      regenerar_enlace_puesto: {
+        Args: { p_puesto_id: string }
+        Returns: string
+      }
       touch_session_activity: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1999,6 +2035,7 @@ export type Database = {
       tipo_pregunta_preselector: 'OPCIONES' | 'TEXTO_LIBRE'
       ubicacion: 'REMOTO' | 'HIBRIDO' | 'LOCALIDADES'
       valoracion_competencia: 'SUBESTIMA' | 'JUSTO' | 'SOBRESTIMA'
+      visibilidad_puesto: 'PUBLICA' | 'PRIVADA'
     }
     CompositeTypes: {
       [_ in never]: never
