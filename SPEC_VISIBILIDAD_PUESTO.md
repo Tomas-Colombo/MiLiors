@@ -163,13 +163,15 @@ Datos:
 | Caso | Qué ve |
 |---|---|
 | Sin sesión, puesto activo con ciclo abierto | Datos del puesto + **Postularme** → `/iniciar-sesion?next=/empleos/{token}` (con link secundario "Crear cuenta" → `/registro?next=...`) |
-| Puesto pausado o sin ciclo abierto | Datos del puesto + aviso "Este puesto no está recibiendo postulaciones por ahora." Sin botón. |
+| Puesto pausado o sin ciclo abierto | Datos del puesto + aviso "Este puesto no está recibiendo postulaciones por ahora." Sin botón. Vale igual para sesión POSTULANTE; si ya se postuló, manda "Ya te postulaste". El detalle del postulante (F.2) deshabilita *Postularme* con el mismo aviso. |
 | Sesión POSTULANTE | **Postularme** → `/postulante/puestos/{puestoId}?enlace={token}` |
 | Sesión POSTULANTE que ya se postuló | "Ya te postulaste" + link a Mis postulaciones |
 | Sesión RECLUTADOR / ADMIN | Vista previa sin botón, con la leyenda "Así ven el puesto los candidatos". |
+| Sesión POSTULANTE sin onboarding, Eneagrama o certificado | *Postularme* lo lleva al detalle (`/postulante/puestos/{id}?enlace=…`), y ahí los gates de siempre (`requireEneagramaCompleto`, certificado vigente) lo mandan a completar el perfil, el Eneagrama o el certificado. Como el destino quedó en la cookie `miliors-destino`, el aviso "Seguí con tu postulación" lo trae de vuelta al puesto desde esas pantallas. |
+| Sesión revocada o cerrada por inactividad | El proxy lo manda a `/iniciar-sesion?motivo=…&next=…`; al volver a ingresar retoma el puesto. |
 
 - **Metadatos y seguridad:**
-  - `generateMetadata` con título "{Puesto} en {Empresa} · Miliors" y una descripción corta, para el preview de WhatsApp.
+  - `generateMetadata` con título "{Puesto} en {Empresa} — MiLiors" (el título raíz es `%s` sin sufijo, la marca se agrega en la página), una descripción corta y `openGraph` con URL absoluta (`appUrlPublico()`; el layout raíz no define `metadataBase`), para el preview de WhatsApp.
   - `robots: { index: false, follow: false }` en todos los casos (ver K).
   - Header `Referrer-Policy: no-referrer` en `/empleos/*` (desde `next.config.ts` `headers()`), para que el token no se filtre por `Referer` a los links externos de la descripción o de la empresa.
 - Leer la guía de Next 16 en `node_modules/next/dist/docs/` para `generateMetadata`, `params` asíncronos y `headers()` antes de implementar (`AGENTS.md`).
@@ -193,6 +195,8 @@ resolverAccesoPuesto(puestoId: string, enlace?: string | null):
 
 Si el acceso es por `enlace`, las lecturas de la página (puesto, carreras, formulario preselector) se hacen con service role **después** de validar el acceso. Los gates actuales se mantienen: `requireEneagramaCompleto` y certificado vigente para postular.
 
+Construido: la página llama a `resolverAccesoPuesto(id, enlace)` (`null` → `notFound()`) y lee con `getPuestoParaPostulante(id)` (service role, para todas las vías, porque RLS tampoco deja leer la empresa a un postulante; ver K.2) y `getFormularioDePuestoAdmin(id)`, conservando la sanitización que nunca manda `esCritica` ni `esValida` al cliente. Además calcula `recibePostulaciones` (activo, sin baja y con ciclo abierto): si es falso, *Postularme* queda deshabilitado con "Este puesto no está recibiendo postulaciones por ahora.". `PostularButton` recibe `enlace`, lo manda a `postularAPuesto` y como hidden input del formulario del preselector, y ahora muestra el error de la action en la ruta sin formulario (antes se perdía).
+
 ### F.3 Postulación (cierra H5 y H6)
 
 `postularAPuesto` y `postularAPuestoConFormulario` reciben el `enlace` opcional (hidden input) y:
@@ -206,12 +210,13 @@ Si el acceso es por `enlace`, las lecturas de la página (puesto, carreras, form
 
 - `/iniciar-sesion` y `/registro` aceptan `?next=`.
 - `sanitizarNext(next)` en `src/lib/` acepta solo rutas relativas internas: empieza con `/`, no empieza con `//` ni `/\`, sin esquema. Allowlist de prefijos: `/empleos/` y `/postulante/`. Cualquier otro valor se ignora.
-- **Login:** `iniciarSesion` redirige a `next` saneado si existe y es compatible con el rol (un reclutador que entra con `next=/empleos/...` va a la vista previa). Si no, va a `RUTAS_POR_ROL[rol]` como hoy.
-- **Registro:** el embudo pasa por verificación de email, onboarding, Eneagrama y certificado, y el email de verificación puede abrirse en otro navegador. Por eso:
-  - Al registrarse con `next`, se guarda la cookie `miliors-destino` (httpOnly, `SameSite=Lax`, 7 días, valor saneado).
-  - El panel del postulante muestra un aviso "Seguí con tu postulación a {Puesto}", con link al destino, mientras la cookie exista. Se borra al postularse o al descartarlo.
+- **Login:** `iniciarSesion` redirige, en este orden, al `next` saneado del formulario, a la cookie `miliors-destino` o a `RUTAS_POR_ROL[rol]`. `/postulante/...` solo se respeta para un POSTULANTE; `/empleos/...` sirve a cualquier rol (un reclutador que entra con `next=/empleos/...` va a la vista previa). Cuando el login trae un `next` válido también escribe la cookie, para no perder el camino si de ahí se pasa por onboarding, Eneagrama o certificado.
+- **Registro (lo construido):** el embudo pasa por verificación de email, onboarding, Eneagrama y certificado, y el email de verificación puede abrirse en otro navegador. **No hay callback de email que retome el `next`**: no se tocó la configuración de confirmación ni `emailRedirectTo` (eso es configuración del dashboard de Supabase). Lo que sí hay:
+  - Con `next` válido, `registrarUsuario` **fuerza el rol POSTULANTE en el servidor** (el formulario solo oculta el selector de tipo de cuenta) y guarda la cookie `miliors-destino` (httpOnly, `SameSite=Lax`, `path=/`, 7 días, valor saneado).
+  - Al confirmar el mail e ingresar, el login usa la cookie y vuelve a la vista previa.
+  - El aviso "Seguí con tu postulación a {Puesto}" (Server Component de solo lectura, con link y *Descartar*) aparece en el inicio, Buscar puestos, certificado, Eneagrama y datos básicos mientras exista la cookie. Si el destino es un `/empleos/{token}` que ya no resuelve (link regenerado, puesto dado de baja) o el puesto ya está postulado, no se muestra. La cookie se borra al postularse a ese puesto (en las dos actions), al descartar (server action) y al cerrar sesión.
   - Si la cookie se perdió, el usuario vuelve a abrir el link y entra directo. Es aceptable.
-- El proxy, al redirigir una ruta protegida sin sesión, agrega `next={pathname+search}` saneado.
+- **Proxy:** `?next=` (saneado, solo si cae en la allowlist) se agrega en tres redirecciones: ruta protegida sin sesión, sesión revocada o inactiva (`/iniciar-sesion?motivo=…&next=…`) y, a la inversa, un usuario ya logueado que abre `/iniciar-sesion?next=…` o `/registro?next=…` va directo al `next` compatible con su rol en lugar de a su panel. Los POST (server actions) siguen sin redirigirse.
 
 ## G. Cierre de fugas existentes
 
@@ -285,4 +290,10 @@ La migración se aplica a producción **solo en el deploy**, con OK explícito d
 **Preguntas abiertas (no bloquean el PR 1):**
 1. **Indexación de puestos públicos:** ¿queremos que Google indexe `/empleos/{token}` de los puestos públicos? Default de este spec: `noindex` para todo. Abrirlo implica pensar SEO y URLs con slug.
 2. **Exponer el nombre de la empresa sin login:** la vista previa muestra empresa y descripción a cualquiera con el link, incluso en puestos públicos. Hoy anon ya puede leer puestos activos vía RLS, así que no empeora, pero conviene confirmarlo con negocio.
+   - **Corrección (hallazgo al construir el PR 3):** la premisa "postulantes ya ven la empresa vía `getReclutadorPublico`" es cierta solo porque esa query usa service role. Por RLS, `empresa_select` es solo admin y reclutador: **un postulante no lee `empresa`**, así que los embeds `empresa(nombre_empresa)` hechos con el cliente RLS (`getPuestosActivos`, `getPuestoPublicoById`) devuelven `null` para un postulante. Es un bug previo y queda **fuera de alcance**; hay que corregirlo aparte (leer el nombre con service role o abrir una policy acotada). El detalle del postulante nuevo (`getPuestoParaPostulante`, service role tras validar el acceso) sí trae la empresa; el buscador todavía no.
+
+**Limitaciones conocidas de la v1:**
+- **Co-reclutadores de la misma empresa:** `puesto_enlace` solo se lee para el reclutador dueño del puesto y el admin, así que otro reclutador de la misma empresa no puede ver ni copiar el link ni regenerarlo. Si hace falta, se abre la policy y la RPC al resto de los reclutadores vinculados a la empresa.
+- **Cookie de destino compartida:** `miliors-destino` es por navegador. Un login sin `next` usa la cookie vigente (hasta 7 días, o hasta postularse, descartar el aviso o cerrar sesión), así que quien ingresa sin `next` puede terminar en la vista previa de un puesto que dejó pendiente.
+- **Sin callback de email** (ver F.4): si el mail de verificación se abre en otro navegador, la cookie no viaja y el usuario tiene que volver a abrir el link.
 3. **Cambio de visibilidad con el puesto pausado:** se permite. Confirmar que no haga falta un aviso extra.
