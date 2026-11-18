@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   '/registro',
   '/recuperar-password',
   '/verificar', // verificación pública de certificados
+  '/empleos', // vista previa pública de un puesto (link para compartir)
 ]
 
 // Rutas que requieren rol específico (prefijo)

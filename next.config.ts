@@ -95,7 +95,16 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com"],
 
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // El token del link para compartir viaja en la URL: sin Referer, no se filtra a
+      // los links externos de la descripción. Va DESPUÉS del bloque general a propósito:
+      // si dos reglas fijan el mismo header, gana la última (docs de headers de Next).
+      {
+        source: "/empleos/:path*",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+    ];
   },
 
   // La pantalla de acceso pasó de /login a /iniciar-sesion (el resto de las

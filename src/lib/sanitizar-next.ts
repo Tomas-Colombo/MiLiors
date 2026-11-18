@@ -13,7 +13,6 @@ const LARGO_MAXIMO = 512
 // Caracteres de control (incluye tab y saltos de línea, que los navegadores
 // descartan al parsear y convierten "/\t/evil.com" en "//evil.com") y backslash,
 // que algunos navegadores tratan como "/".
-// eslint-disable-next-line no-control-regex
 const CONTROL_O_BACKSLASH = /[\u0000-\u001f\u007f\\]/
 const BASE_FICTICIA = 'http://destino.invalid'
 
