@@ -2,12 +2,13 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { requireEneagramaCompleto } from '@/lib/guards'
 import { VolverLink } from '@/components/shared/volver-link'
-import { Card, Badge, buttonClassName } from '@/components/ui'
+import { Alert, Card, Badge, buttonClassName } from '@/components/ui'
 import { ChevronLeftIcon, CalendarIcon, BuildingIcon, ArrowRightIcon } from '@/components/icons'
 import { AvisoCertificado } from '@/components/shared/aviso-certificado'
-import { getPuestoPublicoById, getMisPostulacionesPuestoIds } from '@/modules/puestos/queries'
+import { getPuestoParaPostulante, getMisPostulacionesPuestoIds } from '@/modules/puestos/queries'
+import { resolverAccesoPuesto } from '@/modules/puestos/acceso'
 import { getUltimoCertificado } from '@/modules/certificado/queries'
-import { getFormularioDePuesto } from '@/modules/preselector/queries'
+import { getFormularioDePuestoAdmin } from '@/modules/preselector/queries'
 import { UBICACION_LABEL, CARGA_HORARIA_LABEL } from '@/lib/constants/enums'
 import { ubicacionLabel } from '@/lib/ubicacion'
 import { formatFecha } from '@/lib/fecha'
@@ -15,28 +16,38 @@ import { PostularButton } from '../postular-button'
 
 type Props = {
   params: Promise<{ id: string }>
-  searchParams: Promise<Record<string, string>>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function PuestoDetallePage({ params, searchParams }: Props) {
   await requireEneagramaCompleto()
   const { id } = await params
-  const { from } = await searchParams
+  const { from, enlace: enlaceParam } = await searchParams
+  const enlace = typeof enlaceParam === 'string' ? enlaceParam : null
 
   const desdePostulaciones = from === 'postulaciones'
   const volverHref = desdePostulaciones ? '/postulante/postulaciones' : '/postulante/puestos'
   const volverLabel = desdePostulaciones ? 'Mis postulaciones' : 'Buscar puestos'
 
+  // Un puesto privado sólo se ve con su link (o si ya se postuló): sin acceso, 404.
+  const acceso = await resolverAccesoPuesto(id, enlace)
+  if (!acceso) notFound()
+
+  // Con el acceso validado se lee con service role: RLS escondería el puesto
+  // privado (y el formulario) a quien llegó por el link.
   const [puesto, yaPostulados, certificado, formulario] = await Promise.all([
-    getPuestoPublicoById(id),
+    getPuestoParaPostulante(id),
     getMisPostulacionesPuestoIds(),
     getUltimoCertificado(),
-    getFormularioDePuesto(id),
+    getFormularioDePuestoAdmin(id),
   ])
 
   if (!puesto) notFound()
 
+  const yaPostulo = yaPostulados.has(puesto.id)
   const bloqueado = !certificado || certificado.desactualizado
+  // Pausado, dado de baja o sin ciclo abierto: se puede ver, no postular.
+  const sinPostulaciones = !puesto.recibePostulaciones
 
   // Sanitized for the applicant: never send esCritica / esValida to the client —
   // that would let a candidate read which options are "correct" from the payload.
@@ -88,12 +99,17 @@ export default async function PuestoDetallePage({ params, searchParams }: Props)
             )}
             <PostularButton
               puestoId={puesto.id}
-              yaPostulo={yaPostulados.has(puesto.id)}
-              disabled={bloqueado}
+              yaPostulo={yaPostulo}
+              disabled={bloqueado || sinPostulaciones}
               preguntas={preguntasPublicas}
+              enlace={acceso.via === 'enlace' ? (enlace ?? undefined) : undefined}
             />
           </div>
         </div>
+
+        {sinPostulaciones && !yaPostulo && (
+          <Alert tone="warning" title="Este puesto no está recibiendo postulaciones por ahora." />
+        )}
 
         {/* Badges */}
         <div className="flex flex-wrap gap-2">

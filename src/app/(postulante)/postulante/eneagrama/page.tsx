@@ -8,6 +8,7 @@ import {
 import { evaluarRehacer } from '@/modules/eneagrama/rehacer-policy'
 import { EneagramaWizard } from './eneagrama-wizard'
 import { redirect } from 'next/navigation'
+import { SeguirPostulacion } from '@/components/shared/seguir-postulacion'
 
 // El informe de personalidad se genera con `after` al cerrar el test: corre
 // después de la respuesta pero dentro de esta invocación, así que necesita el
@@ -42,6 +43,9 @@ export default async function EneagramaPage() {
 
   return (
     <div className="min-h-screen bg-surface-page">
+      <div className="mx-auto w-full max-w-2xl px-4 pt-6 sm:px-6">
+        <SeguirPostulacion />
+      </div>
       <EneagramaWizard
         preguntas={
           preguntas as {

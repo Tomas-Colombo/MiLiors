@@ -5,6 +5,9 @@ import { patronSinTildes } from '@/lib/texto'
 import { createAdminClient } from '@/lib/supabase/server-admin'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
+import { ubicacionLabel } from '@/lib/ubicacion'
+import { getCicloAbierto } from './ciclos'
+import { esTokenEnlaceValido } from './acceso'
 import {
   CARGA_HORARIA,
   ESTADO_POSTULACION,
@@ -521,25 +524,17 @@ export const getPuestosActivos = async (filtros?: {
   return { items, total: count ?? 0 }
 }
 
-/** Detalle de un puesto público para postulantes (SIN perfil_psicologico_deseado) */
-export const getPuestoPublicoById = cache(async (puestoId: string): Promise<PuestoItem | null> => {
-  const supabase = await createClient()
+const PUESTO_PUBLICO_SELECT = `
+  id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
+  nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
+  empresa_id, sector_id, reclutador_id, departamento_id, localidad_id,
+  empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
+  departamento(nombre, provincia(nombre)),
+  localidad(nombre, departamento(nombre, provincia(nombre)))
+`
 
-  const { data } = await supabase
-    .from('puesto')
-    .select(`
-      id, titulo_puesto, descripcion_texto, idioma, carga_horaria, ubicacion,
-      nivel_experiencia, activo, fecha_publicacion, fecha_baja_puesto,
-      empresa_id, sector_id, reclutador_id, departamento_id, localidad_id,
-      empresa(nombre_empresa), sector_industrial(nombre_sector), puesto_carrera(carrera_id, carrera(nombre)),
-      departamento(nombre, provincia(nombre)),
-      localidad(nombre, departamento(nombre, provincia(nombre)))
-    `)
-    .eq('id', puestoId)
-    .maybeSingle()
-
-  if (!data) return null
-
+/** Fila cruda de PUESTO_PUBLICO_SELECT → PuestoItem (sin perfil_psicologico_deseado). */
+function mapPuestoPublico(data: unknown): PuestoItem {
   const r = data as {
     id: string; titulo_puesto: string; descripcion_texto: string | null
     idioma: string; carga_horaria: string; ubicacion: string
@@ -580,6 +575,106 @@ export const getPuestoPublicoById = cache(async (puestoId: string): Promise<Pues
       r.localidad?.departamento?.provincia?.nombre ?? r.departamento?.provincia?.nombre ?? null,
     nombre_departamento: r.localidad?.departamento?.nombre ?? r.departamento?.nombre ?? null,
     nombre_localidad: r.localidad?.nombre ?? null,
+  }
+}
+
+export type PuestoParaPostulante = PuestoItem & {
+  /** Activo, sin baja y con un ciclo abierto: es lo que habilita el botón Postularme. */
+  recibePostulaciones: boolean
+}
+
+/**
+ * Detalle de un puesto para un postulante que YA pasó `resolverAccesoPuesto`
+ * (público, por link o porque ya se postuló). Lee con service role: RLS oculta los
+ * puestos privados a quien llegó por el link y las empresas a los postulantes
+ * (`empresa_select` es sólo admin/reclutador), así que con el cliente RLS el puesto
+ * no aparece o aparece sin empresa. NUNCA llamarlo sin validar el acceso antes.
+ */
+export const getPuestoParaPostulante = cache(
+  async (puestoId: string): Promise<PuestoParaPostulante | null> => {
+    const admin = createAdminClient()
+
+    const { data } = await admin
+      .from('puesto')
+      .select(PUESTO_PUBLICO_SELECT)
+      .eq('id', puestoId)
+      .maybeSingle()
+
+    if (!data) return null
+
+    const puesto = mapPuestoPublico(data)
+    const cicloId = puesto.activo && !puesto.fecha_baja_puesto ? await getCicloAbierto(puestoId) : null
+
+    return { ...puesto, recibePostulaciones: !!cicloId }
+  },
+)
+
+/** Lo único que la vista previa pública de `/empleos/{token}` puede mostrar. */
+export type PuestoPreviewPublico = {
+  puestoId: string
+  titulo_puesto: string
+  nombre_empresa: string | null
+  nombre_sector: string | null
+  ubicacion: string
+  /** "Localidad, Provincia" con el nivel más profundo que tenga el puesto. */
+  ubicacion_label: string
+  carga_horaria: string
+  nivel_experiencia: string | null
+  idioma: string | null
+  descripcion_texto: string | null
+  carreras: string[]
+  fecha_publicacion: string
+  recibePostulaciones: boolean
+}
+
+/**
+ * Puesto detrás de un link para compartir, para la vista previa pública.
+ *
+ * Valida el formato del token antes de consultar, lee con service role y devuelve
+ * null igual para token mal formado, inexistente o de un puesto dado de baja (así no
+ * se puede enumerar). Devuelve SÓLO campos de presentación: nunca el perfil
+ * psicológico, datos del reclutador, contadores ni el preselector.
+ */
+export const getPuestoPorEnlace = cache(async (token: string): Promise<PuestoPreviewPublico | null> => {
+  if (!esTokenEnlaceValido(token)) return null
+
+  const admin = createAdminClient()
+
+  const { data: enlace } = await admin
+    .from('puesto_enlace')
+    .select('puesto_id')
+    .eq('token', token)
+    .maybeSingle()
+
+  const puestoId = (enlace as { puesto_id: string } | null)?.puesto_id
+  if (!puestoId) return null
+
+  const { data } = await admin
+    .from('puesto')
+    .select(PUESTO_PUBLICO_SELECT)
+    .eq('id', puestoId)
+    .is('fecha_baja_puesto', null)
+    .maybeSingle()
+
+  if (!data) return null
+
+  const p = mapPuestoPublico(data)
+  const cicloId = p.activo ? await getCicloAbierto(puestoId) : null
+
+  return {
+    puestoId: p.id,
+    titulo_puesto: p.titulo_puesto,
+    nombre_empresa: p.nombre_empresa ?? null,
+    nombre_sector: p.nombre_sector ?? null,
+    ubicacion: p.ubicacion,
+    ubicacion_label: ubicacionLabel(p),
+    carga_horaria: p.carga_horaria,
+    nivel_experiencia: p.nivel_experiencia,
+    idioma: p.idioma || null,
+    descripcion_texto: p.descripcion_texto,
+    carreras: p.carreras.map((c) => c.nombre),
+    fecha_publicacion: p.fecha_publicacion,
+    recibePostulaciones: !!cicloId,
   }
 })
 

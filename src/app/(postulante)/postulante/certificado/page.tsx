@@ -7,6 +7,7 @@ import { getUltimoCertificado, getCertificadoContenido } from '@/modules/certifi
 import { getInformeActual } from '@/modules/informe/queries'
 import { SINTESIS_VERSION, type CertificadoSintesisJSON } from '@/lib/types/certificado'
 import { CertificadoUI } from './certificado-ui'
+import { SeguirPostulacion } from '@/components/shared/seguir-postulacion'
 
 export const metadata = { title: 'Mi Certificado — MiLiors' }
 
@@ -91,6 +92,7 @@ export default async function CertificadoPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <SeguirPostulacion />
       <PageHeader title="Certificado de Perfil" description="Descargá tu certificado verificable con QR para compartir con reclutadores." className="mb-6" />
       <CertificadoUI
         certificado={

@@ -6,7 +6,7 @@ import { iniciarSesion } from '@/modules/auth/actions'
 import { EyeIcon, EyeOffIcon } from '@/components/icons'
 import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
 
-export function IniciarSesionForm() {
+export function IniciarSesionForm({ next }: { next?: string | null }) {
   const [state, action, pending] = useActionState(iniciarSesion, INITIAL_ACTION_STATE)
   const [showPass, setShowPass] = useState(false)
 
@@ -17,6 +17,7 @@ export function IniciarSesionForm() {
 
   return (
     <form action={action} className="tid-panel">
+      {next && <input type="hidden" name="next" value={next} />}
       <div className="tid-field">
         <div className="tid-field-head">
           <label htmlFor="login-email" className="tid-field-label">Email</label>

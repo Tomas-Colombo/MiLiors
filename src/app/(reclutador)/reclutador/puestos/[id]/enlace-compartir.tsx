@@ -17,6 +17,7 @@ type Props = {
 export function EnlaceCompartir({ puestoId, token: tokenInicial, baseUrl }: Props) {
   const [token, setToken] = useState(tokenInicial)
   const [copiado, setCopiado] = useState(false)
+  const [errorCopiar, setErrorCopiar] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
   const [errorRegenerar, setErrorRegenerar] = useState<string | undefined>()
   const [regenerando, iniciarRegeneracion] = useTransition()
@@ -40,7 +41,11 @@ export function EnlaceCompartir({ puestoId, token: tokenInicial, baseUrl }: Prop
         ok = document.execCommand('copy')
       }
     }
-    if (!ok) return
+    if (!ok) {
+      setErrorCopiar(true)
+      return
+    }
+    setErrorCopiar(false)
     setCopiado(true)
     if (temporizador.current) clearTimeout(temporizador.current)
     temporizador.current = setTimeout(() => setCopiado(false), 2000)
@@ -84,6 +89,11 @@ export function EnlaceCompartir({ puestoId, token: tokenInicial, baseUrl }: Prop
       </div>
       {/* Aviso accesible del feedback visual del botón */}
       <span className="sr-only" role="status">{copiado ? 'Link copiado' : ''}</span>
+      {errorCopiar && (
+        <p role="alert" className="mt-2 text-compact text-error-ink">
+          No se pudo copiar. Seleccioná el link y copialo manualmente.
+        </p>
+      )}
 
       <button
         type="button"

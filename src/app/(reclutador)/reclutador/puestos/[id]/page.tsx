@@ -15,7 +15,7 @@ import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 import { ubicacionLabel } from '@/lib/ubicacion'
 import { requireEmpresaCargada } from '@/lib/guards'
 import { formatFecha } from '@/lib/fecha'
-import { appUrl, appUrlPublico } from '@/lib/app-url'
+import { appUrlPublico } from '@/lib/app-url'
 import { VISIBILIDAD_PUESTO } from '@/lib/constants/enums'
 import { EnlaceCompartir } from './enlace-compartir'
 
@@ -39,8 +39,8 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
   ])
 
   const esPrivado = puesto.visibilidad === VISIBILIDAD_PUESTO.PRIVADA
-  // appUrl() puede venir vacía si la variable no está cargada: appUrlPublico() garantiza una base absoluta.
-  const baseUrl = appUrl() || appUrlPublico()
+  // appUrlPublico() ya cae a la base de la app y garantiza una URL absoluta.
+  const baseUrl = appUrlPublico()
 
   // Alerta de pausa automática por inactividad (solo puestos activos).
   const alerta =

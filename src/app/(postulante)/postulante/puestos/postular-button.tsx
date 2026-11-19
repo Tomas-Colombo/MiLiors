@@ -24,13 +24,16 @@ type Props = {
   preguntas?: PreguntaPublica[]
   /** Set by surfaces that know the puesto has a form but don't load its questions (e.g. the listing). */
   tieneFormulario?: boolean
+  /** Token del link para compartir, cuando el postulante llegó al puesto por /empleos/{token}. */
+  enlace?: string
 }
 
-export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tieneFormulario }: Props) {
+export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tieneFormulario, enlace }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [modalOpen, setModalOpen] = useState(false)
   const [respuestas, setRespuestas] = useState<Record<string, string>>({})
+  const [errorDirecto, setErrorDirecto] = useState<string | null>(null)
 
   const boundAction = postularAPuestoConFormulario.bind(null, puestoId)
   const [state, action, isSubmitting] = useActionState(
@@ -55,13 +58,17 @@ export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tiene
       router.push(`/postulante/puestos/${puestoId}`)
       return
     }
+    setErrorDirecto(null)
     startTransition(async () => {
-      await postularAPuesto(puestoId)
+      const res = await postularAPuesto(puestoId, enlace)
+      // Sin esto el rechazo (puesto pausado, certificado vencido, sin acceso...) se
+      // perdía en silencio y el botón parecía no hacer nada.
+      if (!res.success) setErrorDirecto(res.error)
     })
   }
 
   return (
-    <>
+    <div className="flex flex-col items-end gap-2">
       <Button
         variant={yaPostuloEfectivo ? 'secondary' : 'primary'}
         size="sm"
@@ -71,6 +78,10 @@ export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tiene
       >
         {yaPostuloEfectivo ? 'Ya postulaste' : 'Postularme'}
       </Button>
+
+      {errorDirecto && !conPreguntas && (
+        <Alert tone="error" title={errorDirecto} className="max-w-xs text-left" />
+      )}
 
       {conPreguntas && (
         <Modal
@@ -87,6 +98,7 @@ export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tiene
             </Alert>
           ) : (
             <form action={action} className="space-y-4">
+              {enlace && <input type="hidden" name="enlace" value={enlace} />}
               {state.error && <Alert tone="error" title={state.error} />}
 
               {preguntas!.map((p) => (
@@ -139,6 +151,6 @@ export function PostularButton({ puestoId, yaPostulo, disabled, preguntas, tiene
           )}
         </Modal>
       )}
-    </>
+    </div>
   )
 }

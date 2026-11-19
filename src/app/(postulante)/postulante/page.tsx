@@ -15,6 +15,7 @@ import { getTestEneagramaDePostulante } from '@/modules/eneagrama/queries'
 import { getPerfilPostulanteActual } from '@/modules/perfil/queries'
 import { getInformeActual } from '@/modules/informe/queries'
 import { QuickLinksPostulante } from './quick-links'
+import { SeguirPostulacion } from '@/components/shared/seguir-postulacion'
 
 export const metadata = { title: 'Inicio — MiLiors' }
 
@@ -65,6 +66,8 @@ export default async function PostulanteDashboard() {
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 lg:py-10" style={{ background: 'var(--color-page)' }}>
+
+      <SeguirPostulacion />
 
       {/* Saludo */}
       <div className="mb-8">

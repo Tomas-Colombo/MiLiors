@@ -10,9 +10,11 @@ import { INITIAL_ACTION_STATE } from '@/lib/types/domain'
  * (`tid-*`) que el inicio de sesión, para que cambiar de pestaña no cambie de
  * lenguaje visual.
  */
-export function RegistroForm() {
+export function RegistroForm({ next }: { next?: string | null }) {
   const [state, action, pending] = useActionState(registrarUsuario, INITIAL_ACTION_STATE)
-  const [rol, setRol] = useState<'POSTULANTE' | 'RECLUTADOR' | null>(null)
+  // Con `next` la cuenta es siempre de postulante (el servidor también lo impone).
+  const [rolElegido, setRol] = useState<'POSTULANTE' | 'RECLUTADOR' | null>(null)
+  const rol = next ? 'POSTULANTE' : rolElegido
   const [showPass, setShowPass] = useState(false)
 
   const errores = state && !state.success ? state.fieldErrors : undefined
@@ -54,31 +56,40 @@ export function RegistroForm() {
   return (
     <form action={action} className="tid-panel">
       <input type="hidden" name="rol" value={rol ?? ''} />
+      {next && <input type="hidden" name="next" value={next} />}
 
-      <div className="tid-field-label">¿Cómo vas a usar MiLiors?</div>
-      <div className="tid-roles">
-        <button
-          type="button"
-          className="tid-role"
-          data-active={rol === 'POSTULANTE'}
-          onClick={() => setRol('POSTULANTE')}
-        >
-          <UserIcon size={20} />
-          <span className="tid-role-name">Postulante</span>
-          <span className="tid-role-desc">Busco trabajo</span>
-        </button>
-        <button
-          type="button"
-          className="tid-role"
-          data-active={rol === 'RECLUTADOR'}
-          onClick={() => setRol('RECLUTADOR')}
-        >
-          <BuildingIcon size={20} />
-          <span className="tid-role-name">Empresa</span>
-          <span className="tid-role-desc">Busco talento</span>
-        </button>
-      </div>
-      {rolError && <div className="tid-field-error">{rolError}</div>}
+      {next ? (
+        <div className="tid-alert tid-alert-info">
+          Estás creando una cuenta de postulante para postularte al puesto. Cuando termines, volvés a él.
+        </div>
+      ) : (
+        <>
+          <div className="tid-field-label">¿Cómo vas a usar MiLiors?</div>
+          <div className="tid-roles">
+            <button
+              type="button"
+              className="tid-role"
+              data-active={rol === 'POSTULANTE'}
+              onClick={() => setRol('POSTULANTE')}
+            >
+              <UserIcon size={20} />
+              <span className="tid-role-name">Postulante</span>
+              <span className="tid-role-desc">Busco trabajo</span>
+            </button>
+            <button
+              type="button"
+              className="tid-role"
+              data-active={rol === 'RECLUTADOR'}
+              onClick={() => setRol('RECLUTADOR')}
+            >
+              <BuildingIcon size={20} />
+              <span className="tid-role-name">Empresa</span>
+              <span className="tid-role-desc">Busco talento</span>
+            </button>
+          </div>
+          {rolError && <div className="tid-field-error">{rolError}</div>}
+        </>
+      )}
 
       <div className="tid-field">
         <div className="tid-field-head">

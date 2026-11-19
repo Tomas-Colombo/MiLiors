@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { AccesoChrome } from '@/components/acceso/acceso-chrome'
 import { IniciarSesionForm } from './iniciar-sesion-form'
+import { sanitizarNext } from '@/lib/sanitizar-next'
 
 export const metadata = {
   title: 'Iniciar sesión — MiLiors',
@@ -18,19 +19,21 @@ const MOTIVO_MENSAJE: Record<string, string> = {
 export default async function IniciarSesionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ motivo?: string }>
+  searchParams: Promise<{ motivo?: string; next?: string }>
 }) {
-  const { motivo } = await searchParams
+  const { motivo, next } = await searchParams
+  // Adónde volver después de ingresar (p. ej. el puesto que se estaba mirando).
+  const destino = sanitizarNext(next)
   const aviso = motivo ? MOTIVO_MENSAJE[motivo] : undefined
 
   return (
     <AccesoChrome tab="ingresar">
       {aviso && <div className="tid-alert tid-alert-info">{aviso}</div>}
 
-      <IniciarSesionForm />
+      <IniciarSesionForm next={destino} />
 
       <div className="tid-switch">
-        ¿No tienes cuenta? <Link href="/registro">Créala aquí</Link>
+        ¿No tienes cuenta? <Link href={destino ? `/registro?next=${encodeURIComponent(destino)}` : '/registro'}>Créala aquí</Link>
       </div>
     </AccesoChrome>
   )

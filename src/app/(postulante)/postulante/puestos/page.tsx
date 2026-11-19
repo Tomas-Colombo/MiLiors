@@ -17,6 +17,7 @@ import { FiltrosPuestos } from './filtros-puestos'
 import { PuestoCard } from './puesto-card'
 import Link from 'next/link'
 import { AvisoCertificado } from '@/components/shared/aviso-certificado'
+import { SeguirPostulacion } from '@/components/shared/seguir-postulacion'
 
 export const metadata = { title: 'Buscar puestos — MiLiors' }
 
@@ -91,6 +92,8 @@ export default async function BuscarPuestosPage({ searchParams }: { searchParams
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-6">
+      <SeguirPostulacion />
+
       {/* Encabezado */}
       <PageHeader title="Buscar puestos" description={<>{total} resultado{total !== 1 ? 's' : ''}</>} />
 
