@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { VolverLink } from '@/components/shared/volver-link'
 import { Card, Badge, Alert, buttonClassName } from '@/components/ui'
-import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon, UsersIcon } from '@/components/icons'
+import { ChevronLeftIcon, EditIcon, BuildingIcon, CheckCircleIcon, UsersIcon, GlobeIcon, LockIcon } from '@/components/icons'
 import {
   getPuestoById,
   getContratacionesDePuesto,
   getTotalPostulacionesDePuesto,
+  getEnlacePuesto,
 } from '@/modules/puestos/queries'
 import { calcularAlertaInactividad } from '@/modules/puestos/actividad-alerta'
 import { getConfiguracionSistema } from '@/modules/configuracion/queries'
@@ -14,6 +15,9 @@ import { CARGA_HORARIA_LABEL, UBICACION_LABEL } from '@/lib/constants/enums'
 import { ubicacionLabel } from '@/lib/ubicacion'
 import { requireEmpresaCargada } from '@/lib/guards'
 import { formatFecha } from '@/lib/fecha'
+import { appUrl, appUrlPublico } from '@/lib/app-url'
+import { VISIBILIDAD_PUESTO } from '@/lib/constants/enums'
+import { EnlaceCompartir } from './enlace-compartir'
 
 export const metadata = { title: 'Detalle del puesto — MiLiors' }
 
@@ -27,11 +31,16 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
   const puesto = await getPuestoById(id)
   if (!puesto) notFound()
 
-  const [contrataciones, { diasInactividadCierre }, totalPostulaciones] = await Promise.all([
+  const [contrataciones, { diasInactividadCierre }, totalPostulaciones, tokenEnlace] = await Promise.all([
     getContratacionesDePuesto(id),
     getConfiguracionSistema(),
     getTotalPostulacionesDePuesto(id),
+    getEnlacePuesto(id),
   ])
+
+  const esPrivado = puesto.visibilidad === VISIBILIDAD_PUESTO.PRIVADA
+  // appUrl() puede venir vacía si la variable no está cargada: appUrlPublico() garantiza una base absoluta.
+  const baseUrl = appUrl() || appUrlPublico()
 
   // Alerta de pausa automática por inactividad (solo puestos activos).
   const alerta =
@@ -111,6 +120,40 @@ export default async function PuestoDetallePage({ params }: { params: Params }) 
             Editar
           </Link>
         </div>
+      </Card>
+
+      {/* Compartir — link único del puesto y su visibilidad */}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-sm font-bold text-ink">Compartir</h2>
+            <Badge tone={esPrivado ? 'primary' : 'success'}>
+              {esPrivado ? <LockIcon size={13} strokeWidth={2.5} className="flex-none" /> : <GlobeIcon size={13} strokeWidth={2.5} className="flex-none" />}
+              {esPrivado ? 'Privado' : 'Público'}
+            </Badge>
+          </div>
+          <Link
+            href={`/reclutador/puestos/${id}/editar`}
+            className="text-compact font-medium text-primary-600 underline-offset-2 hover:underline"
+          >
+            Cambiar visibilidad
+          </Link>
+        </div>
+        <p className="mt-2 mb-4 text-compact text-muted">
+          {esPrivado
+            ? 'Solo quienes tengan este link pueden ver el puesto y postularse.'
+            : 'Cualquier persona puede encontrarlo en Miliors. Compartí el link para llegar a más candidatos.'}
+        </p>
+        {tokenEnlace ? (
+          <EnlaceCompartir key={tokenEnlace} puestoId={id} token={tokenEnlace} baseUrl={baseUrl} />
+        ) : (
+          <Alert tone="warning" title="No pudimos cargar el link de este puesto." />
+        )}
+        {!puesto.activo && (
+          <p className="mt-3 text-xs text-muted">
+            El puesto está pausado: quien abra el link lo verá, pero no podrá postularse.
+          </p>
+        )}
       </Card>
 
       {/* Postulaciones recibidas — total histórico del puesto (todos los ciclos) */}

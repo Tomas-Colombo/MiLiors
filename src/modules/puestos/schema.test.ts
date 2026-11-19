@@ -11,6 +11,7 @@ const puesto = (overrides: Record<string, unknown> = {}) => ({
   carga_horaria: CARGA_HORARIA.TIEMPO_COMPLETO,
   ubicacion: UBICACION.LOCALIDADES,
   departamento_id: UUID,
+  visibilidad: 'PUBLICA',
   ...overrides,
 })
 
@@ -78,5 +79,25 @@ describe('puestoSchema — descripción', () => {
 
   it('la descripción es opcional', () => {
     expect(puestoSchema.safeParse(puesto()).success).toBe(true)
+  })
+})
+
+describe('puestoSchema — visibilidad', () => {
+  it.each(['PUBLICA', 'PRIVADA'])('acepta %s', (visibilidad) => {
+    expect(puestoSchema.safeParse(puesto({ visibilidad })).success).toBe(true)
+  })
+
+  it('rechaza un valor fuera del enum', () => {
+    const result = puestoSchema.safeParse(puesto({ visibilidad: 'INTERNA' }))
+    expect(result.success).toBe(false)
+    expect(camposConError(result)).toContain('visibilidad')
+  })
+
+  it('es obligatoria: no se asume un valor si el form no la manda', () => {
+    const { visibilidad: _omitida, ...sinVisibilidad } = puesto()
+    void _omitida
+    const result = puestoSchema.safeParse(sinVisibilidad)
+    expect(result.success).toBe(false)
+    expect(camposConError(result)).toContain('visibilidad')
   })
 })

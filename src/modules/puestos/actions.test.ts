@@ -7,6 +7,7 @@ import {
   contarPostulacionesDelUltimoCiclo,
   publicarPuesto,
   editarPuesto,
+  regenerarEnlacePuesto,
 } from './actions'
 import { getReclutadorId } from '@/modules/empresas/queries'
 import { createAdminClient } from '@/lib/supabase/server-admin'
@@ -550,6 +551,7 @@ describe('puestos/actions — criterio psicológico fuera de puesto (H-202)', ()
     formData.set('titulo_puesto', 'Desarrollador Full Stack')
     formData.set('carga_horaria', 'TIEMPO_COMPLETO')
     formData.set('ubicacion', 'REMOTO')
+    formData.set('visibilidad', 'PRIVADA')
     formData.set('perfil_psicologico_deseado', 'Perfil analítico y orientado a objetivos')
 
     const res = await publicarPuesto(INITIAL_ACTION_STATE, formData)
@@ -565,6 +567,7 @@ describe('puestos/actions — criterio psicológico fuera de puesto (H-202)', ()
       reclutador_id: 'rec-1',
       titulo_puesto: 'Desarrollador Full Stack',
       ubicacion: 'REMOTO',
+      visibilidad: 'PRIVADA',
       activo: true,
     })
 
@@ -611,6 +614,7 @@ describe('puestos/actions — criterio psicológico fuera de puesto (H-202)', ()
     formData.set('titulo_puesto', 'Desarrollador Backend')
     formData.set('carga_horaria', 'TIEMPO_COMPLETO')
     formData.set('ubicacion', 'REMOTO')
+    formData.set('visibilidad', 'PUBLICA')
     formData.set('perfil_psicologico_deseado', 'Perfil resolutivo')
 
     const res = await publicarPuesto(INITIAL_ACTION_STATE, formData)
@@ -696,6 +700,7 @@ describe('puestos/actions — criterio psicológico fuera de puesto (H-202)', ()
     formData.set('titulo_puesto', 'Desarrollador Modificado')
     formData.set('carga_horaria', 'TIEMPO_COMPLETO')
     formData.set('ubicacion', 'REMOTO')
+    formData.set('visibilidad', 'PUBLICA')
     // perfil_psicologico_deseado omitted / empty
 
     const res = await editarPuesto('puesto-1', INITIAL_ACTION_STATE, formData)
@@ -761,6 +766,7 @@ describe('puestos/actions — criterio psicológico fuera de puesto (H-202)', ()
     formData.set('titulo_puesto', 'Desarrollador Modificado')
     formData.set('carga_horaria', 'TIEMPO_COMPLETO')
     formData.set('ubicacion', 'REMOTO')
+    formData.set('visibilidad', 'PUBLICA')
 
     const res = await editarPuesto('puesto-1', INITIAL_ACTION_STATE, formData)
 
@@ -771,3 +777,48 @@ describe('puestos/actions — criterio psicológico fuera de puesto (H-202)', ()
   })
 })
 
+
+describe('puestos/actions — regenerarEnlacePuesto', () => {
+  const PUESTO_ID = '22222222-2222-4222-8222-222222222222'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rechaza si el usuario no es un reclutador', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce(null)
+    const res = await regenerarEnlacePuesto(PUESTO_ID)
+    expect(res).toEqual({ success: false, error: 'No autorizado.' })
+    expect(createClient).not.toHaveBeenCalled()
+  })
+
+  it('rechaza un id que no es UUID sin llamar a la RPC', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce('rec-1')
+    const res = await regenerarEnlacePuesto('no-es-uuid')
+    expect(res.success).toBe(false)
+    expect(createClient).not.toHaveBeenCalled()
+  })
+
+  it('devuelve error si la RPC rechaza (p. ej. el puesto es de otro reclutador)', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce('rec-1')
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: '42501', message: 'forbidden' } })
+    vi.mocked(createClient).mockResolvedValueOnce({ rpc } as never)
+
+    const res = await regenerarEnlacePuesto(PUESTO_ID)
+
+    expect(rpc).toHaveBeenCalledWith('regenerar_enlace_puesto', { p_puesto_id: PUESTO_ID })
+    expect(res).toEqual({ success: false, error: 'No se pudo regenerar el link.' })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('devuelve el token nuevo y revalida el detalle del puesto', async () => {
+    vi.mocked(getReclutadorId).mockResolvedValueOnce('rec-1')
+    const rpc = vi.fn().mockResolvedValue({ data: 'token-nuevo-123', error: null })
+    vi.mocked(createClient).mockResolvedValueOnce({ rpc } as never)
+
+    const res = await regenerarEnlacePuesto(PUESTO_ID)
+
+    expect(res).toEqual({ success: true, data: { token: 'token-nuevo-123' } })
+    expect(revalidatePath).toHaveBeenCalledWith(`/reclutador/puestos/${PUESTO_ID}`)
+  })
+})

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CARGA_HORARIA, UBICACION } from '@/lib/constants/enums'
+import { CARGA_HORARIA, UBICACION, VISIBILIDAD_PUESTO } from '@/lib/constants/enums'
 
 /**
  * Tope de caracteres de la descripción del puesto. Se comparte con el
@@ -35,6 +35,9 @@ export const puestoSchema = z.object({
   departamento_id: z.string().uuid().optional().or(z.literal('')),
   localidad_id: z.string().uuid().optional().or(z.literal('')),
   nivel_experiencia: z.string().max(100).optional(),
+  visibilidad: z.enum([VISIBILIDAD_PUESTO.PUBLICA, VISIBILIDAD_PUESTO.PRIVADA], {
+    message: 'Elegí quién puede ver el puesto.',
+  }),
   perfil_psicologico_deseado: z.string().max(2000).optional(),
 }).superRefine((data, ctx) => {
   if (data.ubicacion !== UBICACION.REMOTO && !data.departamento_id) {
