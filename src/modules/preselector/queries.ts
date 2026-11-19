@@ -1,6 +1,9 @@
 import 'server-only'
 import { cache } from 'react'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server-admin'
+import type { Database } from '@/lib/types/database.types'
 import type { TipoPreguntaPreselector } from '@/lib/types/domain'
 
 export type OpcionPreselector = {
@@ -25,10 +28,12 @@ export type FormularioPreselector = {
   preguntas: PreguntaPreselector[]
 }
 
-/** Formulario preselector de un puesto (con preguntas y opciones ordenadas), o null si no tiene. */
-export const getFormularioDePuesto = cache(async (puestoId: string): Promise<FormularioPreselector | null> => {
-  const supabase = await createClient()
+type ClienteSupabase = SupabaseClient<Database>
 
+async function cargarFormulario(
+  supabase: ClienteSupabase,
+  puestoId: string,
+): Promise<FormularioPreselector | null> {
   const { data: formulario } = await supabase
     .from('formulario_preselector')
     .select('id, puesto_id')
@@ -71,6 +76,21 @@ export const getFormularioDePuesto = cache(async (puestoId: string): Promise<For
     puestoId: f.puesto_id,
     preguntas: preguntasOrdenadas,
   }
+}
+
+/** Formulario preselector de un puesto (con preguntas y opciones ordenadas), o null si no tiene. */
+export const getFormularioDePuesto = cache(async (puestoId: string): Promise<FormularioPreselector | null> => {
+  return cargarFormulario(await createClient(), puestoId)
+})
+
+/**
+ * Igual que `getFormularioDePuesto`, pero con service role. Es el que tiene que usar
+ * quien decide si un puesto "tiene formulario" (las acciones de postulación): con el
+ * cliente RLS, un formulario oculto (puesto privado) se leería como "no tiene" y se
+ * saltearía el preselector. Llamarlo solo después de validar el acceso al puesto.
+ */
+export const getFormularioDePuestoAdmin = cache(async (puestoId: string): Promise<FormularioPreselector | null> => {
+  return cargarFormulario(createAdminClient(), puestoId)
 })
 
 /** Ids de los puestos del listado dado que tienen formulario preselector. */

@@ -60,6 +60,7 @@ const RPCS = {
     args: `{\n          p_ala: number | null\n          p_dominantes: Json\n          p_dominantes_empate: number[] | null\n          p_puntajes: Json\n          p_test_id: string\n          p_tiene_empate_ala: boolean\n          p_tiene_empate_dominante: boolean\n        }`,
     returns: 'undefined',
   },
+  regenerar_enlace_puesto: { args: '{ p_puesto_id: string }', returns: 'string' },
   touch_session_activity: { args: 'Record<PropertyKey, never>', returns: 'undefined' },
 }
 

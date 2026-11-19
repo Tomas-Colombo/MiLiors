@@ -12,7 +12,8 @@ import {
   TIPO_PREGUNTA_PRESELECTOR,
   type MarcaPostulacion,
 } from '@/lib/constants/enums'
-import { getFormularioDePuesto } from '@/modules/preselector/queries'
+import { getFormularioDePuestoAdmin } from '@/modules/preselector/queries'
+import { resolverAccesoPuesto } from '@/modules/puestos/acceso'
 import { evaluarRespuestasCriticas, construirMotivoDescarte } from '@/modules/preselector/evaluador'
 import { marcarActividadPuesto } from '@/modules/puestos/actividad'
 import { getCicloAbierto } from '@/modules/puestos/ciclos'
@@ -170,16 +171,47 @@ async function verificarPostulanteConCertificado(
   return { ok: true, postulanteId }
 }
 
-export async function postularAPuesto(puestoId: string): Promise<ActionResult> {
+const ERROR_PUESTO_NO_DISPONIBLE = 'Este puesto no está disponible.'
+
+// Helper: the postulante must be able to reach the puesto (public, via its link, or
+// because they already applied) and the puesto must be activo and not dado de baja.
+// The ciclo abierto check alone does not cover either of those.
+async function verificarPuestoPostulable(
+  puestoId: string,
+  enlace: string | null | undefined,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const acceso = await resolverAccesoPuesto(puestoId, enlace)
+  if (!acceso) return { ok: false, error: ERROR_PUESTO_NO_DISPONIBLE }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('puesto')
+    .select('activo, fecha_baja_puesto')
+    .eq('id', puestoId)
+    .maybeSingle()
+
+  const puesto = data as { activo: boolean; fecha_baja_puesto: string | null } | null
+  if (!puesto || !puesto.activo || puesto.fecha_baja_puesto !== null) {
+    return { ok: false, error: ERROR_PUESTO_NO_DISPONIBLE }
+  }
+
+  return { ok: true }
+}
+
+export async function postularAPuesto(puestoId: string, enlace?: string | null): Promise<ActionResult> {
   const session = await verifySession()
   const supabase = await createClient()
+
+  const disponible = await verificarPuestoPostulable(puestoId, enlace)
+  if (!disponible.ok) return { success: false, error: disponible.error }
 
   const guard = await verificarPostulanteConCertificado(supabase, session.id)
   if (!guard.ok) return { success: false, error: guard.error }
 
   // Guard: a puesto with a pre-screening form can only be applied to via
-  // postularAPuestoConFormulario (the form cannot be bypassed).
-  const formulario = await getFormularioDePuesto(puestoId)
+  // postularAPuestoConFormulario (the form cannot be bypassed). Loaded with service
+  // role: through RLS a hidden form would read as "no form" and skip the preselector.
+  const formulario = await getFormularioDePuestoAdmin(puestoId)
   if (formulario) {
     return { success: false, error: 'Este puesto requiere completar el formulario de preselección para postularte.' }
   }
@@ -217,11 +249,19 @@ export async function postularAPuestoConFormulario(
   const session = await verifySession()
   const supabase = await createClient()
 
+  const enlaceRaw = formData.get('enlace')
+  const disponible = await verificarPuestoPostulable(
+    puestoId,
+    typeof enlaceRaw === 'string' ? enlaceRaw : null,
+  )
+  if (!disponible.ok) return { success: false, error: disponible.error }
+
   const guard = await verificarPostulanteConCertificado(supabase, session.id)
   if (!guard.ok) return { success: false, error: guard.error }
 
-  // The question set is always loaded server-side — never trusted from the client.
-  const formulario = await getFormularioDePuesto(puestoId)
+  // The question set is always loaded server-side with service role — never trusted
+  // from the client, and never through RLS (see postularAPuesto).
+  const formulario = await getFormularioDePuestoAdmin(puestoId)
   if (!formulario || formulario.preguntas.length === 0) {
     return { success: false, error: 'Este puesto no tiene formulario de preselección.' }
   }

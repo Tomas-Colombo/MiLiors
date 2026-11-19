@@ -66,6 +66,8 @@
 
 ### Detalle de Políticas RLS por Tabla (102 políticas)
 
+> **Nota (18/11/2026):** esta tabla es la foto del relevamiento del 31/10. Después cambiaron `puesto_select`, `puesto_select_public`, `puesto_carrera_select(_public)`, `formulario_preselector_select`, `pregunta_preselector_select` y `opcion_pregunta_preselector_select`: la migración `20261120000000_visibilidad_puesto.sql` les suma `visibilidad = 'PUBLICA'` (o "ya se postuló", vía `private.postulante_postulado_a`) en lugar de depender solo de `activo`, y agrega `puesto_enlace` (SELECT solo para el dueño y el admin). Ver `SPEC_VISIBILIDAD_PUESTO.md`.
+
 | Tabla | Política | Comando | Roles | Permisiva | Condición resumida (`USING` / `WITH CHECK`) | Drift repo |
 | --- | --- | :---: | :---: | :---: | --- | :---: |
 | `aceptacion_tyc` | `tyc_aceptacion_insert_propio` | INSERT | `{authenticated}` | PERMISSIVE | `WITH CHECK: (usuario_id = auth.uid())` | Coincide |
